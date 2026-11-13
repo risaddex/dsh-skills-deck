@@ -118,6 +118,9 @@ async function main() {
   for (const k of ['LANG_CONFIG', 'LOCALE_LANGS', 'LOCALE_COPY']) {
     if (globalThis[k] === undefined) globalThis[k] = localeData[k]
   }
+  // #18：门禁不再假定界面是中文。缺省语言取自同一份语言清单的生成物（真源 config/languages.yaml），
+  //   生产路径在沙箱里落到的就是它 —— 所有「promptText 吐出来的那一份」的金样都跟着它走。
+  const DEF = String(((globalThis as any).LANG_CONFIG || {}).default || '') as 'zh' | 'en'
   const localeHelper: any = await import(pathToFileURL(path.join(root, 'src', 'client', 'kernel', 'locale.ts')).href)
   for (const k of ['L', 'languageIds', 'localeMainTagOf', 'langChainFrom', 'langChainOf', 'uiLang', 'pickLangText', 'uiText', 'languageLabelOf']) {
     if (globalThis[k] === undefined) globalThis[k] = localeHelper[k]
@@ -268,9 +271,11 @@ async function main() {
     }
   }
   // 集成锚点：生产 promptText 路径（其内部替换算法必须与本门禁的 fill 完全一致 —— zh 腿全等即证明）
-  check(P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'github', L.zh)) === fill(P.PROMPTS.setupRun.zh, P.setupRunParamsFrom(stubs, 'github', L.zh)), 'promptText 替换算法与门禁 fill 一致（zh 全等）')
-  const mdTxt = P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'markdown', L.zh))
-  check(mdTxt.indexOf('确保仓库中技能所需标签齐全') < 0, 'markdown 注入文本不再要求「标签齐全」')
+  // #18：生产路径按语言链落到 config/languages.yaml 的缺省语言（沙箱里没有宿主语言快照，取到的就是它），
+  //   所以「promptText 吐出来的那一份」要与同一门语言的模板帧比，不再写死中文。
+  check(P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'github', L[DEF])) === fill(P.PROMPTS.setupRun[DEF], P.setupRunParamsFrom(stubs, 'github', L[DEF])), 'promptText 替换算法与门禁 fill 一致（缺省语言这一腿全等）')
+  const mdTxt = P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'markdown', L[DEF]))
+  check(mdTxt.indexOf(LABEL_REQS[DEF]) < 0, 'markdown 注入文本不再要求「标签齐全」')
   // #619：三个后端（含 markdown）的注入文本里都不许再出现那份旧调色盘文案的任何特征片段，
   //   也不许印出 {paletteNote} 这种悬空标记 —— 原来这里是「markdown 含调色盘表指令」的正向断言，
   //   现在换成同强的反向断言；渲染用与上面全文比对同一套模板帧（promptText 内部按当前语言取模板，
@@ -287,12 +292,12 @@ async function main() {
   // 反向守卫（防删过头）：第 3 条里对 triage-labels.md 这个技能产物文件的提及必须留着 ——
   //   本票只拆「让 AI 去建颜色表」那一节，不拆「初始化后核对技能真实产物」这一句。
   check(mdTxt.indexOf('docs/agents/issue-tracker.md + triage-labels.md + domain.md') >= 0, 'markdown 注入文本仍保留技能产物核对句（triage-labels.md 是技能自己的文档，仍在；删的只是调色盘那一节）')
-  const ghTxt = P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'github', L.zh))
-  check(ghTxt.indexOf('确保仓库中技能所需标签齐全') >= 0, 'github 注入文本保留标签齐全要求')
+  const ghTxt = P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'github', L[DEF]))
+  check(ghTxt.indexOf(LABEL_REQS[DEF]) >= 0, 'github 注入文本保留标签齐全要求')
   check(ghTxt.indexOf('/setup-matt-pocock-skills') === 0, '注入文本以手动命令 /setup-matt-pocock-skills 开头（手动输入与按钮两路共用同一模板）')
   // #655：布局那句必须落在注入文本里、且不留悬空标记；没传布局时按缺省布局填（不印出 {contextLayout} 这串字）
-  const ghLayoutTxt = P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'github', L.zh, 'multi'))
-  check(ghLayoutTxt.indexOf(L.zh[LAYOUT_KEY_OF.multi]) >= 0, 'github 注入文本里出现用户选的那一句布局结论')
+  const ghLayoutTxt = P.promptText('setupRun', P.setupRunParamsFrom(stubs, 'github', L[DEF], 'multi'))
+  check(ghLayoutTxt.indexOf(L[DEF][LAYOUT_KEY_OF.multi]) >= 0, 'github 注入文本里出现用户选的那一句布局结论')
   check(ghLayoutTxt.indexOf(LAYOUT_KEY_OF.multi) < 0, '注入文本里不许印出键名（正文只写人话）')
   for (const lang of ['zh', 'en']) {
     for (const b of BACKENDS) {

@@ -157,9 +157,12 @@ function stWith(rows: any[], extra?: any) {
 }
 function tipCount(text: string) { return created.filter((el) => el && el.type === TipStub && String(el.props.content) === text).length }
 function closedTipCount() { return tipCount('tip.detailClosedReadonly') }
-// #1669 期望的悬停整句：模板取自上面 TR_TEMPLATE，视图只负责把票号拼成 "#3、#9"；
-// 分隔符必须由 tr('tip.detailBlockedByJoin') 取，不许在视图里写死。
+// #1669 期望的悬停整句：模板取自上面 TR_TEMPLATE，视图只负责把票号用分隔符拼起来；
+// 分隔符必须由 tr('tip.detailBlockedByJoin') 取，不许在视图里写死 —— 期望句子的拼法也一样走词表，
+// 否则缺省语言一换（#18：中文逗号「、」→ 英文「, 」）门禁就会把正确实现判红。
+const BLOCK_JOIN = TR_TEMPLATE['tip.detailBlockedByJoin']
 const blockSentence = (ids: string) => TR_TEMPLATE['tip.detailBlockedBy'].replace('{n}', ids)
+const blockIds = (...numbers: number[]) => numbers.map((n) => '#' + n).join(BLOCK_JOIN)
 
 // W1：详情缺失、只剩关闭的列表快照 → 两颗动作按钮同进退地置灰
 {
@@ -300,7 +303,7 @@ const blockSentence = (ids: string) => TR_TEMPLATE['tip.detailBlockedBy'].replac
   check(topExec().props['aria-disabled'] === 'true', '关闭+被阻塞：主动作仍置灰')
   check(closedTipCount() === 2 && tipCount(blockSentence('#3')) === 0, '关闭+被阻塞：悬停只说「已关闭」，不再点名阻塞票')
 }
-// X6：多张阻塞票乱序 → 悬停里票号升序、顿号分隔
+// X6：多张阻塞票乱序 → 悬停里票号升序、分隔符取自词表
 {
   renderDetail(stWith([OPEN_ROW], {
     issueDetail: {
@@ -308,11 +311,11 @@ const blockSentence = (ids: string) => TR_TEMPLATE['tip.detailBlockedBy'].replac
       blockedBy: { nodes: [{ number: 12, state: 'OPEN' }, { number: 3, state: ' open ' }, { number: 9, state: 'Open' }] },
     },
   }))
-  check(tipCount(blockSentence('#3、#9、#12')) === 2, '多张阻塞票：悬停票号升序、以顿号分隔（分隔符来自词表）')
+  check(tipCount(blockSentence(blockIds(3, 9, 12))) === 2, '多张阻塞票：悬停票号升序、分隔符取自词表')
 }
 // X7：四位票号连排 → 整句完整进得去，视图不做截断
 {
-  const ids = '#1234、#5678、#9012'
+  const ids = blockIds(1234, 5678, 9012)
   renderDetail(stWith([OPEN_ROW], {
     issueDetail: {
       number: 7, effortId: '', state: 'OPEN', title: '打开的票',

@@ -30,7 +30,7 @@ let total = 0
 const ok = (cond: unknown, msg: string) => { total++; if (cond) console.log('  PASS ' + msg); else { failed = true; console.log('  FAIL ' + msg) } }
 
 // 中英词表两套键值表：动态 import 进来的是未标注模块，只收这两套，其余形状不约束。
-interface LocalePair { zh: Record<string, string>; en: Record<string, string> }
+interface LocalePair { zh: Record<string, string>; en: Record<string, string>; langDefault: string }
 // #1292：提示词数据（PROMPTS 那张表与词表默认值）的真身搬进了 config/prompts/ 下的 YAML，
 //   客户端里那几张表由 scripts/generate-prompt-config.mts 现场生成到 src/client/kernel/prompt-data.ts，
 //   构建时把这份生成物拼在 prompts.js 前面（scripts/build.mts 的 KERNEL_MODULES 顺序：promptData → prompts）。
@@ -112,6 +112,9 @@ async function loadLocale(): Promise<LocalePair> {
   return {
     zh: Object.assign({}, P.L_PANEL.zh, F.L_FLOW.zh, W.L_WORD.zh, L.L_LABELS.zh, PG.L_PAGES.zh),
     en: Object.assign({}, P.L_PANEL.en, F.L_FLOW.en, W.L_WORD.en, L.L_LABELS.en, PG.L_PAGES.en),
+    // #18：缺省语言跟着语言清单走。生成物 locale-data 的 LANG_CONFIG 由 config/languages.yaml 生成，
+    //   本文件已经 import 这份生成物（上面那几个族都在它里面），所以不另开一条读 YAML 的路。
+    langDefault: String((PG as any).LANG_CONFIG.default || ''),
   }
 }
 async function loadGuide(): Promise<any> {
@@ -162,7 +165,10 @@ async function main() {
   // 取占位符值时要显式喂 locale 字典：standalone 求值没有闭包里的 L，与 verify-setup-describe 同口径。
   const paramOf = (backend: string, layout: any, lang?: 'zh' | 'en') => mod.setupRunParamsFrom(MODULES, backend, (L[lang || 'zh'] || null), layout)
   // 用真 locale 把模板填成全文（与生产 promptText 的替换算法同一形状）
-  const textOf = (backend: string, layout: any, lang?: 'zh' | 'en') => String(mod.PROMPTS.setupRun[lang]).replace(/\{(\w+)\}/g, function (m, name) {
+  // #18：这份门禁不再假定界面是中文。生产路径取的是语言链落到的缺省语言（config/languages.yaml 的
+  //   default），沙箱里没有宿主语言快照，取到的就是它；所以「注入的文本长什么样」这一族金样跟着它走。
+  const DEF = String((L as any).langDefault || 'zh') as 'zh' | 'en'
+  const textOf = (backend: string, layout: any, lang?: 'zh' | 'en') => String(mod.PROMPTS.setupRun[lang || DEF]).replace(/\{(\w+)\}/g, function (m, name) {
     const p = paramOf(backend, layout, lang)
     return Object.prototype.hasOwnProperty.call(p, name) ? String(p[name]) : m
   })
@@ -220,7 +226,7 @@ async function main() {
     ok(kind === 'setup', tag + ' → 仍然注入全文（实得 ' + kind + '）')
     ok(injected.length === before + 1, tag + ' → 确实注入了，不是「什么都没发生」')
     ok(injected[injected.length - 1].indexOf('{contextLayout}') < 0, tag + ' → 注入的全文里没有悬空占位符')
-    ok(injected[injected.length - 1].indexOf(L.zh['setup.layout.single']) >= 0, tag + ' → 没选过布局时按缺省「根目录一份 GLOSSARY.md」填，不留空')
+    ok(injected[injected.length - 1].indexOf(L[DEF]['setup.layout.single']) >= 0, tag + ' → 没选过布局时按缺省「根目录一份 GLOSSARY.md」填，不留空')
   }
 
   console.log('== #655 · 选过之后注入全文，两种布局是两句不同的话 ==')
@@ -238,7 +244,7 @@ async function main() {
         const want = L[lang]['setup.layout.' + layout]
         ok(want && want.length > 0, 'locale ' + lang + ' 有 setup.layout.' + layout + ' 这一句')
         ok(paramOf(backend, layout, lang).contextLayout === want, '占位符取值来自用户选的布局（' + lang + '）')
-        if (lang === 'zh') ok(dec.text.indexOf(want) >= 0, '布局已选 ' + layout + ' · ' + backend + ' → 注入文本里就是这一句结论')
+        if (lang === DEF) ok(dec.text.indexOf(want) >= 0, '布局已选 ' + layout + ' · ' + backend + ' → 注入文本里就是这一句结论')
         seen[backend + '|' + layout] = paramOf(backend, layout, 'zh').contextLayout
       }
     }
@@ -287,7 +293,7 @@ async function main() {
   const n0 = injected.length
   ok(mod.injectSetupDecision(st1, 'github') === 'setup', '选定布局后注入决策返回 setup')
   ok(injected.length === n0 + 1, '注入恰好一次（不重复注入）')
-  ok(injected[injected.length - 1] === textOf('github', 'multi', 'zh'), '注入的全文与金样逐字相同')
+  ok(injected[injected.length - 1] === textOf('github', 'multi', DEF), '注入的全文与金样逐字相同')
   const n1 = injected.length
   ok(mod.injectSetupDecision(st1, 'github', { injectNow: false }) === 'setup', 'injectNow:false 时仍然给出 setup 这个决定（检查页那颗按钮要靠它）')
   ok(injected.length === n1, 'injectNow:false 时决策函数自己不注入（注入动作归调用处）')
@@ -309,13 +315,13 @@ async function main() {
     const nB = injected.length
     const kB = mod.injectSetupDecision(stB, 'github', { allowCard: true })
     ok(kB === 'setup', '检查页/切换那条路（不传 askLayout）：布局已答 → 直接注入（实得 ' + kB + '）')
-    ok(injected.length === nB + 1 && injected[injected.length - 1] === textOf('github', 'single', 'zh'), '那条路注入的全文与金样逐字相同（还是那句已答的结论）')
+    ok(injected.length === nB + 1 && injected[injected.length - 1] === textOf('github', 'single', DEF), '那条路注入的全文与金样逐字相同（还是那句已答的结论）')
     // ③ #1449：工作区那份答案现在只从快照回包来（浏览器本地表已删）；会话本次选择优先。
     const stC = stateOf({ backend: 'github' }) // 本次会话没答过
     stC.snapshot = { setupLayout: { layout: 'multi', pickedAt: 0 } }
     ok(mod.readSetupLayout(stC) === 'multi', '会话里没答过 → 读到快照回包里的那一份（multi）')
     ok(mod.injectSetupDecision(stC, 'github', { allowCard: true }) === 'setup', '记住过之后，检查页/切换那条路直接用快照那份注入（不再问）')
-    ok(injected[injected.length - 1].indexOf(L.zh['setup.layout.multi']) >= 0, '注入的就是那份（多上下文那一句）')
+    ok(injected[injected.length - 1].indexOf(L[DEF]['setup.layout.multi']) >= 0, '注入的就是那份（多上下文那一句）')
     const stC2 = stateOf({ backend: 'github' })
     stC2.snapshot = { setupLayout: 'multi' } // 兼容裸字符串形态的回包
     ok(mod.readSetupLayout(stC2) === 'multi', '快照里是裸字符串时也认（兼容老回包）')
@@ -345,7 +351,7 @@ async function main() {
   const n2 = injected.length
   ok(mod.consumePendingSetup(stRe) === true, '补发发生了一次')
   ok(injected.length === n2 + 1, '补发恰好多注入一次')
-  ok(injected[injected.length - 1] === textOf('github', 'multi', 'zh'), '补发用的是本次会话已选的布局（multi），不是缺省值')
+  ok(injected[injected.length - 1] === textOf('github', 'multi', DEF), '补发用的是本次会话已选的布局（multi），不是缺省值')
   ok(stRe.pendingSetupAfterPublish === false, '补发标记被消费掉，不会重复补发')
   ok(mod.consumePendingSetup(stRe) === false, '第二次调用不再补发（仅一次）')
 
@@ -376,7 +382,7 @@ async function main() {
   ok(stClickCard.setupLayoutCardOpen === true, '布局还没选 → 那张小卡确实开了')
   const stClickReady = stateOf({ backend: 'github', layout: 'single' })
   const clicked = await clickInitRow(stClickReady)
-  ok(clicked.length === 1 && clicked[0] === textOf('github', 'single', 'zh'), '布局已选、仓库就绪 → 注入的就是初始化全文（逐字相同）')
+  ok(clicked.length === 1 && clicked[0] === textOf('github', 'single', DEF), '布局已选、仓库就绪 → 注入的就是初始化全文（逐字相同）')
 
   console.log('== #655 · 兜底取值与入参容错 ==')
   ok(mod.setupRunParamsFrom([], undefined, L.zh, undefined).contextLayout === L.zh['setup.layout.single'], '布局参数缺失时按缺省布局填一句（不留空、不留标记）')
