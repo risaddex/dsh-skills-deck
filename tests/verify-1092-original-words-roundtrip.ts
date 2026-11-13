@@ -147,7 +147,7 @@ async function main() {
     '追加后面的原话不会改到前面的原话（第一条仍逐字相同）')
   // A2（用户 m00239 拍板）：票上真有原话时，读票回执的 notes 要有一句「原话是最高要求」的权威提示。
   const g2Notes = (g2.notes || []) as string[]
-  check(g2Notes.some((n) => n.indexOf('最高要求') >= 0),
+  check(g2Notes.some((n) => n.indexOf('the words of the user are the highest requirement') >= 0),
     '有原话的票：读回 notes 里带「用户的原话是这张票的最高要求」这句（实得 ' + JSON.stringify(g2Notes.slice(0, 2)) + '）')
 
   // ═══ ③ section='维护者原话' 直接取整区原文 ═══

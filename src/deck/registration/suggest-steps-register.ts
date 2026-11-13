@@ -161,7 +161,7 @@ export function makeSuggestRegistration(deps?: SuggestRegisterDeps): UnknownReco
           status: 'unsupported',
           tool: definition.name,
           reason: 'bad-args',
-          text: '这颗工具没给出回执，本回合的建议记不下来：请重调一次。',
+          text: 'This tool gave no receipt, so the suggestions of this turn cannot be recorded: call again.',
         }
       }
     },

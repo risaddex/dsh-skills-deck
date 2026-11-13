@@ -277,7 +277,7 @@ async function main() {
   {
     const r = await callTool('deck_issue_patch', { key: specKey, close: false })
     check(envelopeOk(r) && r.ok === false && r.reason === 'ai-tool-refused', '⑧ close:false（重开）→ 被拒（实得 ' + (r && r.reason) + '）')
-    check(String(r.text || '').indexOf('重开') >= 0 && String(r.text || '').indexOf('人') >= 0, '⑧ 回执说清重开只能由人做：' + String(r.text || '').slice(0, 110) + '…')
+    check(String(r.text || '').indexOf('Reopening is not on this AI tool surface') >= 0 && String(r.text || '').indexOf('a person has to do it') >= 0, '⑧ 回执说清重开只能由人做：' + String(r.text || '').slice(0, 110) + '…')
     check((r.items || []).length === 0, '⑧ 重开被拒在选后端之前：一步都没走')
     check((await stateOf(specKey)) === 'closed', '⑧ 规格仍是关闭态，没有被 AI 重开（实得 ' + (await stateOf(specKey)) + '）')
   }
@@ -313,7 +313,7 @@ async function main() {
     const pickAt = patchText.indexOf('openDeckSession({')
     check(reopenAt >= 0, '⑧ issue-patch 里有「close:false 直接拒绝」的那一支')
     check(pickAt > reopenAt, '⑧ 拒绝重开发生在打开会话之前（连后端都不连、一个字都不动）')
-    check(patchText.indexOf('重开不在这个 AI 工具面上') >= 0, '⑧ 拒绝文案说清「重开不在 AI 工具面上」')
+    check(patchText.indexOf('Reopening is not on this AI tool surface') >= 0, '⑧ 拒绝文案说清「重开不在 AI 工具面上」')
     // 关规格三道闸的规则码都在 spec-close-guard 这一份实现里（动态那一半已经在上面跑过）。
     const guardText = fs.readFileSync(path.join(ROOT, 'src', 'deck', 'shell', 'spec-close-guard.ts'), 'utf8')
     const rules = ['spec-close-children-open', 'spec-close-no-children', 'spec-close-no-comment', 'spec-close-unreadable', 'spec-close-children-unreadable']
@@ -358,7 +358,7 @@ async function main() {
   // ── ① 实施票必须挂规格：代码里那道拒绝也在 ──
   {
     const createText = fs.readFileSync(path.join(ROOT, 'src', 'deck', 'tools', 'issue-create.ts'), 'utf8')
-    check(createText.indexOf('实施票的父必须是规格') >= 0, '① deck_issue_create 的源码里写着「实施票的父必须是规格」')
+    check(createText.indexOf('the parent of a spec ticket must be a spec') >= 0, '① deck_issue_create 的源码里写着「实施票的父必须是规格」')
   }
 
   ws.cleanup()

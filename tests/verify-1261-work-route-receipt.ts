@@ -74,7 +74,7 @@ async function main() {
   fs.writeFileSync(diskFile, '{ 这不是 JSON', 'utf8')
   const notedAfterBad = await store.note({ rootKey: rootKey, sessionId: 's-a', sessionLabel: '', backend: 'markdown', ticketKey: '702', effortId: '', title: '乙票', action: 'report', source: 'reported' })
   check(notedAfterBad.ok === true && Array.isArray(notedAfterBad.warnings) && notedAfterBad.warnings.length === 1
-    && notedAfterBad.warnings[0].indexOf('读不出来') >= 0, '盘上文件坏了：当空账处理，这次照样记上，并在回执备注里说明')
+    && notedAfterBad.warnings[0].indexOf('The old file on disk could not be read') >= 0, '盘上文件坏了：当空账处理，这次照样记上，并在回执备注里说明')
   const disk3 = JSON.parse(fs.readFileSync(diskFile, 'utf8'))
   check(disk3.v === 3 && disk3.workers[0].entries.length === 1 && disk3.workers[0].entries[0].ticketKey === '702',
     '坏文件被整份重写成只含这一条的新账（旧条目不再复活）')
@@ -86,7 +86,7 @@ async function main() {
   check(read1.ok === true && read1.readout.entries.length === 2 && read1.readout.staleCount === 0 && read1.readout.collisions === undefined,
     '两条都在 30 天内、都现办、单会话无 collisions 键')
   check(typeof read1.readout.at === 'string' && read1.readout.at.endsWith('Z'), '回执时间是 ISO Z 串')
-  check(typeof read1.summary === 'string' && read1.summary.indexOf('工作路线摘要 · 本工作区在办 2 条（最近 2 条：') === 0,
+  check(typeof read1.summary === 'string' && read1.summary.indexOf('Work route summary: 2 entries in progress in this workspace (most recent 2: ') === 0,
     '摘要一句话（当前会话优先、按时间倒序）：' + read1.summary)
   // 原始会话 id 只进盘：回执全文没有，盘上有。
   check(JSON.stringify(read1.readout).indexOf('s-a') < 0 && JSON.stringify(disk3).indexOf('s-a') >= 0, '原始会话 id 只进盘不进回执')
@@ -96,7 +96,7 @@ async function main() {
     '31 天后再读：在办表空了，摘要也不写')
   const readStale: any = await store.read({ sessionId: 's-a', rootKey: rootKey, at: T0 + 2 * DAY })
   check(readStale.ok === true && readStale.readout.entries.length === 2 && readStale.readout.entries.every((e: any) => e.active === false)
-    && readStale.readout.staleCount === 2 && (readStale.summary || '').indexOf('其中 2 条超过 24 小时未动') >= 0,
+    && readStale.readout.staleCount === 2 && (readStale.summary || '').indexOf('2 of them have not moved for more than 24 hours') >= 0,
     '2 天后再读：两条都不现办，摘要里另说：' + readStale.summary)
   // 空账：读出来是空表，摘要为 null。
   const storeEmpty = bindingsMod.createWorkRouteBindings(Object.assign({ homeDir: fs.mkdtempSync(path.join(os.tmpdir(), 'wproute-1261e-')), now: () => T0 }, memFs(home1)))
@@ -310,7 +310,7 @@ async function main() {
     { workRouteNote: (i: unknown) => failWrite.note(i), workRouteRead: (i: unknown) => failWrite.read(i), now: () => T0 },
     'deck_issue_report', { sessionId: 's-a', workspaceKey: 'ws-1261', cwd: 'x' }, 'markdown', vFail)
   check(!vFail.data.workRoute && vFail.notes.length === 2 && vFail.notes[0] === '旧备注'
-    && vFail.notes[1].indexOf('工作路线这次没落上') === 0 && vFail.notes[1].indexOf('下一次写票会重新读盘再补上') >= 0,
+    && vFail.notes[1].indexOf('The work route did not record this time (write-failed)') === 0 && vFail.notes[1].indexOf('the next ticket write will read the disk again and fill in what is missing') >= 0,
     '写失败：备注写「这次没落上」，旧备注与其他格不动：' + JSON.stringify(vFail.notes[1]))
   const failRead = {
     workRouteNote: async () => ({ ok: true, ticketKey: '701', count: 1 }),
@@ -454,12 +454,12 @@ async function main() {
   const relEntries = (relRead && relRead.readout && relRead.readout.entries) || []
   check(relEntries.length === 1 && relEntries[0].ticketKey === '702',
     '释放成功：直读在办表里只剩另一条（回执不再带表，要看调 deck_work_route）')
-  check(vRel.notes.some((n: string) => n.indexOf('已把票 701 从本会话的工作路线里释放掉') === 0 && n.indexOf('还剩 1 条在办') >= 0),
+  check(vRel.notes.some((n: string) => n.indexOf('Ticket 701 was released from the work route of this session') === 0 && n.indexOf('1 entries are still in progress in this session') >= 0),
     '释放成功：备注写明删掉的是哪张票、本会话还剩几条：' + JSON.stringify(vRel.notes))
   // 再释放同一条：备注说本来就没有，不冒充「删掉了」。
   const vRel2: any = { status: 'ok', release: true, data: { key: '701' }, notes: [] }
   await recordMod.recordWorkRoute(deps6, 'deck_issue_report', { sessionId: 's-r', workspaceKey: rk6, cwd: 'x' }, 'markdown', vRel2)
-  check(vRel2.notes.some((n: string) => n.indexOf('本来就不在本会话的工作路线里') >= 0), '再释放同一条：备注说本来就没有（不冒充删掉）')
+  check(vRel2.notes.some((n: string) => n.indexOf('was not in the work route of this session in the first place') >= 0), '再释放同一条：备注说本来就没有（不冒充删掉）')
   // 建过票的票不能释放：回执必须说清、且在办表里仍然看得到（#1349）。
   await store6.note({ rootKey: rk6, sessionId: 's-r', sessionLabel: '', backend: 'markdown', ticketKey: '705', effortId: '', title: '己票', action: 'create', source: 'auto' })
   const vRelBlocked: any = { status: 'ok', release: true, data: { key: '705', title: '己票' }, notes: [] }
@@ -467,7 +467,7 @@ async function main() {
   const blockedRead: any = await store6.read({ sessionId: 's-r', rootKey: rk6, at: T0 })
   const blockedEntries = ((blockedRead && blockedRead.readout && blockedRead.readout.entries) || []).filter((e: any) => e.ticketKey === '705')
   check(blockedEntries.length === 1
-    && vRelBlocked.notes.some((n: string) => n.indexOf('有过实际处理') >= 0 && n.indexOf('不能从工作路线里释放') >= 0 && n.indexOf('只用来撤销从没处理过的误报') >= 0),
+    && vRelBlocked.notes.some((n: string) => n.indexOf('was actually worked on in this session') >= 0 && n.indexOf('the rules do not allow releasing it from the work route') >= 0 && n.indexOf('release only takes back a report of a ticket that was never worked on') >= 0),
     '建过票的票释放：备注说明有过实际处理、不能释放，直读在办表里仍然有这张票：' + JSON.stringify(vRelBlocked.notes))
   // release:false 与不带 release 都是正常上报。
   const vRelFalse: any = { status: 'ok', release: false, data: { key: '703', effortId: '', title: '丙票' }, notes: [] }
@@ -478,7 +478,7 @@ async function main() {
   // 释放依赖缺席：不静默，备注写没释放掉。
   const vNoBind: any = { status: 'ok', release: true, data: { key: '702' }, notes: [] }
   await recordMod.recordWorkRoute({ workRouteNote: (i: unknown) => store6.note(i), workRouteRead: (i: unknown) => store6.read(i), now: () => T0 }, 'deck_issue_report', { sessionId: 's-r', workspaceKey: rk6, cwd: 'x' }, 'markdown', vNoBind)
-  check(vNoBind.notes.some((n: string) => n.indexOf('没释放掉（no-release-binding）') >= 0), '释放依赖缺席：备注写没释放掉（不静默跳过）')
+  check(vNoBind.notes.some((n: string) => n.indexOf('did not release this time (no-release-binding)') >= 0), '释放依赖缺席：备注写没释放掉（不静默跳过）')
   // 释放写盘失败：备注写没释放掉，票的条目还在。
   const home6f = fs.mkdtempSync(path.join(os.tmpdir(), 'wproute-1261xf-'))
   const store6f = bindingsMod.createWorkRouteBindings(Object.assign({ homeDir: home6f, now: () => T0 }, memFs(home6f)))
@@ -486,7 +486,7 @@ async function main() {
   const failRelStore = bindingsMod.createWorkRouteBindings({ homeDir: home6f, now: () => T0, ...memFs(home6f), writeFile: async () => { throw new Error('磁盘满了（探针）') } })
   const vRelFail: any = { status: 'ok', release: true, data: { key: '704' }, notes: [] }
   await recordMod.recordWorkRoute({ workRouteNote: (i: unknown) => failRelStore.note(i), workRouteRead: (i: unknown) => failRelStore.read(i), workRouteRelease: (i: unknown) => failRelStore.release(i), now: () => T0 }, 'deck_issue_report', { sessionId: 's-f', workspaceKey: 'ws-1261xf', cwd: 'x' }, 'markdown', vRelFail)
-  check(vRelFail.notes.some((n: string) => n.indexOf('没释放掉（write-failed）') >= 0), '释放写盘失败：备注写没释放掉（票的工作条目还留着）')
+  check(vRelFail.notes.some((n: string) => n.indexOf('did not release this time (write-failed)') >= 0), '释放写盘失败：备注写没释放掉（票的工作条目还留着）')
   // 释放后重新上报同一张票：恢复且只有一条。
   const vBack: any = { status: 'ok', data: { key: '701', effortId: '', title: '甲票回来了' }, notes: [] }
   await recordMod.recordWorkRoute(deps6, 'deck_issue_report', { sessionId: 's-r', workspaceKey: rk6, cwd: 'x' }, 'markdown', vBack)
@@ -501,8 +501,8 @@ async function main() {
     workRouteRelease: async () => ({ ok: false, reason: 'readback-failed' }),
     now: () => T0,
   }, 'deck_issue_report', { sessionId: 's-r', workspaceKey: rk6, cwd: 'x' }, 'markdown', vReadbackFail)
-  check(vReadbackFail.notes.some((n: string) => n.indexOf('释放没核对上（readback-failed）') >= 0)
-    && !vReadbackFail.notes.some((n: string) => n.indexOf('工作条目还留着') >= 0),
+  check(vReadbackFail.notes.some((n: string) => n.indexOf('The release of the work route was not confirmed (readback-failed)') >= 0)
+    && !vReadbackFail.notes.some((n: string) => n.indexOf('is still there') >= 0),
     '释放写后读回失败：备注说删除已写进盘里、不说「条目还留着」（实得 ' + JSON.stringify(vReadbackFail.notes) + '）')
   // 读这一支缺席：不静默，备注写带不出在办表。
   const vNoRead: any = { status: 'ok', release: true, data: { key: '702' }, notes: [] }
@@ -511,7 +511,7 @@ async function main() {
     workRouteRelease: (i: unknown) => store6.release(i),
     now: () => T0,
   }, 'deck_issue_report', { sessionId: 's-r', workspaceKey: rk6, cwd: 'x' }, 'markdown', vNoRead)
-  check(vNoRead.notes.some((n: string) => n.indexOf('已把票 702 从本会话的工作路线里释放掉') === 0), '释放不再依赖读（#1561 起回执不带表，不带读依赖照样释放并留备注）')
+  check(vNoRead.notes.some((n: string) => n.indexOf('Ticket 702 was released from the work route of this session') === 0), '释放不再依赖读（#1561 起回执不带表，不带读依赖照样释放并留备注）')
   const noReadAfter: any = await store6.read({ sessionId: 's-r', rootKey: rk6, at: T0 })
   check(!(((noReadAfter && noReadAfter.readout && noReadAfter.readout.entries) || []) as any[]).some((e: any) => e.ticketKey === '702'),
     '不带读依赖的释放确实删掉了 702')

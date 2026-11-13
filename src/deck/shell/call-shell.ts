@@ -106,7 +106,7 @@ export function receiptCost(estimate: unknown, actual: unknown, admit: unknown, 
   const notes = warns.map(str).filter(function (s) { return s.length > 0 })
   const first = str(quotaNote)
   if (first) notes.unshift(first)
-  if (notes.length > 0) cost.note = notes.join('；')
+  if (notes.length > 0) cost.note = notes.join('; ')
   return cost
 }
 

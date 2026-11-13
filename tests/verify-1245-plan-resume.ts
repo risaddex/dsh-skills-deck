@@ -120,7 +120,7 @@ async function main() {
     check((v2.data && v2.data.planId) === id1, '同一份输入第二次得同一自动标识')
     check(tracker.tickets.size === n1, '第二次零新建（' + n1 + ' 票不变）')
     const notes2 = ((v2.notes || []) as string[]).join('\n')
-    check(/自动计划标识/.test(notes2) || /planId/.test(v2.text || ''), '回执带续跑指引')
+    check(/automatic plan identifier/.test(notes2) || /planId/.test(v2.text || ''), '回执带续跑指引')
   }
 
   // —— ② 同计划标识续跑零重复：先紧预算部分成功，再足预算续跑 ——

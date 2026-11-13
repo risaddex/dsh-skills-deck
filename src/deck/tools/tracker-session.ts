@@ -94,7 +94,7 @@ async function fallbackAdmit(input: UnknownRecord): Promise<UnknownRecord> {
   const model = (input.budget || {}) as UnknownRecord;
   const reading = (input.reading || {}) as UnknownRecord;
   const writes = ['create', 'close', 'reopen', 'comment', 'update', 'setLabels', 'setAssignees', 'setParent', 'setBlockedBy'];
-  if (writes.indexOf(op) >= 0 && input.canWrite === false) return { allowed: false, kind: 'rate-limit', reason: 'hard-cap', message: '硬顶：这次调用没有写权限，写操作直接拒绝。' };
+  if (writes.indexOf(op) >= 0 && input.canWrite === false) return { allowed: false, kind: 'rate-limit', reason: 'hard-cap', message: 'Hard cap: this call has no write permission, so the write is refused outright.' };
   if (!reading || reading.known === false) return { allowed: true, reason: 'unknown-reading' };
   if (model.kind === 'off-network' || reading.kind === 'off-network') return { allowed: true, reason: 'off-network' };
   const levels: Array<{ remaining: number; limit: number }> = [];
@@ -107,7 +107,7 @@ async function fallbackAdmit(input: UnknownRecord): Promise<UnknownRecord> {
   }
   // #1527：保底线改成服务端上限的 5%（以前是本桶份额的 30%），文案照实报服务端剩余与保底，不让人猜。
   for (const level of levels) {
-    if (num(level.remaining) <= aiToolFloor(num(level.limit))) return { allowed: false, kind: 'rate-limit', reason: 'exhausted', message: '额度见底：服务端还剩 ' + num(level.remaining) + '（上限 ' + num(level.limit) + '，保底 ' + aiToolFloor(num(level.limit)) + '），这次先不执行。' };
+    if (num(level.remaining) <= aiToolFloor(num(level.limit))) return { allowed: false, kind: 'rate-limit', reason: 'exhausted', message: 'Quota exhausted: the server still has ' + num(level.remaining) + ' (limit ' + num(level.limit) + ', floor ' + aiToolFloor(num(level.limit)) + '), so this call is not executed now.' };
   }
   return { allowed: true, reason: 'sufficient' };
 }
@@ -128,11 +128,11 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
   const registry = (d.registry || {}) as UnknownRecord;
   const gate = (d.gate || {}) as UnknownRecord;
   const cwd = str(s.cwd);
-  if (cwd.trim() === '') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' };
+  if (cwd.trim() === '') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: 'This workspace is not ready yet (the directory has not been recognised), wait until the panel recognises the workspace and try again.' };
   const handle = (typeof d.handleFor === 'function') ? ((d.handleFor(s) || { cwd: cwd }) as UnknownRecord) : { cwd: cwd };
   try { if (typeof d.ensureReading === 'function') await d.ensureReading(cwd, s.workspaceKey); } catch { /* 保读数永不拦路，保不住就照旧往下走。 */ }
   const useOutlet = (typeof d.decideBackend === 'function') ? d.decideBackend as (cwd: string, ctx: unknown) => Promise<unknown> : null;
-  if (!useOutlet) return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '判定出口这次没装上，我没往下做。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' };
+  if (!useOutlet) return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The backend decision outlet was not wired this time, so I did not continue. Retry once; if it still fails, report this message as-is to the plugin maintainer.' };
   const directSelect = async (h: unknown, actx?: unknown): Promise<unknown> => {
     const a = (actx || null) as UnknownRecord | null;
     return (registry.select as (h: unknown, c: unknown) => Promise<unknown>)(h, Object.assign({}, backendCtxNow(d), { cwd: cwd, caller: (a && a.caller) || DECK_TOOL_KIND, signal: (a && a.signal) || undefined }));
@@ -144,7 +144,7 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
       readWorkspaceFileText: d.readWorkspaceFileText, parseWorkspaceFile: d.parseWorkspaceFile,
       readDeclarationId: d.readDeclarationId, caller: DECK_TOOL_KIND, autodetect: directSelect, logCtx: d.log,
     })) as UnknownRecord | null;
-  } catch (e) { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '选后端这一步的后端实现抛错了，我没往下做。' }; }
+  } catch (e) { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The backend implementation threw while selecting the backend, so I did not continue.' }; }
   let selection: UnknownRecord | null = null;
   try {
     selection = (selectionFromOutlet(outlet as never, function (id: string): never {
@@ -154,11 +154,11 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
   const source = str(selection && selection.source);
   if (!selection || selection.backendId == null) {
     const pending = !!(selection && selection.pending);
-    return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: pending ? '后端还没定下来（自动识别有超时未决），先在面板上选一次后端。' : '这个工作区还没有后端（既没有手动选过，也没有识别到锚文件）。先在面板上选一个后端。' };
+    return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: pending ? 'The backend is not decided yet (auto-detection timed out with an open question), so select a backend in the panel first.' : 'This workspace has no backend yet (none was selected by hand and no anchor file was recognised). Select a backend in the panel first.' };
   }
   if (source !== 'explicit' && ((Array.isArray(selection.multiHit) && (selection.multiHit as unknown[]).length > 1) || selection.pending)) {
     const mh = Array.isArray(selection.multiHit) && (selection.multiHit as unknown[]).length > 1;
-    return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: mh ? '这个工作区同时被 ' + (selection.multiHit as unknown[]).length + ' 个后端认出，请在面板中选定后再试。' : '后端还没定下来，先在面板上选一次后端。' };
+    return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: mh ? 'This workspace is recognised by ' + (selection.multiHit as unknown[]).length + ' backends at the same time; select one in the panel and try again.' : 'The backend is not decided yet; select a backend in the panel first.' };
   }
   const backendId = str(selection.backendId);
   let model: UnknownRecord = {};
@@ -188,10 +188,10 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
   if (offline) {
     // 离网后端没有额度可言：剩余额度探针在这里没有意义（无读数的 0 不能当成耗尽，见 #1435），
     // 所以只认调用前估算的单次硬顶；每小时提醒线越线时照常执行，提醒句留在估算 text 里（#1527）。
-    if (est.withinCallCap === false) return { ok: false, reason: REFUSAL_REASONS.OVER_CAP, text: str(est.text) || '这次调用超过了插件给 AI 工具设的硬顶，我没有动手。' };
+    if (est.withinCallCap === false) return { ok: false, reason: REFUSAL_REASONS.OVER_CAP, text: str(est.text) || 'This call exceeds the hard cap the plugin sets for AI tools, so I did not act.' };
     admit = { admitted: true, points: admitVolumes.points, requests: admitVolumes.requests, childTickets: admitVolumes.childTickets, reason: 'off-network' };
   } else {
-    if (typeof gate.admitAiTool !== 'function') return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '额度闸这次没装上，我没往下做。' };
+    if (typeof gate.admitAiTool !== 'function') return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The quota gate was not wired this time, so I did not continue.' };
     let lastText: string = '';
     let lastReason: string = '';
     let failedAt: string = '';
@@ -201,7 +201,7 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
       let probe: UnknownRecord;
       try {
         probe = (await gate.admitAiTool({ points: 0, requests: 1, childTickets: 0 }, { workspaceKey: s.workspaceKey, bucket: bucket, backendId: backendId })) as UnknownRecord;
-      } catch { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '选后端这一步的后端实现抛错了，我没往下做。' }; }
+      } catch { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The backend implementation threw while selecting the backend, so I did not continue.' }; }
       if (!probe || probe.admitted !== true) {
         lastText = str(probe && probe.text); lastReason = str(probe && probe.reason); failedAt = 'probe';
         if (lastReason === 'ai-tool-below-remaining') continue;
@@ -210,7 +210,7 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
       let volumesOk: UnknownRecord;
       try {
         volumesOk = (await gate.admitAiTool(admitVolumes, { workspaceKey: s.workspaceKey, kind: 'tool-batch', bucket: bucket, backendId: backendId })) as UnknownRecord;
-      } catch { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '选后端这一步的后端实现抛错了，我没往下做。' }; }
+      } catch { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The backend implementation threw while selecting the backend, so I did not continue.' }; }
       if (volumesOk && volumesOk.admitted === true) { admit = volumesOk; passed = true; break; }
       lastText = str(volumesOk && volumesOk.text); lastReason = str(volumesOk && volumesOk.reason); failedAt = 'admit';
       if (lastReason === 'ai-tool-below-remaining') continue;
@@ -218,8 +218,8 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
     }
     if (!passed) {
       // 文案取闸给的 text（见底时会写「哪种额度 / 约几点恢复 / 还剩多少」），没有才退回原因代号。
-      if (failedAt === 'admit') return { ok: false, reason: REFUSAL_REASONS.OVER_CAP, text: lastText || '这次调用超过了插件给 AI 工具设的硬顶，我没有动手。' };
-      return { ok: false, reason: REFUSAL_REASONS.GATE_DEFER, text: '这一次选后端被闸推迟了（' + (lastText || lastReason || '额度不够了') + '），先不做。' };
+      if (failedAt === 'admit') return { ok: false, reason: REFUSAL_REASONS.OVER_CAP, text: lastText || 'This call exceeds the hard cap the plugin sets for AI tools, so I did not act.' };
+      return { ok: false, reason: REFUSAL_REASONS.GATE_DEFER, text: 'This backend selection was deferred by the gate (' + (lastText || lastReason || 'not enough quota') + '), so it is not done now.' };
     }
   }
   const getCachedReading = (typeof d.getCachedReading === 'function') ? d.getCachedReading as () => unknown : async function (): Promise<unknown> { return { known: false, reason: 'not-measured' }; };
@@ -235,17 +235,17 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
       // #1627：deck 工具这条路记 'ai-tool' 档、发起人是工具调用、用途是普通取数；
       // 逐笔钩子按依赖袋原样递给管线（盒子没装钩子就没有观察，行为与从前一字不差）。
       caller: DECK_TOOL_KIND, account: 'ai-tool', purpose: '', opHooks: d.opHooks as never,
-      canWrite: true, canWriteReason: '1442 在工具侧保留自有写检查，会话写权限先按就绪透传，1444 再收紧。',
+      canWrite: true, canWriteReason: '1442 keeps the write check on the tool side; the session write permission is passed through as ready for now and tightened in 1444.',
       resolveSelection: async function () { return snapshot as never; },
     })) as { ok: boolean; session?: TrackerSession; reason?: string; detail?: string };
-  } catch (e) { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '选后端这一步的后端实现抛错了，我没往下做。' }; }
+  } catch (e) { return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The backend implementation threw while selecting the backend, so I did not continue.' }; }
   if (!opened || opened.ok !== true || !opened.session) {
     const reason = str(opened && opened.reason);
     const detail = str(opened && opened.detail);
-    if (reason === 'multi-match') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: '这个工作区同时被多个后端认出，请在面板中选定后再试。' };
-    if (reason === 'workspace-not-ready') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' };
-    if (reason === 'no-backend') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: '这个工作区还没有后端（既没有手动选过，也没有识别到锚文件）。先在面板上选一个后端。' };
-    return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: '选中的后端还没就绪（' + (detail || reason || '没说清原因') + '），我没往下做。' };
+    if (reason === 'multi-match') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: 'This workspace is recognised by several backends at the same time; select one in the panel and try again.' };
+    if (reason === 'workspace-not-ready') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: 'This workspace is not ready yet (the directory has not been recognised), wait until the panel recognises the workspace and try again.' };
+    if (reason === 'no-backend') return { ok: false, reason: REFUSAL_REASONS.NO_BACKEND, text: 'This workspace has no backend yet (none was selected by hand and no anchor file was recognised). Select a backend in the panel first.' };
+    return { ok: false, reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The selected backend is not ready yet (' + (detail || reason || 'no reason given') + '), so I did not continue.' };
   }
   // 仓库标识补全：判定出口带的先用；缺 refId 时与刷新后台走同一份补齐
   // （src/tracker/session/repo-ref.ts）：先问会话的 describe（本地 Markdown 在这里就能拿到工作区
@@ -311,9 +311,9 @@ interface BudgetFacts {
 }
 
 /** 额度读数还没同步上来时的说明（人话，不写哨兵）：未知不拦事，但这一笔不按额度记账。 */
-const NOTE_READING_UNKNOWN = '额度读数还没同步上来，这次不按额度记账。';
+const NOTE_READING_UNKNOWN = 'The quota reading has not synced yet, so this call is not accounted against the quota.';
 /** 离网后端的说明：本来就没有额度这回事，既不记条数也不记点数。 */
-const NOTE_OFF_NETWORK = '本后端不需要额度（离网口径）。';
+const NOTE_OFF_NETWORK = 'This backend needs no quota (off-network rule).';
 
 /**
  * 按后端口径解释一次读数，答「这一笔的账该怎么写」。
@@ -430,7 +430,7 @@ export async function callDeckSession(req: DeckCallRequest, work: (ctx: unknown)
     // 宿主那层的失败与房间日志靠同一个 opId 才对得上，否则这一笔在两个地方各说各话。
     noteToolReceipt(d, nowFn, { tool: tool, opId: opId, status: DECK_STATUS.UNSUPPORTED, latencyMs: Math.max(0, nowFn() - startedAt), estRequests: num(est.requests), estPoints: num(est.points), requests: 0, points: 0, remaining: null, tier: null, backendId: backendId });
     return envelope(tool, DECK_STATUS.UNSUPPORTED, {
-      reason: REFUSAL_REASONS.BACKEND_THREW, text: '后端实现抛错了（我没有把它抛给 AI，按三态返回）：' + String(((e || {}) as UnknownRecord).message || e).slice(0, 300),
+      reason: REFUSAL_REASONS.BACKEND_THREW, text: 'The backend implementation threw (I did not rethrow it to the AI; it is returned as a refusal): ' + String(((e || {}) as UnknownRecord).message || e).slice(0, 300),
       workspace: { root: str(s.cwd), key: str(s.workspaceKey) },
       backend: { id: backendId, source: opened.source },
       errorHash: eh, cost: { estimated: est },

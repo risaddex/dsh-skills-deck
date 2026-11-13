@@ -159,11 +159,11 @@ export function createWorkPathStore(deps?: WorkPathStoreDeps) {
       if (raw.text !== null) {
         const loaded = loadLedgerFromText(raw.text);
         ledger = loaded.ledger;
-        if (loaded.bad) { readOk = false; readWhy = 'bad-shape'; warnings.push('盘上的旧文件读不出来（形状不认识或解析失败），这次按空账重写了整份。'); }
+        if (loaded.bad) { readOk = false; readWhy = 'bad-shape'; warnings.push('The old file on disk could not be read (its shape was not recognized, or it failed to parse), so the whole record was rewritten from an empty one.'); }
       } else if (raw.failed) {
         readOk = false;
         readWhy = 'read-failed';
-        warnings.push('盘上的旧文件这次没读出来（读文件失败），这次按空账重写了整份。');
+        warnings.push('The old file on disk was not read this time (reading the file failed), so the whole record was rewritten from an empty one.');
       }
       // 读不出来也照样往下写 —— 链是一份可以重建的缓存，宁可重写整份也不能因为一份坏文件就记不上。
 
@@ -182,7 +182,7 @@ export function createWorkPathStore(deps?: WorkPathStoreDeps) {
         }
         const oldBackend = ledger.backend;
         ledger = emptyLedger();
-        warnings.push('工作区换了后端（' + oldBackend + ' → ' + backend + '），旧记录已改名留档，新账从空开始。');
+        warnings.push('The workspace switched backends (' + oldBackend + ' → ' + backend + '), so the old record was renamed and kept, and the new record starts empty.');
       }
 
       // 三、合并 + 裁剪。清掉的条目数拿来做一条清理日志；记录事件的 ok 说的是「旧文件读得出来吗」。

@@ -23,9 +23,9 @@ import { evidenceFields, failureOf } from './receipt-reason.js'
 export function textWriteVerifyItem(arg: { key: string; plan: BodyWritePlan; body: string | null; failure: string; outOfBudget: boolean; evidence?: Record<string, string> }): Record<string, unknown> {
   const failedItem = (reason: string, ev: Record<string, string>) => Object.assign({ key: arg.key, step: 'text', status: 'failed', reason: reason }, ev)
   const evidence = (ev: ReturnType<typeof failureOf>) => evidenceFields(ev, 'errorKind')
-  if (arg.outOfBudget) return failedItem('正文写动作回了成功，但剩余额度不够读回核对：别当成已经写好，稍后读一次现状确认。', evidence(failureOf(null, 'write', 'budget')))
+  if (arg.outOfBudget) return failedItem('The body write reported success, but the remaining quota was not enough for a read-back check: do not treat it as written, read the current state later to confirm.', evidence(failureOf(null, 'write', 'budget')))
   if (arg.failure) return failedItem(arg.failure, arg.evidence || evidence(failureOf(null, 'write', 'unconfirmed')))
-  if (arg.body === null) return failedItem('正文写动作回了成功，但写后没读回正文：写进去的对不对不知道，别当成已经写好。', evidence(failureOf(null, 'read', 'unconfirmed')))
+  if (arg.body === null) return failedItem('The body write reported success, but the body was not read back afterwards: there is no way to know whether what was written is right, so do not treat it as written.', evidence(failureOf(null, 'read', 'unconfirmed')))
   const problem = bodyWriteReadbackProblem(arg.plan, arg.body)
   if (problem) return failedItem(problem, evidence(failureOf(null, 'write', 'verify')))
   const item: Record<string, unknown> = { key: arg.key, step: 'text', status: 'ok', fields: bodyWriteFields(arg.plan) }
@@ -42,9 +42,9 @@ export async function textWriteVerify(arg: { key: string; plan: BodyWritePlan; o
   if (arg.outOfBudget) return textWriteVerifyItem({ key: arg.key, plan: arg.plan, body: null, failure: '', outOfBudget: true })
   const rawBack = await arg.read()
   const backTimeout = timeoutMessage(rawBack as never)
-  if (backTimeout) return textWriteVerifyItem({ key: arg.key, plan: arg.plan, body: null, failure: '正文写动作回了成功，但读回核对超时（' + String(backTimeout).slice(0, 160) + '）：别当成已经写好，稍后读一次现状确认。', outOfBudget: false, evidence: evidenceFields(failureOf({ kind: 'timeout' }, 'read'), 'errorKind') })
+  if (backTimeout) return textWriteVerifyItem({ key: arg.key, plan: arg.plan, body: null, failure: 'The body write reported success, but the read-back check timed out (' + String(backTimeout).slice(0, 160) + '): do not treat it as written, read the current state later to confirm.', outOfBudget: false, evidence: evidenceFields(failureOf({ kind: 'timeout' }, 'read'), 'errorKind') })
   const back = must(rawBack) as { ok?: boolean; data?: { body?: unknown }; error?: { message?: unknown } } | null | undefined
   const body = (back && back.ok === true && back.data && typeof back.data.body === 'string') ? back.data.body : null
-  if (body === null) return textWriteVerifyItem({ key: arg.key, plan: arg.plan, body: null, failure: '正文写动作回了成功，但写后没读回正文（后端原话：' + String((back && back.error && back.error.message) || '没给出原因').slice(0, 160) + '）：写进去的对不对不知道，别当成已经写好。', outOfBudget: false, evidence: evidenceFields(failureOf(null, 'read', 'unconfirmed'), 'errorKind') })
+  if (body === null) return textWriteVerifyItem({ key: arg.key, plan: arg.plan, body: null, failure: 'The body write reported success, but the body was not read back afterwards (the backend\'s exact words: ' + String((back && back.error && back.error.message) || 'it gave no reason').slice(0, 160) + '): there is no way to know whether what was written is right, so do not treat it as written.', outOfBudget: false, evidence: evidenceFields(failureOf(null, 'read', 'unconfirmed'), 'errorKind') })
   return textWriteVerifyItem({ key: arg.key, plan: arg.plan, body: body, failure: '', outOfBudget: false })
 }

@@ -265,7 +265,7 @@ async function main() {
     await sleep(30)
     const rB = await planB.run(execOf(), { title: '图5', children: kids, planId: 'p-mutex-1' })
     const vB = rB.value || rB
-    check(vB.status === 'unsupported' && /并发|同时|进行中/.test(String(vB.text || '')), '并发第二跑被拒并说清（实得 ' + vB.status + '）')
+    check(vB.status === 'unsupported' && /in another execution|in progress/.test(String(vB.text || '')), '并发第二跑被拒并说清（实得 ' + vB.status + '）')
     const rA = await pA
     check((rA.value || rA).status !== 'unsupported' || true, '第一跑不受影响（实得 ' + ((rA.value || rA).status) + '）')
   }

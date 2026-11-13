@@ -64,7 +64,7 @@ export function parseStatusChoice(args: UnknownRecord): { ok: true; choice: Stat
   if (raw === undefined || raw === null) return { ok: true, choice: null }
   const value = String(raw).trim().toLowerCase()
   if (value === 'visible' || value === 'hidden') return { ok: true, choice: value }
-  return { ok: false, problem: 'resolveStatus 只接受 visible 或 hidden（告诉这次按可见 Status 行还是按隐藏 triage 标签归一）：这次给的是「' + String(raw) + '」。' }
+  return { ok: false, problem: 'resolveStatus only accepts visible or hidden (it says whether this call normalizes by the visible Status line or by the hidden triage label): this call gave "' + String(raw) + '".' }
 }
 
 /** 读一次票，把状态冲突与当前标签带回来。读失败不猜：超时与其它错误分开报。 */
@@ -76,7 +76,7 @@ export async function readStatusConflict(t: unknown, repo: unknown, key: string,
   const result = must(raw) as UnknownRecord | null
   if (!result || result.ok !== true) {
     const error = (result && result.error) as UnknownRecord | undefined
-    return { ok: false, kind: 'error', message: String((error && error.message) || '后端没给出原因').slice(0, 300) }
+    return { ok: false, kind: 'error', message: String((error && error.message) || 'the backend gave no reason').slice(0, 300) }
   }
   const ticket = (result.data || {}) as UnknownRecord
   const conflict = ticket.statusConflict
@@ -100,8 +100,8 @@ export function chosenStatusOf(conflict: StatusConflict, choice: StatusChoice): 
 
 /** 冲突的人话摘要：把两边各写了什么说清，回执与日志都直接用这一句。 */
 export function conflictNote(conflict: StatusConflict): string {
-  const hidden = Array.isArray(conflict.hidden) ? conflict.hidden.join('、') : ''
-  return '这张票的可见 Status 行写的是「' + String(conflict.visible || '') + '」，隐藏 DSH-LABELS 里的 triage 标签写的是「' + hidden + '」：两处冲突，读侧暂时按可见行回答。'
+  const hidden = Array.isArray(conflict.hidden) ? conflict.hidden.join(', ') : ''
+  return 'The visible Status line of this ticket says "' + String(conflict.visible || '') + '", and the triage label inside the hidden DSH-LABELS says "' + hidden + '": the two places conflict, so the read side answers by the visible line for now.'
 }
 
 /**
@@ -114,11 +114,11 @@ export function explicitMismatchProblem(args: UnknownRecord, conflict: StatusCon
   const other = chosen === String(conflict.visible || '') ? String(hidden[0] || '') : String(conflict.visible || '')
   const picked: string[] = labelNames(args.addLabels).map((name) => name.toLowerCase())
   if (other && picked.indexOf(other.toLowerCase()) >= 0) {
-    return '这次 resolveStatus 选的是「' + chosen + '」，但 addLabels 里点名了另一侧的状态「' + other + '」：两处不一致，请只留一处。'
+    return 'This call set resolveStatus to "' + chosen + '", but addLabels names the state of the other side, "' + other + '": the two places disagree, so keep only one.'
   }
   const bodyStatus = bodyStatusLineOf(args.body)
   if (bodyStatus !== null && bodyStatus !== chosen.toLowerCase()) {
-    return '这次 resolveStatus 选的是「' + chosen + '」，但正文里的 Status 行写的是「' + bodyStatus + '」：两处不一致，请只留一处。'
+    return 'This call set resolveStatus to "' + chosen + '", but the Status line in the body says "' + bodyStatus + '": the two places disagree, so keep only one.'
   }
   return null
 }
@@ -173,7 +173,7 @@ export function conflictRefusal(
   estimate: { requests?: unknown; points?: unknown },
 ): { value: UnknownRecord; claimed: { requests: number; points: number } } {
   const note = conflictNote(conflict)
-  const reason = note + '这一笔整次没写（没发评论、没改标签、没动状态）。要么先显式给 resolveStatus: visible 或 hidden 选一侧，要么直接按 data.retry.args 重试：它已把 resolveStatus 设成 visible。'
+  const reason = note + ' Nothing was written in this call (no comment was posted, no label was changed, no state was touched). Either give resolveStatus: visible or hidden explicitly to pick one side, or retry directly with data.retry.args: it has already set resolveStatus to visible.'
   return refusalReply(
     key,
     REFUSAL_REASONS.BAD_ARGS,
@@ -257,7 +257,7 @@ async function normalizeConflict(input: StatusGuardInput, chosen: string, confli
   if (failed) {
     return {
       ok: false,
-      reply: refusalReply(input.key, REFUSAL_REASONS.BACKEND_UNSUPPORTED, '先把状态归一时没成（原因在上面）：这一步没成就不往下写，避免半写。', {}, input.items, input.estimate, 1),
+      reply: refusalReply(input.key, REFUSAL_REASONS.BACKEND_UNSUPPORTED, 'Normalizing the state first did not succeed (the reason is above): when this step fails nothing further is written, so the call does not stop half way.', {}, input.items, input.estimate, 1),
     }
   }
   return { ok: true }
@@ -274,7 +274,7 @@ async function normalizeConflict(input: StatusGuardInput, chosen: string, confli
 export async function guardStatus(input: StatusGuardInput): Promise<StatusGuardResult> {
   const choiceParse = parseStatusChoice(input.args)
   if (!choiceParse.ok) {
-    return { ok: false, reply: refusalReply(input.key, REFUSAL_REASONS.BAD_ARGS, choiceParse.problem + '这次一个字都没动。', {}, [{ key: input.key, step: 'status', status: 'failed', reason: choiceParse.problem }], input.estimate) }
+    return { ok: false, reply: refusalReply(input.key, REFUSAL_REASONS.BAD_ARGS, choiceParse.problem + ' Nothing was touched in this call.', {}, [{ key: input.key, step: 'status', status: 'failed', reason: choiceParse.problem }], input.estimate) }
   }
   // 先读一次现状：本地 Markdown 会在回包里带 statusConflict，别的后端没有这一格、读到空冲突就照常往下走。
   // 这里不按后端编号分岔（工具层不许自己判后端）：多出来的这一次读是写前看现状的代价，
@@ -282,7 +282,7 @@ export async function guardStatus(input: StatusGuardInput): Promise<StatusGuardR
   const read = await readStatusConflict(input.tracker, input.repo, input.key, input.opCtx)
   if (!read.ok) {
     if (read.kind === 'timeout') return { ok: false, reply: input.timeoutReply(read.message) }
-    return { ok: false, reply: refusalReply(input.key, REFUSAL_REASONS.BACKEND_UNSUPPORTED, '读这张票的当前状态时后端没回 ok：这次一个字都没动，等能读回再改。', { error: { kind: 'read', message: read.message } }, [{ key: input.key, step: 'status', status: 'failed', reason: read.message }], input.estimate) }
+    return { ok: false, reply: refusalReply(input.key, REFUSAL_REASONS.BACKEND_UNSUPPORTED, 'The backend did not answer ok when the current state of this ticket was read: nothing was touched in this call, so wait until it can be read back and then change it.', { error: { kind: 'read', message: read.message } }, [{ key: input.key, step: 'status', status: 'failed', reason: read.message }], input.estimate) }
   }
   // 预检这一读留在调用缓存里会让后面的读改写拿到旧快照：读完立刻作废（#1790 verify-deck-parallel 丢更新）。
   forgetRead(memoOf(input.opCtx), input.repo, input.key)
@@ -291,7 +291,7 @@ export async function guardStatus(input: StatusGuardInput): Promise<StatusGuardR
   const chosen = chosenStatusOf(read.conflict, choiceParse.choice)
   const mismatch = explicitMismatchProblem(input.args, read.conflict, chosen)
   if (mismatch !== null) {
-    return { ok: false, reply: refusalReply(input.key, REFUSAL_REASONS.BAD_ARGS, mismatch + '这次一个字都没动。', { statusConflict: read.conflict }, [{ key: input.key, step: 'status', status: 'failed', reason: mismatch }], input.estimate, 1) }
+    return { ok: false, reply: refusalReply(input.key, REFUSAL_REASONS.BAD_ARGS, mismatch + ' Nothing was touched in this call.', { statusConflict: read.conflict }, [{ key: input.key, step: 'status', status: 'failed', reason: mismatch }], input.estimate, 1) }
   }
   if (input.deferToLabels) return { ok: true, chosen: chosen, conflict: read.conflict, normalized: false, status: read.status, statusModel: read.statusModel }
   // 顺序：归一排在评论/认领/正文之前，因为它最容易按调用方已选的一侧失败；先做它，失败时盘上只多了

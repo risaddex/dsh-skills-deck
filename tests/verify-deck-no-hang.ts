@@ -210,7 +210,7 @@ async function main() {
     const tool = mod.createDeckIssueCreate(baseDeps({ gate: g.gate, registry: stubRegistry('o/n', okTracker({ create: boom })), budget: budget }))
     const r = await tool.run(execFor(), { title: '会抛的那一张', kind: 'issue' })
     check(r && r.ok === false && r.reason === 'backend-threw', '抛错判成可重试（实得 ' + (r && r.reason) + '）')
-    check(typeof r.text === 'string' && r.text.indexOf('后端实现抛错') >= 0, '抛错原话带回 text')
+    check(typeof r.text === 'string' && r.text.indexOf('The backend implementation threw') >= 0, '抛错原话带回 text')
   }
 
   // ⑥ 挂住的建票钩子 → 建票照样 OK

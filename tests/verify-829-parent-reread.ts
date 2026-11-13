@@ -126,7 +126,7 @@ async function main() {
     const lr = await link.run(exec, { key: '90', parentKey: '78' })
     const item = (lr.items || [])[0] || {}
     check(item.status === 'failed', 'G3 写成功但读票失败 → 逐条 failed（实得 ' + item.status + '）')
-    check(String(item.evidence || '').includes('读票没成功'), 'G3 证据里带“读票没成功”（实得：' + String(item.evidence).slice(0, 120) + '）')
+    check(String(item.evidence || '').includes('the ticket read did not succeed'), 'G3 证据里带“读票没成功”（实得：' + String(item.evidence).slice(0, 120) + '）')
     check(String(item.evidence || '').includes('unexpected EOF'), 'G3 证据里带读失败的后端原话（实得：' + String(item.evidence).slice(0, 160) + '）')
     disp.dispose()
   }
@@ -142,15 +142,15 @@ async function main() {
     const pr = await shell.applyParentEdge(noGet, {}, {}, '04', '07')
     const pev = String((pr.item && pr.item.evidence) || '')
     check(pr.applied === false && pr.item.status === 'failed', 'G5 没有读票方法 → 这条边判为没确认（实得 applied=' + pr.applied + '）')
-    check(pev.indexOf('判不了') >= 0 && pev.indexOf('读到的是') < 0, 'G5 证据只说判不了、不谎称读回来了（实得：' + pev.slice(0, 160) + '）')
-    check(String(pr.item.landing || '').indexOf('说不好') >= 0, 'G5 落点写成「说不好」（实得：' + String(pr.item.landing) + '）')
+    check(pev.indexOf('cannot tell') >= 0 && pev.indexOf('Read back after the write') < 0, 'G5 证据只说判不了、不谎称读回来了（实得：' + pev.slice(0, 160) + '）')
+    check(String(pr.item.landing || '').indexOf('cannot tell (nothing was read back this time') >= 0, 'G5 落点写成「说不好」（实得：' + String(pr.item.landing) + '）')
     const badWrite = {
       async setParent() { return { ok: true } },
       async setBlockedBy() { return { ok: false, error: { message: 'boom' } } },
     }
     const br = await shell.applyBlockEdges(badWrite, {}, {}, '04', ['07'], ['07'])
     const bi = (br.items || [])[0] || {}
-    check(bi.status === 'failed' && String(bi.evidence || '').indexOf('要把 #07 加进票 #04 的 blockedBy') >= 0,
+    check(bi.status === 'failed' && String(bi.evidence || '').indexOf('#07 was to be added to the blockedBy of ticket #04') >= 0 && String(bi.evidence || '').indexOf('ticket #04 is blocked by #07') >= 0,
       'G5b 写失败回执说清要写什么、方向朝哪（实得：' + String(bi.evidence).slice(0, 160) + '）')
   }
 

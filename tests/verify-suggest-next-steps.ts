@@ -43,7 +43,8 @@ const EXEC_HEADER_WORKSPACE = { agent: { session: { header: { workspaceRoot: '/w
 // #1666 在不动一句话介绍的前提下，只放宽 prompt 与 items 两格说明：补上「等用户补充的半句话」分支。
 // 2026-10-31 随提醒行改成「每轮收尾先判断、想得到就调用」同步改一句话介绍：调用时机从「告一段落」改成
 // 「每轮收尾先判断用户接下来几乎一定会做什么」，并把「等拍板时列答案」「还有活没干完不调用」写进去。
-const SPEC_DESCRIPTION = '推荐 2~4 条下一步建议。每轮回复收尾时先判断：用户接下来几乎一定会做什么？想得到就调用，想不到就不调用；这一轮在等用户拍板时，其中一条把他会选的答案列好；还有活没干完时不调用。'
+// 2026-11-13：src/deck 面向 agent 的话术整批译成英文，这句原文随之换成英文（语义未变）。
+const SPEC_DESCRIPTION = 'Recommend 2 to 4 next steps. At the end of every reply, first judge what the user will almost certainly do next: if you can think of it, call this tool; if you cannot, do not call it. While this turn is waiting for the user to decide, make one of the items the answer the user will pick; while work is still unfinished, do not call it.'
 
 function makeLog() {
   const fired = []
@@ -80,21 +81,21 @@ async function main() {
   // ── 1. 工具定义：名字、一句话介绍、参数形状（本票冻结，界面票照它读） ──
   check(def && def.name === 'suggest_next_steps', '工具名精确为 suggest_next_steps（不带 deck_ 前缀）')
   check(def.description === SPEC_DESCRIPTION, '一句话介绍与规格原句一致')
-  check(def.description.indexOf('2~4') >= 0 && def.description.indexOf('下一步建议') >= 0, '一句话介绍写清做什么：推荐 2~4 条下一步建议')
-  check(def.description.indexOf('每轮回复收尾') >= 0 && def.description.indexOf('不调用') >= 0, '一句话介绍写清调用时机：每轮收尾先判断、想得到才调用，想不到就不调用')
-  check(def.description.indexOf('气泡') < 0 && def.description.indexOf('不会替你发送') < 0, '一句话介绍不写界面行为：显示位置、点选后是否发送由实现保证')
+  check(def.description.indexOf('2 to 4') >= 0 && def.description.indexOf('next steps') >= 0, '一句话介绍写清做什么：推荐 2~4 条下一步建议')
+  check(def.description.indexOf('At the end of every reply') >= 0 && def.description.indexOf('do not call it') >= 0, '一句话介绍写清调用时机：每轮收尾先判断、想得到才调用，想不到就不调用')
+  check(def.description.indexOf('bubble') < 0 && def.description.indexOf('will not send') < 0, '一句话介绍不写界面行为：显示位置、点选后是否发送由实现保证')
   check(def.parameters && def.parameters.type === 'object', '参数顶层是对象模式')
   check(Array.isArray(def.parameters.required) && def.parameters.required.indexOf('items') >= 0, 'items 是必填参数')
   check(def.parameters.additionalProperties === false, '参数顶层不收未知字段')
   const itemsSpec = def.parameters.properties && def.parameters.properties.items
   check(itemsSpec && itemsSpec.type === 'array', 'items 是数组')
   check(String(itemsSpec.description || '').indexOf('/xxxx') >= 0, 'items 的说明写清技能指令的写法（/xxxx）')
-  check(String(itemsSpec.description || '').indexOf('技能') >= 0, 'items 的说明提醒传入者：有对应技能就优先用技能指令')
-  check(String(itemsSpec.description || '').indexOf('理由陈述时机') >= 0 && String(itemsSpec.description || '').indexOf('推荐程度') >= 0,
+  check(String(itemsSpec.description || '').indexOf('when a skill applies') >= 0, 'items 的说明提醒传入者：有对应技能就优先用技能指令')
+  check(String(itemsSpec.description || '').indexOf('reason states the timing') >= 0 && String(itemsSpec.description || '').indexOf('priority says how strongly you recommend') >= 0,
     'items 的说明用四格分工：理由陈述时机、优点陈述收益、缺点陈述成本、推荐分表示推荐程度')
-  check(String(itemsSpec.description || '').indexOf('开头') >= 0, 'items 的说明写清技能指令放在 prompt 开头')
-  check(String(itemsSpec.description || '').indexOf('下一轮') >= 0, 'items 的说明写清每条是用户下一轮要说的话（#1666）')
-  check(String(itemsSpec.description || '').indexOf('前半句') >= 0 && String(itemsSpec.description || '').indexOf('最前') >= 0,
+  check(String(itemsSpec.description || '').indexOf('(/xxxx) first') >= 0, 'items 的说明写清技能指令放在 prompt 开头')
+  check(String(itemsSpec.description || '').indexOf('in the next turn') >= 0, 'items 的说明写清每条是用户下一轮要说的话（#1666）')
+  check(String(itemsSpec.description || '').indexOf('first half') >= 0 && String(itemsSpec.description || '').indexOf('skill command still first') >= 0,
     'items 的说明写清半句话模板里技能指令仍放最前（#1666）')
   check(itemsSpec.items && itemsSpec.items.type === 'object', 'items 的每一项是对象')
   const introSpec = itemsSpec.items.properties && itemsSpec.items.properties.intro
@@ -102,36 +103,36 @@ async function main() {
   const reasonSpec = itemsSpec.items.properties && itemsSpec.items.properties.reason
   check(introSpec && introSpec.type === 'string' && String(introSpec.description || '').indexOf('15') >= 0 && String(introSpec.description || '').indexOf('30') >= 0,
     'intro 是十五个字以内的简介（说明里带上限 15 字、英文折算 30 个字符）')
-  check(String(introSpec.description || '').indexOf('只显示') < 0 && String(introSpec.description || '').indexOf('选项框') < 0,
+  check(String(introSpec.description || '').indexOf('the interface') < 0 && String(introSpec.description || '').indexOf('option box') < 0,
     'intro 说明不写界面行为（只显示、选项框由实现保证）')
-  check(promptSpec && promptSpec.type === 'string' && String(promptSpec.description || '').indexOf('原样发出') >= 0,
+  check(promptSpec && promptSpec.type === 'string' && String(promptSpec.description || '').indexOf('send verbatim') >= 0,
     'prompt 说明写清这是用户会原样发出的话')
   check(String(promptSpec.description || '').indexOf('/xxxx') < 0, '技能指令只写在 items 说明里，prompt 说明不重复')
-  check(String(promptSpec.description || '').indexOf('具体对象') >= 0 && String(promptSpec.description || '').indexOf('继续推进') >= 0,
+  check(String(promptSpec.description || '').indexOf('concrete object') >= 0 && String(promptSpec.description || '').indexOf('keep going') >= 0,
     'prompt 说明要求写具体对象、不写空泛推进')
-  check(String(promptSpec.description || '').indexOf('能确定') >= 0, 'prompt 说明要求只写现在就能确定的事（#1666）')
-  check(String(promptSpec.description || '').indexOf('补充') >= 0 && String(promptSpec.description || '').indexOf('待填位置') >= 0,
+  check(String(promptSpec.description || '').indexOf('already settled') >= 0, 'prompt 说明要求只写现在就能确定的事（#1666）')
+  check(String(promptSpec.description || '').indexOf('adds detail') >= 0 && String(promptSpec.description || '').indexOf('the part to fill in') >= 0,
     'prompt 说明写清要用户补充的只写前半句并留待填位置（#1666）')
-  check(String(promptSpec.description || '').indexOf('冒号') >= 0 && String(promptSpec.description || '').indexOf('在此填写') >= 0,
+  check(String(promptSpec.description || '').indexOf('end with a colon') >= 0 && String(promptSpec.description || '').indexOf('fill in here') >= 0,
     'prompt 说明给出待填位置的写法（冒号结尾或标出要填的地方）（#1666）')
-  check(String(promptSpec.description || '').indexOf('还没发生') >= 0 && String(promptSpec.description || '').indexOf('留给用户填') >= 0,
+  check(String(promptSpec.description || '').indexOf('has not happened yet') >= 0 && String(promptSpec.description || '').indexOf('for the user to fill in') >= 0,
     'prompt 说明要求没发生的事留给用户填（#1666）')
-  check(String(promptSpec.description || '').indexOf('不编') >= 0, 'prompt 说明要求不编具体值（#1666）')
-  check(String(promptSpec.description || '').indexOf('我已回答') < 0, 'prompt 说明不引用错误的已完成句式，避免把禁句带进上下文（#1666）')
-  check(reasonSpec && reasonSpec.type === 'string' && String(reasonSpec.description || '').indexOf('理由（前因）') >= 0, 'reason 是「理由（前因）」格')
-  check(String(reasonSpec.description || '').indexOf('用户可观察') >= 0 && String(reasonSpec.description || '').indexOf('不超过 48 字') >= 0,
+  check(String(promptSpec.description || '').indexOf('do not invent') >= 0, 'prompt 说明要求不编具体值（#1666）')
+  check(String(promptSpec.description || '').indexOf('I have answered') < 0, 'prompt 说明不引用错误的已完成句式，避免把禁句带进上下文（#1666）')
+  check(reasonSpec && reasonSpec.type === 'string' && String(reasonSpec.description || '').indexOf('Reason (the cause)') >= 0, 'reason 是「理由（前因）」格')
+  check(String(reasonSpec.description || '').indexOf('the user can observe') >= 0 && String(reasonSpec.description || '').indexOf('At most 48 characters') >= 0,
     'reason 说明写清前因怎么写（本轮用户可观察的事实、它使此步成为眼下应做之事、不超过 48 字）')
   const gainSpec = itemsSpec.items.properties && itemsSpec.items.properties.gain
   const costSpec = itemsSpec.items.properties && itemsSpec.items.properties.cost
-  check(gainSpec && gainSpec.type === 'string' && String(gainSpec.description || '').indexOf('优点') >= 0 && String(gainSpec.description || '').indexOf('不超过 48 字') >= 0,
+  check(gainSpec && gainSpec.type === 'string' && String(gainSpec.description || '').indexOf('Gain:') >= 0 && String(gainSpec.description || '').indexOf('At most 48 characters') >= 0,
     'gain 是「优点」格：此步的收益，落到具体对象，不超过 48 字')
-  check(costSpec && costSpec.type === 'string' && String(costSpec.description || '').indexOf('缺点') >= 0 && String(costSpec.description || '').indexOf('不超过 48 字') >= 0,
+  check(costSpec && costSpec.type === 'string' && String(costSpec.description || '').indexOf('Cost:') >= 0 && String(costSpec.description || '').indexOf('At most 48 characters') >= 0,
     'cost 是「缺点」格：时间、风险与因此暂缓的事项，不超过 48 字')
   const prioritySpec = itemsSpec.items.properties && itemsSpec.items.properties.priority
   check(Array.isArray(itemsSpec.items.required) && itemsSpec.items.required.join(',') === 'intro,prompt,reason,gain,cost,priority', '每条必须同时给简介、提示词、理由、优点、缺点与推荐分六格')
   check(!!prioritySpec && prioritySpec.type === 'number', 'priority 是数字（推荐分）')
-  check(!!prioritySpec && String(prioritySpec.description || '').indexOf('0 至 10') >= 0, 'priority 说明写清合法区间是 0 至 10')
-  check(String(prioritySpec.description || '').indexOf('推荐程度') >= 0,
+  check(!!prioritySpec && String(prioritySpec.description || '').indexOf('0 to 10') >= 0, 'priority 说明写清合法区间是 0 至 10')
+  check(String(prioritySpec.description || '').indexOf('how strongly you recommend') >= 0,
     'priority 说明写清它表示对该选项的推荐程度，不套固定档位')
   check(Array.isArray(itemsSpec.items.required) && itemsSpec.items.required.indexOf('priority') >= 0, 'priority 必填（每条都要打分，几条之间才有先后）')
   check(itemsSpec.items.additionalProperties === false, '每条不收未知字段')
@@ -223,9 +224,9 @@ async function main() {
   const longIntro = '简'.repeat(30)
   const rLong = resolve({ items: [{ intro: longIntro, prompt: longPrompt, reason: longReason, gain: longGain, cost: longCost, priority: 9 }, two[1]] })
   check(rLong.accepted === true, '单项超长不报错、仍然接受')
-  check(Array.from(rLong.items[0].intro).length === 16 && rLong.items[0].intro.slice(-1) === '…' && rLong.items[0].intro.slice(0, 15) === '简'.repeat(15), '超长简介保留前 15 个汉字（30 格宽）并另加省略号（#1540）')
-  check(Array.from(rLong.items[0].prompt).length === 501 && rLong.items[0].prompt.slice(-1) === '…' && rLong.items[0].prompt.slice(0, 500) === '长'.repeat(500), '超长提示词保留前 500 个码点并另加省略号（#1540）')
-  check(rLong.items[0].reason === longReason.slice(0, 48) + '…' && rLong.items[0].gain === longGain.slice(0, 48) + '…' && rLong.items[0].cost === longCost.slice(0, 48) + '…',
+  check(Array.from(rLong.items[0].intro).length === 18 && rLong.items[0].intro.slice(-3) === '...' && rLong.items[0].intro.slice(0, 15) === '简'.repeat(15), '超长简介保留前 15 个汉字（30 格宽）并另加省略号（#1540）')
+  check(Array.from(rLong.items[0].prompt).length === 503 && rLong.items[0].prompt.slice(-3) === '...' && rLong.items[0].prompt.slice(0, 500) === '长'.repeat(500), '超长提示词保留前 500 个码点并另加省略号（#1540）')
+  check(rLong.items[0].reason === longReason.slice(0, 48) + '...' && rLong.items[0].gain === longGain.slice(0, 48) + '...' && rLong.items[0].cost === longCost.slice(0, 48) + '...',
     '理由、优点、缺点各保留前 48 个码点并另加省略号（2026-11-01 由 30 放宽，#1787）')
   check(rLong.counts.clipped === 1 && rLong.notes.indexOf('clipped:1') >= 0, '被截断的条数如实记下')
   const introHanExact = resolve({ items: [{ intro: '简'.repeat(15), prompt: '/a', reason: 'r', gain: 'g', cost: 'c', priority: 9 }, two[1]] })
@@ -233,10 +234,10 @@ async function main() {
   const introEnExact = resolve({ items: [{ intro: 'a'.repeat(30), prompt: '/b', reason: 'r', gain: 'g', cost: 'c', priority: 9 }, two[1]] })
   check(introEnExact.counts.clipped === 0 && introEnExact.items[0].intro === 'a'.repeat(30), '30 个英文字母的简介正好放得下、不截断（等效 15 个汉字宽）')
   const introEnLong = resolve({ items: [{ intro: 'a'.repeat(31), prompt: '/c', reason: 'r', gain: 'g', cost: 'c', priority: 9 }, two[1]] })
-  check(introEnLong.counts.clipped === 1 && introEnLong.items[0].intro === 'a'.repeat(30) + '…', '31 个英文字母的简介保留前 30 个并另加省略号')
+  check(introEnLong.counts.clipped === 1 && introEnLong.items[0].intro === 'a'.repeat(30) + '...', '31 个英文字母的简介保留前 30 个并另加省略号')
   const emoji = '😀'.repeat(600)
   const rEmoji = resolve({ items: [{ intro: '表情', prompt: emoji, reason: '表情', gain: 'g', cost: 'c', priority: 9 }, two[1]] })
-  check(rEmoji.accepted === true && Array.from(rEmoji.items[0].prompt).length === 501 && rEmoji.items[0].prompt.slice(-1) === '…' && Array.from(rEmoji.items[0].prompt.slice(0, -1)).every(function (c) { return c === '😀' }),
+  check(rEmoji.accepted === true && Array.from(rEmoji.items[0].prompt).length === 503 && rEmoji.items[0].prompt.slice(-3) === '...' && Array.from(rEmoji.items[0].prompt.slice(0, -3)).every(function (c) { return c === '😀' }),
     '按码点截断，不切坏 emoji（代理对完整，#1540 保留前 500 个码点并另加省略号）')
   const boundary = resolve({ items: [{ intro: '简介', prompt: 'a'.repeat(500), reason: 'b'.repeat(48), gain: 'g'.repeat(48), cost: 'c'.repeat(48), priority: 5 }, two[1]] })
   check(boundary.accepted === true && boundary.counts.clipped === 0, '正好卡在上限的文本不截断')
@@ -249,7 +250,7 @@ async function main() {
   const okEnv = await okRunner.run(EXEC, { items: two })
   check(okEnv.ok === true && okEnv.status === 'ok' && okEnv.tool === 'suggest_next_steps' && okEnv.reason === '',
     '成功回执：ok/status/tool/reason 四格照统一回执壳')
-  check(typeof okEnv.text === 'string' && okEnv.text.indexOf('已记下 2 条') >= 0, '成功回执给一句结论')
+  check(typeof okEnv.text === 'string' && okEnv.text.indexOf('Recorded 2 next steps') >= 0, '成功回执给一句结论')
   check(okEnv.workspace && okEnv.workspace.root === '/ws/proj' && okEnv.workspace.sessionId === 'sess-7',
     '成功回执带会话的目录与会话号')
   check(typeof okEnv.workspace.key === 'string' && okEnv.workspace.key.indexOf('ws-') === 0 && typeof okEnv.workspace.source === 'string',
@@ -293,12 +294,12 @@ async function main() {
   const badRunner = tool.createSuggestNextSteps({ log: badLog.log, now: fakeClock(0) })
   const badEnv = await badRunner.run(EXEC, { items: [two[0]] })
   check(badEnv.ok === false && badEnv.status === 'unsupported' && badEnv.reason === 'bad-args', '少于两条：拒绝回执带稳定的 unsupported 与 bad-args')
-  check(typeof badEnv.text === 'string' && badEnv.text.indexOf('少于 2 条') >= 0, '拒绝回执说明为什么没记下')
+  check(typeof badEnv.text === 'string' && badEnv.text.indexOf('fewer than 2') >= 0 && badEnv.text.indexOf('recorded none') >= 0, '拒绝回执说明为什么没记下')
   check(badEnv.data === undefined, '拒绝回执不带建议清单')
   check(badEnv.workspace && badEnv.workspace.sessionId === 'sess-7', '拒绝回执仍带会话（界面与日志能对上）')
   check(badLog.fired.length === 1 && badLog.fired[0].fields.ok === false && badLog.fired[0].fields.reason === 'bad-args:1', '拒绝也落既有事件，ok 为假、条数在 reason')
   const badMissing = await badRunner.run(EXEC, { items: [two[0], { intro: '下一步', prompt: '下一步', reason: '', gain: '优点', cost: '缺点', priority: 5 }] })
-  check(badMissing.ok === false && String(badMissing.text).indexOf('第 2 条') >= 0, '条目缺理由时拒绝并指出第几条')
+  check(badMissing.ok === false && String(badMissing.text).indexOf('Suggestion 2 in this call') >= 0, '条目缺理由时拒绝并指出第几条')
   const noSessionLog = makeLog()
   const noSessionRunner = tool.createSuggestNextSteps({ log: noSessionLog.log, now: fakeClock(0) })
   const noSession = await noSessionRunner.run({}, { items: two })
@@ -352,7 +353,7 @@ async function main() {
   const noCtxRunner = tool.createSuggestNextSteps({ log: noCtxLog.log, now: fakeClock(0) })
   const noCtx = await noCtxRunner.run({ agent: { session: { header: {} } } }, { items: two })
   check(noCtx.ok === false && noCtx.reason === 'no-session-context', 'header 里也没有目录时仍如实拒绝')
-  check(String(noCtx.text || '').indexOf('没法记录建议') >= 0 && String(noCtx.text || '').indexOf('不动任何票') < 0,
+  check(String(noCtx.text || '').indexOf('the suggestions could not be recorded') >= 0 && String(noCtx.text || '').indexOf('do not touch any ticket') < 0,
     '拒绝正文用本工具的口径（不写票）')
   check(noCtxLog.fired[0] && noCtxLog.fired[0].fields.reason === 'no-session-context', 'header 也取不到时仍落一行日志')
 

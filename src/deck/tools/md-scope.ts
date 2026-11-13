@@ -23,11 +23,11 @@ type StringParam = { type: 'string'; description: string }
 export const MD_SCOPE_CREATE: Record<'effort' | 'feature', StringParam> = {
   effort: {
     type: 'string',
-    description: '本地 Markdown 后端专用：探索地图（wayfinder）所在的 `.scratch/` 目录名，原文叫 `<effort>`。不填时按父票或标题决定目录；远端后端忽略它。',
+    description: 'Local Markdown backend only: the name of the `.scratch/` directory that holds the exploration map (wayfinder), called `<effort>` in the original text. When it is not given, the directory is decided by the parent ticket or the title; remote backends ignore it.',
   },
   feature: {
     type: 'string',
-    description: '本地 Markdown 后端专用：规格、实施票、普通票所在的 `.scratch/` 目录名，原文叫 `<feature-slug>`。不填时按父票或标题决定目录；远端后端忽略它。',
+    description: 'Local Markdown backend only: the name of the `.scratch/` directory that holds specs, spec tickets and plain tickets, called `<feature-slug>` in the original text. When it is not given, the directory is decided by the parent ticket or the title; remote backends ignore it.',
   },
 }
 
@@ -35,21 +35,21 @@ export const MD_SCOPE_CREATE: Record<'effort' | 'feature', StringParam> = {
 export const MD_SCOPE_LOCATE: Record<'effort' | 'feature', StringParam> = {
   effort: {
     type: 'string',
-    description: '本地 Markdown 后端专用：探索地图（wayfinder）所在的 `.scratch/` 目录名，原文叫 `<effort>`。不填就全仓库找；远端后端忽略它。',
+    description: 'Local Markdown backend only: the name of the `.scratch/` directory that holds the exploration map (wayfinder), called `<effort>` in the original text. When it is not given, the whole repository is searched; remote backends ignore it.',
   },
   feature: {
     type: 'string',
-    description: '本地 Markdown 后端专用：规格、实施票、普通票所在的 `.scratch/` 目录名，原文叫 `<feature-slug>`。不填就全仓库找；远端后端忽略它。',
+    description: 'Local Markdown backend only: the name of the `.scratch/` directory that holds specs, spec tickets and plain tickets, called `<feature-slug>` in the original text. When it is not given, the whole repository is searched; remote backends ignore it.',
   },
 }
 
 /** 目录名里不能出现的东西：返回一句人话原因，能用就返回空串。 */
 function badDirName(name: string): string {
-  if (name === '.' || name === '..') return '它表示当前目录或上一级目录'
+  if (name === '.' || name === '..') return 'it means the current directory or the parent directory'
   // 路径分隔符与 Windows 保留字符：拼进路径后会变成另一条路，或者写不出来。
-  if (/[\\/:*?"<>|\u0000-\u001f]/.test(name)) return '含有路径分隔符或文件名里不允许的字符'
+  if (/[\\/:*?"<>|\u0000-\u001f]/.test(name)) return 'it contains a path separator or a character a file name does not allow'
   // Windows 会把结尾的点和空格吞掉，导致「以为写了 A、实际落在 A」。
-  if (/[. ]$/.test(name)) return '末尾是点或空格（Windows 上会被吞掉）'
+  if (/[. ]$/.test(name)) return 'it ends with a dot or a space (Windows drops that)'
   return ''
 }
 
@@ -63,7 +63,7 @@ export function readMdScope(a: Record<string, unknown>): MdScope {
   if (effort && feature) {
     return {
       ok: false,
-      message: 'effort 与 feature 只能填一个：它们都指本地后端 `.scratch/` 下的同一个目录名，只是原文两套技能叫法不同（探索地图叫 `<effort>`，规格体系叫 `<feature-slug>`）。这次在办哪套就留哪个，两个都填会让人猜你要听哪个。',
+      message: 'Give only one of effort and feature: both name the same directory under `.scratch/` on the local backend, and only the two sets of original skills call it differently (the exploration map says `<effort>`, the spec system says `<feature-slug>`). Keep whichever one this call is about; giving both makes the reader guess which one you mean.',
     }
   }
   const name = effort || feature
@@ -72,7 +72,7 @@ export function readMdScope(a: Record<string, unknown>): MdScope {
     if (bad) {
       return {
         ok: false,
-        message: '目录名不能用「' + name + '」：' + bad + '。这个值会直接拼成 `.scratch/<目录>/`，只接受单段普通目录名（例如 buy-coffee、买咖啡积分）。',
+        message: 'The directory name cannot be "' + name + '": ' + bad + '. This value is pasted straight into `.scratch/<directory>/`, so it only accepts a single plain directory name (for example buy-coffee or coffee-points).',
       }
     }
   }
@@ -97,6 +97,6 @@ export function applyMdScope(repo: { effortId?: unknown; mdScene?: unknown }, a:
 
 /** 回执里那句人话：说清这次用的是哪个词、本地后端把范围收在哪，免得以为远端也会跟着变。 */
 export function mdScopeNote(scene: string, effortId: string): string {
-  const word = scene === 'effort' ? 'effort（探索地图目录）' : (scene === 'feature' ? 'feature（规格体系目录）' : '工作单元目录')
-  return '这次带了 ' + word + '「' + effortId.slice(0, 60) + '」：本地后端只在那一个 `.scratch/` 目录里找，远端后端忽略它。'
+  const word = scene === 'effort' ? 'effort (the exploration map directory)' : (scene === 'feature' ? 'feature (the spec system directory)' : 'work unit directory')
+  return 'This call carried ' + word + ' "' + effortId.slice(0, 60) + '": the local backend looks only inside that one `.scratch/` directory, and remote backends ignore it.'
 }

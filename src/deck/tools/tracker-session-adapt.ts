@@ -27,12 +27,12 @@ export function adaptSession(session: TrackerSession): UnknownRecord {
       // listMaps 是第一条允许退化的操作：房间没有它（手造桩或极老的会话形状）不算执行层失败，
       // 调用方拿 unsupported 照老路走；其余操作的缺席仍是抛错（调用方按 backend-threw 处理）。
       if (typeof fn !== 'function') {
-        if (name === 'listMaps') return { ok: false, error: { kind: 'unsupported', message: '这个后端没有地图薄行，按老路取' } };
-        throw new Error('这次没拿到后端实现，我没往下做。');
+        if (name === 'listMaps') return { ok: false, error: { kind: 'unsupported', message: 'This backend has no map thin rows; use the old path' } };
+        throw new Error('The backend implementation was not available this time, so I did not continue.');
       }
       const got = (await fn(...args)) as UnknownRecord | null;
       const err = (got && got.ok === false) ? (got.error || null) as UnknownRecord | null : null;
-      if (err && str(err.kind) === 'env') return { ok: false, error: { kind: 'backend-threw', message: str(err.message) || '执行层没回来' } };
+      if (err && str(err.kind) === 'env') return { ok: false, error: { kind: 'backend-threw', message: str(err.message) || 'the execution layer gave no answer' } };
       return got;
     };
   }

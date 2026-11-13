@@ -19,6 +19,6 @@
   "ok": false,
   "reason": "bad-args",
   "status": "unsupported",
-  "text": "progress 参数已退役（#1352）：上报只表达「在办／办完」，进度请写到票面——用 deck_issue_patch 的 progress 传 { percent, note }，工具会把它写进那张票的「## 进度」区。这次什么都没做：没选后端、没花点数、没写盘。",
+  "text": "The progress parameter is retired (#1352): a report only says \"in progress / done\"; write progress on the ticket instead — pass { percent, note } through the progress parameter of deck_issue_patch, and the tool writes it into the \"## 进度\" section of that ticket. Nothing was done this time: no backend was selected, no points were spent, and nothing was written to disk.",
   "tool": "deck_issue_report"
 }

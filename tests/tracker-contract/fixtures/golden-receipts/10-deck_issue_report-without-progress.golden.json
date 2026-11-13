@@ -20,7 +20,7 @@
       "text": "这次 deck_issue_report 预计花 6 点、3 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "backendId": "markdown",
@@ -33,7 +33,7 @@
   },
   "items": [],
   "notes": [
-    "备注只回显，不记进工作路线（路线上每条只留票键、时间与动作类别）。"
+    "The note is only echoed back and does not go into the work route (each entry on the route keeps only the ticket key, the time and the action kind)."
   ],
   "ok": true,
   "readBack": null,
@@ -45,7 +45,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "票 1 已上报（金标准演示票）：金标准上报（不带进度）。要看在办表就调 deck_work_route。",
+  "text": "Ticket 1 reported (金标准演示票): 金标准上报（不带进度）. To see the work board, call deck_work_route.",
   "tool": "deck_issue_report",
   "touched": [],
   "workspace": {

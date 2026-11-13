@@ -212,7 +212,7 @@ async function main() {
   check(plan1 && plan1.reason === 'bad-args', '#1799 partial 有失败项：顶层 reason 取失败项映射出的码 bad-args（实得 ' + (plan1 && plan1.reason) + '）')
   check(failed1.length === 1 && failed1[0].code === 'bad-args' && failed1[0].errorKind === undefined && failed1[0].stage === undefined,
     '#1799 失败项留下映射码与被拒输入这件事（实得 ' + JSON.stringify(failed1) + '）')
-  check(plan1 && String(plan1.text || '').indexOf('最该先说的是') >= 0,
+  check(plan1 && String(plan1.text || '').indexOf('The most important thing to say first is "edge"') >= 0 && String(plan1.text || '').indexOf('An endpoint of this edge has no ticket number yet') >= 0,
     '#1799 partial 的 text 带着与顶层 reason 同一条失败的原因（实得 ' + (plan1 && plan1.text) + '）')
 
   // ── 第二段：换一套全新装配（等价于进程重启）带同一个计划标识接着建 ──
@@ -222,7 +222,7 @@ async function main() {
   })
   check(plan2 && plan2.status === 'ok', '续跑这一跑全成了（status=' + (plan2 && plan2.status) + '，notes=' + JSON.stringify(plan2 && plan2.notes) + '）')
   check(plan2 && plan2.data && plan2.data.mapKey === plan1.data.mapKey, '地图票没有重建，还是同一张（' + (plan2 && plan2.data && plan2.data.mapKey) + '）')
-  check(!!(plan2 && plan2.notes && plan2.notes.some((n) => String(n).indexOf('上次已经建好了') >= 0)), '回执里那句「地图票上次已经建好了」来自盘上读回来的游标（第二套装配进程内存里是空的）')
+  check(!!(plan2 && plan2.notes && plan2.notes.some((n) => String(n).indexOf('was already created last time, so this call continues from there') >= 0)), '回执里那句「地图票上次已经建好了」来自盘上读回来的游标（第二套装配进程内存里是空的）')
   check(ws.ticketFiles('plan-store-1150').length === ticketsBefore + 2, '续跑没有重复建票（票文件仍是 ' + ws.ticketFiles('plan-store-1150').length + ' 个）')
   check(!!(plan2 && plan2.data && plan2.data.skippedKeys && plan2.data.skippedKeys.length === 2), '两张子票都被认出来跳过了：' + JSON.stringify(plan2 && plan2.data && plan2.data.skippedKeys))
   const cursors2 = ws.cursorFiles()
@@ -253,7 +253,7 @@ async function main() {
   check(ws4.cursorFiles().length === 1, '工具自建读写把游标写到了盘上：' + JSON.stringify(ws4.cursorFiles()))
   const own2 = await toolLevel(ws4)
   const ownPlan2 = await own2.tool.run(ownExec, { planId: 'plan-store-1150-own', title: '计划存储演示地图', effort: 'plan-store-1150-own', children: [{ key: 'e1', title: '子票一', kind: 'issue' }, { key: 'e2', title: '子票二', kind: 'issue' }] })
-  check(ownPlan2 && ownPlan2.status === 'ok' && !!(ownPlan2.notes && ownPlan2.notes.some((n) => String(n).indexOf('上次已经建好了') >= 0)), '换一套新装配后，工具自建读写也能靠盘上游标接着建（status=' + (ownPlan2 && ownPlan2.status) + '，notes=' + JSON.stringify(ownPlan2 && ownPlan2.notes) + '）')
+  check(ownPlan2 && ownPlan2.status === 'ok' && !!(ownPlan2.notes && ownPlan2.notes.some((n) => String(n).indexOf('was already created last time, so this call continues from there') >= 0)), '换一套新装配后，工具自建读写也能靠盘上游标接着建（status=' + (ownPlan2 && ownPlan2.status) + '，notes=' + JSON.stringify(ownPlan2 && ownPlan2.notes) + '）')
   check(ws4.ticketFiles('plan-store-1150-own').length === 2 && fs.existsSync(path.join(ws4.root, '.scratch', 'plan-store-1150-own', 'map.md')), '续跑没有重复建票（票文件 ' + ws4.ticketFiles('plan-store-1150-own').length + ' 个，map.md ' + (fs.existsSync(path.join(ws4.root, '.scratch', 'plan-store-1150-own', 'map.md')) ? '在' : '不在') + '）')
 
   // ── 第五段：工具自建读写碰上「没有 resolve」的实现时，同样只许说没落盘 ──
@@ -264,7 +264,7 @@ async function main() {
   })
   check(!!(ownPlan3 && ownPlan3.data && ownPlan3.data.mapKey), '没有 resolve 时票照建（mapKey=' + (ownPlan3 && ownPlan3.data && ownPlan3.data.mapKey) + '）')
   check(ownPlan3 && ownPlan3.data && ownPlan3.data.durable === false, '工具自建读写碰上没有 resolve 的宿主时，如实说这次没落盘（durable=' + (ownPlan3 && ownPlan3.data && ownPlan3.data.durable) + '）')
-  check(!!(ownPlan3 && ownPlan3.notes && ownPlan3.notes.some((n) => String(n).indexOf('只记在本进程的内存里') >= 0)), '回执里写明中间态只在进程内存里')
+  check(!!(ownPlan3 && ownPlan3.notes && ownPlan3.notes.some((n) => String(n).indexOf('the intermediate state is kept only in the memory of this process') >= 0)), '回执里写明中间态只在进程内存里')
   check(ws5.cursorFiles().length === 0, '盘上没有游标文件：' + JSON.stringify(ws5.cursorFiles()))
 
   first.dispose.dispose()

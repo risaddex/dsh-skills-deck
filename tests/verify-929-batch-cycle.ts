@@ -143,7 +143,7 @@ function itemsOf(out) { return (out.items || []).map((i) => i.key + '→' + (i.t
   const tool = linkMod.createDeckMapLink(env.toolDeps())
   const out = await tool.run(EXEC, { edges: [{ key: '1', blockedBy: ['2'] }] })
   const notes = String((out.notes || []).join(' '))
-  check(notes.indexOf('整批成环预检没读到整图') >= 0, '④ 读不回整图时不假装预检过了：notes 里如实说（实得 ' + notes.slice(0, 150) + '）')
+  check(notes.indexOf('did not read the whole graph') >= 0, '④ 读不回整图时不假装预检过了：notes 里如实说（实得 ' + notes.slice(0, 150) + '）')
   check(out && typeof out.status === 'string', '④ 这一步失败不影响工具照旧回话（status=' + out.status + '）')
 }
 

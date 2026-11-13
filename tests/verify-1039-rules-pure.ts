@@ -143,12 +143,12 @@ async function edgeLanding() {
 
   // #1421：给了 from 就在回执里点名双方与方向；没给 from 时逐字保留老文案（老调用方不受影响）。
   const dirNative = e.classifyEdgeLanding('block', '3', { issue: { body: '没有引用', parentKey: '' }, dependencies: { blockedBy: [{ key: '3' }] } }, '4')
-  check(dirNative.kind === native.kind && dirNative.text.indexOf('票 #4 的 blockedBy 里有 #3') > 0 && dirNative.text.indexOf('也就是 #4 被 #3 阻塞') > 0,
+  check(dirNative.kind === native.kind && dirNative.text.indexOf('in the blockedBy of ticket #4') > 0 && dirNative.text.indexOf('that is, #4 is blocked by #3') > 0,
     '阻塞边：给了 from 就点名「谁的 blockedBy 里加了谁、谁被谁阻塞」：' + dirNative.text)
   const dirParent = e.classifyEdgeLanding('parent', '7', { issue: { body: 'x', parentKey: '7' } }, '4')
-  check(dirParent.kind === 'contract' && dirParent.text.indexOf('票 #4 的父票是 #7') > 0,
+  check(dirParent.kind === 'contract' && dirParent.text.indexOf('the parent of ticket #4 is #7') > 0,
     '父子边：给了 from 就点名「谁的父票是谁」：' + dirParent.text)
-  check(native.text.indexOf('#4') < 0 && parent.text.indexOf('票 #') < 0,
+  check(native.text.indexOf('#4') < 0 && parent.text.indexOf('ticket #') < 0,
     '没给 from 时老文案的原句不变（不点名票号）')
 
   // 三态判据（#790）：只有写后读回的结构字段能确认一条边落上了；没读到就说没确认。
@@ -189,7 +189,7 @@ async function dependencyGraph() {
   const graph = new Map([['1', []], ['2', ['3']], ['3', ['1']]])
   const refused = d.refuseCyclicBlockBatch({ graph: graph, keyOrder: ['1'], blockedBy: new Map([['1', ['3']]]) })
   check(refused.refused.has('1'), '整批预检：会把图闭合的那条边被拒（拒的是 1）')
-  check(String(refused.refused.get('1')).includes('成环'), '拒的理由写清了是成环，且带上要写的目标')
+  check(String(refused.refused.get('1')).includes('cyclic'), '拒的理由写清了是成环，且带上要写的目标')
   // 自环（自己挡自己）在试放前就滤掉：契约层自己拒它，这里算成环会抢它的活。
   const self = d.refuseCyclicBlockBatch({ graph: new Map(), keyOrder: ['9'], blockedBy: new Map([['9', ['9']]]) })
   check(self.refused.size === 0, '自己挡自己不在这里拒（那是契约层的活）')
@@ -314,9 +314,9 @@ async function objectKind() {
     [{ kind: 'map-ticket', parentKey: '00' }, /label/, '地图工单必须给 label'],
     [{ kind: 'map', parentKey: '00' }, /父票|parentKey/, '探索地图不收 parentKey'],
     [{ kind: 'spec', parentKey: '00' }, /父票|parentKey/, '规格不收 parentKey'],
-    [{ kind: 'map', labels: ['wayfinder:map'] }, /类型标签由 kind/, '标签里塞类型标签被拒（文案点明由 kind 决定）'],
-    [{ kind: 'bug', labels: ['bug'] }, /类型标签由 kind/, 'bug 不能在 labels 里重复带类型标签'],
-    [{ kind: 'spec-ticket', labels: ['wayfinder:task'], parentKey: '01' }, /类型标签由 kind/, '实施票不能在 labels 里带类型标签'],
+    [{ kind: 'map', labels: ['wayfinder:map'] }, /type label is decided by kind/, '标签里塞类型标签被拒（文案点明由 kind 决定）'],
+    [{ kind: 'bug', labels: ['bug'] }, /type label is decided by kind/, 'bug 不能在 labels 里重复带类型标签'],
+    [{ kind: 'spec-ticket', labels: ['wayfinder:task'], parentKey: '01' }, /type label is decided by kind/, '实施票不能在 labels 里带类型标签'],
     [{ kind: 'map-ticket', label: 'wayfinder:task' }, /parentKey/, '地图工单必须有父票'],
     [{ kind: 'spec-ticket' }, /parentKey/, '实施票必须有父票'],
   ]

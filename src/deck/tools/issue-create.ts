@@ -89,12 +89,12 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
     const a: Record<string, unknown> = args || {}
     const title = String(a.title === undefined || a.title === null ? '' : a.title).trim()
     const est = shell.estimateFor('deck_issue_create', a)
-    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'workRouteDetail 参数已退役（#1561）：在办表不再跟在写回执里，要看就调 deck_work_route（默认只看近 24 小时在办，带 includeStale:true 看近 30 天）。这次什么都没做：没选后端、没花点数、没写盘。', { cost: { estimated: est } })
+    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'The workRouteDetail parameter is retired (#1561): the work board is no longer included in the write receipt, so call deck_work_route to see it (by default it shows only what moved in the last 24 hours; pass includeStale:true to see the last 30 days). Nothing was done this time: no backend was selected, no points were spent, and nothing was written to disk.', { cost: { estimated: est } })
     // #1403：位置值先收口 —— kind 必填、label 只给地图工单、labels 里不许重复表达类型、顶层容器不收父票、
     // 子票必须带父票。收不成就回一句人话，把合法值与迁移路径写清楚；这一步不碰后端、不花请求。
     const argued = resolveCreateKind({ kind: a.kind, label: a.label, labels: a.labels, parentKey: a.parentKey })
     if (!argued.ok) {
-      return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, String(argued.problem || '建票参数不对。') + '这张票没建。', { cost: { estimated: est } })
+      return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, String(argued.problem || 'The create arguments are wrong.') + ' This ticket was not created.', { cost: { estimated: est } })
     }
     // 收口之后这几个值一定在；写成带缺省的形式只是为了让编译器安静，运行时分支进不来。
     const kind = String(argued.kind || '')
@@ -105,14 +105,14 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 在会话壳里是运行时布尔，
     // 那一层还没标类型，见 #1040），所以这里按形状取 reason —— 取到的值与老写法逐字相同。
     if (!s.ok) return shell.unsupported('deck_issue_create', (s as { reason: string }).reason, s.text, { cost: { estimated: est } })
-    if (!title) return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, '要建哪一张票：title 不能空。', { cost: { estimated: est } })
+    if (!title) return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'Which ticket to create: title cannot be empty.', { cost: { estimated: est } })
     // #1299：建票时顺手把阻塞边一起写掉 —— 拆票那一步最容易漏的就是边，入参一次给全比等 AI 记得再补强。
     // 形状与 deck_map_link 的 blockedBy 一致：元素是票号或 key（'#1298' 也认，去掉 # 再走），去重后按整批替换。
     // 字符集先挡一道：只收本仓库内票号（数字，或本地后端的字母数字 key），别把别的仓库的票号写成原生边。
     const blockedRaw: unknown = (a.blockedBy === undefined || a.blockedBy === null) ? [] : a.blockedBy
     const blockedKeys: string[] = []
     if (!Array.isArray(blockedRaw)) {
-      return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'blockedBy 要写成数组：元素是挡住这张票的票号（例如 ["1298"]）。', { cost: { estimated: est } })
+      return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'blockedBy must be an array: its items are the ticket numbers (or keys) that block this ticket (for example ["1298"]).', { cost: { estimated: est } })
     }
     {
       const seen: Record<string, true> = {}
@@ -120,12 +120,12 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
         const raw = blockedRaw[i]
         if (raw === undefined || raw === null) continue
         if (typeof raw !== 'string' && typeof raw !== 'number') {
-          return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'blockedBy 里的票号要写成字符串或数字（第 ' + (i + 1) + ' 个不是）。', { cost: { estimated: est } })
+          return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'Ticket numbers in blockedBy must be strings or numbers (item ' + (i + 1) + ' is not).', { cost: { estimated: est } })
         }
         const k = String(raw).trim().replace(/^#/, '')
         if (!k) continue
         if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(k)) {
-          return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'blockedBy 里的「' + k.slice(0, 40) + '」不是本仓库内的票号：只填票号或 key（例如 "1298"）。', { cost: { estimated: est } })
+          return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, 'The item "' + k.slice(0, 40) + '" in blockedBy is not a ticket number of this repo: fill in a ticket number or key only (for example "1298").', { cost: { estimated: est } })
         }
         if (seen[k]) continue
         seen[k] = true
@@ -154,7 +154,7 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
     if (a.originalWords !== undefined && a.originalWords !== null) {
       const parsed = originalWordsFromArg(a.originalWords)
       if (parsed.entry === null) {
-        return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, parsed.problem + '这张票没建。', { cost: { estimated: est } })
+        return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, parsed.problem + ' This ticket was not created.', { cost: { estimated: est } })
       }
       originalWords = parsed.entry
     }
@@ -169,7 +169,7 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
     if (originalWords) {
       const planned = planBodyWrite(body.body, null, originalWords, PROGRESS_BODY_LIMIT)
       if (planned.plan === null) {
-        return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, planned.problem + '这张票没建。', { cost: { estimated: est } })
+        return shell.unsupported('deck_issue_create', REFUSAL_REASONS.BAD_ARGS, planned.problem + ' This ticket was not created.', { cost: { estimated: est } })
       }
       bodyPlan = planned.plan
       body.body = bodyPlan.next
@@ -208,13 +208,13 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
             claimed: claimed,
           }
         }
-        if (sc.outOfBudget()) return refuse('额度不够，没读父票：这张票没建。先核对父票号，再续。', { requests: 0, points: 0 }, null, 'budget')
+        if (sc.outOfBudget()) return refuse('Not enough quota, so the parent ticket was not read: this ticket was not created. Check the parent ticket number first, then continue.', { requests: 0, points: 0 }, null, 'budget')
         const parentRead = await t.get(repo, rel, {}, opCtx)
         const parentTimeout = timeoutMessage(parentRead as TransportResult)
-        if (parentTimeout) return refuse('父票 ' + rel + ' 没读回来（超时：' + String(parentTimeout).slice(0, 160) + '）：这张票没建。先按票号核对父票，再续。', parentCheck, { kind: 'timeout' })
+        if (parentTimeout) return refuse('Parent ticket ' + rel + ' did not come back (it timed out: ' + String(parentTimeout).slice(0, 160) + '): this ticket was not created. Check the parent ticket by its number first, then continue.', parentCheck, { kind: 'timeout' })
         if (!parentRead || parentRead.ok !== true) {
-          const why = String((parentRead && parentRead.error && parentRead.error.message) || '后端没给出原因').slice(0, 200)
-          return refuse('父票 ' + rel + ' 读不到（后端原话：' + why + '）：这张票没建。父票必须已经存在。', parentCheck, parentRead)
+          const why = String((parentRead && parentRead.error && parentRead.error.message) || 'no reason given').slice(0, 200)
+          return refuse('Parent ticket ' + rel + ' could not be read (the backend said: ' + why + '): this ticket was not created. The parent ticket must already exist.', parentCheck, parentRead)
         }
         const parentData = (parentRead.data || {}) as Record<string, unknown>
         const declaredType = (typeof parentData.type === 'string') ? String(parentData.type) : ''
@@ -223,15 +223,15 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
         // 契约类型优先；后端没回类型字段时退回票面标记（T1 的读侧判据），两个都没有才算「读不到类型」。
         const parentKind = declaredType || (declaredMarker === 'map' ? 'map' : declaredMarker === 'spec' ? 'spec' : (declaredMarker ? 'issue' : ''))
         if (!parentKind) {
-          notes.push('父票类型读不到，只核了存在性：父票 ' + rel + ' 已经在了，但它是不是该有的容器没法确认。')
+          notes.push('The parent type could not be read, so only its existence was checked: parent ticket ' + rel + ' exists, but whether it is the right kind of container could not be confirmed.')
         } else if (parentRule === 'map') {
-          if (parentKind !== 'map') return refuse('父票 ' + rel + ' 不是探索地图（读到的是 ' + parentKind + '）：地图工单的父必须是探索地图。这张票没建。', parentCheck, null, 'input')
+          if (parentKind !== 'map') return refuse('Parent ticket ' + rel + ' is not an exploration map (read as ' + parentKind + '): the parent of a map ticket must be an exploration map. This ticket was not created.', parentCheck, null, 'input')
         } else if (parentRule === 'spec') {
-          if (parentKind !== 'spec') return refuse('父票 ' + rel + ' 不是规格（读到的是 ' + parentKind + '）：实施票的父必须是规格。这张票没建。', parentCheck, null, 'input')
+          if (parentKind !== 'spec') return refuse('Parent ticket ' + rel + ' is not a spec (read as ' + parentKind + '): the parent of a spec ticket must be a spec. This ticket was not created.', parentCheck, null, 'input')
         } else if (parentKind !== 'map' && parentKind !== 'spec') {
-          return refuse('父票 ' + rel + ' 不是探索地图或规格（读到的是 ' + parentKind + '）：普通票的父只能是这两种容器。这张票没建。', parentCheck, null, 'input')
+          return refuse('Parent ticket ' + rel + ' is not an exploration map or a spec (read as ' + parentKind + '): the parent of a plain ticket can only be one of these two containers. This ticket was not created.', parentCheck, null, 'input')
         } else {
-          notes.push('父票 ' + rel + ' 已核对：它是' + (parentKind === 'map' ? '探索地图' : '规格') + '。')
+          notes.push('Parent ticket ' + rel + ' was checked: it is ' + (parentKind === 'map' ? 'an exploration map' : 'a spec') + '.')
         }
       }
       // 建票入参是本文件自己拼的，两个可选字段（parentKey / assignees）下面按条件补：
@@ -252,13 +252,13 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
       if (Array.isArray(a.assignees) && a.assignees.length) input.assignees = a.assignees
       const created = await t.create(repo, input, opCtx)
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
-      if (body.added.length) notes.push('我替你补了正文区块：' + body.added.join('、'))
-      if (!a.idempotencyKey) notes.push('这次用的是自动幂等锚（同会话 + 同标题 + 同标签，5 分钟窗口内重复调用复用同一张票）。')
+      if (body.added.length) notes.push('Body sections were added for you: ' + body.added.join(', '))
+      if (!a.idempotencyKey) notes.push('This call used an automatic idempotency anchor (same session + same title + same labels; a repeated call inside the 5-minute window reuses the same ticket).')
       // 执行层失败原样抛给壳（走 backend-threw，可重试）；后端诚实失败才走下面的部分成功。
       // 只有超时单列：直接回独立原因码 backend-timeout（是否生效说不清，重试前先核对）。
       const createdTimeout = timeoutMessage(created as TransportResult)
       if (createdTimeout) return {
-        value: { status: DECK_STATUS.UNSUPPORTED, reason: reasonForFailure({ kind: 'timeout', phase: 'write' }), text: '这张票这次没建成（超时了：在限时内没等到后端回话，票建上没有说不清；先按标题查一次再续，不要直接重建）。', data: { error: { kind: 'timeout', message: createdTimeout.slice(0, 300) } }, notes: notes },
+        value: { status: DECK_STATUS.UNSUPPORTED, reason: reasonForFailure({ kind: 'timeout', phase: 'write' }), text: 'This ticket was not created this time (it timed out: no word came back from the backend within the limit, so whether the ticket exists cannot be told; look it up by title once before continuing, and do not rebuild it directly).', data: { error: { kind: 'timeout', message: createdTimeout.slice(0, 300) } }, notes: notes },
         claimed: { requests: 1, points: 4 },
       }
       const createdTransport = transportMessage(created as TransportResult)
@@ -271,9 +271,9 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
       // #992：标签没挂上（后端在票上记了 labelError）不再报“补了”——按结果说话。
       //   幂等锚的取值保持不动（改它会动去重语义，另议）。
       const labelFailed = !!(issue && issue.labelError)
-      const labelWhy = labelFailed ? String((issue.labelError && issue.labelError.message) || '后端没给出原因').slice(0, 300) : ''
-      if (ensured.added.length && !labelFailed) notes.push('我替你补了必备标签：' + ensured.added.join('、'))
-      if (labelFailed) notes.push('标签没挂上，别把它当成已经打上：逐条原因在同包的 items 里。')
+      const labelWhy = labelFailed ? String((issue.labelError && issue.labelError.message) || 'no reason given').slice(0, 300) : ''
+      if (ensured.added.length && !labelFailed) notes.push('Required labels were added for you: ' + ensured.added.join(', '))
+      if (labelFailed) notes.push('The labels did not land, so do not treat them as applied: the reason for each one is in the items of this same receipt.')
       // #746：建票直达命名守护（调用会话即建号会话；hook 缺失、失败或超时都不影响已建成的返回）。
       try {
         if (typeof d.onTicketCreated === 'function' && issue.key) {
@@ -287,14 +287,14 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
       let originalProblem = ''
       let originalEvidence: Record<string, string> = {}
       if (bodyPlan !== null) {
-        if (sc.outOfBudget()) { originalProblem = '原话写动作回了成功，但剩余额度不够读回核对：别当成已经写好，稍后读一次现状确认。'; originalEvidence = failureFields(null, 'write', 'budget') }
+        if (sc.outOfBudget()) { originalProblem = 'The original-words write reported success, but the remaining quota was not enough for the read-back check: do not treat it as written, read the current state once later to confirm.'; originalEvidence = failureFields(null, 'write', 'budget') }
         else {
           const rawBack = await t.get(repo, String(issue.key || ''), {}, opCtx)
           const backTimeout = timeoutMessage(rawBack as TransportResult)
           const okBack = (rawBack && rawBack.ok === true) ? rawBack : null
           const backBody = (okBack && okBack.data && typeof okBack.data.body === 'string') ? okBack.data.body : null
-          if (backTimeout) { originalProblem = '原话写动作回了成功，但读回核对超时（' + String(backTimeout).slice(0, 160) + '）：别当成已经写好，稍后读一次现状确认。'; originalEvidence = failureFields(null, 'write', 'unconfirmed') }
-          else if (backBody === null) { originalProblem = '原话写动作回了成功，但写后没读回正文（后端原话：' + String((rawBack && rawBack.error && rawBack.error.message) || '没给出原因').slice(0, 160) + '）：写进去的对不对不知道，别当成已经写好。'; originalEvidence = failureFields(rawBack, 'read', 'unconfirmed') }
+          if (backTimeout) { originalProblem = 'The original-words write reported success, but the read-back check timed out (' + String(backTimeout).slice(0, 160) + '): do not treat it as written, read the current state once later to confirm.'; originalEvidence = failureFields(null, 'write', 'unconfirmed') }
+          else if (backBody === null) { originalProblem = 'The original-words write reported success, but the body was not read back afterwards (the backend said: ' + String((rawBack && rawBack.error && rawBack.error.message) || 'no reason given').slice(0, 160) + '): there is no telling whether what was written is right, so do not treat it as written.'; originalEvidence = failureFields(rawBack, 'read', 'unconfirmed') }
           else { originalProblem = bodyWriteReadbackProblem(bodyPlan, backBody); if (originalProblem) originalEvidence = failureFields(null, 'write', 'verify') }
         }
         if (originalProblem) items.push(Object.assign({ key: issue.key, step: 'text', status: 'failed', reason: originalProblem }, originalEvidence))
@@ -313,7 +313,7 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
         //   两者都不是「盘上有这条边」的证据；它们与读回不一致时按没挂上算，并把不一致写进证据里。
         const readBack = (typeof t.get === 'function' && !sc.outOfBudget()) ? await t.get(repo, issue.key, {}, opCtx) : null
         const after = (readBack && readBack.ok === true) ? { issue: readBack.data } : null
-        let ev: EdgeEvidence = after ? classifyEdgeLanding('parent', rel, after) : unsupportedEvidence('写后没读回来，判不了这条父子落点')
+        let ev: EdgeEvidence = after ? classifyEdgeLanding('parent', rel, after) : unsupportedEvidence('nothing was read back after the write, so where this parent-child edge landed cannot be judged')
         const verdict = edgeVerdict('parent', rel, after)
         parentVerdict = verdict
         parentLanded = verdict === 'landed'
@@ -322,13 +322,13 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
         const createdError = (issue && issue.parentError && issue.parentError.message) ? String(issue.parentError.message).slice(0, 200) : ''
         if (!parentLanded) {
           const echo = (createdKey === String(rel))
-            ? '；建票回包里写着父票 ' + createdKey + '，但写后读回里没有这条父子 —— 回包是写动作的自述，不算落上'
+            ? '; the create receipt says parent ticket ' + createdKey + ', but the read-back has no such parent-child edge, and a receipt is the write action describing itself, so it does not count as landed'
             : ''
-          const roomWords = createdError ? '；房自己记下的原话：' + createdError : ''
+          const roomWords = createdError ? '; the backend itself recorded: ' + createdError : ''
           const base = (verdict === 'unconfirmed')
-            ? '写后没读回来，判不了这条父子落上了没有'
-            : ('写后读回：票的 parentKey 读到的是 ' + (landedKey || '空') + '，要的是 ' + rel)
-          ev = { kind: verdict === 'unconfirmed' ? 'unknown' : 'missing', ok: false, text: base + echo + roomWords + '。' + String(ev.text || '') }
+            ? 'nothing was read back after the write, so whether this parent-child edge landed cannot be judged'
+            : ('read back after the write: the ticket parentKey reads ' + (landedKey || 'empty') + ', and what was wanted is ' + rel)
+          ev = { kind: verdict === 'unconfirmed' ? 'unknown' : 'missing', ok: false, text: base + echo + roomWords + '. ' + String(ev.text || '') }
         }
         parentEvidence = ev
         // 落点证据那一支：壳那层还没标类型（见 #1040），第四个形参（额外字段）本文件本来就没传，
@@ -347,18 +347,18 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
       if (blockWant.length) {
         blockAttempted = true
         if (sc.outOfBudget()) {
-          blockFailed = '额度不够，这次没写'
-          blockItems.push(Object.assign({ key: issue.key, edge: { op: 'block', target: blockWant.join('、') }, status: 'failed', reason: blockFailed }, failureFields(null, 'write', 'budget')))
+          blockFailed = 'Not enough quota, so nothing was written this time'
+          blockItems.push(Object.assign({ key: issue.key, edge: { op: 'block', target: blockWant.join(', ') }, status: 'failed', reason: blockFailed }, failureFields(null, 'write', 'budget')))
         } else {
           const wrote = await applyBlockEdges(t, repo, opCtx, String(issue.key), blockWant, blockWant)
           for (const one of wrote.items) blockItems.push(one as unknown as Record<string, unknown>)
           if (wrote.failed) {
-            blockFailed = String(wrote.failed.text || '后端没给出原因').slice(0, 300)
+            blockFailed = String(wrote.failed.text || 'no reason given').slice(0, 300)
           } else {
             const missed = wrote.items.filter(function (one) { return one.status !== 'ok' })
             if (missed.length) {
               const ev = (missed[0] as unknown as Record<string, unknown>).edge as Record<string, unknown> | undefined
-              blockFailed = String((ev && ev.text) || '写后读回里没看到这些阻塞边').slice(0, 300)
+              blockFailed = String((ev && ev.text) || 'these blocking edges did not appear in the read-back').slice(0, 300)
             }
           }
         }
@@ -368,47 +368,47 @@ export function createDeckIssueCreate(deps?: DeckIssueCreateDeps) {
       const blockCost = blockAttempted ? { requests: 3, points: 6 } : { requests: 0, points: 0 }
       if (rel && !parentLanded) {
         // 票建成了、边没挂上：按部分成功回，不再报“建好了（父票 X）”。
-        const why = String((parentEvidence && parentEvidence.text) || '后端没给出原因').slice(0, 300)
+        const why = String((parentEvidence && parentEvidence.text) || 'no reason given').slice(0, 300)
         // 「没挂上」与「没读回来、判不了」是两件事，抬头那句话也要分开说（#790 审查指出：
         // 同一个「父子边没挂上（要 X）」在两种判决下都出现，H 节的正则分不出来）。
         const edgeHead = (parentVerdict === 'unconfirmed')
-          ? '父子边没确认（要 ' + rel + '）'
-          : '父子边没挂上（要 ' + rel + '）'
-        notes.push('父子边没建成，别把它当成已经挂上：逐条原因在上面的 items 里。')
-        if (blockFailed) notes.push('阻塞边也没建成，别把它们当成已经挂上：逐条原因也在上面的 items 里。')
+          ? 'The parent-child edge was not confirmed (wanted ' + rel + ')'
+          : 'The parent-child edge did not land (wanted ' + rel + ')'
+        notes.push('The parent-child edge was not created, so do not treat it as attached: the per-item reasons are in items above.')
+        if (blockFailed) notes.push('The blocking edges were not created either, so do not treat them as attached: their per-item reasons are also in items above.')
         if (labelFailed) items.push(Object.assign({ key: issue.key, step: 'labels', status: 'failed', reason: labelWhy }, failureFields(null, 'write')))
-        if (originalProblem) notes.push('维护者原话也没核对上：' + originalProblem)
-        return partialCreateResult(issue, kind, anchor, items, notes, '票 ' + (issue.key || '（后端没回票号）') + ' 建好了：' + title + '。' + where + edgeHead + '：' + why
-          + (labelFailed ? '标签也没挂上：' + labelWhy : '')
-          + (blockFailed ? '阻塞边也没挂上（要 ' + blockWant.join('、') + '）：' + blockFailed : '')
-          + (originalProblem ? '维护者原话也没核对上：' + originalProblem : ''), { requests: 3 + parentCheck.requests + blockCost.requests + wordCost.requests, points: 6 + parentCheck.points + blockCost.points + wordCost.points })
+        if (originalProblem) notes.push('The original words did not check out either: ' + originalProblem)
+        return partialCreateResult(issue, kind, anchor, items, notes, 'Ticket ' + (issue.key || '(the backend returned no ticket number)') + ' created: ' + title + '. ' + where + edgeHead + ': ' + why
+          + (labelFailed ? ' The labels did not land either: ' + labelWhy : '')
+          + (blockFailed ? ' The blocking edges did not land either (wanted ' + blockWant.join(', ') + '): ' + blockFailed : '')
+          + (originalProblem ? ' The original words did not check out either: ' + originalProblem : ''), { requests: 3 + parentCheck.requests + blockCost.requests + wordCost.requests, points: 6 + parentCheck.points + blockCost.points + wordCost.points })
       }
       if (labelFailed) {
         // 票建成了、标签没挂上：按部分成功回（照父子边没挂上的 PARTIAL 先例），不再报“我替你补了”。
         items.push(Object.assign({ key: issue.key, step: 'labels', status: 'failed', reason: labelWhy }, failureFields(null, 'write')))
-        if (blockFailed) notes.push('阻塞边也没建成，别把它们当成已经挂上：逐条原因也在上面的 items 里。')
-        if (originalProblem) notes.push('维护者原话也没核对上：' + originalProblem)
-        return partialCreateResult(issue, kind, anchor, items, notes, '票 ' + (issue.key || '（后端没回票号）') + ' 建好了：' + title + '。' + where + '标签没挂上：' + labelWhy
-          + (blockFailed ? '阻塞边也没挂上（要 ' + blockWant.join('、') + '）：' + blockFailed : '')
-          + (originalProblem ? '维护者原话也没核对上：' + originalProblem : ''), { requests: 3 + parentCheck.requests + blockCost.requests + wordCost.requests, points: 6 + parentCheck.points + blockCost.points + wordCost.points })
+        if (blockFailed) notes.push('The blocking edges were not created either, so do not treat them as attached: their per-item reasons are also in items above.')
+        if (originalProblem) notes.push('The original words did not check out either: ' + originalProblem)
+        return partialCreateResult(issue, kind, anchor, items, notes, 'Ticket ' + (issue.key || '(the backend returned no ticket number)') + ' created: ' + title + '. ' + where + 'The labels did not land: ' + labelWhy
+          + (blockFailed ? ' The blocking edges did not land either (wanted ' + blockWant.join(', ') + '): ' + blockFailed : '')
+          + (originalProblem ? ' The original words did not check out either: ' + originalProblem : ''), { requests: 3 + parentCheck.requests + blockCost.requests + wordCost.requests, points: 6 + parentCheck.points + blockCost.points + wordCost.points })
       }
       const claimedBase = { requests: (rel ? 3 + parentCheck.requests : 2) + blockCost.requests + wordCost.requests, points: (rel ? 6 + parentCheck.points : 4) + blockCost.points + wordCost.points }
       if (blockFailed) {
-        notes.push('阻塞边没建成，别把它们当成已经挂上：逐条原因在上面的 items 里。')
-        if (originalProblem) notes.push('维护者原话也没核对上：' + originalProblem)
-        return partialCreateResult(issue, kind, anchor, items, notes, '票 ' + (issue.key || '（后端没回票号）') + ' 建好了：' + title + '。' + where + '阻塞边没挂上（要 ' + blockWant.join('、') + '）：' + blockFailed
-          + (originalProblem ? '维护者原话也没核对上：' + originalProblem : ''), claimedBase)
+        notes.push('The blocking edges were not created, so do not treat them as attached: the per-item reasons are in items above.')
+        if (originalProblem) notes.push('The original words did not check out either: ' + originalProblem)
+        return partialCreateResult(issue, kind, anchor, items, notes, 'Ticket ' + (issue.key || '(the backend returned no ticket number)') + ' created: ' + title + '. ' + where + 'The blocking edges did not land (wanted ' + blockWant.join(', ') + '): ' + blockFailed
+          + (originalProblem ? ' The original words did not check out either: ' + originalProblem : ''), claimedBase)
       }
       // #1091：原话没核对上不算建成（票在、但原话对不对不知道）：与标签没挂上同一档，按部分成功回。
       if (originalProblem) {
-        notes.push('维护者原话没核对上，别把它当成已经写好：逐条原因在上面的 items 里。')
-        return partialCreateResult(issue, kind, anchor, items, notes, '票 ' + (issue.key || '（后端没回票号）') + ' 建好了：' + title + '。' + where + '维护者原话没核对上：' + originalProblem, claimedBase)
+        notes.push('The original words did not check out, so do not treat them as written: the per-item reasons are in items above.')
+        return partialCreateResult(issue, kind, anchor, items, notes, 'Ticket ' + (issue.key || '(the backend returned no ticket number)') + ' created: ' + title + '. ' + where + 'The original words did not check out: ' + originalProblem, claimedBase)
       }
       return {
         value: {
           status: DECK_STATUS.OK,
-          text: '票 ' + (issue.key || '（后端没回票号）') + ' 建好了：' + title + (rel ? '（父票 ' + rel + '）' : '') + '。' + where + '返回值就是写后的真状态，不必再读一次。'
-            + (blockWant.length ? '阻塞边已按写后读回逐条核对（见 items）：' + blockWant.join('、') + '。' : ''),
+          text: 'Ticket ' + (issue.key || '(the backend returned no ticket number)') + ' created: ' + title + (rel ? ' (parent ' + rel + ')' : '') + '. ' + where + 'The return value is the real state after the write; there is no need to read it again.'
+            + (blockWant.length ? ' The blocking edges were checked one by one against the read-back (see items): ' + blockWant.join(', ') + '.' : ''),
           data: { ticket: issue, kind: kind, idempotencyKey: anchor, limits: { maxChildTicketsPerCall: budget.AI_TOOL_MAX_CHILD_TICKETS_PER_CALL } },
           items: items,
           notes: notes,

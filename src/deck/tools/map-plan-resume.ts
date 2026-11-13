@@ -145,7 +145,7 @@ export async function repairOrphanParents(args: RepairOrphanArgs): Promise<void>
     }
   }
   if (repaired) {
-    notes.push('续跑时补挂了 ' + repaired + ' 张孤儿票的父边（首次建后挂边前被掐断留下的）：' + skippedKeys.slice(0, 8).join('、') + '。')
+    notes.push('While resuming, the parent edge was attached for ' + repaired + ' orphan tickets (left behind by a cut between creating and attaching the edge): ' + skippedKeys.slice(0, 8).join(', ') + '.')
     await store.save(planId, state)
   }
 }

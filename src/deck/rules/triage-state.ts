@@ -48,7 +48,7 @@ export function triageStatesIn(labels: unknown): string[] {
 export function triageStateProblem(labels: unknown, field: string): string {
   const states = triageStatesIn(labels)
   if (states.length <= 1) return ''
-  return field + ' 里同时给了 ' + states.length + ' 枚 triage 状态标签（' + states.join('、') + '）：'
-    + '一张票同一时刻只能有一枚 triage 状态（' + TRIAGE_STATE_MENU + ' 五选一），请只留一枚 —— '
-    + '改状态是替换：带要切到的那一枚，旧状态由工具自动摘掉。'
+  return field + ' carried ' + states.length + ' triage state labels at once (' + states.join(', ') + '): '
+    + 'a ticket can carry only one triage state at a time (' + TRIAGE_STATE_MENU + ', one of five), so keep only one. '
+    + 'Changing the state replaces it: carry the one to switch to, and the tool takes the old one off.'
 }

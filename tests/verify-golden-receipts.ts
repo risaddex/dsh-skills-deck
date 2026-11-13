@@ -126,7 +126,10 @@ function normalize(value: unknown, rootPosix: string, rootWin: string, wsKey: st
   // 指纹本身跑两次就会变（哈希放大了归一化抹掉的那点差别）。基准里只钉「有指纹、64 位十六进制」这个形状，
   // 值用占位符归一；指纹算法的正确性由体积极小的专用断言另守，不在这里逐字节比。
   const digestRe = /\b[0-9a-f]{64}\b/g
-  const shortRe = /指纹 [0-9a-f]{12}/g
+  // 短指纹（前 12 位）在回执里有两处说法：中文那句「指纹 xxxx」与英文那句「digest xxxx」
+  //   （2026-11-13 src/deck 翻成英文之后，原来的正则只认中文，抹不掉值，基准就开始逐字节抖）。
+  //   两种说法都要抹成同一个占位符：形状照旧只钉「有指纹、12 位十六进制」。
+  const shortRe = /(?:指纹|digest) [0-9a-f]{12}/g
   const walk = (v: unknown): unknown => {
     if (typeof v === 'string') {
       let s = v
@@ -135,7 +138,7 @@ function normalize(value: unknown, rootPosix: string, rootWin: string, wsKey: st
       if (wsKey) s = s.split(wsKey).join('<WSKEY>')
       s = s.replace(isoRe, '<TIME>')
       s = s.replace(digestRe, '<DIGEST>')
-      s = s.replace(shortRe, '指纹 <DIGEST12>')
+      s = s.replace(shortRe, 'digest <DIGEST12>')
       return s
     }
     if (Array.isArray(v)) return v.map(walk)

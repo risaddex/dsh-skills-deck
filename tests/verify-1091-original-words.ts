@@ -199,7 +199,7 @@ async function main() {
   // ④ 缺出处拒绝：整笔拒绝、正文一个字不动（原话是一字不改的东西，不替调用方编出处）。
   const w3 = await patchTool.run(execA, { key: cKey, originalWords: { text: '没有出处的原话' } })
   check(!!w3 && w3.status !== 'ok', '缺出处的原话被整笔拒绝（实得 ' + String(w3 && w3.status) + '）')
-  check(String((w3 && w3.text) || '').indexOf('出处') >= 0 && String((w3 && w3.text) || '').indexOf('一个字都没动') >= 0, '拒绝说明里讲清出处必填、也说了一个字都没动')
+  check(String((w3 && w3.text) || '').indexOf('出处') >= 0 && String((w3 && w3.text) || '').indexOf('Nothing was changed this time') >= 0, '拒绝说明里讲清出处必填、也说了一个字都没动')
   const g3 = await getTool.run(execA, { key: cKey })
   check(readBody(g3) === body1, '被拒以后正文一个字没动')
 

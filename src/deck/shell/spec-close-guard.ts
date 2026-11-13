@@ -37,13 +37,13 @@ export type SpecCloseGuardResult =
 /** 执行层超时的原话；不是超时就回 null，一个字不改判。 */
 function timeoutOf(reply: ContractReply): string | null {
   const e = reply && reply.error
-  if (e && e.kind === 'timeout') return String(e.message || '执行层没回来')
+  if (e && e.kind === 'timeout') return String(e.message || 'the execution layer did not come back')
   return null
 }
 
 /** 后端失败的原话（截短到 200 字）：回执里要带，但不能让一句超长报错占满整条回执。 */
 function errorText(reply: ContractReply): string {
-  return String((reply && reply.error && reply.error.message) || '后端没给出原因').slice(0, 200)
+  return String((reply && reply.error && reply.error.message) || 'the backend gave no reason').slice(0, 200)
 }
 
 export async function specCloseGuard(input: {
@@ -60,7 +60,7 @@ export async function specCloseGuard(input: {
   if (selfTimeout) return { kind: 'timeout', message: selfTimeout }
   if (!rawSelf || rawSelf.ok !== true) {
     const msg = errorText(rawSelf)
-    return { kind: 'refuse', rule: 'spec-close-unreadable', text: '这张票没读回来（后端原话：' + msg + '）：判不了它是普通票还是规格，先不关。等能读回再调一次。', data: { error: { message: msg } }, reads: 1 }
+    return { kind: 'refuse', rule: 'spec-close-unreadable', text: 'This ticket was not read back (the backend\'s exact words: ' + msg + '): I cannot tell whether it is a plain ticket or a spec, so it is not closed. Call again once it can be read back.', data: { error: { message: msg } }, reads: 1 }
   }
   const data: Record<string, unknown> = (rawSelf.data && typeof rawSelf.data === 'object') ? rawSelf.data as Record<string, unknown> : {}
   // 判「是不是规格」两个判据取或：三个后端的归一层都按正文文件头标记把 type 标成 spec（#1403 T1 读侧统一），
@@ -74,7 +74,7 @@ export async function specCloseGuard(input: {
   if (kidsTimeout) return { kind: 'timeout', message: kidsTimeout }
   if (!rawKids || rawKids.ok !== true) {
     const msg = errorText(rawKids)
-    return { kind: 'refuse', rule: 'spec-close-children-unreadable', text: '这张规格下面的实施票没取到（后端原话：' + msg + '）：判不了是不是全关了，先不关。等能读回子票清单再调一次。', data: { error: { message: msg } }, reads: 2 }
+    return { kind: 'refuse', rule: 'spec-close-children-unreadable', text: 'The spec tickets under this spec could not be read (the backend\'s exact words: ' + msg + '): I cannot tell whether they are all closed, so it is not closed. Call again once the list of sub-issues can be read back.', data: { error: { message: msg } }, reads: 2 }
   }
   // 规格下面只该挂实施票（#1403 口径）：认正文文件头的 ticket 标记，或者父票就是这张规格。
   // 老票可能还没有文件头标记，靠父子边认；childrenOf 在清单不带父子信息时会把整批票原样回来，
@@ -85,15 +85,15 @@ export async function specCloseGuard(input: {
     return row.parentKey !== undefined && row.parentKey !== null && String(row.parentKey) === String(key)
   })
   if (children.length === 0) {
-    return { kind: 'refuse', rule: 'spec-close-no-children', text: '这张规格下面还没有实施票：没有实施票就没有可核对的东西，不能按完成态关它。先补实施票（跑 /to-tickets）再回来关。', data: {}, reads: 2 }
+    return { kind: 'refuse', rule: 'spec-close-no-children', text: 'This spec has no spec tickets under it yet: with no spec tickets there is nothing to check, so it cannot be closed as complete. Add the spec tickets first (run /to-tickets), then come back and close it.', data: {}, reads: 2 }
   }
   const openKids = children.filter((c) => String(c.state) !== 'closed')
   if (openKids.length > 0) {
     const missing = openKids.map((c) => ({ key: String(c.key || ''), title: String(c.title || ''), state: String(c.state || '') }))
-    return { kind: 'refuse', rule: 'spec-close-children-open', text: '这张规格下面还有 ' + missing.length + ' 张实施票没关：' + missing.map((m) => '#' + m.key + '（' + (m.title || '没标题') + '，当前 ' + (m.state || '未知') + '）').join('；') + '。实施票没全关时不能关规格：先把没做完的做完或说明清楚，再回来走收口核对。', data: { missing: missing }, reads: 2 }
+    return { kind: 'refuse', rule: 'spec-close-children-open', text: 'This spec still has ' + missing.length + ' spec tickets open: ' + missing.map((m) => '#' + m.key + ' (' + (m.title || 'no title') + ', currently ' + (m.state || 'unknown') + ')').join('; ') + '. A spec cannot be closed while its spec tickets are not all closed: finish what is unfinished or explain it, then come back and run the close check.', data: { missing: missing }, reads: 2 }
   }
   if (!input.hasComment) {
-    return { kind: 'refuse', rule: 'spec-close-no-comment', text: '关规格前必须留一条评论写明逐张核对结论：这次调用里没带 comment，关闭动作没做（评论与关闭要在同一次调用里）。先在 comment 里写每一张实施票的核对结论，再带 close:true 一起调一次。', data: {}, reads: 2 }
+    return { kind: 'refuse', rule: 'spec-close-no-comment', text: 'Closing a spec requires a comment that states the check result for each spec ticket: this call carried no comment, so the close was not done (the comment and the close must come in the same call). Write the check result of every spec ticket in comment first, then call again together with close:true.', data: {}, reads: 2 }
   }
   return { kind: 'ok' }
 }

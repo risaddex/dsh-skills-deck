@@ -20,7 +20,7 @@
       "text": "这次 deck_issue_get 预计花 6 点、3 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "body": {
@@ -33,9 +33,9 @@
     "comments": [],
     "dependenciesRaw": null,
     "landings": {
-      "blockedBy": "说不好（这次没读回来，别当它已经建好）",
-      "caveat": "这两个落点是从契约返回的字段读出来的；要精确知道这个后端把父子放在原生层级还是平级链接，看返回里本次写操作留下的 evidence（deck_map_link 会写）。",
-      "parent": "说不好（这次没读回来，别当它已经建好）"
+      "blockedBy": "cannot tell (nothing was read back this time, so do not treat it as built)",
+      "caveat": "These two landings are read from the fields the contract returns; to know exactly whether this backend keeps the parent-child relation in a native hierarchy or in a flat link, look at the evidence this write left in the return (deck_map_link writes it).",
+      "parent": "cannot tell (nothing was read back this time, so do not treat it as built)"
     },
     "relations": {
       "blockedBy": [],
@@ -67,9 +67,9 @@
   },
   "items": [],
   "notes": [
-    "反向阻塞边这次没取（blocking=false，跳过一次反向边查询）：上面“阻塞别人”记空不是 0 条，要就带 blocking=true 再调一次。",
-    "正文共 215 字，已全量在 data.body.text 里（指纹 <DIGEST12>）：写回正文时仍要先 body='full' 取指纹再传 bodyDigest。",
-    "评论默认 0 条（共有 0 条）：要看评论正文带 comments=N 再调一次（最大 200），总数这次已给。"
+    "The reverse blocking edges were not fetched this time (blocking=false, one reverse-edge query skipped): the empty blocks entry above does not mean 0, so call again with blocking=true if you need them.",
+    "The body is 215 characters and is complete in data.body.text (digest <DIGEST12>): writing the body back still needs body='full' first, to read the digest and pass bodyDigest.",
+    "Comments default to 0 (there are 0 in total): to read the comment text, call again with comments=N (up to 200); the total is already given here."
   ],
   "ok": true,
   "readBack": null,
@@ -81,7 +81,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "票 01 读回来了：状态 open，父票 （没有），被阻塞 0 条，阻塞别人未取（blocking=false）。；状态：claimed（来源：default）",
+  "text": "Ticket 01 read back: state open, parent (none), blocked by 0, blocks not fetched (blocking=false). Status: claimed (source: default)",
   "tool": "deck_issue_get",
   "touched": [],
   "workspace": {

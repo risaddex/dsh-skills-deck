@@ -68,7 +68,7 @@ const NO_SESSION = 'no-session-context'
 
 /** 算不出规范根时的同一句回执：三处调用点（超时、抛错、空结果）逐字同形，收成一个。 */
 function canonicalFailure(sessionId: string): SessionContextFailure {
-  return { ok: false, reason: NO_SESSION, sessionId: sessionId, text: '这次没能把工作区目录归一到工作区根，所以我不动任何票。' }
+  return { ok: false, reason: NO_SESSION, sessionId: sessionId, text: 'This call could not normalize the workspace directory to the workspace root, so I do not touch any ticket.' }
 }
 
 // 竞速实现见 ./capped-wait.ts（#1114 第二批）：到点如实失败、不抛，无论谁赢都清掉等待定时器，
@@ -97,7 +97,7 @@ export function sessionContextOf(exec: unknown, deps?: SessionWorkdirDeps): Sess
     if (typeof c.value === 'string' && c.value.trim()) { cwd = c.value.trim(); source = c.where; break }
   }
   const sessionId = str(session && (session.id || session.sessionId)) || str(agent.sessionId)
-  if (!cwd) return { ok: false, reason: NO_SESSION, sessionId: sessionId, text: '这次没拿到当前会话的工作区目录，所以我不动任何票。' }
+  if (!cwd) return { ok: false, reason: NO_SESSION, sessionId: sessionId, text: 'This call did not get the workspace directory of the current session, so I do not touch any ticket.' }
   const key = typeof d.workspaceKeyOf === 'function' ? String(d.workspaceKeyOf(cwd)) : ('ws-' + hash8(cwd))
   return { ok: true, cwd: cwd, workspaceKey: key, sessionId: sessionId, source: source, text: '' }
 }

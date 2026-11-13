@@ -242,7 +242,7 @@ async function main() {
   check(rawBad && rawBad.status === 'unsupported' && typeof rawBad.text === 'string' && rawBad.text.length > 0,
     '参数不是对象直接回没做成，不进表')
   const rawAbort = await rawOne.execute({ key: '01' }, { agent: { session: { cwd: '/ws' } }, signal: { aborted: true } })
-  check(rawAbort && rawAbort.status === 'unsupported' && String(rawAbort.text).indexOf('中止') >= 0,
+  check(rawAbort && rawAbort.status === 'unsupported' && String(rawAbort.text).indexOf('was aborted and did not finish') >= 0,
     '调用已被中止直接回没做成，不等后端（也不抛）')
   // 信封取值与共享壳同一份常量（改了壳，这里的字面量会先红）。
   const shell = await imp('src/deck/shell/call-shell.ts')
@@ -325,7 +325,7 @@ async function main() {
     '探针如实回服务清单（有的说有，没有的说没有）')
   const pending = rowSvc.registered.filter((t) => t.name === 'deck_context')[0]
   const pendOut = await pending.execute({}, { agent: { session: { cwd: '/ws' } } })
-  check(pendOut && pendOut.status === 'unsupported' && String(pendOut.text).indexOf('面板') >= 0,
+  check(pendOut && pendOut.status === 'unsupported' && String(pendOut.text).indexOf('use the panel') >= 0,
     '通道未通时执行诚实说明并指去面板（不谎报成功）')
   // 注册表第二个就拒绝：剩下的照样交，坏一个不连累其余九个加探针和建议。
   const flakySvc = stubToolsSvc()
@@ -339,7 +339,7 @@ async function main() {
   // 工具服务不在：行起不来就明说，不静默。
   let noSvcCrashed = null
   try { row.apply({}) } catch (e) { noSvcCrashed = e }
-  check(!!noSvcCrashed && String((noSvcCrashed && noSvcCrashed.message) || '').indexOf('工具服务不在') >= 0,
+  check(!!noSvcCrashed && String((noSvcCrashed && noSvcCrashed.message) || '').indexOf('tools service is not there') >= 0,
     '工具服务不在行就明说失败（不静默，装配面看得见）')
 
   console.log('\n' + total + ' 条断言，' + (failed ? '失败' : '通过'))

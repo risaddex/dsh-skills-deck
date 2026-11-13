@@ -374,7 +374,7 @@ async function main() {
     check(unknownActual && unknownActual.backendId === 'gitlab' && unknownActual.budgetKind === 'requests-only', '读数未知时回执仍说清这是 GitLab 的只计请求口径')
     check(unknownActual && unknownActual.readKnown === false && unknownActual.offNetwork === false, '读数未知时 readKnown=false、offNetwork=false')
     check(unknownActual && unknownActual.remaining === undefined && unknownActual.tier === undefined, '读数未知时 remaining 与 tier 都不出现（实得 ' + JSON.stringify({ remaining: unknownActual && unknownActual.remaining, tier: unknownActual && unknownActual.tier }) + '）')
-    check(unknownReceipt && unknownReceipt.cost && String(unknownReceipt.cost.note || '').indexOf('额度读数还没同步上来') >= 0, '读数未知时由 cost.note 说明「还没同步上来」（实得 ' + JSON.stringify(unknownReceipt && unknownReceipt.cost && unknownReceipt.cost.note) + '）')
+    check(unknownReceipt && unknownReceipt.cost && String(unknownReceipt.cost.note || '').indexOf('The quota reading has not synced yet') >= 0, '读数未知时由 cost.note 说明「还没同步上来」（实得 ' + JSON.stringify(unknownReceipt && unknownReceipt.cost && unknownReceipt.cost.note) + '）')
     check(JSON.stringify(unknownActual).indexOf('buckets') < 0 && JSON.stringify(unknownActual).indexOf('graphql') < 0, '读数未知时回执里也没有两桶字段')
 
     // (4) 验收 A4 里 deck 这一层的硬顶：探针放行，正式那一笔被拒，原因码是 ai-tool-refused。

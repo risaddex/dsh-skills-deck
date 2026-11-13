@@ -20,7 +20,7 @@
       "text": "这次 deck_issue_list 预计花 6 点、3 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "backendTruncated": false,
@@ -70,7 +70,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "ISSUE 列表：共 2 行符合（state=open），回 2 行，其中状态冲突 0 张。",
+  "text": "ISSUE list: 2 rows match (state=open), returning 2, of which 0 have a status conflict.",
   "tool": "deck_issue_list",
   "touched": [],
   "workspace": {

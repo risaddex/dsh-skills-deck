@@ -83,15 +83,15 @@ export function createDeckExec(deps: unknown): { handleDeckExec: (args: unknown)
 
     if ((DECK_TOOL_ORDER as readonly string[]).indexOf(tool) < 0) {
       fireFail('bad-tool:' + tool)
-      return unsupported(tool || 'deck', 'bad-args', '工具名不对，我没法做：请按十个 deck 工具的名字重调一次。')
+      return unsupported(tool || 'deck', 'bad-args', 'The tool name is not right, so I cannot do this: use one of the ten deck tool names and call again.')
     }
     if (toolArgs === null || typeof toolArgs !== 'object' || Array.isArray(toolArgs)) {
       fireFail('bad-args')
-      return unsupported(tool, 'bad-args', '参数不是一个对象，我没法做：请按这个工具的参数说明重调一次。')
+      return unsupported(tool, 'bad-args', 'The arguments are not an object, so I cannot do this: follow the parameter description of this tool and call again.')
     }
     if (!cwd) {
       fireFail('no-session')
-      return unsupported(tool, 'no-session-context', '这次没拿到当前会话的工作区目录，所以我不动任何票。请换一个会话再来。')
+      return unsupported(tool, 'no-session-context', 'This call did not get the workspace directory of the current session, so I do not touch any ticket. Try again from another session.')
     }
 
     let table: unknown = null
@@ -100,20 +100,20 @@ export function createDeckExec(deps: unknown): { handleDeckExec: (args: unknown)
     const entry = (tableObj && tableObj.tools ? tableObj.tools[tool] : undefined) as { run?: (exec: unknown, args: unknown) => Promise<unknown> } | undefined;
     if (!table || !tableObj || !tableObj.tools || typeof entry !== 'object' || !entry || typeof entry.run !== 'function') {
       fireFail('no-table')
-      return unsupported(tool, 'not-wired', tool + ' 的执行通道还没接通（宿主那张表不在）：请先用面板操作，进展见仓库的 BUG 单。')
+      return unsupported(tool, 'not-wired', tool + ' is not wired up yet (the table on the host side is missing): use the panel for now, and the progress is in the BUG ticket of the repository.')
     }
     const execLike = { agent: { session: { cwd: cwd, id: sessionId } } }
     let back: unknown = null
     try { back = await entry.run(execLike, toolArgs) } catch (e) {
       fireFail('backend-threw')
       recordWriteFailure(tool, cwd, 'backend-threw', ((e as { message?: unknown } | null)?.message) || e)
-      return unsupported(tool, 'backend-threw', '这次没做成（内部执行抛错，已拦下）：' + String(((e as { message?: unknown } | null)?.message) || e).slice(0, 200))
+      return unsupported(tool, 'backend-threw', 'This was not done (the internal run threw and was caught): ' + String(((e as { message?: unknown } | null)?.message) || e).slice(0, 200))
     }
     const value = pickValue(back)
     if (!value) {
       fireFail('backend-threw')
-      recordWriteFailure(tool, cwd, 'bad-reply', '没按约定回包')
-      return unsupported(tool, 'backend-threw', '这次没做成（工具内部没按约定回包，已拦下），请重试或走面板操作。')
+      recordWriteFailure(tool, cwd, 'bad-reply', 'the reply did not follow the agreement')
+      return unsupported(tool, 'backend-threw', 'This was not done (the tool interior replied without following the agreement, and that was caught): retry, or use the panel instead.')
     }
     const ms = Date.now() - t0
     if (value.status === 'ok' || value.status === 'partial') fireOk(ms)

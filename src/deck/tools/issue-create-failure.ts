@@ -23,17 +23,17 @@ import { TRACKER_ERROR_STAGE } from '../../tracker/contract/results.js'
  */
 export function backendCreateFailure(created: TransportResult, explicitKey: boolean, notes: string[]): { value: Record<string, unknown>; claimed: { requests: number; points: number } } {
   const err = created && created.error
-  const msg = String((err && err.message) || '后端没给出原因').slice(0, 300)
+  const msg = String((err && err.message) || 'no reason given').slice(0, 300)
   // 只有「回查没做成」这一档有确定可做的下一步；别的失败重试未必有用，不追加任何建议。
   const lookupFailed = !!err && err.stage === TRACKER_ERROR_STAGE.ANCHOR_LOOKUP
   const retryAdvice = lookupFailed
-    ? ' 原样重试即可：重试带的是' + (explicitKey ? '同一个幂等键' : '同一个 5 分钟窗口内算出的同一个锚（标题和标签都别改）') + '，会先按它回查，命中就复用那张票，不会多建一张。'
+    ? ' You can retry exactly as it is: the retry carries ' + (explicitKey ? 'the same idempotency key' : 'the same anchor computed inside the same 5-minute window (do not change the title or the labels)') + ', looks it up first, and reuses that ticket when it matches, so no second ticket is created.'
     : ''
   // 映射码同时写进顶层 reason 与 data.error.code：前者告诉人下一步做什么，后者让调用方在逐条核对时
   // 还能看到「为什么判成这个码」的原始档位（kind / stage）——两处说的是同一件事，不许各说各的。
   const code = reasonForResult(err || null, 'write')
   return {
-    value: { status: DECK_STATUS.UNSUPPORTED, reason: code, text: '这张票没建成（后端原话：' + msg + '）。' + retryAdvice, data: { error: { kind: String((err && err.kind) || ''), stage: String((err && err.stage) || ''), code: code, message: msg } }, notes: notes },
+    value: { status: DECK_STATUS.UNSUPPORTED, reason: code, text: 'This ticket was not created (the backend said: ' + msg + ').' + retryAdvice, data: { error: { kind: String((err && err.kind) || ''), stage: String((err && err.stage) || ''), code: code, message: msg } }, notes: notes },
     claimed: { requests: 1, points: 4 },
   }
 }

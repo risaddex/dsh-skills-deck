@@ -127,10 +127,10 @@ const DETAIL_TOTAL_CAP = 60000
 // 括号、逗号、引号、键名这些结构开销是估算着扣的，不是精确值；单个字符串还有 8000 的上限
 // 兜着，误差有界。
 function projectDetail(v: unknown, budget: { left: number }, depth: number): unknown {
-  if (depth > 12) return '（这里嵌套太深，没有展开）'
+  if (depth > 12) return '(nested too deeply here, not expanded)'
   if (typeof v === 'string') {
     const cap = Math.min(budget.left, DETAIL_STRING_CAP)
-    const s = v.length <= cap ? v : v.slice(0, cap) + '……（本段已截断，原长 ' + v.length + ' 字符）'
+    const s = v.length <= cap ? v : v.slice(0, cap) + '... (this passage was cut, its original length was ' + v.length + ' characters)'
     budget.left -= s.length
     return s
   }
@@ -143,7 +143,7 @@ function projectDetail(v: unknown, budget: { left: number }, depth: number): unk
       if (budget.left <= 0) { cut += v.length - i; break }
       out.push(projectDetail(v[i], budget, depth + 1))
     }
-    if (cut) out.push('……（此处还有 ' + cut + ' 项未带回）')
+    if (cut) out.push('... (' + cut + ' more items were not carried back)')
     return out
   }
   if (v !== null && typeof v === 'object') {
@@ -156,7 +156,7 @@ function projectDetail(v: unknown, budget: { left: number }, depth: number): unk
       if (budget.left <= 0) { cut.push(k); continue }
       out[k] = projectDetail((v as UnknownRecord)[k], budget, depth + 1)
     }
-    if (cut.length) out.__未带回 = '未带回的字段：' + cut.join('、') + '（超出总量上限）'
+    if (cut.length) out.__未带回 = 'fields not carried back: ' + cut.join(', ') + ' (over the total limit)'
     return out
   }
   return v
@@ -195,9 +195,9 @@ function detailBlock(v: unknown): string {
   if (!Object.keys(pick).length) return ''
   let s = ''
   try { s = JSON.stringify(projectDetail(pick, { left: DETAIL_TOTAL_CAP }, 0)) || '' } catch (e) {
-    return '明细（取不出来）：里面有循环引用或不可序列化的值，本次只给了上面那一句摘要。'
+    return 'Detail (could not be taken out): it holds a circular reference or a value that cannot be serialized, so this call only gave the one summary sentence above.'
   }
-  return '明细（JSON）：\n' + s
+  return 'Detail (JSON):\n' + s
 }
 
 // 交给模型的全部内容：一句摘要 + 工具的如实提示 + 明细。#809 之前只回那一句摘要，正文、评论、
@@ -210,7 +210,7 @@ function deckAgentRender(args: unknown, value: unknown): { type: string; text: s
   if (text) out.push({ type: 'text', text: text })
   // 提示排在明细前面：它是工具对「这次拿到的不一定全」的如实警告，丢了才最危险。
   if (Array.isArray(v.notes) && v.notes.length) {
-    out.push({ type: 'text', text: '本次调用的提示：\n' + (v.notes as unknown[]).map(function (n: unknown) { return '- ' + String(n) }).join('\n') })
+    out.push({ type: 'text', text: 'Notes for this call:\n' + (v.notes as unknown[]).map(function (n: unknown) { return '- ' + String(n) }).join('\n') })
   }
   const detail = detailBlock(v)
   if (detail) out.push({ type: 'text', text: detail })
@@ -275,9 +275,9 @@ export function buildAgentToolOptions(definition: unknown): UnknownRecord | null
  * 直接回“没做成”的信封并指去面板，绝不谎报成功。通道接通即退役。
  */
 export function makePendingExecute(toolName: unknown): () => Promise<UnknownRecord> {
-  const name = String(toolName || '这个工具')
+  const name = String(toolName || 'this tool')
   return async function (): Promise<UnknownRecord> {
-    return { status: 'unsupported', reason: 'not-wired', text: name + ' 的执行通道还没接通（列表可见是第一步）：请先用面板操作，进展见仓库的 BUG 单。' }
+    return { status: 'unsupported', reason: 'not-wired', text: name + ' is not wired up yet (being visible in the list is only the first step): use the panel for now, and the progress is in the BUG ticket of the repository.' }
   }
 }
 
@@ -289,7 +289,7 @@ const _assertProbeFourteen: 14 = PROBE_SERVICES.length;
 /** 探针定义：不要参数，回服务清单的 JSON 文本（诊断口，通道接通即退役）。 */
 export const probeDefinition = {
   name: 'deck_probe',
-  description: '诊断探针：返回 agent 上下文里有哪些服务。查 deck 工具执行通道设计时用，通道接通即退役。',
+  description: 'Diagnostic probe: returns which services exist in the agent context. Used while checking the design of the deck tool execution channel; it retires once the channel is wired up.',
   parameters: { type: 'object', properties: {}, additionalProperties: false },
 }
 
@@ -327,22 +327,22 @@ function makeExecute(run: unknown): (args: unknown, exec: unknown) => Promise<Un
     const execObj = exec as { signal?: { aborted?: unknown } } | null | undefined;
     const signal = execObj && execObj.signal
     if (signal && typeof signal.aborted === 'boolean' && signal.aborted) {
-      return { status: 'unsupported', reason: 'aborted', text: '这次被中止了，没做完：请按需重调一次。' }
+      return { status: 'unsupported', reason: 'aborted', text: 'This call was aborted and did not finish: call again when needed.' }
     }
     if (args === null || typeof args !== 'object' || Array.isArray(args)) {
-      return { status: 'unsupported', reason: 'bad-args', text: '参数不是一个对象，我没法做：请按这个工具的参数说明重调一次。' }
+      return { status: 'unsupported', reason: 'bad-args', text: 'The arguments are not an object, so I cannot do this: follow the parameter description of this tool and call again.' }
     }
     let back: unknown = null
     try {
       back = await (run as (exec: unknown, args: unknown) => Promise<unknown>)(exec, args)
     } catch (e) {
-      return { status: 'unsupported', reason: 'backend-threw', text: '这次没做成（内部执行抛错，已拦下）：' + String(((e as { message?: unknown } | null)?.message) || e).slice(0, 200) }
+      return { status: 'unsupported', reason: 'backend-threw', text: 'This was not done (the internal run threw and was caught): ' + String(((e as { message?: unknown } | null)?.message) || e).slice(0, 200) }
     }
     const backObj = back as { value?: unknown } | null | undefined;
     const value = (backObj && backObj.value !== undefined) ? backObj.value : back
     const valueRec = value as UnknownRecord | null;
     if (valueRec && typeof valueRec.status === 'string' && typeof valueRec.text === 'string') return valueRec
-    return { status: 'unsupported', reason: 'backend-threw', text: '这次没做成（工具内部没按约定回包，已拦下），请重试或走面板操作。' }
+    return { status: 'unsupported', reason: 'backend-threw', text: 'This was not done (the tool interior replied without following the agreement, and that was caught): retry, or use the panel instead.' }
   }
 }
 

@@ -24,16 +24,16 @@ export const PRIVACY_ALLOWED_FIELDS: readonly string[] = [
 
 /** 凭证形状：命中任何一条就当成「这一份里有秘密」，整份不写。 */
 const CREDENTIAL_PATTERNS: Array<[RegExp, string]> = [
-  [/\bgh[pousr]_[A-Za-z0-9]{20,}\b/, '像 GitHub 令牌'],
-  [/\bgithub_pat_[A-Za-z0-9_]{20,}\b/, '像 GitHub 细粒度令牌'],
-  [/\bglpat-[A-Za-z0-9_-]{16,}\b/, '像 GitLab 令牌'],
-  [/\bsk-[A-Za-z0-9]{16,}\b/, '像 API 密钥'],
-  [/\bAKIA[0-9A-Z]{16}\b/, '像云厂商访问密钥'],
-  [/\bxox[abposr]-[A-Za-z0-9-]{10,}\b/, '像 Slack 令牌'],
-  [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, '像私钥'],
-  [/\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{12,}/i, '像授权头里的凭据'],
-  [/\b(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key)\s*[:=]\s*\S{6,}/i, '像口令键值'],
-  [/[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/i, '像带凭据的网址'],
+  [/\bgh[pousr]_[A-Za-z0-9]{20,}\b/, 'looks like a GitHub token'],
+  [/\bgithub_pat_[A-Za-z0-9_]{20,}\b/, 'looks like a GitHub fine-grained token'],
+  [/\bglpat-[A-Za-z0-9_-]{16,}\b/, 'looks like a GitLab token'],
+  [/\bsk-[A-Za-z0-9]{16,}\b/, 'looks like an API key'],
+  [/\bAKIA[0-9A-Z]{16}\b/, 'looks like a cloud provider access key'],
+  [/\bxox[abposr]-[A-Za-z0-9-]{10,}\b/, 'looks like a Slack token'],
+  [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'looks like a private key'],
+  [/\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{12,}/i, 'looks like credentials in an authorization header'],
+  [/\b(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key)\s*[:=]\s*\S{6,}/i, 'looks like a password key and value'],
+  [/[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/i, 'looks like a URL that carries credentials'],
 ];
 
 /** 这句字符串像不像凭证原文；像就返回一句人能读的说明，不像返回空串。 */
@@ -55,13 +55,13 @@ export function privacyViolations(value: unknown): string[] {
   const walk = function (v: unknown, at: string): void {
     if (typeof v === 'string') {
       const why = credentialKind(v);
-      if (why) out.push(at + '：' + why);
+      if (why) out.push(at + ': ' + why);
       return;
     }
     if (Array.isArray(v)) { v.forEach(function (x, i) { walk(x, at + '[' + i + ']'); }); return; }
     if (v && typeof v === 'object') {
       for (const k of Object.keys(v as Record<string, unknown>)) {
-        if (!allowed[k]) out.push(at + '.' + k + '：不在白名单的字段名');
+        if (!allowed[k]) out.push(at + '.' + k + ': a field name that is not on the allowlist');
         walk((v as Record<string, unknown>)[k], at + '.' + k);
       }
     }

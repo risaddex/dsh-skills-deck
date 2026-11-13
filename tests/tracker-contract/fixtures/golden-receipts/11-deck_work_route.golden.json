@@ -20,7 +20,7 @@
       "text": "这次 deck_work_route 预计花 6 点、3 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "at": "<TIME>",
@@ -34,7 +34,7 @@
             "active": true,
             "currentSession": true,
             "effortId": "demo",
-            "sessionLabel": "会话 1d9b81",
+            "sessionLabel": "session 1d9b81",
             "source": "reported",
             "ticketKey": "1",
             "title": "金标准演示票"
@@ -44,7 +44,7 @@
             "actionAt": "<TIME>",
             "active": true,
             "currentSession": true,
-            "sessionLabel": "会话 1d9b81",
+            "sessionLabel": "session 1d9b81",
             "source": "auto",
             "ticketKey": "2",
             "title": "金子票一"
@@ -54,13 +54,13 @@
             "actionAt": "<TIME>",
             "active": true,
             "currentSession": true,
-            "sessionLabel": "会话 1d9b81",
+            "sessionLabel": "session 1d9b81",
             "source": "auto",
             "ticketKey": "3",
             "title": "金子票二"
           }
         ],
-        "sessionLabel": "会话 1d9b81"
+        "sessionLabel": "session 1d9b81"
       }
     ],
     "includeStale": false,
@@ -77,7 +77,7 @@
   },
   "items": [],
   "notes": [
-    "数据来自本机工作区存档（local archive），只含本工作区 30 天内动过的条目；在办指 24 小时内动过，超过 24 小时、未满 30 天记为陈旧；存档上限 2MB，超限按时间从旧到新裁。"
+    "The data comes from the local workspace archive and only covers entries touched inside this workspace in the last 30 days; in progress means touched inside the last 24 hours, anything older than 24 hours but younger than 30 days counts as stale; the archive cap is 2MB, and an oversize archive is trimmed from oldest to newest."
   ],
   "ok": true,
   "readBack": null,
@@ -89,7 +89,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "在办表（24 小时内在办）：共 3 条，分 1 个会话组，回 3 条。",
+  "text": "Work board (24 hours, in progress): 3 entries in 1 session groups, 3 returned.",
   "tool": "deck_work_route",
   "touched": [],
   "workspace": {

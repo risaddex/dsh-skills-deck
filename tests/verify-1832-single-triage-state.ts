@@ -209,7 +209,7 @@ async function main() {
   const dStates = triageStatesOf(dLabels)
   check(dLabels.indexOf('bug') >= 0 && dStates.length === 1 && dStates[0] === 'needs-triage', 'd 默认缺陷票标签是 bug + needs-triage：' + JSON.stringify(dLabels))
   const dNotes = (d && d.notes) || []
-  check(dNotes.some(function(n) { return String(n).indexOf('补了必备标签') >= 0 }), 'd 回执写明补了必备标签：' + JSON.stringify(dNotes))
+  check(dNotes.some(function(n) { return String(n).indexOf('Required labels were added for you') >= 0 }), 'd 回执写明补了必备标签：' + JSON.stringify(dNotes))
 
   // ══ b) 改标签：addLabels 带新状态=替换旧状态，回执写明摘了哪几枚 ══
   const b = await callTool('deck_issue_patch', { key: dKey, addLabels: ['ready-for-agent'], comment: '把状态从等待诊断推进到可接' })
@@ -223,7 +223,7 @@ async function main() {
   check(bStates.length === 1 && bStates[0] === 'ready-for-agent', 'b 票上恰有一枚 triage 状态，且是 ready-for-agent：' + JSON.stringify(bLabels))
   check(bLabels.indexOf('needs-triage') < 0, 'b 旧状态 needs-triage 已从票上摘掉：' + JSON.stringify(bLabels))
   const bNotes = (b && b.notes) || []
-  check(bNotes.some(function(n) { return String(n).indexOf('旧状态') >= 0 && String(n).indexOf('needs-triage') >= 0 }), 'b 回执写明摘掉了 needs-triage：' + JSON.stringify(bNotes))
+  check(bNotes.some(function(n) { return String(n).indexOf('old state labels were taken off') >= 0 && String(n).indexOf('needs-triage') >= 0 }), 'b 回执写明摘掉了 needs-triage：' + JSON.stringify(bNotes))
 
   // ══ b2) 标签名大小写不同也算同一枚：Ready-For-Agent 与 ready-for-agent 不并存 ══
   const g = await callTool('deck_issue_create', { title: '大小写变体验证的缺陷票', kind: 'bug', body: '**What to build:** 演示标签名大小写不敏感。' })
@@ -246,8 +246,8 @@ async function main() {
   const beforeCreateCount = countFiles('demo')
   const c1 = await callTool('deck_issue_create', { title: '两枚状态的缺陷票', kind: 'bug', labels: ['needs-triage', 'needs-info'], body: '**What to build:** 演示建票拒绝。' })
   check(c1 && c1.status === 'unsupported' && c1.reason === 'bad-args', 'c1 建票给两枚状态被拒（bad-args）：' + JSON.stringify({ status: c1 && c1.status, reason: c1 && c1.reason }))
-  check(String(c1 && c1.text || '').indexOf('五选一') >= 0 && String(c1 && c1.text || '').indexOf('只留一枚') >= 0, 'c1 拒绝原因说清「五选一、只留一枚」：' + String(c1 && c1.text).slice(0, 160))
-  check(String(c1 && c1.text || '').indexOf('这张票没建') >= 0, 'c1 拒绝原因写明这张票没建')
+  check(String(c1 && c1.text || '').indexOf('one of five') >= 0 && String(c1 && c1.text || '').indexOf('keep only one') >= 0, 'c1 拒绝原因说清「五选一、只留一枚」：' + String(c1 && c1.text).slice(0, 160))
+  check(String(c1 && c1.text || '').indexOf('This ticket was not created') >= 0, 'c1 拒绝原因写明这张票没建')
   check(countFiles('demo') === beforeCreateCount, 'c1 被拒后盘上一张票都没多建：' + beforeCreateCount + ' → ' + countFiles('demo'))
   const c2 = await callTool('deck_issue_create', { title: '两枚状态的普通票', kind: 'issue', labels: ['ready-for-human', 'wontfix'], body: '**What to build:** 演示普通票也拒绝。' })
   check(c2 && c2.status === 'unsupported' && c2.reason === 'bad-args', 'c2 普通票给两枚状态同样被拒：' + JSON.stringify({ status: c2 && c2.status, reason: c2 && c2.reason }))
@@ -256,24 +256,24 @@ async function main() {
   const beforePatch = readTicketFile('demo', dKey)
   const c3 = await callTool('deck_issue_patch', { key: dKey, addLabels: ['needs-info', 'ready-for-human'] })
   check(c3 && c3.status === 'unsupported' && c3.reason === 'bad-args', 'c3 改标签给两枚状态被拒（bad-args）：' + JSON.stringify({ status: c3 && c3.status, reason: c3 && c3.reason }))
-  check(String(c3 && c3.text || '').indexOf('五选一') >= 0, 'c3 拒绝原因说清只能留一枚：' + String(c3 && c3.text).slice(0, 160))
-  check(String(c3 && c3.text || '').indexOf('没写盘') >= 0, 'c3 拒绝原因写明一个字都没写：' + String(c3 && c3.text).slice(0, 200))
+  check(String(c3 && c3.text || '').indexOf('one of five') >= 0, 'c3 拒绝原因说清只能留一枚：' + String(c3 && c3.text).slice(0, 160))
+  check(String(c3 && c3.text || '').indexOf('nothing was written to disk') >= 0, 'c3 拒绝原因写明一个字都没写：' + String(c3 && c3.text).slice(0, 200))
   check(readTicketFile('demo', dKey) === beforePatch, 'c3 被拒后票文件一个字节都不动')
 
   // c4) 批量建图的地图本体一次给两枚状态：整批拒绝，一张票都不动。
   const beforeMapCount = countFiles('demo')
   const c4 = await callTool('deck_map_plan_create', { title: '两枚状态的地图骨架', planId: 'plan-1832-c4', labels: ['needs-triage', 'needs-info'], children: [{ key: 'child-bug', title: '子票：演示拒绝', kind: 'bug' }] })
   check(c4 && c4.status === 'unsupported' && c4.reason === 'bad-args', 'c4 地图本体给两枚状态被拒（bad-args）：' + JSON.stringify({ status: c4 && c4.status, reason: c4 && c4.reason }))
-  check(String(c4 && c4.text || '').indexOf('五选一') >= 0 && String(c4 && c4.text || '').indexOf('只留一枚') >= 0, 'c4 拒绝原因说清「五选一、只留一枚」：' + String(c4 && c4.text).slice(0, 160))
-  check(String(c4 && c4.text || '').indexOf('一张票都没动') >= 0, 'c4 拒绝原因写明一张票都没动')
+  check(String(c4 && c4.text || '').indexOf('one of five') >= 0 && String(c4 && c4.text || '').indexOf('keep only one') >= 0, 'c4 拒绝原因说清「五选一、只留一枚」：' + String(c4 && c4.text).slice(0, 160))
+  check(String(c4 && c4.text || '').indexOf('not a single ticket was touched') >= 0, 'c4 拒绝原因写明一张票都没动')
   check(countFiles('demo') === beforeMapCount, 'c4 被拒后盘上一张票都没多建：' + beforeMapCount + ' → ' + countFiles('demo'))
 
   // ══ f) 批量建图：地图本体与子票都显式给状态，按调用方的来，建后读回核对通过 ══
   const f = await callTool('deck_map_plan_create', { title: '显式状态的演示地图', planId: 'plan-1832-f', effort: MAP_EFFORT, labels: ['needs-info'], children: [{ key: 'explicit-bug', title: '显式 needs-info 的子票', kind: 'bug', labels: ['needs-info'] }] })
   check(f && f.status === 'ok', 'f 建图 ok：' + JSON.stringify({ status: f && f.status, text: String(f && f.text || '').slice(0, 200) }))
   const fNotes = (f && f.notes) || []
-  check(fNotes.some(function(n) { return String(n).indexOf('建后读回核对通过') >= 0 }), 'f 回执写明建后读回核对通过：' + JSON.stringify(fNotes))
-  check(!fNotes.some(function(n) { return String(n).indexOf('缺标签') >= 0 }), 'f 读回核对没有报「缺标签」（显式状态不叠位置默认）：' + JSON.stringify(fNotes))
+  check(fNotes.some(function(n) { return String(n).indexOf('read-back check after building passed') >= 0 }), 'f 回执写明建后读回核对通过：' + JSON.stringify(fNotes))
+  check(!fNotes.some(function(n) { return String(n).indexOf('missing labels') >= 0 }), 'f 读回核对没有报「缺标签」（显式状态不叠位置默认）：' + JSON.stringify(fNotes))
   const fMapKey = String((f && f.data && f.data.mapKey) || '')
   check(!!fMapKey, 'f 回执带地图票号 key=' + fMapKey)
   if (fMapKey) {

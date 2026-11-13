@@ -330,11 +330,11 @@ export function makeDelegatedExecute(toolName: unknown, ctx: unknown, opts?: { c
       const execObj = exec as { signal?: { aborted?: unknown } } | null | undefined;
       const signal = execObj && execObj.signal
       if (signal && typeof signal.aborted === 'boolean' && signal.aborted) {
-        return { status: 'unsupported', reason: 'aborted', text: '这次被中止了，没做完：请按需重调一次。' }
+        return { status: 'unsupported', reason: 'aborted', text: 'This call was aborted and did not finish: call again when needed.' }
       }
     } catch (e) {}
     if (args === null || typeof args !== 'object' || Array.isArray(args)) {
-      return { status: 'unsupported', reason: 'bad-args', text: '参数不是一个对象，我没法做：请按这个工具的参数说明重调一次。' }
+      return { status: 'unsupported', reason: 'bad-args', text: 'The arguments are not an object, so I cannot do this: follow the parameter description of this tool and call again.' }
     }
     const hint = sessionHintOf(exec)
     if (!hint) return fallthrough()
@@ -395,7 +395,7 @@ export function makeDelegatedExecute(toolName: unknown, ctx: unknown, opts?: { c
 export function apply(ctx: unknown): void {
   const toolsSvc = (ctx as { tools?: { register?: (tool: UnknownRecord) => unknown } } | null)?.tools;
   if (!toolsSvc || typeof toolsSvc.register !== 'function') {
-    throw new Error('[deckToolsRow] 工具服务不在，行起不来（注入声明了 tools，框架本应保证就绪）。')
+    throw new Error('[deckToolsRow] the tools service is not there, so the row cannot start (the injection declares tools, and the framework should have guaranteed it is ready).')
   }
   for (const d of NINE) {
     const raw = toRawRegistration(d, ctx)

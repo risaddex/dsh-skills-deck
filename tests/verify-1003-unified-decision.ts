@@ -164,7 +164,7 @@ async function main() {
     check(r.backendId === null && r.source === 'unknown' && r.reason === 'workspace-not-ready', 'D3 空目录统一判定按未知返回', JSON.stringify(r));
     check(selected === false, 'D3 空目录没问自动识别（不起外部命令）');
     const p = await openedOfU(reg, { agent: { session: { id: 's', cwd: '' } } }, sOf(''));
-    check(p.ok === false && /还没就绪/.test(p.text || ''), 'D3 空目录工具壳说还没就绪（不说没有后端）', (p.text || '').slice(0, 120));
+    check(p.ok === false && /not ready yet/.test(p.text || ''), 'D3 空目录工具壳说还没就绪（不说没有后端）', (p.text || '').slice(0, 120));
     const regCore = await imp('src/tracker/registry/core.ts');
     let matched = false;
     const reg2 = regCore.createRegistry();
@@ -178,7 +178,7 @@ async function main() {
   {
     const reg = regOf(async () => ({ backendId: 'github', source: 'matches', multiHit: ['github', 'markdown'] }));
     const p = await openedOfU(reg, { agent: { session: { id: 's', cwd: 'D:\\ws' } } }, sOf('D:\\ws'));
-    check(p.ok === false && p.reason === 'no-backend' && /同时被 2 个后端认出/.test(p.text || ''), 'D4 多命中诚实拒绝并引导去面板选定', (p.text || '').slice(0, 120));
+    check(p.ok === false && p.reason === 'no-backend' && /recognised by 2 backends at the same time/.test(p.text || ''), 'D4 多命中诚实拒绝并引导去面板选定', (p.text || '').slice(0, 120));
   }
 
   // —— 纯核单测：顺序 文件 > 声明 > 自动识别 ——

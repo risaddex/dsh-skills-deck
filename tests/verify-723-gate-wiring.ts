@@ -331,7 +331,7 @@ async function main() {
       '⑤ 回执照实说额度不适用（backendId=' + (a1 && a1.backendId) + ' / kind=' + (a1 && a1.budgetKind) + ' / readKnown=' + (a1 && a1.readKnown) + ' / offNetwork=' + (a1 && a1.offNetwork) + '）')
     check(!!a1 && a1.remaining === undefined && a1.tier === undefined,
       '⑤ 离网回执不带剩余量与档位（remaining=' + (a1 && a1.remaining) + ' / tier=' + (a1 && a1.tier) + '）')
-    check(!!r1 && r1.cost && typeof r1.cost.note === 'string' && r1.cost.note.indexOf('本后端不需要额度') >= 0,
+    check(!!r1 && r1.cost && typeof r1.cost.note === 'string' && r1.cost.note.indexOf('This backend needs no quota') >= 0,
       '⑤ 回执的 cost.note 写出「本后端不需要额度」那一句（实得 ' + JSON.stringify(r1 && r1.cost && r1.cost.note) + '）')
     // 不做成「闸被绕过了」：闸的裁决本身没坏，只是离网后端这一趟根本不问它。
     const probe = H1.gate.admitAiTool({ points: 0, requests: 1, childTickets: 0 }, { workspaceKey: wsPosix, kind: 'tool-batch', bucket: 'rest', backendId: 'github' })

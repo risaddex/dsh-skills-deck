@@ -175,7 +175,7 @@ async function main() {
   check(!('statusVisible' in confTicket), 'get 冲突票不带 statusVisible（可见值被采用了）')
   check(JSON.stringify(confTicket.statusConflict) === JSON.stringify(expectConflictImpl), 'get 冲突票 statusConflict 形状与读侧约定一致（实得 ' + JSON.stringify(confTicket.statusConflict) + '）')
   check(confTicket.state === 'closed', 'get 冲突票 state 由 wontfix 派生为 closed（实得 ' + confTicket.state + '）')
-  check(String(gConflict.text || '').indexOf('读回来了：状态 closed') >= 0, 'get 冲突票 text 仍按老格式报状态')
+  check(String(gConflict.text || '').indexOf('read back: state closed') >= 0, 'get 冲突票 text 仍按老格式报状态')
 
   const gOld = await callTool('deck_issue_get', { key: implOldKey, feature: F })
   check(gOld && gOld.status === 'ok', 'get 旧文件实施票 ok')
@@ -223,7 +223,7 @@ async function main() {
   check(rowImplOld && rowImplOld.status === 'ready-for-agent', 'list 无冲突行 status=ready-for-agent（实得 ' + (rowImplOld && rowImplOld.status) + '）')
   check(rowImplOld && rowImplOld.statusConflict === false, 'list 无冲突行 statusConflict 显式 false（实得 ' + (rowImplOld && rowImplOld.statusConflict) + '）')
   check(rowImplConflict && !('statusVisible' in rowImplConflict) && !('statusSource' in rowImplConflict), 'list 行只带 status 与 statusConflict 两格，不带 statusVisible / statusSource')
-  check(String(lF.text || '').indexOf('其中状态冲突 1 张') >= 0, 'list text 带「其中状态冲突 1 张」（实得 ' + lF.text + '）')
+  check(String(lF.text || '').indexOf('of which 1 have a status conflict') >= 0, 'list text 带「其中状态冲突 1 张」（实得 ' + lF.text + '）')
 
   const lE = await callTool('deck_issue_list', { state: 'all', effort: E })
   check(lE && lE.status === 'ok', 'list 地图目录 ok')
@@ -233,7 +233,7 @@ async function main() {
   check(rowChild && rowChild.status === 'claimed' && rowChild.statusConflict === false, 'list 地图子票 status=claimed、statusConflict=false')
   // 地图子票只认 claimed / resolved：可见行写的 wontfix 是非法值，按默认 claimed 读，不产生冲突。
   check(rowChildConflict && rowChildConflict.status === 'claimed' && rowChildConflict.statusConflict === false, 'list 非法可见值的子票按 claimed 读、无冲突（实得 ' + (rowChildConflict && rowChildConflict.status) + ' / ' + (rowChildConflict && rowChildConflict.statusConflict) + '）')
-  check(String(lE.text || '').indexOf('其中状态冲突 0 张') >= 0, 'list 地图目录 text 冲突数 0（实得 ' + lE.text + '）')
+  check(String(lE.text || '').indexOf('of which 0 have a status conflict') >= 0, 'list 地图目录 text 冲突数 0（实得 ' + lE.text + '）')
 
   const lAll = await callTool('deck_issue_list', { state: 'all' })
   check(lAll && lAll.status === 'ok', 'list 全仓 ok')
@@ -245,7 +245,7 @@ async function main() {
   check(!!plainRow, 'list 全仓里有普通票行')
   check(plainRow && !('status' in plainRow), 'list 普通票没有 status 时不出 status 字段（实得 status=' + (plainRow && plainRow.status) + '）')
   check(plainRow && plainRow.statusConflict === false, 'list 普通票 statusConflict 仍显式 false')
-  check(String(lAll.text || '').indexOf('其中状态冲突 2 张') >= 0, 'list 全仓 text 冲突数 2（实施票 1 张 + 普通票 1 张；实得 ' + lAll.text + '）')
+  check(String(lAll.text || '').indexOf('of which 2 have a status conflict') >= 0, 'list 全仓 text 冲突数 2（实施票 1 张 + 普通票 1 张；实得 ' + lAll.text + '）')
 
   const lThin = await callTool('deck_issue_list', { state: 'all', labels: ['wayfinder:map'] })
   check(lThin && lThin.status === 'ok', 'list 纯地图筛（薄查）ok')
@@ -254,7 +254,7 @@ async function main() {
   const thinRow = thinRows[0] || {}
   check('key' in thinRow && 'title' in thinRow && 'state' in thinRow && 'url' in thinRow, '薄地图行仍带 key/title/state/url 四格')
   check(!('status' in thinRow) && !('statusConflict' in thinRow), '薄地图行不加 status / statusConflict 两格')
-  check(String(lThin.text || '').indexOf('状态冲突') < 0, '薄地图路 text 不加冲突数（薄行没有状态）')
+  check(String(lThin.text || '').indexOf('have a status conflict') < 0, '薄地图路 text 不加冲突数（薄行没有状态）')
 
   // ---- 三、deck_map_snapshot ----
   const snap = await callTool('deck_map_snapshot', { key: '00', effort: E })
@@ -269,7 +269,7 @@ async function main() {
   check(kidChild && 'progress' in kidChild && 'progressDetail' in kidChild && 'originalWords' in kidChild, 'snapshot childRow 原有字段不变（progress / progressDetail / originalWords 都在）')
   const mapData = (snap && snap.data && snap.data.map) || {}
   check(!('status' in mapData) && !('statusConflict' in mapData), 'snapshot data.map 不加 status / statusConflict')
-  check(String(snap.text || '').indexOf('其中状态冲突 0 张') >= 0, 'map snapshot text 带冲突数（地图子票不会冲突，恒为 0；实得 ' + snap.text + '）')
+  check(String(snap.text || '').indexOf('of which 0 have a status conflict') >= 0, 'map snapshot text 带冲突数（地图子票不会冲突，恒为 0；实得 ' + snap.text + '）')
 
   const snapThin = await callTool('deck_map_snapshot', { key: '00', effort: E, detail: 'thin' })
   check(snapThin && snapThin.status === 'ok', 'map snapshot thin ok')
@@ -279,7 +279,7 @@ async function main() {
   check(thinKidChild && thinKidChild.status === 'claimed' && thinKidChild.statusConflict === false, 'snapshot thinRow 普通子票带 status 与 statusConflict=false')
   check(thinKidConflict && thinKidConflict.status === 'claimed' && thinKidConflict.statusConflict === false, 'snapshot thinRow 非法可见值的子票按 claimed 读、无冲突')
   check(thinKidChild && !('progress' in thinKidChild) && !('progressDetail' in thinKidChild) && !('originalWords' in thinKidChild), 'snapshot thinRow 仍不带正文进度与维护者原话')
-  check(String(snapThin.text || '').indexOf('其中状态冲突 0 张') >= 0, 'map snapshot thin text 带冲突数（恒为 0）')
+  check(String(snapThin.text || '').indexOf('of which 0 have a status conflict') >= 0, 'map snapshot thin text 带冲突数（恒为 0）')
 
   ws.cleanup()
   try { fs.rmSync(workPathHome, { recursive: true, force: true }) } catch (e) {}

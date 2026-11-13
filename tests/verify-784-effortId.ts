@@ -111,9 +111,9 @@ async function main(): Promise<void> {
   check(g0.status === 'ok' && String(g0.data.ticket.title).includes('Alpha'), '读票不带时回落第一份（与今天一致）')
   // 互斥与非法目录名：都在落盘前拒绝。
   const both = await tools.deck_issue_get.run(exec, { key: '01', feature: 'alpha', effort: 'alpha' })
-  check(both.ok === false && String(both.text || both.message || '').includes('只能填一个'), '两个参数同时给 → bad-args（只填一个）')
+  check(both.ok === false && String(both.text || both.message || '').includes('only one of effort and feature'), '两个参数同时给 → bad-args（只填一个）')
   const bad = await tools.deck_issue_get.run(exec, { key: '01', feature: '../escape' })
-  check(bad.ok === false && String(bad.text || bad.message || '').includes('目录名'), '非法目录名 → bad-args（拒绝 ..）')
+  check(bad.ok === false && String(bad.text || bad.message || '').includes('The directory name cannot be'), '非法目录名 → bad-args（拒绝 ..）')
 
   // 地图快照
   const sA = await tools.deck_map_snapshot.run(exec, { key: '00', effort: 'alpha' })
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   const cB = await tools.deck_issue_create.run(exec, { title: 'Beta 新票', kind: 'issue', feature: 'beta' })
   check(cB.status === 'ok' && cB.data.ticket.effortId === 'beta', '建票 feature=beta 落在 beta（key=' + (cB.data.ticket && cB.data.ticket.key) + '）')
   const cBoth = await tools.deck_issue_create.run(exec, { title: '两参数新票', kind: 'issue', feature: 'beta', effort: 'beta' })
-  check(cBoth.ok === false && String(cBoth.text || cBoth.message || '').includes('只能填一个'), '建票两个参数同时给 → bad-args，不落盘')
+  check(cBoth.ok === false && String(cBoth.text || cBoth.message || '').includes('only one of effort and feature'), '建票两个参数同时给 → bad-args，不落盘')
   const c0 = await tools.deck_issue_create.run(exec, { title: '不带 scope 的新票', kind: 'issue' })
   check(c0.status === 'ok' && String(c0.text || '').includes('.scratch/不带-scope-的新票/issues/'), '建票不带 scope 时按标题生成目录并如实回报（' + String(c0.text || '').slice(0, 80) + '）')
 

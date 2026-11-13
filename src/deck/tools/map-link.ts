@@ -39,16 +39,16 @@ export interface DeckMapLinkDeps {
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_map_link',
-  description: '同属 dsh-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。给已存在的 ISSUE 补 parent 或 blockedBy 边，写完读回并逐条标出落点。',
+  description: 'The ISSUE and map management of the dsh-skills-deck plugin; it only handles the repo of the current workspace. Before touching an ISSUE, call deck_context to confirm the workspace and backend, and stop if it says there is no backend. Add parent or blockedBy edges to an existing ISSUE; after writing, read back and mark the landing of each edge.',
   parameters: {
     type: 'object',
     properties: {
-      key: { type: 'string', description: '要改的那张票（子票）' },
-      parentKey: { type: 'string', description: '要挂到的父票；不传就不动父子' },
-      blockedBy: { type: 'array', items: { type: 'string' }, description: '这张票被哪些票阻塞（整批替换）' },
+      key: { type: 'string', description: 'The ticket to change (a sub-issue)' },
+      parentKey: { type: 'string', description: 'The parent ticket to attach to; leave it out to leave the parent unchanged' },
+      blockedBy: { type: 'array', items: { type: 'string' }, description: 'Which tickets block this ticket (replaces the whole set)' },
       edges: {
         type: 'array',
-        description: '一次改多张票的边；与 key/parentKey/blockedBy 二选一',
+        description: 'Change the edges of several tickets at once; use either this or key/parentKey/blockedBy',
         items: {
           type: 'object',
           properties: { key: { type: 'string' }, parentKey: { type: 'string' }, blockedBy: { type: 'array', items: { type: 'string' } } },
@@ -118,13 +118,13 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
     const toolEntryAt = (typeof d.now === 'function') ? d.now() : Date.now()
     const a: Record<string, unknown> = args || {}
     const est = shell.estimateFor('deck_map_link', a)
-    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_map_link', REFUSAL_REASONS.BAD_ARGS, 'workRouteDetail 参数已退役（#1561）：在办表不再跟在写回执里，要看就调 deck_work_route（默认只看近 24 小时在办，带 includeStale:true 看近 30 天）。这次什么都没做：没选后端、没花点数、没写盘。', { cost: { estimated: est } })
+    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_map_link', REFUSAL_REASONS.BAD_ARGS, 'The workRouteDetail parameter is retired (#1561): the work board no longer comes back inside write receipts; to see it, call deck_work_route (by default it only covers work from the last 24 hours; pass includeStale:true for the last 30 days). Nothing was done this time: no backend was selected, no points were spent, and nothing was written to disk.', { cost: { estimated: est } })
     const s = await sessionContextOfAsync(exec, { canonicalKey: d.canonicalKey, workspaceKeyOf: d.workspaceKeyOf })
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 在会话壳里是运行时布尔，
     // 那一层还没标类型，见 #1040），所以这里按形状取 reason —— 取到的值与老写法逐字相同。
     if (!s.ok) return shell.unsupported('deck_map_link', (s as { reason: string }).reason, s.text, { cost: { estimated: est } })
     const jobs = Array.isArray(a.edges) && a.edges.length ? a.edges : (a.key ? [a] : [])
-    if (!jobs.length) return shell.unsupported('deck_map_link', REFUSAL_REASONS.BAD_ARGS, '要改哪张票的边：给 key（可带 parentKey / blockedBy），或者给 edges 清单。', { cost: { estimated: est } })
+    if (!jobs.length) return shell.unsupported('deck_map_link', REFUSAL_REASONS.BAD_ARGS, 'Which ticket edges to change: give key (optionally with parentKey / blockedBy), or give an edges list.', { cost: { estimated: est } })
     const pick = await openDeckSession({ deps: d, exec: exec, session: s, estimate: est, tool: 'deck_map_link', kind: 'write' })
     if (!pick.ok) return shell.unsupported('deck_map_link', pick.reason, pick.text, { workspace: { root: s.cwd, key: s.workspaceKey }, cost: { estimated: est } })
     const repo = shell.repoOf(pick, s)
@@ -163,7 +163,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
       const jobsByKey = new Map()
       for (const job of jobs) {
         const k = String((job && job.key) || '').trim()
-        if (!k) { items.push(Object.assign({ key: '', status: 'failed', reason: 'edges 里有一项没写 key。' }, failureFields(null, 'write', 'input'))); continue }
+        if (!k) { items.push(Object.assign({ key: '', status: 'failed', reason: 'One item in edges has no key.' }, failureFields(null, 'write', 'input'))); continue }
         if (!jobsByKey.has(k)) { jobsByKey.set(k, []); keyOrder.push(k) }
         jobsByKey.get(k).push(job)
       }
@@ -171,7 +171,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
       // 还没落盘的边 —— 两条互指的边同批发出时两边都会通过、盘上留下环（已用真件复现）。
       // 预检只读一次整图、串行算完；下面那份组间并行一个字不动。被拒的票只跳过阻塞边，父子边照旧做。
       const pre = mergedBlocked.size ? await precheckBlockBatch(t, repo, opCtx, keyOrder, mergedBlocked) : { ok: true, refused: new Map() }
-      if (!pre.ok) notes.push('这一批的整批成环预检没读到整图（列表没回来），成环检查只有每一组自己那一份：同批里互指的边仍可能都通过。')
+      if (!pre.ok) notes.push('The whole-batch cycle precheck for this batch did not read the whole graph (the list did not come back), so only each group has its own cycle check: edges that point at each other inside the batch may still all pass.')
       const perKey = await Promise.all(keyOrder.map(async (key) => {
         const out: EdgeGroupOut = { items: [], notes: [], touched: [], done: 0, readback: null }
         // 同票分组持锁 serial：同票并发补边不再丢一次改动；不同票分组照旧并行。
@@ -179,7 +179,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
         const lockTimeoutMs = numOpt(d.keyLockTimeoutMs)
         const held = await withKeyLock(repo, key, async () => {
           for (const job of jobsByKey.get(key)) {
-            if (sc.outOfBudget()) { out.items.push(Object.assign({ key: key, status: 'failed', reason: '剩余额度不够发这一次调用了，这张票的边这次没动：带同样参数再调一次即可。' }, failureFields(null, 'write', 'budget'))); continue }
+            if (sc.outOfBudget()) { out.items.push(Object.assign({ key: key, status: 'failed', reason: 'There is not enough quota left to send this call, so the edges of this ticket were not touched: call again with the same parameters.' }, failureFields(null, 'write', 'budget'))); continue }
           if (job.parentKey !== undefined && job.parentKey !== null) {
             const r = await applyParentEdge(t, repo, opCtx, key, String(job.parentKey))
             out.items.push(r.item)
@@ -189,7 +189,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
             if (pre.refused.has(key)) {
               // 整批预检说这一组边会让图成环：这条边不写，逐条如实报失败（别让 AI 当成建好了）。
               for (const target of asList(job.blockedBy)) {
-                out.items.push(Object.assign({ key: key, status: 'failed' }, edgeEvidence('block', target, { kind: 'unknown', ok: false, text: '写前成环预检拒了这一组边，这条没写：要把 #' + target + ' 加进票 #' + key + ' 的 blockedBy（也就是票 #' + key + ' 被 #' + target + ' 阻塞）。预检原话：' + String(pre.refused.get(key) || '（没给出原因）') }), failureFields(null, 'write', 'input')))
+                out.items.push(Object.assign({ key: key, status: 'failed' }, edgeEvidence('block', target, { kind: 'unknown', ok: false, text: 'The cycle precheck before writing refused this group of edges, so this one was not written: it wanted to add #' + target + ' to the blockedBy of ticket #' + key + ' (that is, ticket #' + key + ' blocked by #' + target + '). Precheck words: ' + String(pre.refused.get(key) || '(no reason given)') }), failureFields(null, 'write', 'input')))
               }
               continue
             }
@@ -200,9 +200,9 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
                 // readOk 分开看：读失败时只能说「没读回来，判不了」，绝不许说成「这条依赖没出现在票上」（#790）。
                 const hit = out.readback.readOk && !out.readback.failed && out.readback.landed.indexOf(target) >= 0
                 const e2 = out.readback.failed ? out.readback.failed
-                  : !out.readback.readOk ? { kind: 'unknown', ok: false, text: '写动作回了成功，但写后没读回票 ' + key + '，判不了 ' + key + ' 的 blockedBy 里有没有 ' + target + '：这一组边已按合并后的完整集合写过一次，读回没成功，别把这条当成已建成、也别当成没建成（同组第一条明细里有后端原话）。' }
+                  : !out.readback.readOk ? { kind: 'unknown', ok: false, text: 'The write call returned success, but ticket ' + key + ' was not read back after the write, so the blockedBy of ' + key + ' cannot be judged: it may or may not hold ' + target + '. This group of edges was written once as the merged full set, but the read-back did not succeed, so do not treat this edge as built and do not treat it as not built (the backend words are in the first detail of this group).' }
                   : hit ? classifyEdgeLanding('block', target, out.readback.after, key)
-                  : { kind: 'unknown', ok: false, text: '写后读回：票 ' + key + ' 的 blockedBy 里没有 ' + target + '（读回来的是 ' + (out.readback.landed.join('、') || '空') + '）' }
+                  : { kind: 'unknown', ok: false, text: 'Read-back after the write: ticket ' + key + ' does not hold ' + target + ' (what came back was ' + (out.readback.landed.join(', ') || 'empty') + ')' }
                 // 重复项也要带证据：同一批里第一条明细有分类、后面几条只有「判不了」会让人不知道该信哪条。
                 let ev: Record<string, string> | undefined
                 if (!hit) {
@@ -220,7 +220,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
               if (r.failed) {
                 // 整批写失败时 r.failed 是这次失败的原对象：过同一张映射表出证据，不抄第一项、也不猜默认码。
                 const ev = failureFields(r.failed, 'write')
-                out.items.push(Object.assign({ key: key, status: 'failed' }, edgeEvidence('block', want.join('、'), r.failed), ev))
+                out.items.push(Object.assign({ key: key, status: 'failed' }, edgeEvidence('block', want.join(', '), r.failed), ev))
                 out.readback = { landed: [], after: { issue: null, dependencies: null }, failed: r.failed, readOk: false, code: ev.code, errorKind: ev.errorKind, stage: ev.stage }
               } else {
                 for (const item of r.items) {
@@ -228,7 +228,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
                   if (item.status === 'ok') { out.done += 1; out.touched.push(key) }
                 }
                 const extra = r.landed.filter((k) => want.indexOf(k) < 0)
-                if (extra.length) out.notes.push('票 ' + key + ' 上还有计划外的阻塞边：' + extra.join('、') + '（setBlockedBy 是整批替换，后端却留下了它们，读回来核对一次）。')
+                if (extra.length) out.notes.push('Ticket ' + key + ' also has blocking edges that were not planned: ' + extra.join(', ') + ' (setBlockedBy replaces the whole set, yet the backend kept them; read it back and check once).')
                 out.readback = { landed: r.landed, after: r.after, failed: null, readOk: r.readOk }
               }
             }
@@ -237,7 +237,7 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
           }, { timeoutMs: lockTimeoutMs })
           if (held && held.ok === false && held.timedOut) {
             // 锁没等到：这组一条没动，逐条诚实记（形状与预检拒绝同形，调用方照既有路续跑）。
-            const lockText = '票 ' + key + ' 正被另一次调用改着，这次没动：稍后带同样参数再调一次即可。'
+            const lockText = 'Ticket ' + key + ' is being changed by another call right now, so nothing was changed: call again with the same parameters in a moment.'
             for (const job of jobsByKey.get(key)) {
               if (job.parentKey !== undefined && job.parentKey !== null) {
                 out.items.push(Object.assign({ key: key, status: 'failed' }, edgeEvidence('parent', String(job.parentKey), { kind: 'unknown', ok: false, text: lockText }), failureFields(null, 'write', 'lock')))
@@ -256,22 +256,22 @@ export function createDeckMapLink(deps?: DeckMapLinkDeps) {
         done += r.done
       }
       const status = statusOfItems(items)
-      if (status !== DECK_STATUS.OK) notes.push('有几条边没建成，逐条原因在上面的 items 里：别把它们当成已经建好。')
+      if (status !== DECK_STATUS.OK) notes.push('Some edges were not built; the reason for each is in the items above: do not treat them as built.')
       // #1799：顶层 reason 由逐条失败项的映射码汇总（取最该先告诉人的那一个），不是「有失败就一律 backend-unsupported」。
       const failedItems = items.filter((i) => i && i.status !== 'ok') as Array<{ code?: unknown }>
       // 每个失败项都带 code（上面逐条用 evidenceOf / failureFields 记下的映射码），所以这里不再手写兜底字面量：
       // 真有哪条漏了证据，宁可回空串让门禁暴露，也不把「不知道」写成 backend-unsupported。
       const reason = status === DECK_STATUS.OK ? '' : worstReason(failedItems.map((i) => String((i && i.code) || '')))
       // #790：顶层一句话要带失败摘要，不只报计数。原因原文仍在逐条 items 的 evidence 里，这里只摘要。
-      let text = '这次要补 ' + items.length + ' 条边，建成 ' + done + ' 条。'
+      let text = 'This call asked for ' + items.length + ' edges, and ' + done + ' were built.'
       const failed = items.filter((i) => i && i.status !== 'ok')
       if (failed.length) {
         const sums = failed.map((i) => {
           const t = String((i && i.target) || '')
           const e = String((i && i.evidence) || (i && i.reason) || '')
-          return String((i && i.key) || '?') + '→' + t + '：' + e.slice(0, 120)
+          return String((i && i.key) || '?') + '→' + t + ': ' + e.slice(0, 120)
         })
-        text += '失败 ' + failed.length + ' 条：' + sums.join('；').slice(0, 800)
+        text += ' ' + failed.length + ' edges failed: ' + sums.join('; ').slice(0, 800)
       }
       return {
         value: {

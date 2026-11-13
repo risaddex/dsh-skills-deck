@@ -24,17 +24,17 @@ import { TRACKER_ERROR_STAGE } from '../../tracker/contract/results.js'
  */
 export function backendMapCreateFailure(created: TransportResult, planId: string, notes: string[]): { value: Record<string, unknown>; claimed: { requests: number; points: number } } {
   const err = created && created.error
-  const msg = String((err && err.message) || '后端没给出原因').slice(0, 300)
+  const msg = String((err && err.message) || 'the backend did not give a reason').slice(0, 300)
   // 只有「回查没做成」这一档有确定可做的下一步；别的失败重试未必有用，不追加任何建议。
   const lookupFailed = !!err && err.stage === TRACKER_ERROR_STAGE.ANCHOR_LOOKUP
   const retryAdvice = lookupFailed
-    ? ' 拿同一个计划标识原样重试即可：这一支的幂等键是 deck-plan-' + String(planId).slice(0, 60) + '-map，同一个计划标识重试命中的是同一个键，命中会复用那张地图票，已经建好的部分会认回来，不会多建一张。'
+    ? ' Retry as-is with the same plan identifier: the idempotency key on this path is deck-plan-' + String(planId).slice(0, 60) + '-map, so a retry with the same plan identifier hits the same key, a hit reuses that map ticket, whatever was already built is adopted back, and no extra ticket is created.'
     : ''
   // 与建票失败回执同一个口径：顶层 reason 与 data.error.code 是同一张映射表出来的同一个码；
   // data.error 另外保留后端原档位（kind）与阶段（stage），供人追查「为什么判成这个码」。
   const code = reasonForResult(err || null, 'write')
   return {
-    value: { status: DECK_STATUS.UNSUPPORTED, reason: code, text: '地图票没建成（后端原话：' + msg + '），后面的子票与边都没动。' + retryAdvice, data: { planId: planId, error: { kind: String((err && err.kind) || ''), stage: String((err && err.stage) || ''), code: code, message: msg } }, notes: notes },
+    value: { status: DECK_STATUS.UNSUPPORTED, reason: code, text: 'The map ticket was not created (backend words: ' + msg + '), so the sub-issues and edges after it were not touched.' + retryAdvice, data: { planId: planId, error: { kind: String((err && err.kind) || ''), stage: String((err && err.stage) || ''), code: code, message: msg } }, notes: notes },
     claimed: { requests: 1, points: 4 },
   }
 }

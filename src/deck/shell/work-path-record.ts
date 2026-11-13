@@ -191,7 +191,7 @@ export async function recordWorkRoute(
   if (releaseMode) {
     // 释放这一支接不上时也要说清楚：静默什么都不做会让人以为票已经释放了。
     if (typeof releaseFn !== 'function') {
-      notes.push('工作路线这次没释放掉（no-release-binding）：当前装配没接上释放这一支，票的工作条目还留着。');
+      notes.push('The work route did not release this time (no-release-binding): this assembly has no release branch wired up, so the work entry of the ticket is still there.');
       return;
     }
   } else if (typeof note !== 'function') return;
@@ -204,22 +204,22 @@ export async function recordWorkRoute(
   // 这种只说「没记全」，不谎称整次没落上。#1263 之后若要再细分，按 reason 接着加。
   const noteFailNote = function (reason: string): void {
     const tail = reason === 'readback-failed'
-      ? '写下去了，但读回来核对没通过，下一次写票会重新读盘再补上。'
-      : '这次没写成功；盘上可能还是旧内容（换后端时旧文件已单独留档），下一次写票会重新读盘再补上。';
-    notes.push('工作路线这次没落上（' + reason + '）：' + tail + '要看在办表就调 deck_work_route。');
+      ? 'The write went through, but the read-back check did not pass, and the next ticket write will read the disk again and fill in what is missing.'
+      : 'Nothing was written; the disk may still hold the old content (when the backend changed, the old file was archived on its own), and the next ticket write will read the disk again and fill in what is missing.';
+    notes.push('The work route did not record this time (' + reason + '): ' + tail + ' To see the work board, call deck_work_route.');
   };
   const partialNote = function (reason: string): void {
-    notes.push('工作路线这次没记全（' + reason + '）：已经记下的不会丢，下一次写票会把缺的补上。');
+    notes.push('The work route recorded only part of this time (' + reason + '): what was already recorded is not lost, and the next ticket write will fill in what is missing.');
   };
   // 释放失败要人知道票的工作条目还留着。
   // 读回核对失败是释放里的特例：写盘那一步已经成了，删除大概率已经落盘，这时说「条目还留着」是假话
   // （与 noteFailNote 里分两句同一个理由）。
   const releaseFailNote = function (reason: string): void {
     if (reason === 'readback-failed') {
-      notes.push('工作路线这次释放没核对上（readback-failed）：删除已经写进盘里了，但写回后读回来核对没通过；下一次释放或上报会重新读盘确认。');
+      notes.push('The release of the work route was not confirmed (readback-failed): the deletion was already written to disk, but the read-back check after the write did not pass; the next release or report will read the disk again to confirm.');
       return;
     }
-    notes.push('工作路线这次没释放掉（' + reason + '）：这张票在本会话的工作条目还留着，下一次释放或上报会照常处理。');
+    notes.push('The work route did not release this time (' + reason + '): the work entry of this ticket in this session is still there, and the next release or report will handle it as usual.');
   };
   const rootKey = str(s && s.workspaceKey);
   const sessionId = str(s && s.sessionId);
@@ -239,11 +239,11 @@ export async function recordWorkRoute(
       }
       if (released.removed === true) {
         const left = typeof released.count === 'number' ? released.count : 0;
-        notes.push('已把票 ' + tickets[0] + ' 从本会话的工作路线里释放掉（本会话还剩 ' + left + ' 条在办；票本身的状态与认领人没有改动）。');
+        notes.push('Ticket ' + tickets[0] + ' was released from the work route of this session (' + left + ' entries are still in progress in this session; the state and assignee of the ticket itself were not changed).');
       } else if (released.blocked === 'has-work') {
-        notes.push('票 ' + tickets[0] + ' 在本会话有过实际处理（建票、改票、关票、建计划、挂边之一），按规则不能从工作路线里释放；这条路径保留。release 只用来撤销从没处理过的误报。');
+        notes.push('Ticket ' + tickets[0] + ' was actually worked on in this session (one of: created, edited, closed, a plan was made, an edge was attached), so the rules do not allow releasing it from the work route; this path is kept. release only takes back a report of a ticket that was never worked on.');
       } else {
-        notes.push('票 ' + tickets[0] + ' 本来就不在本会话的工作路线里，这次没有可释放的条目。');
+        notes.push('Ticket ' + tickets[0] + ' was not in the work route of this session in the first place, so there was no entry to release this time.');
       }
     } else {
       for (let i = 0; i < tickets.length; i++) {

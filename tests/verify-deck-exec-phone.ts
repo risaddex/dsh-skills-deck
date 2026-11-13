@@ -52,7 +52,7 @@ async function main() {
   // ── 2. 表不在、表里没这条，各回诚实占位 ──
   const noTablePhone = mod.createDeckExec({ getTable: async function () { return null }, logCtx: fakeLog })
   const noTable = await noTablePhone.handleDeckExec({ tool: 'deck_context', args: {}, session: { cwd: '/ws' } })
-  check(noTable && noTable.status === 'unsupported' && String(noTable.text).indexOf('面板') >= 0, '表不在回诚实占位并指去面板')
+  check(noTable && noTable.status === 'unsupported' && String(noTable.text).indexOf('use the panel for now') >= 0, '表不在回诚实占位并指去面板')
   const emptyPhone = mod.createDeckExec({ getTable: async function () { return { tools: {} } }, logCtx: fakeLog })
   const emptyRun = await emptyPhone.handleDeckExec({ tool: 'deck_context', args: {}, session: { cwd: '/ws' } })
   check(emptyRun && emptyRun.status === 'unsupported', '表里没这条回做不到')
@@ -165,13 +165,13 @@ async function main() {
   row.apply(quietCtx)
   const quietTool = quietCtx.tools.registered.filter((t) => t.name === 'deck_context')[0]
   const quietOut = await quietTool.execute({}, { agent: { session: { cwd: '/ws' } } })
-  check(quietOut && quietOut.status === 'unsupported' && String(quietOut.text).indexOf('面板') >= 0, '没路就回诚实占位（不谎报成功）')
+  check(quietOut && quietOut.status === 'unsupported' && String(quietOut.text).indexOf('use the panel for now') >= 0, '没路就回诚实占位（不谎报成功）')
   check(JSON.stringify((await imp('src/deck/shell/table-cell.ts')).readDeckPath()) === JSON.stringify({ tool: 'deck_context', via: 'fallback' }), '没路记退回（给探针读）')
   // 参数不是对象、中止、会话缺失：三档各回各的，不碰网络。
   const badOut = await quietTool.execute('不是对象', { agent: { session: { cwd: '/ws' } } })
   check(badOut && badOut.status === 'unsupported', '参数不是对象直接回做不到')
   const abortOut = await quietTool.execute({}, { agent: { session: { cwd: '/ws' } }, signal: { aborted: true } })
-  check(abortOut && abortOut.status === 'unsupported' && String(abortOut.text).indexOf('中止') >= 0, '已中止直接回做不到')
+  check(abortOut && abortOut.status === 'unsupported' && String(abortOut.text).indexOf('was aborted and did not finish') >= 0, '已中止直接回做不到')
   const noSessOut = await quietTool.execute({}, { agent: {} })
   check(noSessOut && noSessOut.status === 'unsupported', '会话目录拿不到回做不到')
   // 同源请求通：直连不在、同源在，也拿真结果。

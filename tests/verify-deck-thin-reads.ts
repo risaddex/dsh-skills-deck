@@ -100,7 +100,7 @@ async function main() {
     const r = await tool.run(execFor(), { key: '7' })
     check(depsCalls === 1, '缺省取反向边（调了依赖接口）')
     check(r && r.status === 'ok' && r.data.relations.blocking.length === 1, '缺省反向边在关系里')
-    check(typeof r.text === 'string' && r.text.indexOf('阻塞别人 1 条') >= 0, '缺省正文报条数')
+    check(typeof r.text === 'string' && r.text.indexOf('blocks 1') >= 0, '缺省正文报条数')
   }
 
   // ② blocking=false：依赖接口一次不打，反向边记空不记 0
@@ -116,7 +116,7 @@ async function main() {
     check(depsCalls === 0, '关掉反向边一次不打依赖接口')
     check(r && r.status === 'ok', '关掉照样 OK')
     check(r && Array.isArray(r.data.relations.blocking) && r.data.relations.blocking.length === 0, '反向边记空')
-    check(typeof r.text === 'string' && r.text.indexOf('阻塞别人未取') >= 0 && r.text.indexOf('阻塞别人 0 条') < 0, '正文不写假的 0 条')
+    check(typeof r.text === 'string' && r.text.indexOf('blocks not fetched') >= 0 && r.text.indexOf('blocks 0') < 0, '正文不写假的 0 条')
     check(JSON.stringify(r.notes || []).indexOf('blocking=false') >= 0, '注记写清跳过与拿全量办法')
     check(r.data.relations.blockedBy.length === 1 && r.data.relations.parentKey === '3', '正向关系不受影响')
   }
@@ -174,7 +174,7 @@ async function main() {
     const g = stubGateLedger(gateMod, ledgerMod)
     const r = await getMod.createDeckIssueGet(baseDeps(g.gate, stubRegistry(truncated), budget)).run(execFor(), { key: '7' })
     check(r && r.status === 'ok' && r.data.relations.blocking.length === 1, '⑥-1 到了上限，已经看到的边照给')
-    check(typeof r.text === 'string' && r.text.indexOf('可能不全') >= 0, '⑥-2 正文说清这个条数可能不全')
+    check(typeof r.text === 'string' && r.text.indexOf('possibly incomplete') >= 0, '⑥-2 正文说清这个条数可能不全')
     check(JSON.stringify(r.notes || []).indexOf('不是「没有阻塞别人」') >= 0, '⑥-3 注记把后端给的说明原样带上')
   }
   {
@@ -186,7 +186,7 @@ async function main() {
     const r = await getMod.createDeckIssueGet(baseDeps(g.gate, stubRegistry(scanned), budget)).run(execFor(), { key: '7' })
     check(r && r.status === 'ok', '⑥-4 退回整仓反推照样读成功')
     check(JSON.stringify(r.notes || []).indexOf('整仓列表反推') >= 0, '⑥-5 注记交代用了兜底（即使结果完整）')
-    check(typeof r.text === 'string' && r.text.indexOf('可能不全') < 0, '⑥-6 结果完整时不乱说「可能不全」')
+    check(typeof r.text === 'string' && r.text.indexOf('possibly incomplete') < 0, '⑥-6 结果完整时不乱说「可能不全」')
   }
 
   // ⑥-b REST 降级时列表也要自曝（#1304 AC⑤）：主路用不了、走 REST 通道，REST 自己也可能只拿到一部分
@@ -202,13 +202,13 @@ async function main() {
     const r = await tool.run(execFor(), {})
     check(r && r.status === 'ok', '⑥-7 REST 降级时列表照样回 OK')
     const notesText = JSON.stringify(r && r.notes || [])
-    check(notesText.indexOf('REST 降级通道') >= 0 && notesText.indexOf('可能不全') >= 0, '⑥-8 注记说清走了 REST 且清单可能不全')
+    check(notesText.indexOf('REST fallback path was used') >= 0 && notesText.indexOf('may be incomplete') >= 0, '⑥-8 注记说清走了 REST 且清单可能不全')
   }
 
   // ⑦ 介绍不断：描述是一行，参数说明里有性能字眼
   {
     check(typeof getMod.definition.description === 'string' && getMod.definition.description.indexOf('\n') < 0, '单票读介绍仍是一行')
-    check(getMod.definition.parameters.properties.blocking.description.indexOf('反向边查询') >= 0, 'blocking 参数说清代价')
+    check(getMod.definition.parameters.properties.blocking.description.indexOf('reverse-edge query') >= 0, 'blocking 参数说清代价')
     check(snapMod.definition.parameters.properties.detail.description.indexOf('thin') >= 0, 'detail 参数说清两档')
   }
 
@@ -310,12 +310,16 @@ async function main() {
      // 量两个数：data 是工具自己装的那一块（正文、票面、关系、落点），整份回执外面还有壳的公共字段
       // （tool/workspace/backend/repo/cost/notes 等，约 700 字，由会话壳统一加，跟正文重复无关）。
       // #1562 时同构造整份 7433 字；#1828 唯一化正文后 data 2705、整份 3406，所以卡这两个上限。
+      // 2026-11-13：src/deck 的回执从中文翻成英文，同样的信息用英文写就是更长（实测 data 3029、整份 4013，
+      //   +12% / +18%，内容一条没加），上限跟着语言的字符数各留约一成余量改成 3400 / 4600。
+      //   这两条挡的是「回执把上下文灌满」，不是某个字数；结构性的保证（正文只出现一次、摘要 2000 字、
+      //   评论只给总数）仍是原判据，一个字没松。
       const size = JSON.stringify(r).length
       const dataSize = JSON.stringify(r.data).length
       check(r && r.status === 'ok' && r.data.body.text.length === 2000 && r.data.body.length === body10k.length && r.data.commentCount === 5,
         '10KB 正文 + 5 条评论：摘要 2000 字、全文长度与评论总数照给')
-      check(dataSize <= 3000, '10KB 正文 + 5 条评论：回执的 data 部分 ≤3KB（实得 ' + dataSize + ' 字）')
-      check(size <= 3500, '10KB 正文 + 5 条评论：整份回执 ≤3.5KB（实得 ' + size + ' 字）')
+      check(dataSize <= 3400, '10KB 正文 + 5 条评论：回执的 data 部分 ≤3.4KB（实得 ' + dataSize + ' 字）')
+      check(size <= 4600, '10KB 正文 + 5 条评论：整份回执 ≤4.6KB（实得 ' + size + ' 字）')
       check(countOf(JSON.stringify(r), '十千字票') === 1, '正文在整份回执里只出现一次（实得 ' + countOf(JSON.stringify(r), '十千字票') + ' 次）')
     }
     // 写整段正文：没带指纹、指纹对不上，都一个字不动。
@@ -327,7 +331,7 @@ async function main() {
       const noDigestText = JSON.stringify(noDigest)
       check(noDigestText.indexOf('bodyDigest') >= 0 && noDigest.data && noDigest.data.ticket && noDigest.data.ticket.body === bigBody, '没带指纹写正文：一个字不动并告诉怎么取指纹')
       const wrong = await mkPatch().run(execFor(), { key: '7', body: bigBody + '改', bodyDigest: '0'.repeat(64) })
-      check(JSON.stringify(wrong).indexOf('指纹对不上') >= 0, '指纹对不上：一个字不动并提示重读')
+      check(JSON.stringify(wrong).indexOf('The body digest does not match') >= 0, '指纹对不上：一个字不动并提示重读')
     }
   }
 

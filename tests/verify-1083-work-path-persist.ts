@@ -148,7 +148,7 @@ async function main() {
   const vBad: any = { status: 'ok', data: { key: '704', effortId: '', title: '坏文件票' }, notes: [] }
   await recordMod.recordWorkRoute({ workRouteNote: (i: unknown) => instBad.note(i), workRouteRead: (i: unknown) => instBad.read(i), now: () => T0 }, 'deck_issue_report', { sessionId: 'sess-a-1083', workspaceKey: 'ws-1083-bad', cwd: 'x' }, 'markdown', vBad)
   check(!vBad.data || !('workRoute' in vBad.data), '坏文件时写回执不再带在办表（#1561：要看调 deck_work_route）；记条目本身不抛错')
-  check(vBad.notes.some((n: string) => n.indexOf('读不出来') >= 0), '回执备注说明盘上旧文件读不出来、按空账重写：' + JSON.stringify(vBad.notes))
+  check(vBad.notes.some((n: string) => n.indexOf('could not be read') >= 0 && n.indexOf('rewritten from an empty one') >= 0), '回执备注说明盘上旧文件读不出来、按空账重写：' + JSON.stringify(vBad.notes))
   const badAfter = JSON.parse(fs.readFileSync(badFile, 'utf8'))
   check(badAfter.workers.length === 1 && badAfter.workers[0].entries.length === 1 && badAfter.workers[0].entries[0].ticketKey === '704', '坏文件被整份重写成只含这次这一条的新账')
   // 读文件这一下临时失败（比如被占用）：当空账继续，读回成功，备注说明，日志记 record ok=false。
@@ -164,7 +164,7 @@ async function main() {
   })
   const instTransient = storeMod.createWorkPathStore(Object.assign({ homeDir: home4b, now: () => T0, log: log4b.sink }, transientIo))
   const transientNote: any = await instTransient.note({ rootKey: 'ws-1083-transient', sessionId: 'sess-a-1083', backend: 'markdown', ticketKey: '705', action: 'report', source: 'reported' })
-  check(transientNote.ok === true && Array.isArray(transientNote.warnings) && transientNote.warnings.length === 1 && transientNote.warnings[0].indexOf('没读出来') >= 0,
+  check(transientNote.ok === true && Array.isArray(transientNote.warnings) && transientNote.warnings.length === 1 && transientNote.warnings[0].indexOf('was not read this time') >= 0,
     '读文件临时失败：当空账继续写、不抛错，成功结果带 warnings')
   const recordLines = log4b.lines.filter((l) => l.fields && l.fields.kind === 'record')
   check(recordLines.length === 1 && recordLines[0].fields.ok === false, '读旧文件失败时 record 那条日志如实记 ok=false')
@@ -190,7 +190,7 @@ async function main() {
   await store5.note({ rootKey: root5, sessionId: 'sess-a-1083', backend: 'github', ticketKey: '901', action: 'report', source: 'reported' })
   clock5 = T0 + 1000
   const switched: any = await store5.note({ rootKey: root5, sessionId: 'sess-a-1083', backend: 'markdown', ticketKey: '902', action: 'report', source: 'reported' })
-  check(switched.ok === true && Array.isArray(switched.warnings) && switched.warnings[0].indexOf('留档') >= 0, '换后端：这次照样落上，warnings 说明旧记录已改名留档')
+  check(switched.ok === true && Array.isArray(switched.warnings) && switched.warnings[0].indexOf('renamed and kept') >= 0, '换后端：这次照样落上，warnings 说明旧记录已改名留档')
   const legacy5 = main5.slice(0, -5) + '.github.json'
   check(fs.existsSync(legacy5), '旧后端那份改名留档（<根散列>.github.json）')
   const legacyDisk = JSON.parse(fs.readFileSync(legacy5, 'utf8'))
@@ -221,9 +221,9 @@ async function main() {
   const clean = { v: 3, at: T0, backend: 'markdown', workers: [{ session: 'sess', label: '会话标题', labelAt: T0, entries: [{ ticketKey: '1', effortId: '', title: humanTitle, action: 'report', actionAt: T0, source: 'reported' }] }] }
   check(privacyMod.privacyViolations(clean).length === 0, '白名单里那 15 个字段名组成的账自检干净')
   const dirtyName = privacyMod.privacyViolations({ v: 3, command: 'gh issue list' })
-  check(dirtyName.length === 1 && dirtyName[0].indexOf('不在白名单') >= 0, '出现白名单以外的字段名：当场拦下并指到字段（' + dirtyName[0] + '）')
+  check(dirtyName.length === 1 && dirtyName[0].indexOf('not on the allowlist') >= 0, '出现白名单以外的字段名：当场拦下并指到字段（' + dirtyName[0] + '）')
   const dirtyValue = privacyMod.privacyViolations({ workers: [{ title: token }] })
-  check(dirtyValue.length === 1 && dirtyValue[0].indexOf('GitHub 令牌') >= 0, '白名单字段里的凭证原文也会被内容检查认出来（' + dirtyValue[0] + '）')
+  check(dirtyValue.length === 1 && dirtyValue[0].indexOf('looks like a GitHub token') >= 0, '白名单字段里的凭证原文也会被内容检查认出来（' + dirtyValue[0] + '）')
 
   // ── 七、日志：新事件上线、四类 kind 齐全、字段封闭（验收⑤）──────────────
   const writeLines = log1.lines.filter((l) => l.event === 'workRoute.write')

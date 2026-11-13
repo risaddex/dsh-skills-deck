@@ -20,7 +20,7 @@
       "text": "这次 deck_issue_create 预计花 7 点、4 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "idempotencyKey": "deck-dafdda6d-5666666",
@@ -48,8 +48,8 @@
   },
   "items": [],
   "notes": [
-    "我替你补了正文区块：## 进度",
-    "这次用的是自动幂等锚（同会话 + 同标题 + 同标签，5 分钟窗口内重复调用复用同一张票）。"
+    "Body sections were added for you: ## 进度",
+    "This call used an automatic idempotency anchor (same session + same title + same labels; a repeated call inside the 5-minute window reuses the same ticket)."
   ],
   "ok": true,
   "readBack": null,
@@ -61,7 +61,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "票 01 建好了：金标准演示票。落在 .scratch/demo/issues/01-金标准演示票.md（编号 01）。返回值就是写后的真状态，不必再读一次。",
+  "text": "Ticket 01 created: 金标准演示票. Landed at .scratch/demo/issues/01-金标准演示票.md (number 01). The return value is the real state after the write; there is no need to read it again.",
   "tool": "deck_issue_create",
   "touched": [
     "01"

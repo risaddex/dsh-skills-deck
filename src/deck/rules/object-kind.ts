@@ -177,39 +177,39 @@ export function resolveCreateKind(request: unknown): CreateKindResolution {
   if (!rawKind) {
     return {
       ok: false,
-      problem: '建票要说明这是哪一层：kind 必填，六个值 ' + KIND_MENU + '。'
-        + '迁移：旧的 task 改成 map-ticket 并同时给 label（按意图四选一，例如 wayfinder:task），旧的 ticket 改成 spec-ticket。',
+      problem: 'Creating a ticket has to say which level it is: kind is required, one of the six values ' + KIND_MENU + '. '
+        + 'Migration: the old task becomes map-ticket together with a label (one of four by intent, for example wayfinder:task), and the old ticket becomes spec-ticket.',
     }
   }
   if (rawKind === 'task') {
     return {
       ok: false,
-      problem: '旧的 kind=task 不再接受：改 map-ticket 并同时给 label（按意图四选一：' + LABEL_MENU + '），'
-        + '或者改 issue —— 它只是普通票、不在地图上时用 issue。',
+      problem: 'The old kind=task is no longer accepted: change it to map-ticket together with a label (one of four by intent: ' + LABEL_MENU + '), '
+        + 'or change it to issue: use issue when it is only a plain ticket that is not on a map.',
     }
   }
   if (rawKind === 'ticket') {
-    return { ok: false, problem: '旧的 kind=ticket 不再接受：改 spec-ticket（规格拆出来的实施票就是它）。' }
+    return { ok: false, problem: 'The old kind=ticket is no longer accepted: change it to spec-ticket (a spec ticket split out of a spec is exactly what it means).' }
   }
   const rule = ruleFor(rawKind)
   if (!rule) {
-    return { ok: false, problem: '没有这个位置值「' + rawKind.slice(0, 40) + '」：kind 只认 ' + KIND_MENU + '。' }
+    return { ok: false, problem: 'There is no such position value "' + rawKind.slice(0, 40) + '": kind only accepts ' + KIND_MENU + '.' }
   }
 
   const label = (req.label === undefined || req.label === null) ? '' : String(req.label).trim()
   if (rule.kind !== 'map-ticket' && label) {
-    return { ok: false, problem: '只有地图工单（kind=map-ticket）才收 label：' + rule.kind + ' 的身份已经由 kind 自己说清了，别把类型标签同时塞在 label 里。' }
+    return { ok: false, problem: 'Only a map ticket (kind=map-ticket) takes a label: the identity of ' + rule.kind + ' is already stated by kind itself, so do not also put a type label in label.' }
   }
   if (rule.kind === 'map-ticket') {
     if (!label) {
-      return { ok: false, problem: '地图工单要说明是哪一种：kind=map-ticket 时必须给 label，四选一：' + LABEL_MENU + '。' }
+      return { ok: false, problem: 'A map ticket has to say which type it is: kind=map-ticket requires a label, one of four: ' + LABEL_MENU + '.' }
     }
     let known = false
     for (let i = 0; i < MAP_TICKET_LABELS.length; i += 1) {
       if (MAP_TICKET_LABELS[i] === label) known = true
     }
     if (!known) {
-      return { ok: false, problem: '没有这个类型标签「' + label.slice(0, 40) + '」：地图工单的 label 只认 ' + LABEL_MENU + '。' }
+      return { ok: false, problem: 'There is no such type label "' + label.slice(0, 40) + '": the label of a map ticket only accepts ' + LABEL_MENU + '.' }
     }
   }
 
@@ -224,8 +224,8 @@ export function resolveCreateKind(request: unknown): CreateKindResolution {
     if (offending) {
       return {
         ok: false,
-        problem: 'labels 里别再放类型标签（其中有「' + offending.slice(0, 40) + '」）：类型标签由 kind/label 决定，'
-          + '这里只放 triage 标签（例如 ready-for-agent、needs-triage）。',
+        problem: 'Do not put a type label in labels (one of them is "' + offending.slice(0, 40) + '"): the type label is decided by kind/label, '
+          + 'so only triage labels belong here (for example ready-for-agent, needs-triage).',
       }
     }
   }
@@ -238,13 +238,13 @@ export function resolveCreateKind(request: unknown): CreateKindResolution {
 
   const parentKey = (req.parentKey === undefined || req.parentKey === null) ? '' : String(req.parentKey).trim()
   if ((rule.kind === 'map' || rule.kind === 'spec') && parentKey) {
-    return { ok: false, problem: rule.kind === 'map' ? '探索地图是顶层容器，不收 parentKey。' : '规格是顶层容器，不收 parentKey。' }
+    return { ok: false, problem: rule.kind === 'map' ? 'An exploration map is a top-level container and does not take parentKey.' : 'A spec is a top-level container and does not take parentKey.' }
   }
   if (rule.kind === 'map-ticket' && !parentKey) {
-    return { ok: false, problem: '地图工单要挂在探索地图下：kind=map-ticket 时要带 parentKey，填探索地图的票号（本地后端是 00）。' }
+    return { ok: false, problem: 'A map ticket has to hang under an exploration map: kind=map-ticket requires parentKey, filled with the ticket number of the exploration map (00 on the local backend).' }
   }
   if (rule.kind === 'spec-ticket' && !parentKey) {
-    return { ok: false, problem: '实施票要挂在规格票下：kind=spec-ticket 时要带 parentKey，填规格票号。' }
+    return { ok: false, problem: 'A spec ticket has to hang under a spec: kind=spec-ticket requires parentKey, filled with the ticket number of the spec.' }
   }
 
   return {

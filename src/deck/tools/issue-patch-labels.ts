@@ -79,7 +79,7 @@ export async function runLabelsStep(input: LabelsStepInput): Promise<LabelsStepR
   // removeLabels 里点名的若是当前状态（读回来的可见 Status 值），摘标签不会清掉状态，
   // 回执必须把这一点说清，否则调用方会以为票已经变回「未分流」。状态词表在后端，这里只比读回来的值。
   if (input.statusModel && input.statusValue && input.removeLabels.indexOf(input.statusValue) >= 0) {
-    input.notes.push('removeLabels 里的 ' + input.statusValue + ' 是状态而不是普通标签：本地 Markdown 的状态住在可见 Status 行，摘标签不会清掉状态；要改状态请用 addLabels 带一枚 triage，或关闭这张票。')
+    input.notes.push('The ' + input.statusValue + ' in removeLabels is a status, not an ordinary label: on local Markdown the status lives in the visible Status line, so removing a label does not clear it; to change the status, pass a triage label in addLabels, or close this ticket.')
   }
 
   const held = await withKeyLock(input.repo, key, async () => {
@@ -136,19 +136,19 @@ export async function runLabelsStep(input: LabelsStepInput): Promise<LabelsStepR
       const gotLower = gotLabels.map(lower)
       const missing = uniq.filter((n) => gotLower.indexOf(lower(n)) < 0)
       if (!readOk) {
-        const afterMsg = String((after && after.error && after.error.message) || '没给出原因').slice(0, 160)
-        items.push({ key: key, step: 'labels', status: 'failed', reason: '写动作回了成功，但写后没读回来（' + (canRead ? '后端原话：' + afterMsg : '剩余额度不够读回这一次的结果') + '）：标签改成没改成不知道，别当成已经改好。' })
+        const afterMsg = String((after && after.error && after.error.message) || 'no reason given').slice(0, 160)
+        items.push({ key: key, step: 'labels', status: 'failed', reason: 'The write reported success, but nothing was read back afterwards (' + (canRead ? 'the backend said: ' + afterMsg : 'the remaining quota was not enough for this read-back') + '): there is no telling whether the labels changed, so do not treat them as changed.' })
       } else if (missing.length) {
-        items.push({ key: key, step: 'labels', status: 'failed', reason: '写动作回了成功，但写后读回来的标签里没有这些（' + missing.join('、') + '）：整批替换没落全，别当成已经改好。' })
+        items.push({ key: key, step: 'labels', status: 'failed', reason: 'The write reported success, but these labels were not in the set read back afterwards (' + missing.join(', ') + '): the batch replace did not land in full, so do not treat them as changed.' })
       } else {
-        if (droppedStates.length) input.notes.push('这张票（' + key + '）：这次把 triage 状态换成「' + addState + '」，旧状态标签已从票上摘掉：' + droppedStates.join('、') + '（状态是替换，不会两枚并存）。')
+        if (droppedStates.length) input.notes.push('This ticket (' + key + '): the triage state was switched to "' + addState + '", and the old state labels were taken off the ticket: ' + droppedStates.join(', ') + ' (a state is replaced, two never sit side by side).')
         items.push({ key: key, step: 'labels', status: 'ok', labels: uniq })
       }
     } else if (chosen !== null && r && r.error && String(r.error.kind) === 'parse') {
       // 带着状态归一写的标签被后端驳回，且驳回原因是「状态与标签两处对不上」：
       // 标签与状态都还一个字没动，别的步骤一次都没开始，整笔回拒绝，让调用方先统一口径。
-      const msg = String((r.error && r.error.message) || '后端没给出原因').slice(0, 300)
-      refused = refusalReply(key, REFUSAL_REASONS.BAD_ARGS, '这次给的标签里的状态与 resolveStatus 选的那一侧对不上（后端原话：' + msg + '）：标签与状态都还一个字没动，别的步骤也没做。', { statusConflict: conflict }, [{ key: key, step: 'status', status: 'failed', reason: msg }], input.estimate, 1)
+      const msg = String((r.error && r.error.message) || 'no reason given').slice(0, 300)
+      refused = refusalReply(key, REFUSAL_REASONS.BAD_ARGS, 'The status among the labels given this time does not match the side chosen by resolveStatus (the backend said: ' + msg + '): neither the labels nor the status has been touched, and no other step was run.', { statusConflict: conflict }, [{ key: key, step: 'status', status: 'failed', reason: msg }], input.estimate, 1)
     } else input.fail('labels', r)
   }, input.lockOpts)
 

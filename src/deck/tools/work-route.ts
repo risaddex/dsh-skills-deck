@@ -32,8 +32,8 @@ const ACTIVE_HOURS = WORK_ROUTE_ACTIVE_WINDOW_MS / HOUR_MS
 /** 回执句子里「30 天」的写法：由中央 YAML 的保留期现算，改 YAML 这里跟着变。 */
 const RETENTION_DAYS = WORK_ROUTE_IN_PROGRESS_WINDOW_MS / DAY_MS
 /** 两条回执 notes 共用的前半句（说清数据来源与两个口径），避免同一句话抄两遍抄出错。 */
-const ARCHIVE_SCOPE_NOTE = '数据来自本机工作区存档（local archive），只含本工作区 ' + RETENTION_DAYS
-  + ' 天内动过的条目；在办指 ' + ACTIVE_HOURS + ' 小时内动过'
+const ARCHIVE_SCOPE_NOTE = 'The data comes from the local workspace archive and only covers entries touched inside this workspace in the last ' + RETENTION_DAYS
+  + ' days; in progress means touched inside the last ' + ACTIVE_HOURS + ' hours'
 
 /**
  * 装配层注入的依赖袋。壳要的键原样透传（没列的键也一律接受：壳自己还没标类型，这一层不替它把关）；
@@ -55,12 +55,12 @@ export interface DeckWorkRouteDeps {
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_work_route',
-  description: '查看本工作区在办表（按会话分组）：默认只看 ' + ACTIVE_HOURS + ' 小时内在办的条目，传 includeStale:true 展开 ' + RETENTION_DAYS + ' 天内全部（含陈旧）；limit 控制最多回多少条。什么时候调：想了解有哪些会话在处理哪些票，或怀疑自己要和别的会话撞同一张票时。数据来自本机工作区存档，只含本工作区 ' + RETENTION_DAYS + ' 天内动过的条目；在办指 ' + ACTIVE_HOURS + ' 小时内动过这张票，不代表那个会话此刻还在跑。组上带 running:true 的是宿主现报、此刻真有一轮开着（等审批、等回答也算），不标不等于没在跑；存档上限 ' + CHAIN_MAX_BYTES_LABEL + '。写票回执不再带在办表，要看就来这里。',
+  description: 'Show the work board of this workspace, grouped by session: by default it only covers entries in progress in the last ' + ACTIVE_HOURS + ' hours; pass includeStale:true to expand to everything inside ' + RETENTION_DAYS + ' days (stale entries included); limit controls how many entries come back. When to call it: when you want to know which sessions are working on which tickets, or when you suspect you are about to collide with another session on the same ticket. The data comes from the local workspace archive and only covers entries touched inside this workspace in the last ' + RETENTION_DAYS + ' days; in progress means the ticket was touched inside the last ' + ACTIVE_HOURS + ' hours, which does not mean that session is still running right now. A group with running:true is reported by the host right now and really has a turn open (waiting for approval or an answer counts too); no flag does not mean it is not running; the archive cap is ' + CHAIN_MAX_BYTES_LABEL + '. Write receipts no longer carry the work board, so come here to see it.',
   parameters: {
     type: 'object',
     properties: {
-      includeStale: { type: 'boolean', description: '是否展开陈旧条目：缺省 false 只看 ' + ACTIVE_HOURS + ' 小时内在办；传 true 回 ' + RETENTION_DAYS + ' 天内全部（含超过 ' + ACTIVE_HOURS + ' 小时未动的那部分）' },
-      limit: { type: 'number', description: '最多回多少条，缺省 100，上限 200' },
+      includeStale: { type: 'boolean', description: 'Whether to expand stale entries: default false only shows work in progress in the last ' + ACTIVE_HOURS + ' hours; true returns everything inside ' + RETENTION_DAYS + ' days (including the part that has not moved for more than ' + ACTIVE_HOURS + ' hours)' },
+      limit: { type: 'number', description: 'How many entries come back at most; default 100, maximum 200' },
     },
     required: [],
     additionalProperties: false,
@@ -130,9 +130,9 @@ export function createDeckWorkRoute(deps?: DeckWorkRouteDeps) {
           value: {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
-            text: '在办表这次读不出来（no-read-binding）：当前装配没接上读这一支，这是插件内部接线问题，不是你的参数或工作区的问题；按工具故障处理（重启或升级插件）后再调一次。',
+            text: 'The work board could not be read this time (no-read-binding): the current wiring does not connect the read path, which is an internal plugin wiring problem, not a problem with your parameters or workspace; treat it as a tool failure (restart or upgrade the plugin) and call again.',
             data: { total: 0, returned: 0, omitted: 0, includeStale: includeStale, limit: limit, error: evidenceFields(ev, 'errorKind') },
-            notes: [ARCHIVE_SCOPE_NOTE + '，存档上限 ' + CHAIN_MAX_BYTES_LABEL + '。'],
+            notes: [ARCHIVE_SCOPE_NOTE + ', archive cap ' + CHAIN_MAX_BYTES_LABEL + '.'],
             touched: [],
           },
           claimed: { requests: 1, points: 3 },
@@ -153,9 +153,9 @@ export function createDeckWorkRoute(deps?: DeckWorkRouteDeps) {
           value: {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
-            text: '在办表这次读不出来（' + reason + '）：先按工具故障处理（重启或升级插件）后再调一次；如果反复出现，检查本机工作区存档是否可读、文件是否损坏，不要靠反复重试硬碰。',
+            text: 'The work board could not be read this time (' + reason + '): treat it as a tool failure first (restart or upgrade the plugin) and call again; if it keeps happening, check that the local workspace archive is readable and the file is not damaged, instead of retrying again and again.',
             data: { total: 0, returned: 0, omitted: 0, includeStale: includeStale, limit: limit, error: evidenceFields(ev, 'errorKind') },
-            notes: [ARCHIVE_SCOPE_NOTE + '，存档上限 ' + CHAIN_MAX_BYTES_LABEL + '。'],
+            notes: [ARCHIVE_SCOPE_NOTE + ', archive cap ' + CHAIN_MAX_BYTES_LABEL + '.'],
             touched: [],
           },
           claimed: { requests: 1, points: 3 },
@@ -172,7 +172,7 @@ export function createDeckWorkRoute(deps?: DeckWorkRouteDeps) {
       const groupMap = new Map<string, { sessionLabel: string; currentSession: boolean; running?: boolean; items: UnknownRecord[] }>()
       for (const e of sliced) {
         const rec = (e || {}) as UnknownRecord
-        const label = str(rec.sessionLabel) || '未知会话'
+        const label = str(rec.sessionLabel) || 'unknown session'
         let g = groupMap.get(label)
         if (!g) {
           g = { sessionLabel: label, currentSession: rec.currentSession === true, items: [] }
@@ -214,14 +214,14 @@ export function createDeckWorkRoute(deps?: DeckWorkRouteDeps) {
         if (runningSet.has(g.sessionLabel)) { g.running = true; runningGroups += 1 }
       }
       const staleCount = num((readout as UnknownRecord).staleCount)
-      const notes: string[] = [ARCHIVE_SCOPE_NOTE + '，超过 ' + ACTIVE_HOURS + ' 小时、未满 ' + RETENTION_DAYS
-        + ' 天记为陈旧；存档上限 ' + CHAIN_MAX_BYTES_LABEL + '，超限按时间从旧到新裁。']
-      if (omitted > 0) notes.push('只回前 ' + sliced.length + ' 条（共 ' + total + ' 条符合，另有 ' + omitted + ' 条没带）：调大 limit 或分会话再查一次。')
+      const notes: string[] = [ARCHIVE_SCOPE_NOTE + ', anything older than ' + ACTIVE_HOURS + ' hours but younger than ' + RETENTION_DAYS
+        + ' days counts as stale; the archive cap is ' + CHAIN_MAX_BYTES_LABEL + ', and an oversize archive is trimmed from oldest to newest.']
+      if (omitted > 0) notes.push('Only the first ' + sliced.length + ' entries are returned (' + total + ' match, ' + omitted + ' more are left out): raise limit or check one session at a time.')
       const staleInView = sliced.filter((e) => (e as UnknownRecord).active !== true).length
-      if (staleInView > 0) notes.push('其中 ' + staleInView + ' 条超过 ' + ACTIVE_HOURS + ' 小时未动（本工作区陈旧共 ' + staleCount + ' 条）。')
-      else if (includeStale && staleCount > 0) notes.push('本工作区陈旧共 ' + staleCount + ' 条（超过 ' + ACTIVE_HOURS + ' 小时未动）。')
-      else if (!includeStale && staleCount > 0) notes.push('另有 ' + staleCount + ' 条超过 ' + ACTIVE_HOURS + ' 小时未动（陈旧，只计数，不在默认视图里列出；传 includeStale:true 展开）。')
-      if (runningGroups > 0) notes.push('其中 ' + runningGroups + ' 个会话组此刻正在跑一轮（running 只说明那一轮开着，不代表正在改这张票）。')
+      if (staleInView > 0) notes.push('Of these, ' + staleInView + ' have not moved for more than ' + ACTIVE_HOURS + ' hours (this workspace has ' + staleCount + ' stale entries in total).')
+      else if (includeStale && staleCount > 0) notes.push('This workspace has ' + staleCount + ' stale entries (not moved for more than ' + ACTIVE_HOURS + ' hours).')
+      else if (!includeStale && staleCount > 0) notes.push('Another ' + staleCount + ' have not moved for more than ' + ACTIVE_HOURS + ' hours (stale: counted only, not listed in the default view; pass includeStale:true to expand).')
+      if (runningGroups > 0) notes.push('Of these, ' + runningGroups + ' session groups are running a turn right now (running only says that turn is open, not that this ticket is being changed).')
       const collisions: UnknownRecord[] = Array.isArray((readout as UnknownRecord).collisions) ? ((readout as UnknownRecord).collisions as UnknownRecord[]) : []
       const data: UnknownRecord = {
         at: str((readout as UnknownRecord).at) || atFallbackIso,
@@ -236,12 +236,12 @@ export function createDeckWorkRoute(deps?: DeckWorkRouteDeps) {
       }
       if (collisions.length > 0) data.collisions = collisions
       const head = includeStale
-        ? '在办表（' + RETENTION_DAYS + ' 天内全部）：共 ' + total + ' 条，分 ' + groups.length + ' 个会话组'
-        : '在办表（' + ACTIVE_HOURS + ' 小时内在办）：共 ' + total + ' 条，分 ' + groups.length + ' 个会话组'
+        ? 'Work board (' + RETENTION_DAYS + ' days, everything): ' + total + ' entries in ' + groups.length + ' session groups'
+        : 'Work board (' + ACTIVE_HOURS + ' hours, in progress): ' + total + ' entries in ' + groups.length + ' session groups'
       return {
         value: {
           status: DECK_STATUS.OK,
-          text: head + '，回 ' + sliced.length + ' 条。',
+          text: head + ', ' + sliced.length + ' returned.',
           data: data,
           notes: notes,
           touched: [],

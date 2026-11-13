@@ -59,7 +59,7 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
   const items: Array<Record<string, unknown>> = []
   // 地图票还没有票号（没建成），或者额度已经不够：只记那句「没核对」，与拆出来之前的两支逐字相同。
   if (!args.mapKey || args.outOfBudget) {
-    if (args.outOfBudget) notes.push('建后读回核对：剩余额度不够，这次没核对。')
+    if (args.outOfBudget) notes.push('Read-back check after building: not enough quota left, so this time no check was made.')
     return { notes: notes, items: items }
   }
   const tracker = args.tracker
@@ -78,15 +78,15 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
   } catch (eGetMap) { mapRow = null }
   const mapBody = mapRow ? String(mapRow.body || '') : ''
   if (!mapRow) {
-    notes.push('建后读回核对：地图票 ' + mapKey + ' 没读回来，这次没核对（不判失败）。')
+    notes.push('Read-back check after building: map ticket ' + mapKey + ' did not come back, so this time no check was made (not judged a failure).')
   } else {
     const heads = MAP_BLOCK_TITLES.map((h) => mapBody.indexOf('## ' + h))
     const missingHeads = MAP_BLOCK_TITLES.filter((h, i) => heads[i] < 0)
-    if (missingHeads.length) problems.push('地图缺五节里的：' + missingHeads.join('、'))
-    if (stripProgressSections(mapBody) === mapBody) problems.push('地图没有 ## 进度')
+    if (missingHeads.length) problems.push('The map is missing these of the five sections: ' + missingHeads.join(', '))
+    if (stripProgressSections(mapBody) === mapBody) problems.push('the map has no ## 进度 section')
     const at = mapBody.search(/^##\s*进度\s*$/m)
     const knownHeads = heads.filter((i) => i >= 0)
-    if (at >= 0 && knownHeads.length && at < Math.max.apply(null, knownHeads)) problems.push('地图的 ## 进度没有排在五节之后')
+    if (at >= 0 && knownHeads.length && at < Math.max.apply(null, knownHeads)) problems.push('the ## 进度 of the map is not placed after the five sections')
   }
   const rows = Array.isArray(liveRows) ? (liveRows as Record<string, unknown>[]) : []
   const rowByKey = new Map<string, Record<string, unknown>>()
@@ -108,7 +108,7 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
     const resolved = childKinds.get(planKey)
     if (!ticketKey || !resolved || !resolved.ok) continue
     const row = rowByKey.get(ticketKey)
-    if (!row) { problems.push('子票「' + planKey + '」（票号 ' + ticketKey + '）没按父票列出来'); continue }
+    if (!row) { problems.push('sub-issue "' + planKey + '" (ticket ' + ticketKey + ') was not listed under the parent'); continue }
     const childBody = String(row.body || '')
     const names = (Array.isArray(row.labels) ? row.labels : []).map((x) => {
       return (typeof x === 'string') ? x : String((x && (x as { name?: unknown }).name) || '')
@@ -117,38 +117,38 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
     // #1832：显式给过 triage 状态的子票，读回时不该再期待位置默认的那一枚；用与建票同一个函数算期望。
     const expected = ensureLabels(resolved.labels, resolved.kind || '', resolved.label).labels
     const missingLabels = expected.filter((n) => lower.indexOf(String(n).toLowerCase()) < 0)
-    if (missingLabels.length) problems.push('子票「' + planKey + '」缺标签：' + missingLabels.join('、'))
+    if (missingLabels.length) problems.push('sub-issue "' + planKey + '" is missing labels: ' + missingLabels.join(', '))
     // issue 兜底不推导类型标签、labels 原样传递（#1403）：它带 wayfinder:* 是调用方给的原样，不按「应为 0 枚」判错。
     // 其他位置值的类型标签由工具补，读回来枚数必须与应补的一致。
     if (resolved.kind !== 'issue') {
       const wantType = expected.filter((n) => isTypeLabel(n)).length
       const gotType = names.filter((n) => isTypeLabel(n)).length
-      if (gotType !== wantType) problems.push('子票「' + planKey + '」有 ' + gotType + ' 枚类型标签（应为 ' + wantType + ' 枚）')
+      if (gotType !== wantType) problems.push('sub-issue "' + planKey + '" has ' + gotType + ' type labels (expected ' + wantType + ')')
     }
-    if (String(row.parentKey || '') !== String(mapKey)) problems.push('子票「' + planKey + '」的父票是「' + String(row.parentKey || '') + '」（应为地图 ' + mapKey + '）')
-    if (stripProgressSections(childBody) === childBody) problems.push('子票「' + planKey + '」没有 ## 进度')
+    if (String(row.parentKey || '') !== String(mapKey)) problems.push('sub-issue "' + planKey + '" is "' + String(row.parentKey || '') + '" (expected the map ' + mapKey + ')')
+    if (stripProgressSections(childBody) === childBody) problems.push('sub-issue "' + planKey + '" has no ## 进度 section')
     if (looksLikeWholeFile(childBody)) {
       checkedTypeLine = true
       const typeRows = childBody.match(/^\s*Type\s*[：:].*$/gm) || []
       if (resolved.kind === 'map-ticket') {
         const bare = String(resolved.label || '').replace(/^wayfinder:/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         const want = new RegExp('^\\s*Type\\s*[：:]\\s*' + bare + '\\s*$', 'im')
-        if (!want.test(childBody)) problems.push('子票「' + planKey + '」的 Type 行不是 ' + bare + '（实得 ' + typeRows.join(' / ').slice(0, 60) + '）')
+        if (!want.test(childBody)) problems.push('sub-issue "' + planKey + '" has a Type line that is not ' + bare + ' (got ' + typeRows.join(' / ').slice(0, 60) + ')')
       } else if (typeRows.length) {
-        problems.push('子票「' + planKey + '」不该有 Type 行（实得 ' + typeRows.join(' / ').slice(0, 60) + '）')
+        problems.push('sub-issue "' + planKey + '" should not have a Type line (got ' + typeRows.join(' / ').slice(0, 60) + ')')
       }
     }
   }
   if (problems.length) {
-    notes.push('建后读回核对有 ' + problems.length + ' 处没对上：' + problems.slice(0, 4).join('；') + (problems.length > 4 ? '；…' : '') + '。以盘上为准，别按计划数字往下走。')
+    notes.push('The read-back check after building found ' + problems.length + ' mismatches: ' + problems.slice(0, 4).join('; ') + (problems.length > 4 ? '; ...' : '') + '. Trust what is on disk, not the plan numbers.')
     // #1799：读回核对没对上也是失败项，要带映射码（本地来源 verify → 这条路走不通，以盘上为准），
     // 否则顶层 reason 只能瞎猜一个默认值。
     const ev = failureFields(null, 'write', 'verify')
     for (const one of problems.slice(0, 8)) items.push(Object.assign({ key: '', role: 'verify', status: 'failed', reason: one }, ev))
   } else if (mapRow && liveRows) {
-    notes.push('建后读回核对通过：地图五节与 ## 进度齐；' + Object.keys(keys).length + ' 张子票的父票、类型标签、## 进度' + (checkedTypeLine ? '与 Type 行' : '') + '都对。')
+    notes.push('The read-back check after building passed: the five map sections and ## 进度 are all present; ' + Object.keys(keys).length + ' sub-issues: the parent, the type labels and ## 进度' + (checkedTypeLine ? ' and the Type line' : '') + ' all match.')
   } else {
-    notes.push('建后读回核对：地图读回来了，但子票没按父票列出来（' + String(args.pickedNote || '后端没给出原因') + '），这次没核对子票。')
+    notes.push('Read-back check after building: the map came back, but the sub-issues were not listed under the parent (' + String(args.pickedNote || 'the backend did not give a reason') + '), so this time the sub-issues were not checked.')
   }
   return { notes: notes, items: items }
 }
@@ -166,5 +166,5 @@ export function leadFailureText(items: ArrayLike<Record<string, unknown>>, reaso
   }
   if (!failed.length || !reason) return ''
   const lead = failed.find((one) => one.code === reason) || failed[0]
-  return ' 最该先说的是「' + String(lead.step || lead.role || '') + '」：' + String(lead.reason || '后端没给出原因').slice(0, 160)
+  return ' The most important thing to say first is "' + String(lead.step || lead.role || '') + '": ' + String(lead.reason || 'the backend did not give a reason').slice(0, 160)
 }

@@ -36,22 +36,22 @@ type TransportResult = { error?: { kind?: string; message?: unknown } } | null |
 /** 后端回包里「执行层失败」的原话；不是执行层失败（后端诚实地说做不到）就回 null，一个字不改判。 */
 function transportMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || '执行层没回来')
+  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || 'the execution layer did not come back')
   return null
 }
 /** 超时那一支的原话（kind 'timeout'）：调用处直接回独立原因码，不抛给壳。 */
 function timeoutMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && e.kind === 'timeout') return String(e.message || '执行层没回来')
+  if (e && e.kind === 'timeout') return String(e.message || 'the execution layer did not come back')
   return null
 }
 /** 失败回执里的「下一步做什么」：reason 已经回答了下一步，text 要跟它指向同一件事，不能各说各的。
  *  只给本工具判断得了的几种码补一句；其余（后端说做不到等）保持原话，不替后端发明退路。 */
 function nextStepText(reason: string): string {
-  if (reason === REFUSAL_REASONS.BAD_ARGS) return '票号可能写错了：先用 deck_issue_list 或 deck_issue_get 确认这张票存在，再重读。'
-  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return '等一会儿重调一次：读票没有副作用，这次只是没等到回包。'
-  if (reason === REFUSAL_REASONS.BACKEND_THREW) return '读票没有副作用，可以原样重调一次。'
-  if (reason === REFUSAL_REASONS.OVER_CAP) return '稍等一会儿再调，或把这次读拆小一点。'
+  if (reason === REFUSAL_REASONS.BAD_ARGS) return 'The ticket number may be wrong: confirm with deck_issue_list or deck_issue_get that the ticket exists, then read it again.'
+  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return 'Wait a moment and call again: reading a ticket has no side effects, and this time no answer came back in time.'
+  if (reason === REFUSAL_REASONS.BACKEND_THREW) return 'Reading a ticket has no side effects, so you can call again exactly as it is.'
+  if (reason === REFUSAL_REASONS.OVER_CAP) return 'Wait a little and call again, or make this read smaller.'
   return ''
 }
 
@@ -62,7 +62,7 @@ function transportValue(message: string, claimed: { requests: number; points: nu
     value: {
       status: DECK_STATUS.UNSUPPORTED,
       reason: reasonForFailure({ kind: 'backend-threw', phase: 'read' }),
-      text: '后端实现抛错了（我没有把它抛给 AI，按三态返回）：' + String(message).slice(0, 300),
+      text: 'The backend implementation threw an error (it was not thrown at you; it comes back as one of the three result states): ' + String(message).slice(0, 300),
       data: data,
     },
     claimed: claimed,
@@ -96,15 +96,15 @@ export interface DeckIssueGetDeps {
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_issue_get',
-  description: '同属 dsh-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。读一个 ISSUE 的完整关系：正文、评论、label、assignee 与 parent 和 blockedBy 边，每条边标出落点。blocking=false 跳过反向边查询（快，见 blocking 参数）。',
+  description: 'Part of the ISSUE and map management surface of the dsh-skills-deck plugin; it handles only the repo of the current workspace. Before touching an ISSUE, call deck_context to confirm the workspace and the backend, and stop if it reports no backend. Read one ISSUE with all its relations: body, comments, labels, assignees, and the parent and blockedBy edges, with where each edge landed marked on it. blocking=false skips the reverse-edge query (faster; see the blocking parameter).',
   parameters: {
     type: 'object',
     properties: {
-      key: { type: 'string', description: '票号，例如 713' },
-      body: { type: 'string', description: '正文怎么回：excerpt 只回前 2000 字（缺省，省上下文）；full 回全文分块（大正文不截断，带指纹可验完整）。正文只出现一处：data.body.text、data.body.chunks 或 data.section.text。' },
-      comments: { type: 'number', description: '最多带回几条评论，缺省 0（只回总数不回正文）；要看评论正文再按需取，最大 200' },
-      section: { type: 'string', description: '只回正文里这一节（## 标题子串），缺省回正文前 2000 字' },
-      blocking: { type: 'boolean', description: '要不要反向阻塞边（谁被这张票阻塞）。缺省要：读全量关系，一次查询就取回反向边，阻塞者的标题与状态随行回来。关掉只读单票本身，跳过一次反向边查询，快；反向边记空并注记，要就再调一次。' },
+      key: { type: 'string', description: 'The ticket number, for example 713' },
+      body: { type: 'string', description: 'How the body comes back: excerpt returns only the first 2000 characters (the default, to save context); full returns the whole body in chunks (a large body is not cut, and the digest lets you verify it is complete). The body appears in exactly one place: data.body.text, data.body.chunks or data.section.text.' },
+      comments: { type: 'number', description: 'How many comments to bring back at most; the default is 0, which returns only the total and none of the text; ask for the text when you need it, up to 200' },
+      section: { type: 'string', description: 'Return only this section of the body (a substring of its ## heading); when omitted, the first 2000 characters of the body come back' },
+      blocking: { type: 'boolean', description: 'Whether to read the reverse blocking edges (who is blocked by this ticket). On by default: the full set of relations is read, the reverse edges come back in one query, and the title and state of each blocker come back with its row. Turning it off reads only the ticket itself and skips one reverse-edge query, which is faster; the reverse edges are then recorded as empty with a note, and you can call again if you need them.' },
       ...MD_SCOPE_LOCATE,
     },
     required: ['key'],
@@ -138,12 +138,12 @@ function statusSentenceOf(issue: Record<string, unknown>): string {
   const conflict = issue.statusConflict as Record<string, unknown> | null | undefined
   if (conflict && typeof conflict.visible === 'string') {
     const hidden = Array.isArray(conflict.hidden) ? conflict.hidden.filter((one) => typeof one === 'string') : []
-    return '；状态有冲突：可见 Status 是「' + conflict.visible + '」，隐藏标签是「' + hidden.join('、') + '」，读侧按可见值；写入前按 deck_issue_patch 回执里的 retry 参数重试。'
+    return ' The status conflicts: the visible Status says "' + conflict.visible + '", the hidden labels say "' + hidden.join(', ') + '", and the read side goes by the visible value; before writing, retry with the retry arguments from the deck_issue_patch receipt.'
   }
   const status = typeof issue.status === 'string' ? issue.status : ''
   if (!status) return ''
   const source = typeof issue.statusSource === 'string' ? issue.statusSource : ''
-  return '；状态：' + status + (source ? '（来源：' + source + '）' : '')
+  return ' Status: ' + status + (source ? ' (source: ' + source + ')' : '')
 }
 
 /**
@@ -236,7 +236,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 在会话壳里是运行时布尔，
     // 那一层还没标类型，见 #1040），所以这里按形状取 reason —— 取到的值与老写法逐字相同。
     if (!s.ok) return shell.unsupported('deck_issue_get', (s as { reason: string }).reason, s.text, { cost: { estimated: est } })
-    if (!key) return shell.unsupported('deck_issue_get', REFUSAL_REASONS.BAD_ARGS, '要读哪一张票：把票号写在 key 里（例如 713）。', { cost: { estimated: est } })
+    if (!key) return shell.unsupported('deck_issue_get', REFUSAL_REASONS.BAD_ARGS, 'Which ticket to read: put the ticket number in key (for example 713).', { cost: { estimated: est } })
 
     const pick = await openDeckSession({ deps: d, exec: exec, session: s, estimate: est, tool: 'deck_issue_get', kind: 'read' })
     if (!pick.ok) return shell.unsupported('deck_issue_get', pick.reason, pick.text, { workspace: { root: s.cwd, key: s.workspaceKey }, cost: { estimated: est } })
@@ -307,9 +307,9 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
           value: {
             status: DECK_STATUS.PARTIAL,
             reason: reasonForFailure({ kind: 'timeout', phase: 'read' }),
-            text: '票 ' + key + ' 这次没读全（超时了：在限时内没等到后端回话）。这次读没有副作用，等一会儿重调一次就行。',
+            text: 'Ticket ' + key + ' was not read in full this time (it timed out: no word came back from the backend within the limit). This read has no side effects; wait a moment and call again.',
             data: partialData,
-            notes: ['这次是读超时：票本身没读回来，父票、标签、正文这些格都是空的（不代表没有）；只回了已经落地的阻塞关系。'],
+            notes: ['This was a read timeout: the ticket itself did not come back, so the parent, labels and body fields are empty (which does not mean they are missing); only the blocking relations that had already landed came back.'],
             touched: [],
           },
           claimed: claimedOf(),
@@ -335,9 +335,9 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
           value: {
             status: DECK_STATUS.PARTIAL,
             reason: failureOf(got, 'read').code,
-            text: '票 ' + key + ' 这次没读全（这次读的时间额度在发出请求之前就用完了，一个请求都没发出去）。这次读没有副作用，稍等一会儿重调一次就行。',
+            text: 'Ticket ' + key + ' was not read in full this time (the time budget for this read ran out before a request was sent, so no request went out at all). This read has no side effects; wait a little and call again.',
             data: budgetData,
-            notes: ['这次是读的时间额度用完了：票本身没读回来，父票、标签、正文这些格都是空的（不代表没有）。'],
+            notes: ['This time the time budget for the read ran out: the ticket itself did not come back, so the parent, labels and body fields are empty (which does not mean they are missing).'],
             touched: [],
           },
           claimed: claimedOf(),
@@ -348,7 +348,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       // 带上真的发出去了几条（抛出去的话用量丢在壳的兜底里，回执只能报 0 条）。
       if (gotTransport) return transportValue(gotTransport, claimedOf(), { key: key, backendId: pick.backendId, error: { kind: String((got && got.error && got.error.kind) || 'backend-threw'), message: gotTransport.slice(0, 300) } })
       if (!got || got.ok !== true) {
-        const msg = String((got && got.error && got.error.message) || '后端没给出原因').slice(0, 300)
+        const msg = String((got && got.error && got.error.message) || 'no reason given').slice(0, 300)
         // #1799：reason 不再手写「后端做不到」，改由统一映射从后端原档位（以及房间标的失败阶段）推出来；
         // 失败证据也一并留下：code 是映射后的下一步，kind/stage 是后端原值。
         const ev = failureOf(got, 'read')
@@ -356,7 +356,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
           value: {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
-            text: '这张票没读回来（后端原话：' + msg + '）。' + nextStepText(ev.code),
+            text: 'This ticket did not come back (the backend said: ' + msg + '). ' + nextStepText(ev.code),
             data: { key: key, backendId: pick.backendId, error: Object.assign({ message: msg }, evidenceFields(ev)) },
           },
           claimed: claimedOf(),
@@ -377,8 +377,8 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       if (!wantBlocking) rel.blocking = []
       const notes = []
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
-      if (!wantBlocking) notes.push('反向阻塞边这次没取（blocking=false，跳过一次反向边查询）：上面“阻塞别人”记空不是 0 条，要就带 blocking=true 再调一次。')
-      if (dep && dep.ok !== true) notes.push('阻塞边这次没读到（' + (depTimeout ? '阻塞边查询超时了：' + depTimeout.slice(0, 200) : '后端原话：' + String((dep.error && dep.error.message) || '').slice(0, 200)) + '）：上面只列了票自己带的那些。')
+      if (!wantBlocking) notes.push('The reverse blocking edges were not fetched this time (blocking=false, one reverse-edge query skipped): the empty blocks entry above does not mean 0, so call again with blocking=true if you need them.')
+      if (dep && dep.ok !== true) notes.push('The blocking edges were not read this time (' + (depTimeout ? 'the blocking-edge query timed out: ' + depTimeout.slice(0, 200) : 'the backend said: ' + String((dep.error && dep.error.message) || '').slice(0, 200)) + '): only the ones the ticket carries itself are listed above.')
       // 反向边全不全由读路径自己交代（原生连接截断、或退回整仓反推）：这里原样带给调用方，
       // 不替它改写成「0 条」那种看起来确定的说法（#1304）。
       if (wantBlocking && dependencies && typeof dependencies.blockingNote === 'string' && dependencies.blockingNote) notes.push(dependencies.blockingNote)
@@ -396,9 +396,9 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       if (originalWords.length) {
         // 正文摘要被截断时，原话区可能不在这次回来的前 2000 字里：补半句指向按节读的入口。
         const excerptTruncated = bodyMode === 'excerpt' && (sectionFound ? sec.text.length > BODY_EXCERPT_LEN : bodyText.length > BODY_EXCERPT_LEN)
-        notes.unshift('这张票有 ' + originalWords.length + ' 条维护者原话（data.ticket.originalWords）：用户的原话是这张票的最高要求，票面其它说法与它冲突时以原话为准；判不清就告诉用户有冲突，别自己裁。' + (excerptTruncated ? "要看原话所在整区原文，传 section='维护者原话'。" : ''))
+        notes.unshift('This ticket has ' + originalWords.length + ' original-words entries (data.ticket.originalWords): the words of the user are the highest requirement for this ticket, and where the rest of the ticket conflicts with them the original words win; if you cannot tell, tell the user there is a conflict and do not decide it yourself.' + (excerptTruncated ? " To see the whole section that holds them, pass section='维护者原话'." : ''))
       }
-      if (wantsSection && !sec.found) notes.push('正文里没找到标题含「' + String(a.section).trim().slice(0, 60) + '」的节，回的是' + (bodyMode === 'full' ? '全文分块' : '正文前 2000 字') + '。')
+      if (wantsSection && !sec.found) notes.push('No section whose heading contains "' + String(a.section).trim().slice(0, 60) + '" was found in the body, so what came back is ' + (bodyMode === 'full' ? 'the whole body in chunks' : 'the first 2000 characters of the body') + '.')
       const excerpt = (sectionFound ? sec.text : bodyText).slice(0, BODY_EXCERPT_LEN)
       const commentTotal = typeof (issue as { commentCount?: unknown }).commentCount === 'number' ? (issue as { commentCount: number }).commentCount : (Array.isArray(issue.comments) ? issue.comments.length : 0)
       // #1828：只读某一节时正文在 data.section.text；摘要档在 data.body.text。两处都只说一次，
@@ -406,21 +406,21 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       if (bodyMode === 'excerpt') {
         if (sectionFound) {
           notes.push(sec.text.length <= BODY_EXCERPT_LEN
-            ? '正文「' + sec.name + '」这一节已全量在 data.section.text 里（正文共 ' + bodyText.length + ' 字，指纹 ' + digest.slice(0, 12) + '）：写回正文时仍要先 body=\'full\' 取指纹再传 bodyDigest。'
-            : '正文「' + sec.name + '」这一节只回前 2000 字（该节共 ' + sec.text.length + ' 字，正文全文 ' + bodyText.length + ' 字，指纹 ' + digest.slice(0, 12) + '）：要全文带 body=\'full\' 再调一次。')
+            ? 'The body section "' + sec.name + '" is complete in data.section.text (the body is ' + bodyText.length + ' characters, digest ' + digest.slice(0, 12) + '): writing the body back still needs body=\'full\' first, to read the digest and pass bodyDigest.'
+            : 'The body section "' + sec.name + '" returned only its first 2000 characters (the section is ' + sec.text.length + ' characters, the whole body is ' + bodyText.length + ' characters, digest ' + digest.slice(0, 12) + '): for the full text, call again with body=\'full\'.')
         } else {
           notes.push(bodyText.length <= BODY_EXCERPT_LEN
-            ? '正文共 ' + bodyText.length + ' 字，已全量在 data.body.text 里（指纹 ' + digest.slice(0, 12) + '）：写回正文时仍要先 body=\'full\' 取指纹再传 bodyDigest。'
-            : '正文只回前 2000 字（全文共 ' + bodyText.length + ' 字，指纹 ' + digest.slice(0, 12) + '）：要全文带 body=\'full\' 再调一次，按分块回、可验指纹。')
+            ? 'The body is ' + bodyText.length + ' characters and is complete in data.body.text (digest ' + digest.slice(0, 12) + '): writing the body back still needs body=\'full\' first, to read the digest and pass bodyDigest.'
+            : 'The body returned only its first 2000 characters (the whole body is ' + bodyText.length + ' characters, digest ' + digest.slice(0, 12) + '): for the full text, call again with body=\'full\'; it comes back in chunks and the digest can be verified.')
         }
       }
-      if (first === 0) notes.push('评论默认 0 条（共有 ' + commentTotal + ' 条）：要看评论正文带 comments=N 再调一次（最大 200），总数这次已给。')
-      const stateText = String(issue.state || '未知状态')
-      const closedText = issue.closedAt ? '（关闭于 ' + String(issue.closedAt).slice(0, 10) + '）' : ''
+      if (first === 0) notes.push('Comments default to 0 (there are ' + commentTotal + ' in total): to read the comment text, call again with comments=N (up to 200); the total is already given here.')
+      const stateText = String(issue.state || 'unknown state')
+      const closedText = issue.closedAt ? ' (closed on ' + String(issue.closedAt).slice(0, 10) + ')' : ''
       // 反向边不全时，条数后面跟一句「可能不全」：数字本身照给（已经看到的那些是真的），但别让读者当成全量。
       const blockingText = wantBlocking
-        ? ('阻塞别人 ' + rel.blocking.length + ' 条' + (dependencies && dependencies.blockingComplete === false ? '（可能不全，见注记）。' : '。'))
-        : '阻塞别人未取（blocking=false）。'
+        ? ('blocks ' + rel.blocking.length + (dependencies && dependencies.blockingComplete === false ? ' (possibly incomplete, see the notes).' : '.'))
+        : 'blocks not fetched (blocking=false).'
       const brief = issueBrief(issue)
       // #1828：正文只装一处。只读某一节时 data.body 只报档位、全文长度与指纹，节原文放 data.section.text；
       // 全文 + 指定节时正文已在 chunks，section 只报节名，不再重复节原文。
@@ -436,7 +436,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       return {
         value: {
           status: DECK_STATUS.OK,
-          text: '票 ' + key + ' 读回来了：状态 ' + stateText + closedText + '，父票 ' + (rel.parentKey || '（没有）') + '，被阻塞 ' + rel.blockedBy.length + ' 条，' + blockingText + statusSentenceOf(issue as Record<string, unknown>),
+          text: 'Ticket ' + key + ' read back: state ' + stateText + closedText + ', parent ' + (rel.parentKey || '(none)') + ', blocked by ' + rel.blockedBy.length + ', ' + blockingText + statusSentenceOf(issue as Record<string, unknown>),
           data: {
             ticket: brief,
             body: bodyPayload,
@@ -447,7 +447,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
               // 读路径只知道「契约的字段里有这条关系」，分不出原生层级与平级链接，如实降一档（判据见 shell.js）。
               parent: rel.parentKey ? EDGE_LANDING.CONTRACT_PARENT_FIELD : EDGE_LANDING.UNKNOWN,
               blockedBy: rel.blockedBy.length ? EDGE_LANDING.CONTRACT_BLOCK_FIELD : EDGE_LANDING.UNKNOWN,
-              caveat: '这两个落点是从契约返回的字段读出来的；要精确知道这个后端把父子放在原生层级还是平级链接，看返回里本次写操作留下的 evidence（deck_map_link 会写）。',
+              caveat: 'These two landings are read from the fields the contract returns; to know exactly whether this backend keeps the parent-child relation in a native hierarchy or in a flat link, look at the evidence this write left in the return (deck_map_link writes it).',
             },
             comments: Array.isArray(issue.comments) ? issue.comments.slice(0, first) : [],
             dependenciesRaw: dependencies,

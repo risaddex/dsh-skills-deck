@@ -237,12 +237,12 @@ async function partToolNote(): Promise<void> {
   const truncatedReceipt: any = await runOne('三、>100 张（后端标截断）', true)
   const notes: string[] = ((truncatedReceipt && truncatedReceipt.notes) || []).map(function (n: any): string { return String(n) })
   const joined = notes.join('\n')
-  check(joined.indexOf('可能不全') >= 0, '三、>100 张：回执里有「可能不全」的说明', joined || '（没有 notes）')
-  check(joined.indexOf('每页最多 100 条') >= 0, '三、>100 张：文案点到每页 100 条这类后端上限（不只说 GitHub 的 500/1000 条）', joined || '（没有 notes）')
+  check(joined.indexOf('may be incomplete') >= 0, '三、>100 张：回执里有「可能不全」的说明', joined || '（没有 notes）')
+  check(joined.indexOf('at most 100 per page') >= 0, '三、>100 张：文案点到每页 100 条这类后端上限（不只说 GitHub 的 500/1000 条）', joined || '（没有 notes）')
 
   const normalReceipt: any = await runOne('三、≤100 张（后端没标截断）', false)
   const normalNotes: string[] = ((normalReceipt && normalReceipt.notes) || []).map(function (n: any): string { return String(n) })
-  check(normalNotes.join('\n').indexOf('可能不全') < 0, '三、≤100 张：回执里没有「可能不全」的说明', normalNotes.join('\n') || '（没有 notes，符合预期）')
+  check(normalNotes.join('\n').indexOf('may be incomplete') < 0, '三、≤100 张：回执里没有「可能不全」的说明', normalNotes.join('\n') || '（没有 notes，符合预期）')
 }
 
 async function main(): Promise<void> {

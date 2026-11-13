@@ -273,16 +273,16 @@ async function partTool() {
   check(bd.backendTruncated === true, '四、后端到顶时 data.backendTruncated === true（本票的核心）', bd.backendTruncated)
   check(bd.truncated === false, '四、返回行数没超 limit 时 data.truncated 仍是 false（本地没截断）', bd.truncated)
   check(bd.returned === 3 && bd.total === 3, '四、total/returned 照旧按这次拿到的行算', { total: bd.total, returned: bd.returned })
-  check(notesOf(b.r).indexOf('可能不全') >= 0, '四、notes 说「可能不全」', notesOf(b.r))
-  check(String(b.r.text || '').indexOf('可能不全') >= 0, '四、text 也把后端截断说出来（notes 与 data 说同一件事）', b.r && b.r.text)
+  check(notesOf(b.r).indexOf('may be incomplete') >= 0, '四、notes 说「可能不全」', notesOf(b.r))
+  check(String(b.r.text || '').indexOf('may be incomplete') >= 0, '四、text 也把后端截断说出来（notes 与 data 说同一件事）', b.r && b.r.text)
 
   // 五、本地 limit 截断、后端没到顶：两层不许混成一个数。
   const c = await runTool({ rows: bugRows(), truncated: false }, { state: 'closed', limit: 2 })
   const cd = (c.r && c.r.data) || {}
   check(cd.truncated === true, '五、行数超过 limit 时 data.truncated === true', cd.truncated)
   check(cd.backendTruncated === false, '五、后端没到顶时 data.backendTruncated === false', cd.backendTruncated)
-  check(notesOf(c.r).indexOf('只回前 2 行') >= 0, '五、notes 说本地只回了前 2 行', notesOf(c.r))
-  check(String(c.r.text || '').indexOf('可能不全') < 0, '五、后端没到顶时 text 不说「可能不全」', c.r && c.r.text)
+  check(notesOf(c.r).indexOf('Only the first 2 rows came back') >= 0, '五、notes 说本地只回了前 2 行', notesOf(c.r))
+  check(String(c.r.text || '').indexOf('may be incomplete') < 0, '五、后端没到顶时 text 不说「可能不全」', c.r && c.r.text)
 
   // 六、两层同时成立：两个旗标各说各的。
   const d = await runTool({ rows: bugRows(), truncated: true }, { state: 'closed', limit: 2 })
@@ -294,7 +294,7 @@ async function partTool() {
   const ed = (e.r && e.r.data) || {}
   check(ed.backendTruncated === true, '七、薄查撞封顶页数时 data.backendTruncated === true', ed.backendTruncated)
   check(ed.truncated === false, '七、薄查返回 1 行未超 limit 时 data.truncated === false', ed.truncated)
-  check(String(e.r.text || '').indexOf('可能不全') >= 0, '七、薄查的 text 同样说「可能不全」', e.r && e.r.text)
+  check(String(e.r.text || '').indexOf('may be incomplete') >= 0, '七、薄查的 text 同样说「可能不全」', e.r && e.r.text)
 
   const f = await runTool({ thin: true, thinRows: [{ key: '00', title: '地图', state: 'open', url: '' }], thinTruncated: false }, { state: 'open', labels: ['wayfinder:map'] })
   const fd = (f.r && f.r.data) || {}
@@ -305,16 +305,16 @@ async function partTool() {
   const gd = (g.r && g.r.data) || {}
   check(gd.backendTruncated === false && gd.truncated === false, '九、降级但未撞后端上限时两个旗标都是 false', { truncated: gd.truncated, backendTruncated: gd.backendTruncated })
   check(gd.fallback === 'rest' && gd.fallbackReason === 'quota', '九、data 照旧写明走了 REST 降级与原因', { fallback: gd.fallback, fallbackReason: gd.fallbackReason })
-  check(notesOf(g.r).indexOf('REST 降级通道') >= 0, '九、notes 照旧说明走了降级通道', notesOf(g.r))
-  check(notesOf(g.r).indexOf('可能不全') < 0, '九、降级但未撞上限时 notes 不说「可能不全」', notesOf(g.r))
-  check(String(g.r.text || '').indexOf('可能不全') < 0, '九、降级但未撞上限时 text 也不说「可能不全」', g.r && g.r.text)
+  check(notesOf(g.r).indexOf('the REST fallback path was used') >= 0, '九、notes 照旧说明走了降级通道', notesOf(g.r))
+  check(notesOf(g.r).indexOf('may be incomplete') < 0, '九、降级但未撞上限时 notes 不说「可能不全」', notesOf(g.r))
+  check(String(g.r.text || '').indexOf('may be incomplete') < 0, '九、降级但未撞上限时 text 也不说「可能不全」', g.r && g.r.text)
 
   // 十、降级且撞到后端上限：两个旗标、notes、text 说的是同一件事。
   const h = await runTool({ rows: bugRows(), truncated: true, fallback: 'rest', fallbackReason: 'other' }, closedArgs)
   const hd = (h.r && h.r.data) || {}
   check(hd.fallback === 'rest' && hd.backendTruncated === true, '十、降级且撞上限时 data 同时有 fallback 与 backendTruncated', { fallback: hd.fallback, backendTruncated: hd.backendTruncated })
-  check(notesOf(h.r).indexOf('可能不全') >= 0, '十、此时 notes 说「可能不全」', notesOf(h.r))
-  check(String(h.r.text || '').indexOf('可能不全') >= 0, '十、此时 text 也说「可能不全」', h.r && h.r.text)
+  check(notesOf(h.r).indexOf('may be incomplete') >= 0, '十、此时 notes 说「可能不全」', notesOf(h.r))
+  check(String(h.r.text || '').indexOf('may be incomplete') >= 0, '十、此时 text 也说「可能不全」', h.r && h.r.text)
 }
 
 async function main() {

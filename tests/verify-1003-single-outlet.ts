@@ -194,7 +194,7 @@ async function main() {
     const u = await decideBackend('', { registry: reg, caller: 'test-s3' });
     check(u.backendId === null && u.source === 'unknown', 'S3 统一判定空目录按未知回', JSON.stringify(u));
     const p = await openedOf(reg, { agent: { session: { id: 's', cwd: '' } } }, sOf(''));
-    check(p.ok === false && /还没就绪/.test(p.text || ''), 'S3 工具壳说还没就绪', (p.text || '').slice(0, 100));
+    check(p.ok === false && /not ready yet/.test(p.text || ''), 'S3 工具壳说还没就绪', (p.text || '').slice(0, 100));
     const l = await lcOf(Object.assign({}, reg, { get: () => fakeTracker() }), makeFs()).handleListLabels({ cwd: '' });
     check(l.ok === false, 'S3 改色电话空目录不成功', JSON.stringify(l).slice(0, 160));
     check(matched === false, 'S3 空目录没起自动识别');
@@ -204,7 +204,7 @@ async function main() {
   {
     const reg = regOf(async () => ({ backendId: 'github', source: 'matches', multiHit: ['github', 'markdown'] }));
     const p = await openedOf(reg, { agent: { session: { id: 's', cwd: 'D:\\ws' } } }, sOf('D:\\ws'));
-    check(p.ok === false && /同时被 2 个后端认出/.test(p.text || ''), 'S4 工具壳多命中拒绝', (p.text || '').slice(0, 100));
+    check(p.ok === false && /recognised by 2 backends at the same time/.test(p.text || ''), 'S4 工具壳多命中拒绝', (p.text || '').slice(0, 100));
     const u = await decideBackend('D:\\ws', {
       registry: reg, caller: 'test-s4',
       readChoice: async () => null,

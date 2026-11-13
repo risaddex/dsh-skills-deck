@@ -272,7 +272,7 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     try {
       const got = await run('deck_issue_create', { title: '降级探测票', kind: 'map-ticket', label: 'wayfinder:task', parentKey: '77' })
       const notes = (got.r && Array.isArray(got.r.notes)) ? got.r.notes : []
-      check(notes.some((n: unknown) => String(n).includes('父票类型读不到，只核了存在性')), '父票没有类型字段时，回执写明「父票类型读不到，只核了存在性」（notes=' + JSON.stringify(notes).slice(0, 220) + '）')
+      check(notes.some((n: unknown) => String(n).includes('The parent type could not be read, so only its existence was checked')), '父票没有类型字段时，回执写明「父票类型读不到，只核了存在性」（notes=' + JSON.stringify(notes).slice(0, 220) + '）')
       check(got.r && got.r.status !== 'ok', '读回里没有父子边时如实回 partial，不当成建好（实得 ' + (got.r && got.r.status) + '）')
     } finally { dispose.dispose(); chooseWorkspace(ws.rootPosix, 'markdown') }
   }
@@ -293,11 +293,11 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     ['实施票缺父票', { title: '实施缺父', kind: 'spec-ticket' }, /parentKey|父票/],
     ['map 带父票', { title: '地图带父', kind: 'map', parentKey: '00' }, /parentKey|父票/],
     ['spec 带父票', { title: '规格带父', kind: 'spec', parentKey: '00' }, /parentKey|父票/],
-    ['非 issue 在 labels 带类型标签', { title: '标签塞类型', kind: 'bug', labels: ['bug'] }, /类型标签由 kind/],
-    ['spec-ticket 在 labels 带类型标签', { title: '实施塞类型', kind: 'spec-ticket', parentKey: '00', labels: ['wayfinder:task'] }, /类型标签由 kind/],
+    ['非 issue 在 labels 带类型标签', { title: '标签塞类型', kind: 'bug', labels: ['bug'] }, /type label is decided by kind/],
+    ['spec-ticket 在 labels 带类型标签', { title: '实施塞类型', kind: 'spec-ticket', parentKey: '00', labels: ['wayfinder:task'] }, /type label is decided by kind/],
     ['父票不存在', { title: '父不存在', kind: 'map-ticket', label: 'wayfinder:task', parentKey: '999999' }, /999999|找不到|不存在/],
-    ['地图工单的父不是地图', { title: '父错配地图', kind: 'map-ticket', label: 'wayfinder:task', parentKey: '01' }, /地图|探索地图/],
-    ['实施票的父不是规格', { title: '父错配规格', kind: 'spec-ticket', parentKey: '01' }, /规格/],
+    ['地图工单的父不是地图', { title: '父错配地图', kind: 'map-ticket', label: 'wayfinder:task', parentKey: '01' }, /not an exploration map/],
+    ['实施票的父不是规格', { title: '父错配规格', kind: 'spec-ticket', parentKey: '01' }, /is not a spec/],
   ]
   // 先造两张用于「父票错配」的票：一张在 map 目录里的普通票，一张在 spec 目录里的普通票。
   // #1486 起没有 feature 的普通票会按标题另起目录，父票号在别的目录里读不到；错配用例要落在同一个容器目录里。

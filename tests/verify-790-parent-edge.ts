@@ -205,12 +205,12 @@ async function main() {
     const item = (lr.items || [])[0] || {}
     check(item.status === 'failed', 'D1 写后读回没父 → 逐条 failed（实得 ' + item.status + '）')
     check(lr.status !== 'ok', 'D2 顶层不再回 ok（实得 ' + lr.status + '）')
-    check(String(lr.text || '').includes('失败') && String(lr.text || '').includes('90'), 'D3 顶层带失败摘要（含票号与失败字样）：' + String(lr.text).slice(0, 120))
+    check(String(lr.text || '').includes('edges failed') && String(lr.text || '').includes('90'), 'D3 顶层带失败摘要（含票号与失败字样）：' + String(lr.text).slice(0, 120))
     check(String(item.evidence || '').length > 0, 'D4 逐条有非空证据：' + String(item.evidence).slice(0, 80))
 
     const cr = await createTool.run(exec, { title: '带父票的新票', kind: 'issue', parentKey: '78' })
     check(cr.status === 'partial', 'E1 票建成、边没挂上 → partial（实得 ' + cr.status + '）')
-    check(String(cr.text || '').includes('没挂上') && !String(cr.text || '').includes('建好了（父票'), 'E2 不再报“建好了（父票 X）”，而说没挂上：' + String(cr.text).slice(0, 140))
+    check(String(cr.text || '').includes('did not land') && !String(cr.text || '').includes('(parent '), 'E2 不再报“建好了（父票 X）”，而说没挂上：' + String(cr.text).slice(0, 140))
     const citem = (cr.items || [])[0] || {}
     check(citem.status === 'failed', 'E3 建票回执的边逐条 failed（实得 ' + citem.status + '）')
 
@@ -277,8 +277,8 @@ async function main() {
     const crEcho = await createEcho.run(exec, { title: '回包写着父票、读回失败', kind: 'issue', parentKey: '78' })
     const crEchoItem = (crEcho.items || [])[0] || {}
     check(crEcho.status === 'partial', 'H1 写后读回失败 → partial，不因建票回包写着父票就算落上（实得 ' + crEcho.status + '）')
-    check(!String(crEcho.text || '').includes('建好了（父票'), 'H2 不报「建好了（父票 X）」：' + String(crEcho.text).slice(0, 140))
-    check(/没读到|没读回|没确认|未确认/.test(String(crEcho.text || '') + ' ' + String(crEchoItem.evidence || '')), 'H3 文案说清「没读到、没确认」：' + String(crEchoItem.evidence || '').slice(0, 120))
+    check(!String(crEcho.text || '').includes('(parent '), 'H2 不报「建好了（父票 X）」：' + String(crEcho.text).slice(0, 140))
+    check(/nothing was read back|not confirmed|cannot be judged/.test(String(crEcho.text || '') + ' ' + String(crEchoItem.evidence || '')), 'H3 文案说清「没读到、没确认」：' + String(crEchoItem.evidence || '').slice(0, 120))
     dispEcho.dispose()
 
     // I) 正文里提到父票号、写后读回里没有这条父子 → 不算落上
@@ -314,8 +314,8 @@ async function main() {
     const crBody = await createBody.run(exec, { title: '正文提到父票号', kind: 'issue', parentKey: '78' })
     const crBodyItem = (crBody.items || [])[0] || {}
     check(crBody.status === 'partial', 'I1 正文提到父票号不算落上 → partial（实得 ' + crBody.status + '）')
-    check(!String(crBody.text || '').includes('（父票'), 'I2 顶层不说「（父票 78）」：' + String(crBody.text).slice(0, 140))
-    check(/正文/.test(String(crBodyItem.evidence || '')), 'I3 证据里点明正文提到票号不等于这条边落上：' + String(crBodyItem.evidence || '').slice(0, 140))
+    check(!String(crBody.text || '').includes('(parent '), 'I2 顶层不说「（父票 78）」：' + String(crBody.text).slice(0, 140))
+    check(/a ticket number in the body does not mean this edge landed/.test(String(crBodyItem.evidence || '')), 'I3 证据里点明正文提到票号不等于这条边落上：' + String(crBodyItem.evidence || '').slice(0, 140))
     dispBody.dispose()
 
     // J) 阻塞边：写成功、读回失败 → 说「没读回来」，不说「没出现在票上」
@@ -348,14 +348,14 @@ async function main() {
     const lrJ = await link3.run(exec, { key: '94', blockedBy: ['78'] })
     const jItem = (lrJ.items || [])[0] || {}
     check(lrJ.status !== 'ok' && jItem.status === 'failed', 'J1 阻塞边读回失败 → 逐条 failed、顶层不是 ok（实得 ' + jItem.status + ' / ' + lrJ.status + '）')
-    check(/没读回|没读到|未确认|没确认/.test(String(jItem.evidence || '')) && !/没出现在票上/.test(String(jItem.evidence || '')), 'J2 说「没读回来」而不是「没出现在票上」：' + String(jItem.evidence || '').slice(0, 140))
+    check(/not read back|did not succeed|unconfirmed|cannot tell/.test(String(jItem.evidence || '')) && !/is not in the blockedBy/.test(String(jItem.evidence || '')), 'J2 说「没读回来」而不是「没出现在票上」：' + String(jItem.evidence || '').slice(0, 140))
     // K) 同一票号的阻塞边出现两次、写后读回失败 → 重复项也说「没读回来，判不了」（#790 审查 ②-2）
     //    （重复项分支以前自己重算一次「读回来了、里面没有」，与 J 节同一处不诚实）
     const lrK = await link3.run(exec, { edges: [{ key: '94', blockedBy: ['78'] }, { key: '94', blockedBy: ['79'] }] })
     const kItems = lrK.items || []
     const kDup = kItems[kItems.length - 1] || {}
     check(kItems.length >= 2 && kDup.status === 'failed', 'K1 重复项也逐条 failed（实得 ' + kDup.status + ' / ' + kItems.length + ' 条）')
-    check(/没读回|判不了|没确认/.test(String(kDup.evidence || '')) && !/没出现在票上/.test(String(kDup.evidence || '')), 'K2 重复项说「没读回来，判不了」而不是「没出现在票上」：' + String(kDup.evidence || '').slice(0, 140))
+    check(/not read back|cannot be judged|not confirmed/.test(String(kDup.evidence || '')) && !/is not in the blockedBy/.test(String(kDup.evidence || '')), 'K2 重复项说「没读回来，判不了」而不是「没出现在票上」：' + String(kDup.evidence || '').slice(0, 140))
     dispBlockRead.dispose()
 
     // L) 整图建骨架：子票建成了、房在票上记着父子边没挂上 → 这张子票记 failed，不报 ok（#790 审查 ②-3）
@@ -382,7 +382,7 @@ async function main() {
     const planRun = await planTool.run(exec, { title: '地图', children: [{ key: 'c1', title: '子票一', kind: 'issue' }], edges: [{ from: '@map', to: 'c1', type: 'parent' }] })
     const childItem = (planRun.items || []).filter((i) => i.role === 'child')[0] || {}
     check(childItem.status === 'failed', 'L1 父子边没挂上 → 这张子票记 failed，不报 ok（实得 ' + childItem.status + '）')
-    check(/父子边没挂上/.test(String(childItem.reason || '')), 'L2 原因里点明父子边没挂上：' + String(childItem.reason || '').slice(0, 140))
+    check(/the parent edge was not attached/.test(String(childItem.reason || '')), 'L2 原因里点明父子边没挂上：' + String(childItem.reason || '').slice(0, 140))
     dispPlan.dispose()
 
     // M) 认领人 / 标签 / 关票三步：写动作自述成功、写后读回来的票不认 → 逐条 failed（#790 审查 ①-1、①-2）
@@ -411,7 +411,7 @@ async function main() {
     const prA = await patchTool.run(exec, { key: '96', assignees: ['alice'] })
     const aItem = (prA.items || [])[0] || {}
     check(aItem.status === 'failed', 'M1 写回包写着认领人、读回来的票上没有 → 这一步 failed（实得 ' + aItem.status + '）')
-    check(/没记|没读回|没有这些认领人/.test(String(aItem.reason || '')), 'M2 认领人那一步的原因说清读回来的票上没有：' + String(aItem.reason || '').slice(0, 140))
+    check(/does not carry these assignees|the assignees were not recorded/.test(String(aItem.reason || '')), 'M2 认领人那一步的原因说清读回来的票上没有：' + String(aItem.reason || '').slice(0, 140))
     const prL = await patchTool.run(exec, { key: '96', addLabels: ['bug'] })
     const lItem = (prL.items || [])[0] || {}
     check(lItem.status === 'failed', 'M3 标签：写回包写着改好了、读回来没有 → 这一步 failed（实得 ' + lItem.status + '）')

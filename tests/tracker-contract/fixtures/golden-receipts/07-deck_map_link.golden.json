@@ -20,7 +20,7 @@
       "text": "这次 deck_map_link 预计花 6 点、3 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "done": 1,
@@ -36,9 +36,9 @@
   },
   "items": [
     {
-      "evidence": "写后读回：票 #03 的 blockedBy 里有 #02，也就是 #03 被 #02 阻塞；正文里也写着指向 #02 的一行（这是把关系写进正文的那种落法）",
+      "evidence": "Read back after the write: #02 is in the blockedBy of ticket #03, that is, #03 is blocked by #02; the body also holds a line pointing at #02 (this is the landing where the relation is written into the body)",
       "key": "03",
-      "landing": "正文行",
+      "landing": "body line",
       "ok": true,
       "op": "block",
       "role": "edge",
@@ -57,7 +57,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "这次要补 1 条边，建成 1 条。",
+  "text": "This call asked for 1 edges, and 1 were built.",
   "tool": "deck_map_link",
   "touched": [
     "03"

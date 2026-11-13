@@ -28,16 +28,16 @@ function obj(v: unknown): Record<string, unknown> {
 
 /** 一条边落到哪里（票面要求每条边在返回里标出落点）。后四个是「说不好」与「做不到」，不假装知道。 */
 export const EDGE_LANDING = Object.freeze({
-  NATIVE_PARENT: '原生层级',
-  NATIVE_BLOCK: '原生依赖边',
-  PEER_LINK: '平级链接',
-  BODY_LINE: '正文行',
-  FILE_NOTE: '票文件注释',
-  CONTRACT_PARENT_FIELD: '契约的父子列（分不出是原生层级还是平级链接，别把它当成原生层级）',
-  CONTRACT_BLOCK_FIELD: '契约的依赖列（分不出是原生边还是正文行）',
-  UNSUPPORTED: '做不到',
-  UNKNOWN: '说不好（这次没读回来，别当它已经建好）',
-  READ_BACK_MISSING: '读回来了，这条边不在票上（别当它已经建好）',
+  NATIVE_PARENT: 'native parent link',
+  NATIVE_BLOCK: 'native dependency edge',
+  PEER_LINK: 'peer link',
+  BODY_LINE: 'body line',
+  FILE_NOTE: 'ticket file note',
+  CONTRACT_PARENT_FIELD: 'the parent column of the contract (it cannot tell a native parent link from a peer link, so do not treat it as a native parent link)',
+  CONTRACT_BLOCK_FIELD: 'the dependency column of the contract (it cannot tell a native edge from a body line)',
+  UNSUPPORTED: 'it cannot do this',
+  UNKNOWN: 'cannot tell (nothing was read back this time, so do not treat it as built)',
+  READ_BACK_MISSING: 'read back, and this edge is not on the ticket (do not treat it as built)',
 })
 
 /**
@@ -209,7 +209,7 @@ export function classifyEdgeLanding(op: string, target: unknown, after: unknown,
   const readHappened = (a.issue !== undefined && a.issue !== null)
     || (a.dependencies !== undefined && a.dependencies !== null)
     || (typeof a.body === 'string')
-  if (!readHappened) return { kind: 'unknown', ok: true, text: '写后没读回来，判不了这条边的落点' }
+  if (!readHappened) return { kind: 'unknown', ok: true, text: 'Nothing was read back after the write, so the landing of this edge cannot be judged' }
   // #829：读回失败时 after.issue 为 null，旧写法 (a.issue && a.issue.body) !== undefined
   // 在 null 上仍进真分支并读 .body 直接抛错，把「读失败」变成工具崩溃（backend-threw）。
   // 这里先判空：没读到票正文按空串处理，落点判 unknown，真正的读错误由调用方在证据里另带原话。
@@ -226,27 +226,27 @@ export function classifyEdgeLanding(op: string, target: unknown, after: unknown,
   if (op === 'block') {
     const inField = rel.blockedBy.indexOf(want) >= 0
     if (inField && !bodyHas) return { kind: 'native', ok: true, text: owner
-      ? '写后读回：票 #' + owner + ' 的 blockedBy 里有 #' + want + '，也就是 #' + owner + ' 被 #' + want + ' 阻塞；后端的结构字段里有这条依赖、正文里没有那一行（后端把它放在自己的原生边上）'
-      : '写后读回：结构字段里有这条依赖、正文里没有那一行（后端把它放在自己的原生边上）' }
+      ? 'Read back after the write: #' + want + ' is in the blockedBy of ticket #' + owner + ', that is, #' + owner + ' is blocked by #' + want + '; the structural field of the backend holds this dependency and the body does not hold that line (the backend keeps it on its own native edge)'
+      : 'Read back after the write: the structural field holds this dependency and the body does not hold that line (the backend keeps it on its own native edge)' }
     if (inField && bodyHas) return { kind: 'body-line', ok: true, text: owner
-      ? '写后读回：票 #' + owner + ' 的 blockedBy 里有 #' + want + '，也就是 #' + owner + ' 被 #' + want + ' 阻塞；正文里也写着指向 #' + want + ' 的一行（这是把关系写进正文的那种落法）'
-      : '写后读回：结构字段里有这条依赖，正文里也写着指向 #' + want + ' 的一行（这是把关系写进正文的那种落法）' }
+      ? 'Read back after the write: #' + want + ' is in the blockedBy of ticket #' + owner + ', that is, #' + owner + ' is blocked by #' + want + '; the body also holds a line pointing at #' + want + ' (this is the landing where the relation is written into the body)'
+      : 'Read back after the write: the structural field holds this dependency and the body also holds a line pointing at #' + want + ' (this is the landing where the relation is written into the body)' }
     // 字段里没有、正文里有：正文里出现票号只是「作者写了这行字」，不是「这条边在盘上」的证据（#790）。
     if (!inField && bodyHas) return { kind: 'missing', ok: true, text: owner
-      ? '写后读回：票 #' + owner + ' 的 blockedBy 里没有 #' + want + '（正文里出现了指向 #' + want + ' 的一行，但正文提到票号不等于这条边落上了）'
-      : '写后读回：结构字段里没有这条依赖（正文里出现了指向 #' + want + ' 的一行，但正文提到票号不等于这条边落上了）' }
+      ? 'Read back after the write: #' + want + ' is not in the blockedBy of ticket #' + owner + ' (the body holds a line pointing at #' + want + ', but a ticket number in the body does not mean this edge landed)'
+      : 'Read back after the write: the structural field does not hold this dependency (the body holds a line pointing at #' + want + ', but a ticket number in the body does not mean this edge landed)' }
     return { kind: 'missing', ok: true, text: owner
-      ? '写后读回：票 #' + owner + ' 的 blockedBy 里没有 #' + want + '，正文里也没找到指向 #' + want + ' 的一行'
-      : '写后读回：结构字段与正文里都没找到指向 #' + want + ' 的这条依赖' }
+      ? 'Read back after the write: #' + want + ' is not in the blockedBy of ticket #' + owner + ', and the body holds no line pointing at #' + want + ' either'
+      : 'Read back after the write: neither the structural field nor the body holds this dependency pointing at #' + want }
   }
   if (rel.parentKey === want) return { kind: 'contract', ok: true, text: owner
-    ? '写后读回：票 #' + owner + ' 的父票是 #' + want + '（契约把父子放在 parentKey 这一列，分不出原生层级还是平级链接）'
-    : '写后读回：票的 parentKey = ' + want + '（契约把父子放在这一列，分不出原生层级还是平级链接）' }
+    ? 'Read back after the write: the parent of ticket #' + owner + ' is #' + want + ' (the contract keeps parent and child in the parentKey column, and that column cannot tell a native parent link from a peer link)'
+    : 'Read back after the write: parentKey = ' + want + ' (the contract keeps parent and child in this column, and that column cannot tell a native parent link from a peer link)' }
   // 父子边同理：正文里写「归属 #78」不是这条边落上的证据（#790 里正是这一条把没挂上的边报成了挂上）。
   if (bodyHas) return { kind: 'missing', ok: true, text: owner
-    ? '写后读回：票 #' + owner + ' 的父票不是 #' + want + '（正文里出现了指向 #' + want + ' 的一行，但正文提到票号不等于这条边落上了）'
-    : '写后读回：结构字段里没有这条父子关系（正文里出现了指向 #' + want + ' 的一行，但正文提到票号不等于这条边落上了）' }
+    ? 'Read back after the write: the parent of ticket #' + owner + ' is not #' + want + ' (the body holds a line pointing at #' + want + ', but a ticket number in the body does not mean this edge landed)'
+    : 'Read back after the write: the structural field holds no such parent and child relation (the body holds a line pointing at #' + want + ', but a ticket number in the body does not mean this edge landed)' }
   return { kind: 'missing', ok: true, text: owner
-    ? '写后读回：票 #' + owner + ' 上没有父票 #' + want + '，正文里也没找到指向它的一行'
-    : '写后读回：结构字段与正文里都没找到这条父子关系' }
+    ? 'Read back after the write: ticket #' + owner + ' has no parent #' + want + ', and the body holds no line pointing at it either'
+    : 'Read back after the write: neither the structural field nor the body holds this parent and child relation' }
 }

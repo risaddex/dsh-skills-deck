@@ -28,10 +28,10 @@ import { withCap } from '../shell/capped-wait.js'
 /** 失败回执里的「下一步做什么」：reason 已经回答了下一步，text 要跟它指向同一件事。
  *  只给本工具判断得了的几种码补一句；其余（后端说做不到等）保持原话，不替后端发明退路。 */
 function nextStepText(reason: string): string {
-  if (reason === REFUSAL_REASONS.BAD_ARGS) return '票号可能写错了：先用 deck_issue_list 或 deck_issue_get 确认这张票存在，再重试。'
-  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return '等一会儿重调一次：上报与释放都要先读到票，读没有副作用。'
-  if (reason === REFUSAL_REASONS.BACKEND_THREW) return '读票没有副作用，可以原样重调一次。'
-  if (reason === REFUSAL_REASONS.OVER_CAP) return '稍等一会儿再调。'
+  if (reason === REFUSAL_REASONS.BAD_ARGS) return 'The ticket number may be wrong: check with deck_issue_list or deck_issue_get that this ticket exists, then retry.'
+  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return 'Call again in a moment: both report and release have to read the ticket first, and reading has no side effects.'
+  if (reason === REFUSAL_REASONS.BACKEND_THREW) return 'Reading a ticket has no side effects, so the same call can be made again.'
+  if (reason === REFUSAL_REASONS.OVER_CAP) return 'Call again shortly.'
   return ''
 }
 
@@ -58,13 +58,13 @@ type TransportResult = { error?: { kind?: string; message?: unknown } } | null |
 /** 后端回包里「执行层失败」的原话；不是执行层失败（后端诚实地说做不到）就回 null，一个字不改判。 */
 function transportMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || '执行层没回来')
+  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || 'the execution layer gave no answer')
   return null
 }
 /** 超时那一支的原话（kind 'timeout'）：调用处直接回独立原因码，不抛给壳。 */
 function timeoutMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && e.kind === 'timeout') return String(e.message || '执行层没回来')
+  if (e && e.kind === 'timeout') return String(e.message || 'the execution layer gave no answer')
   return null
 }
 
@@ -84,14 +84,14 @@ export interface DeckIssueReportDeps {
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_issue_report',
-  description: '同属插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；先调 deck_context 确认 workspace 与 backend。开始处理、切换或完成一个 ISSUE 时都必须调用：开始前报一次，关闭时再报一次。职责划分：deck_issue_patch 改内容，deck_issue_report 上报处理关系；用前者关闭不等于已上报。key 填要上报的 ISSUE 编号；本地后端才需要填 effort 或 feature（地图用 effort、规格用 feature，均为 `.scratch/` 下目录名），远端忽略。撤销误报带 release=true（只删本会话那一行；建过、改过、关过、建过计划、挂过边的票不能释放）。',
+  description: 'The ISSUE and map management of this plugin; it only handles the repo of the current workspace. Call deck_context first to confirm the workspace and backend. It must be called when starting, switching or finishing an ISSUE: report once before starting, and once more when closing. Division of labour: deck_issue_patch changes content, deck_issue_report reports the handling relationship; closing through the former does not mean it has been reported. Put the ISSUE number to report in key; effort or feature is needed only on the local backend (effort for a map, feature for a spec, both are directory names under `.scratch/`), and the remote backend ignores it. To withdraw a wrong report, pass release=true (it only deletes the row of this session; a ticket that was created, changed, closed, planned or linked cannot be released).',
   parameters: {
     type: 'object',
     properties: {
-      key: { type: 'string', description: '你要上报的那个 ISSUE 的编号' },
-      note: { type: 'string', description: '可选带一句备注（只回显，不进链）' },
+      key: { type: 'string', description: 'The number of the ISSUE you are reporting' },
+      note: { type: 'string', description: 'Optional short note (only echoed back, not added to the chain)' },
       ...MD_SCOPE_LOCATE,
-      release: { type: 'boolean', description: '可选：传 true 表示尝试撤销本会话对这张票的一条误报（只在从没实际处理过这张票时删得掉；建过、改过、关过、建过计划或挂过边的票不能释放，路径保留；不是改票：票的状态与认领人都不动）；不传或传 false 就是正常上报' },
+      release: { type: 'boolean', description: 'Optional: pass true to try withdrawing a wrong report this session made for this ticket (it can only be deleted when this ticket has never actually been handled; a ticket that was created, changed, closed, planned or linked cannot be released and its path stays; this does not change the ticket: neither the state nor the assignees move); leave it out or pass false for a normal report' },
     },
     required: ['key'],
     additionalProperties: false,
@@ -128,13 +128,13 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
     const est = shell.estimateFor('deck_issue_report', a)
     // #1352：progress 已退役。检查放在最前面（比读会话、比选后端都早）：不花点数、不碰后端、不写盘，
     // 回执形状与别的参数错一样是六格。
-    if (retiredProgressGiven(a)) return shell.unsupported('deck_issue_report', REFUSAL_REASONS.BAD_ARGS, 'progress 参数已退役（#1352）：上报只表达「在办／办完」，进度请写到票面——用 deck_issue_patch 的 progress 传 { percent, note }，工具会把它写进那张票的「## 进度」区。这次什么都没做：没选后端、没花点数、没写盘。', { cost: { estimated: est } })
-    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_issue_report', REFUSAL_REASONS.BAD_ARGS, 'workRouteDetail 参数已退役（#1561）：在办表不再跟在写回执里，要看就调 deck_work_route（默认只看近 24 小时在办，带 includeStale:true 看近 30 天）。这次什么都没做：没选后端、没花点数、没写盘。', { cost: { estimated: est } })
+    if (retiredProgressGiven(a)) return shell.unsupported('deck_issue_report', REFUSAL_REASONS.BAD_ARGS, 'The progress parameter is retired (#1352): a report only says "in progress / done"; write progress on the ticket instead — pass { percent, note } through the progress parameter of deck_issue_patch, and the tool writes it into the "## 进度" section of that ticket. Nothing was done this time: no backend was selected, no points were spent, and nothing was written to disk.', { cost: { estimated: est } })
+    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_issue_report', REFUSAL_REASONS.BAD_ARGS, 'The workRouteDetail parameter is retired (#1561): the work board no longer comes back inside write receipts; to see it, call deck_work_route (by default it only covers work from the last 24 hours; pass includeStale:true for the last 30 days). Nothing was done this time: no backend was selected, no points were spent, and nothing was written to disk.', { cost: { estimated: est } })
     const s = await sessionContextOfAsync(exec, { canonicalKey: d.canonicalKey, workspaceKeyOf: d.workspaceKeyOf })
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 在会话壳里是运行时布尔，
     // 那一层还没标类型，见 #1040），所以这里按形状取 reason —— 取到的值与老写法逐字相同。
     if (!s.ok) return shell.unsupported('deck_issue_report', (s as { reason: string }).reason, s.text, { cost: { estimated: est } })
-    if (!key) return shell.unsupported('deck_issue_report', REFUSAL_REASONS.BAD_ARGS, '要上报哪一张票：把票号写在 key 里（例如 775）。', { cost: { estimated: est } })
+    if (!key) return shell.unsupported('deck_issue_report', REFUSAL_REASONS.BAD_ARGS, 'Which ticket to report: put the ticket number in key (for example 775).', { cost: { estimated: est } })
     const note = typeof a.note === 'string' ? a.note.trim().slice(0, 200) : ''
     // #1086 释放标记：只认显式 true（传字符串 'true'、1 之类一律当没带，照旧正常上报）。
     const release = a.release === true
@@ -162,7 +162,7 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
       const opCtx = sc.opCtx
       const notes = []
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
-      if (note) notes.push('备注只回显，不记进工作路线（路线上每条只留票键、时间与动作类别）。')
+      if (note) notes.push('The note is only echoed back and does not go into the work route (each entry on the route keeps only the ticket key, the time and the action kind).')
       const got = typeof t.get === 'function' ? await t.get(repo, key, { comments: { first: 0 } }, opCtx) : null
       const gotTimeout = timeoutMessage(got as TransportResult)
       if (gotTimeout) return {
@@ -170,8 +170,8 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
           status: DECK_STATUS.UNSUPPORTED,
           reason: reasonForFailure({ kind: 'timeout', phase: 'read' }),
           text: release
-            ? '这张票这次没释放（超时了：在限时内没等到后端回话，释放有没有做上说不清，重调一次就行）。'
-            : '这张票这次没上报（超时了：在限时内没等到后端回话，票有没有记上说不清，重调一次就行）。',
+            ? 'This ticket was not released this time (timed out: the backend did not answer within the time limit, so whether the release landed is unclear; just call again).'
+            : 'This ticket was not reported this time (timed out: the backend did not answer within the time limit, so whether it was recorded is unclear; just call again).',
           data: { key: key, backendId: pick.backendId, effortId: effortId, error: { kind: 'timeout', message: gotTimeout.slice(0, 300) } },
           notes: notes,
         },
@@ -180,7 +180,7 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
       const gotTransport = transportMessage(got as TransportResult)
       if (gotTransport) throw new Error(gotTransport)
       if (!got || got.ok !== true) {
-        const msg = String((got && got.error && got.error.message) || '后端没给出原因').slice(0, 300)
+        const msg = String((got && got.error && got.error.message) || 'the backend did not give a reason').slice(0, 300)
         // #1799：这一支失败的是「读票确认它存在」那一次读（写动作——记路线或释放——都还没发生），
         // 所以按读阶段映射：票不存在归 bad-args，读侧网络/解析失败可原样重试，别按写阶段劝人先读回。
         const ev = failureOf(got, 'read')
@@ -189,8 +189,8 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
             text: (release
-              ? '这张票没释放（票 ' + key + ' 没读回来；释放要先确认这张票真的存在，所以没动手。后端原话：' + msg + '）。'
-              : '这张票没上报（票 ' + key + ' 没读回来，后端原话：' + msg + '）。') + nextStepText(ev.code),
+              ? 'This ticket was not released (ticket ' + key + ' did not come back; a release has to confirm that the ticket really exists first, so nothing was done. Backend words: ' + msg + ').'
+              : 'This ticket was not reported (ticket ' + key + ' did not come back; backend words: ' + msg + ').') + nextStepText(ev.code),
             data: { key: key, backendId: pick.backendId, effortId: effortId, error: Object.assign({ message: msg }, evidenceFields(ev)) },
             notes: notes,
           },
@@ -207,7 +207,7 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
           value: {
             status: DECK_STATUS.OK,
             release: true,
-            text: '票 ' + key + ' 这次不是上报，是释放：尝试把本会话工作路线里的这一条误报删掉（票本身的状态与认领人没有改动）。只有从没实际处理过的票能删，删没删掉看回执备注。',
+            text: 'Ticket ' + key + ' was not reported this time but released: it tried to delete this wrong entry from the work route of this session (the state and assignees of the ticket itself were not changed). Only a ticket that was never actually handled can be deleted; whether it was deleted is in the receipt notes.',
             data: {
               key: key, title: title, state: issue.state || '', url: issue.url || '',
               backendId: pick.backendId, effortId: effortId || (issue.effortId !== undefined ? issue.effortId : ''),
@@ -222,7 +222,7 @@ export function createDeckIssueReport(deps?: DeckIssueReportDeps) {
       return {
         value: {
           status: DECK_STATUS.OK,
-          text: '票 ' + key + ' 已上报（' + (title || '没取到标题') + '）' + (note ? '：' + note.slice(0, 80) : '') + '。要看在办表就调 deck_work_route。',
+          text: 'Ticket ' + key + ' reported (' + (title || 'could not read the title') + ')' + (note ? ': ' + note.slice(0, 80) : '') + '. To see the work board, call deck_work_route.',
           data: {
             key: key, title: title, state: issue.state || '', url: issue.url || '',
             backendId: pick.backendId, effortId: effortId || (issue.effortId !== undefined ? issue.effortId : ''),

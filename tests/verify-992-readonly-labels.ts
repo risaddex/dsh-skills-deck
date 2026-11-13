@@ -201,7 +201,7 @@ async function main(): Promise<void> {
     const cr = await tool.run(exec, { title: '只读库建 bug 票', kind: 'bug' })
     check(cr.status === 'partial', 'E1 标签没挂上 → partial（实得 ' + cr.status + '）')
     check(String(cr.text || '').includes('没挂上') && String(cr.text || '').includes('读权限'), 'E2 写明哪几个标签、为什么（权限）：' + String(cr.text).slice(0, 100) + '…')
-    check(!(cr.notes || []).join('').includes('我替你补了必备标签'), 'E3 不再出现“我替你补了”假话')
+    check(!(cr.notes || []).join('').includes('Required labels were added for you'), 'E3 不再出现“我替你补了”假话')
     const item = (cr.items || []).find((i) => i.step === 'labels') || {}
     check(item.status === 'failed', 'E4 labels 逐条 failed（实得 ' + item.status + '）')
     disp.dispose()
@@ -211,7 +211,7 @@ async function main(): Promise<void> {
     const tool2 = createMod.createDeckIssueCreate(deps)
     const ok2 = await tool2.run(exec, { title: '正常建 bug 票', kind: 'bug' })
     check(ok2.status === 'ok', 'E5 标签挂上时仍 ok（回归对照；实得 ' + ok2.status + '）')
-    check((ok2.notes || []).join('').includes('我替你补了必备标签'), 'E6 挂上时照说补了（回归对照）')
+    check((ok2.notes || []).join('').includes('Required labels were added for you'), 'E6 挂上时照说补了（回归对照）')
     disp2.dispose()
   }
 
@@ -294,13 +294,13 @@ async function main(): Promise<void> {
       async getRepoPermissions() { return { ok: true, data: { push: false, triage: false } } },
     })
     check(ro.status === 'ok' && ro.data && ro.data.repo && ro.data.repo.permissions && ro.data.repo.permissions.push === false, 'G7 GitHub 只读：repo 带权限位 {push:false}（实得 ' + JSON.stringify(ro.data && ro.data.repo && ro.data.repo.permissions) + '）')
-    check((ro.notes || []).join('').includes('这个仓库只读：标签与写操作不可用'), 'G8 GitHub 只读：notes 出现“这个仓库只读”那句')
+    check((ro.notes || []).join('').includes('This repo is read-only: labels and write operations are not available'), 'G8 GitHub 只读：notes 出现“这个仓库只读”那句')
     const wr = await runCtx('github', {
       async preflight() { return { ok: true } },
       async list() { return { ok: true, data: [] } },
       async getRepoPermissions() { return { ok: true, data: { push: true, triage: true } } },
     })
-    check(wr.data.repo.permissions.push === true && !(wr.notes || []).join('').includes('这个仓库只读'), 'G9 GitHub 可写：权限位为真且无只读提示')
+    check(wr.data.repo.permissions.push === true && !(wr.notes || []).join('').includes('This repo is read-only'), 'G9 GitHub 可写：权限位为真且无只读提示')
     const md = await runCtx('markdown', {
       async preflight() { return { ok: true } },
       async list() { return { ok: true, data: [] } },

@@ -100,7 +100,7 @@ export interface WorkPathReadoutView {
 export function workPathSessionLabel(label: string, sessionId: string): string {
   if (typeof label === 'string' && label !== '') return label;
   const shard = chainSessionShardId(String(sessionId || ''));
-  return '会话 ' + String(shard).slice(0, 6);
+  return 'session ' + String(shard).slice(0, 6);
 }
 
 interface FlatRow {
@@ -274,10 +274,10 @@ export function buildWorkPathCollisionNote(readout: WorkPathReadout | null): str
     const label = String(hits[i] && hits[i].sessionLabel !== undefined ? (hits[i] as any).sessionLabel : '');
     const at = String(hits[i] && hits[i].actionAt !== undefined ? (hits[i] as any).actionAt : '');
     if (key === '' || label === '' || at === '') continue;
-    items.push('票 #' + key + ' 在 ' + Math.round(WORK_ROUTE_COLLISION_WINDOW_MS / MINUTE_MS) + ' 分钟内也被 ' + label + ' 记过（它记在 ' + at + '）');
+    items.push('ticket #' + key + ' was also recorded by ' + label + ' within ' + Math.round(WORK_ROUTE_COLLISION_WINDOW_MS / MINUTE_MS) + ' minutes (it recorded ' + at + ')');
   }
   if (items.length === 0) return null;
-  return '撞车提醒 · ' + items.join('；') + '，这次写仍然成功，票的状态没有变。';
+  return 'Collision notice: ' + items.join('; ') + ', this write still succeeded and the ticket state did not change.';
 }
 
 /**
@@ -289,18 +289,18 @@ export function buildWorkPathSummary(readout: WorkPathReadout | WorkPathReadoutV
   const total = typeof (readout as any).total === 'number' ? (readout as any).total as number : readout.entries.length;
   const detail = workPathDetailOf((readout as any).detail, 'standard');
   const shown = Math.min(SUMMARY_CLIP, readout.entries.length);
-  const clip = readout.entries.slice(0, shown).map(function (e) { return '#' + String((e as any).ticketKey); }).join('、');
-  let text = '工作路线摘要 · 本工作区在办 ' + total + ' 条（最近 ' + shown + ' 条：' + clip + '）';
+  const clip = readout.entries.slice(0, shown).map(function (e) { return '#' + String((e as any).ticketKey); }).join(', ');
+  let text = 'Work route summary: ' + total + ' entries in progress in this workspace (most recent ' + shown + ': ' + clip + ')';
   if (detail === 'core') {
     // core 档只带最近 CORE_CLIP 条；说「其余几十条见 data.workRoute」就成了假话，所以分开写。
     const omitted = typeof (readout as any).omitted === 'number' ? (readout as any).omitted as number : Math.max(0, total - readout.entries.length);
-    if (omitted > 0) text += '，回执只带最近 ' + readout.entries.length + ' 条（另外 ' + omitted + ' 条没带）';
-    else if (total > shown) text += '，其余 ' + (total - shown) + ' 条见 data.workRoute';
-    text += '；这次只带核心字段（票号、会话、时间），要标题与动作传 workRouteDetail: standard';
+    if (omitted > 0) text += ', and the receipt carries only the most recent ' + readout.entries.length + ' (another ' + omitted + ' were not carried)';
+    else if (total > shown) text += ', and the other ' + (total - shown) + ' are in data.workRoute';
+    text += '; this call carries only the core fields (ticket number, session, time), and titles and actions need workRouteDetail: standard';
   } else {
-    if (total > shown) text += '，其余 ' + (total - shown) + ' 条见 data.workRoute';
+    if (total > shown) text += ', and the other ' + (total - shown) + ' are in data.workRoute';
   }
   const stale = typeof readout.staleCount === 'number' ? readout.staleCount : 0;
-  if (stale > 0) text += '；其中 ' + stale + ' 条超过 ' + (WORK_ROUTE_ACTIVE_WINDOW_MS / HOUR_MS) + ' 小时未动';
+  if (stale > 0) text += '; ' + stale + ' of them have not moved for more than ' + (WORK_ROUTE_ACTIVE_WINDOW_MS / HOUR_MS) + ' hours';
   return text;
 }

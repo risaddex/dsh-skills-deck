@@ -155,8 +155,8 @@ async function sectionIssueGet(budget, ledgerMod, gateMod) {
   check(r && r.ok === false && r.status === 'partial', '读票超时回 status=partial（实得 ' + (r && r.status) + '）')
   check(r && r.reason === 'backend-timeout', '读票超时 reason 仍是 backend-timeout（#1799 映射不动，实得 ' + (r && r.reason) + '）')
   check(r && r.data && r.data.partial === true && r.data.incomplete === 'timeout', '读票超时 data 带 partial:true / incomplete:timeout')
-  check(r && String(r.text).indexOf('不要直接重放写操作') < 0, '读票超时文案不出现写操作口径（实际：' + String((r && r.text) || '').slice(0, 90) + '…）')
-  check(r && String(r.text).indexOf('读') >= 0, '读票超时文案明说这是一次读')
+  check(r && String(r.text).indexOf('do not replay') < 0, '读票超时文案不出现写操作口径（实际：' + String((r && r.text) || '').slice(0, 90) + '…）')
+  check(r && String(r.text).indexOf('was not read in full') >= 0, '读票超时文案明说这是一次读')
   check(dt < 5000, '读票超时有硬截止（' + dt + 'ms）')
 }
 
@@ -200,8 +200,8 @@ async function sectionIssueList(budget, ledgerMod, gateMod) {
   check(r && r.reason === 'backend-timeout', '读列表超时 reason 仍是 backend-timeout（实得 ' + (r && r.reason) + '）')
   check(r && r.data && r.data.partial === true && r.data.incomplete === 'timeout', '读列表超时 data 带 partial:true / incomplete:timeout')
   const text = String((r && r.text) || '')
-  check(text.indexOf('不要直接重放写操作') < 0, '读列表回执不出现「不要直接重放写操作」（实际：' + text.slice(0, 110) + '…）')
-  check(text.indexOf('读') >= 0 || text.indexOf('清单') >= 0, '读列表回执明说这是一次读/清单')
+  check(text.indexOf('do not replay') < 0, '读列表回执不出现「不要直接重放写操作」（实际：' + text.slice(0, 110) + '…）')
+  check(text.indexOf('was not read in full') >= 0 || /list/i.test(text), '读列表回执明说这是一次读/清单')
   check(dt < 5000, '读列表超时有硬截止（' + dt + 'ms）')
 }
 
@@ -218,7 +218,7 @@ async function sectionBudgetExhausted(budget, ledgerMod, gateMod) {
   check(gr && gr.status === 'partial', '读票额度用尽回 status=partial（实得 ' + (gr && gr.status) + '）')
   check(gr && gr.data && gr.data.partial === true && gr.data.incomplete === 'budget', '读票额度用尽 data 带 partial:true / incomplete:budget')
   const gText = String((gr && gr.text) || '')
-  check(gText.indexOf('不要直接重放写操作') < 0 && gText.indexOf('读') >= 0, '读票额度用尽也用读口径文案（实际：' + gText.slice(0, 90) + '…）')
+  check(gText.indexOf('do not replay') < 0 && gText.indexOf('was not read in full') >= 0, '读票额度用尽也用读口径文案（实际：' + gText.slice(0, 90) + '…）')
   check(Date.now() - t0 < 5000, '读票额度用尽不挂住')
 
   const g2 = stubGateLedger(budget, gateMod, ledgerMod)
@@ -228,7 +228,7 @@ async function sectionBudgetExhausted(budget, ledgerMod, gateMod) {
   check(lr && lr.status === 'partial', '读列表额度用尽回 status=partial（实得 ' + (lr && lr.status) + '）')
   check(lr && lr.data && lr.data.partial === true && lr.data.incomplete === 'budget', '读列表额度用尽 data 带 partial:true / incomplete:budget')
   const lText = String((lr && lr.text) || '')
-  check(lText.indexOf('不要直接重放写操作') < 0, '读列表额度用尽不出现写操作口径（实际：' + lText.slice(0, 90) + '…）')
+  check(lText.indexOf('do not replay') < 0, '读列表额度用尽不出现写操作口径（实际：' + lText.slice(0, 90) + '…）')
 }
 
 // —— 四、中央时间键与日志字段 ——

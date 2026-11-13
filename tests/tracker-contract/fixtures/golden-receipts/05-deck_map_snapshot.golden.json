@@ -20,7 +20,7 @@
       "text": "这次 deck_map_snapshot 预计花 6 点、3 条出站请求，在硬顶之内。",
       "withinCallCap": true
     },
-    "note": "本后端不需要额度（离网口径）。"
+    "note": "This backend needs no quota (off-network rule)."
   },
   "data": {
     "blockedByKeys": {
@@ -63,7 +63,7 @@
   },
   "items": [],
   "notes": [
-    "这个后端的清单接口没带父子信息（它回的是一批票、不是按父票筛过的），下面的子票清单是按原文列的：要精确的子票清单，请逐张用 deck_issue_get 看 parentKey。"
+    "The list call of this backend carried no parent and child information (it returned a batch of tickets, not a list filtered by parent), so the sub-issue list below is what it returned: for an exact list of sub-issues, read parentKey of each ticket with deck_issue_get."
   ],
   "ok": true,
   "readBack": null,
@@ -75,7 +75,7 @@
     "url": ""
   },
   "status": "ok",
-  "text": "地图 00：子票 0 张，未关闭 0 张、已关闭 0 张、可接 0 张、被阻塞 0 张，其中状态冲突 0 张。",
+  "text": "Map 00: 0 sub-issues, 0 open, 0 closed, 0 can be picked up, 0 blocked, of which 0 have a status conflict.",
   "tool": "deck_map_snapshot",
   "touched": [],
   "workspace": {

@@ -34,7 +34,7 @@ export type TransportResult = { error?: { kind?: string; message?: unknown; stag
 /** 后端回包里「执行层失败」的原话；不是执行层失败（后端诚实地说做不到）就回 null，一个字不改判。 */
 export function transportMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || '执行层没回来')
+  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || 'the execution layer did not come back')
   return null
 }
 
@@ -48,6 +48,6 @@ export function must<T>(result: T): T {
 /** 超时那一支的原话（kind 'timeout'）：调用处直接回独立原因码，不抛给壳。 */
 export function timeoutMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && e.kind === 'timeout') return String(e.message || '执行层没回来')
+  if (e && e.kind === 'timeout') return String(e.message || 'the execution layer did not come back')
   return null
 }

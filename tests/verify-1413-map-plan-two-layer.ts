@@ -142,8 +142,8 @@ async function main() {
   check(counts && counts.planned === 7 && counts.actual === 7 && counts.ok === true, '逐项计数对上：计划 7 张（含地图）、实际 7 张（实得 ' + JSON.stringify(counts) + '）')
   check((built.r.data.builtKeys || []).length === 6, '六张子票都建成了（实得 ' + JSON.stringify(built.r.data.builtKeys) + '）')
   const notes = (built.r && built.r.notes) || []
-  check(notes.some((n: string) => n.indexOf('建后读回核对通过') >= 0), '回执备注写明建后读回核对通过（notes=' + JSON.stringify(notes).slice(0, 300) + '）')
-  check(!notes.some((n: string) => n.indexOf('逐项校验没对上') >= 0), '逐项校验没有报「没对上」')
+  check(notes.some((n: string) => n.indexOf('The read-back check after building passed') >= 0), '回执备注写明建后读回核对通过（notes=' + JSON.stringify(notes).slice(0, 300) + '）')
+  check(!notes.some((n: string) => n.indexOf('The read-back check after building found') >= 0 && n.indexOf('mismatches') >= 0), '逐项校验没有报「没对上」')
 
   // planKey → 真票号，从回执的 items 取（建票明细里有 planKey）。
   const childKeyOf = new Map<string, string>()
@@ -229,8 +229,8 @@ async function main() {
   check(!rerun.threw && rerun.r && rerun.r.status === 'ok', '同 planId 重跑回 ok（实得 ' + (rerun.threw || (rerun.r && rerun.r.status)) + '）')
   check((rerun.r.data.skippedKeys || []).length === 6 && (rerun.r.data.builtKeys || []).length === 6, '重跑把六张子票都按已建跳过（skipped=' + JSON.stringify(rerun.r.data.skippedKeys) + '）')
   check(countFiles() === beforeRerun, '重跑一张票都没多建（' + beforeRerun + ' → ' + countFiles() + '）')
-  check((rerun.r.notes || []).some((n: string) => n.indexOf('上次已经建好了') >= 0), '重跑备注说明地图上次已经建好')
-  check((rerun.r.notes || []).some((n: string) => n.indexOf('建后读回核对通过') >= 0), '重跑也逐张核对了一遍')
+  check((rerun.r.notes || []).some((n: string) => n.indexOf('was already created last time') >= 0), '重跑备注说明地图上次已经建好')
+  check((rerun.r.notes || []).some((n: string) => n.indexOf('The read-back check after building passed') >= 0), '重跑也逐张核对了一遍')
 
   // ── 三b、#1799：partial 的第二种形状（只是这一片没做完，没有任何失败项）──
   // 一次最多建 60 张子票；给 61 张时这一片会留下 1 张到 restKeys。此时 status 是 partial，
@@ -243,7 +243,7 @@ async function main() {
     check(!shardRun.threw && shard.status === 'partial' && shard.reason === '',
       '#1799 partial（只是没做完）：status=partial、reason 留空（实得 ' + (shardRun.threw || (shard.status + '/' + JSON.stringify(shard.reason))) + '）')
     const rest = Array.isArray(shard.data && shard.data.restKeys) ? shard.data.restKeys : []
-    check(rest.length >= 1 && String(shard.text || '').indexOf('带同一个 planId') >= 0,
+    check(rest.length >= 1 && String(shard.text || '').indexOf('call again with the same planId') >= 0,
       '#1799 partial（只是没做完）：data.restKeys 与 text 的续法都写明（restKeys=' + JSON.stringify(rest.slice(0, 3)) + '，text=' + String(shard.text || '').slice(0, 160) + '）')
     const failures = (Array.isArray(shard.items) ? shard.items : []).filter((i: any) => i && i.status !== 'ok')
     check(failures.length === 0, '#1799 partial（只是没做完）：items 里没有失败项（实得 ' + JSON.stringify(failures).slice(0, 300) + '）')
@@ -256,12 +256,12 @@ async function main() {
     ['缺 kind', [{ key: 'a', title: '没写位置' }], /kind[\s\S]*map-ticket[\s\S]*bug[\s\S]*issue/],
     ['旧的 task', [{ key: 'a', title: '旧值任务', kind: 'task' }], /map-ticket[\s\S]*label/],
     ['旧的 ticket', [{ key: 'a', title: '旧值实施', kind: 'ticket' }], /spec-ticket|deck_issue_create/],
-    ['kind=map（地图本体由工具建）', [{ key: 'a', title: '把地图塞进 children', kind: 'map' }], /地图本体|工具自己建/],
-    ['kind=spec（规格走建票工具）', [{ key: 'a', title: '把规格塞进 children', kind: 'spec' }], /deck_issue_create|规格/],
+    ['kind=map（地图本体由工具建）', [{ key: 'a', title: '把地图塞进 children', kind: 'map' }], /map itself is created by this tool/],
+    ['kind=spec（规格走建票工具）', [{ key: 'a', title: '把规格塞进 children', kind: 'spec' }], /deck_issue_create|spec/],
     ['地图工单缺 label', [{ key: 'a', title: '缺标签', kind: 'map-ticket' }], /label[\s\S]*wayfinder:research/],
     ['非地图工单传 label', [{ key: 'a', title: '缺陷带标签', kind: 'bug', label: 'wayfinder:task' }], /map-ticket/],
     ['地图工单 label 非法', [{ key: 'a', title: '标签非法', kind: 'map-ticket', label: 'wayfinder:map' }], /wayfinder/],
-    ['labels 里塞类型标签', [{ key: 'a', title: '标签塞类型', kind: 'bug', labels: ['bug'] }], /类型标签/],
+    ['labels 里塞类型标签', [{ key: 'a', title: '标签塞类型', kind: 'bug', labels: ['bug'] }], /put a type label in labels/],
   ]
   let seen = 0
   for (const [name, kids, want] of refusals) {

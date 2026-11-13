@@ -23,15 +23,15 @@ import { filterRows } from './issue-list-filter.js'
 
 // #1830：后端撞到自己取数上限时，回执正文与 notes 共用这一句。data.backendTruncated 是唯一的判据，
 // 本地 limit 截断（data.truncated）另有说法，两件事不互相顶替。
-const BACKEND_INCOMPLETE = '后端到自己的取数上限就停了，这份清单可能不全。'
+const BACKEND_INCOMPLETE = 'The backend stopped at its own fetch limit, so this list may be incomplete.'
 
 /** 失败回执里的「下一步做什么」：reason 已经回答了下一步，text 要跟它指向同一件事。
  *  只给本工具判断得了的几种码补一句；其余（后端说做不到等）保持原话，不替后端发明退路。 */
 function nextStepText(reason: string): string {
-  if (reason === REFUSAL_REASONS.BAD_ARGS) return '过滤条件可能写错了：换一组条件（state / type / label / assignee / query）再试一次。'
-  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return '等一会儿再调一次：重新读没有副作用，这次只是没等到回包。'
-  if (reason === REFUSAL_REASONS.BACKEND_THREW) return '重新读一次没有副作用，可以直接再调一次。'
-  if (reason === REFUSAL_REASONS.OVER_CAP) return '稍等一会儿再调，或把过滤条件收窄一点。'
+  if (reason === REFUSAL_REASONS.BAD_ARGS) return 'The filters may be wrong: try again with a different set (state / type / label / assignee / query).'
+  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return 'Wait a moment and call again: reading again has no side effects, and this time no answer came back in time.'
+  if (reason === REFUSAL_REASONS.BACKEND_THREW) return 'Reading again has no side effects, so you can call again exactly as it is.'
+  if (reason === REFUSAL_REASONS.OVER_CAP) return 'Wait a little and call again, or narrow the filters.'
   return ''
 }
 
@@ -45,9 +45,9 @@ function partialTimeoutValue(ev: { code: string }, opCtx: unknown, claimed: { re
     value: {
       status: DECK_STATUS.PARTIAL,
       reason: ev.code,
-      text: 'ISSUE 列表这次没读全（超时了：在限时内没等到后端回话）。这次读没有副作用，等一会儿重调一次就行（清单为空只说明这次没拿到，不代表没有）。',
+      text: 'The ISSUE list was not read in full this time (it timed out: no word came back from the backend within the limit). This read has no side effects; wait a moment and call again (an empty list only means nothing came back this time, not that there is nothing).',
       data: { total: null, returned: 0, truncated: true, backendTruncated: false, issues: [], partial: true, incomplete: 'timeout', opId: String(op.opId || '') },
-      notes: ['这次是读超时：列表这次没有可回的行（后端一次给整份），清单为空不代表没有。'],
+      notes: ['This was a read timeout: there were no rows to return this time (the backend gives the list in one piece), and an empty list does not mean there is nothing.'],
       touched: [],
     },
     claimed: claimed,
@@ -62,9 +62,9 @@ function partialBudgetValue(ev: { code: string }, opCtx: unknown, claimed: { req
     value: {
       status: DECK_STATUS.PARTIAL,
       reason: ev.code,
-      text: 'ISSUE 列表这次没读全（这次读的时间额度在发出请求之前就用完了，一个请求都没发出去）。这次读没有副作用，稍等一会儿重调一次就行。',
+      text: 'The ISSUE list was not read in full this time (the time budget for this read ran out before a request was sent, so no request went out at all). This read has no side effects; wait a little and call again.',
       data: { total: null, returned: 0, truncated: true, backendTruncated: false, issues: [], partial: true, incomplete: 'budget', opId: String(op.opId || '') },
-      notes: ['这次是读的时间额度用完了：列表没有可回的行，清单为空不代表没有。'],
+      notes: ['This time the time budget for the read ran out: the list had no rows to return, and an empty list does not mean there is nothing.'],
       touched: [],
     },
     claimed: claimed,
@@ -97,16 +97,16 @@ function numOpt(v: unknown): number | undefined { return (typeof v === 'number' 
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_issue_list',
-  description: '同属 dsh-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。按状态、label、assignee 与关键词列出 ISSUE 薄行，不回正文与评论；行上带 hasOriginalWords:true 的票里有维护者原话（这张票的最高要求），值得逐张读 deck_issue_get 看。',
+  description: 'Part of the ISSUE and map management surface of the dsh-skills-deck plugin; it handles only the repo of the current workspace. Before touching an ISSUE, call deck_context to confirm the workspace and the backend, and stop if it reports no backend. List ISSUE thin rows by state, label, assignee and keyword, without bodies or comments; a row carrying hasOriginalWords:true holds the maintainer original words (the highest requirement for that ticket), so it is worth reading one by one with deck_issue_get.',
   parameters: {
     type: 'object',
     properties: {
-      state: { type: 'string', enum: ['open', 'closed', 'all'], description: '只列哪种状态，缺省 open' },
-      type: { type: 'string', enum: ['issue', 'map', 'spec', 'all'], description: '只列哪种类型，缺省 all' },
-      labels: { type: 'array', items: { type: 'string' }, description: '必须同时带上这些 label（AND），缺省不过滤' },
-      assignee: { type: 'string', description: '只留认领含此人的行，缺省不过滤' },
-      query: { type: 'string', description: '标题与正文的子串过滤，缺省不过滤' },
-      limit: { type: 'number', description: '最多回几行，缺省 50，上限 200' },
+      state: { type: 'string', enum: ['open', 'closed', 'all'], description: 'Which state to list; the default is open' },
+      type: { type: 'string', enum: ['issue', 'map', 'spec', 'all'], description: 'Which type to list; the default is all' },
+      labels: { type: 'array', items: { type: 'string' }, description: 'A row must carry all of these labels (AND); no filter by default' },
+      assignee: { type: 'string', description: 'Keep only rows whose assignees include this person; no filter by default' },
+      query: { type: 'string', description: 'Substring filter over title and body; no filter by default' },
+      limit: { type: 'number', description: 'How many rows to return at most; the default is 50 and the cap is 200' },
       ...MD_SCOPE_LOCATE,
     },
     required: [],
@@ -278,7 +278,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
         const thinUnsupported = thinBody.ok === false && thinBody.error && String(thinBody.error.kind) === 'unsupported'
         if (!thinUnsupported) {
           if (thinBody.ok !== true) {
-            const thinMsg = String((thinBody.error && thinBody.error.message) || '后端没给出原因').slice(0, 300)
+            const thinMsg = String((thinBody.error && thinBody.error.message) || 'no reason given').slice(0, 300)
             // #1799：reason 走统一映射（薄查也是读后端），失败证据留后端原档位与映射后的码。
             const ev = failureOf(thinBody, 'read')
             // #1831：读超时回「没读全」的部分结果，文案只用读口径；回执与普通路共用 partialTimeoutValue。
@@ -289,7 +289,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
               value: {
                 status: DECK_STATUS.UNSUPPORTED,
                 reason: ev.code,
-                text: 'ISSUE 列表没取回来（后端原话：' + thinMsg + '）。' + nextStepText(ev.code),
+                text: 'The ISSUE list did not come back (the backend said: ' + thinMsg + '). ' + nextStepText(ev.code),
                 data: { error: Object.assign({ message: thinMsg }, evidenceFields(ev)) },
               },
               claimed: { requests: 1, points: 3 },
@@ -306,9 +306,9 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
           thinCond.push('state=' + state)
           if (type !== 'all') thinCond.push('type=' + type)
           if (wantLabels.length) thinCond.push('label=' + wantLabels.join('&'))
-          const thinNotes = ['这次走地图薄查快速回（只筛地图标签，不读正文）。']
-          if (thinBackendTruncated) thinNotes.push('地图只取回了前 ' + mapped.length + ' 张（共 ' + String(thinBody.data && thinBody.data.total) + ' 张，撞到封顶页数），剩下的这次没拿。')
-          if (thinTruncated) thinNotes.push('只回前 ' + thinSliced.length + ' 行（共 ' + thinTotal + ' 行符合）：收窄过滤或调大 limit 再取一次。')
+          const thinNotes = ['This one took the fast thin map query (map labels only, no body read).']
+          if (thinBackendTruncated) thinNotes.push('Only the first ' + mapped.length + ' maps came back (out of ' + String(thinBody.data && thinBody.data.total) + ', the page cap was hit); the rest was not fetched this time.')
+          if (thinTruncated) thinNotes.push('Only the first ' + thinSliced.length + ' rows came back (out of ' + thinTotal + ' that match): narrow the filters or raise limit and fetch again.')
           const thinRawUsage: unknown = (thin as { usage?: unknown }).usage
           const thinUsageObj: { requests?: unknown; points?: unknown } = (thinRawUsage !== null && typeof thinRawUsage === 'object') ? (thinRawUsage as { requests?: unknown; points?: unknown }) : {}
           const thinClaimed = (typeof thinUsageObj.requests === 'number' && typeof thinUsageObj.points === 'number')
@@ -326,7 +326,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
           return {
             value: {
               status: DECK_STATUS.OK,
-              text: 'ISSUE 列表：共 ' + thinTotal + ' 行符合（' + thinCond.join('，') + '），回 ' + thinSliced.length + ' 行。' + (thinBackendTruncated ? BACKEND_INCOMPLETE : ''),
+              text: 'ISSUE list: ' + thinTotal + ' rows match (' + thinCond.join(', ') + '), returning ' + thinSliced.length + '.' + (thinBackendTruncated ? BACKEND_INCOMPLETE : ''),
               data: thinData,
               notes: thinNotes,
               touched: [],
@@ -337,7 +337,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
       }
       const listed = await t.list(repo, filter, opCtx)
       if (!listed || listed.ok !== true) {
-        const msg = String((listed && listed.error && listed.error.message) || '后端没给出原因').slice(0, 300)
+        const msg = String((listed && listed.error && listed.error.message) || 'no reason given').slice(0, 300)
         // #1799：与薄查同一套映射，不再把任何后端失败都写成「后端做不到」。
         const ev = failureOf(listed, 'read')
         // #1831：与薄查同款——读超时回「没读全」的部分结果，文案只用读口径。
@@ -348,7 +348,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
           value: {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
-            text: 'ISSUE 列表没取回来（后端原话：' + msg + '）。' + nextStepText(ev.code),
+            text: 'The ISSUE list did not come back (the backend said: ' + msg + '). ' + nextStepText(ev.code),
             data: { error: Object.assign({ message: msg }, evidenceFields(ev)) },
           },
           claimed: { requests: 1, points: 3 },
@@ -385,21 +385,21 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
       // 「可能不全」只跟 backendTruncated 走：REST 降级本身不等于没取全（今天 GitHub 的降级路确实总会
       // 标 truncated，但半径按事实说，不按通道名说）。notes 与下面的 text 因此永远说同一件事。
-      const backendIncompleteNote = backendTruncated ? '这份清单可能不全：收窄 state 或 label 再查一次（这两样会真的下推给后端；assignee 与 query 只在本层筛，收窄它们不会让后端少取）。' : ''
+      const backendIncompleteNote = backendTruncated ? 'This list may be incomplete: narrow state or label and query again (those two are really pushed down to the backend; assignee and query are filtered in this layer only, so narrowing them does not make the backend fetch less).' : ''
       if (backendFallback) {
         // 配额耗尽与其它失败分开说：前者等额度恢复，后者按 opId 去日志里查 read.degraded 同一趟的原因。
-        if (fallbackReason === 'quota') notes.push('后端主路这次因配额耗尽走了 REST 降级通道（opId ' + (opId || '未知') + '）：REST 自己有翻页上限，尾页失败时只回已经拿到的。' + backendIncompleteNote)
-        else notes.push('后端主路这次用不了，走的是 REST 降级通道（原因 ' + (fallbackReason || 'other') + '，opId ' + (opId || '未知') + '，日志里按 opId 查 read.degraded 就是同一趟）：REST 自己有翻页上限，尾页失败时只回已经拿到的。' + backendIncompleteNote)
+        if (fallbackReason === 'quota') notes.push('The main path of the backend hit its quota this time, so the REST fallback path was used (opId ' + (opId || 'unknown') + '): REST has its own page cap, so when the last page fails only what was already fetched comes back.' + backendIncompleteNote)
+        else notes.push('The main path of the backend was not available this time, so the REST fallback path was used (reason ' + (fallbackReason || 'other') + ', opId ' + (opId || 'unknown') + '; looking up read.degraded by that opId in the log finds the same run): REST has its own page cap, so when the last page fails only what was already fetched comes back.' + backendIncompleteNote)
       }
-      else if (backendTruncated) notes.push('后端这次取到自己的上限就停了（GitLab 是每页最多 100 条、只取第一页；GitHub 是工单 500 条、拉取请求 1000 条），这份清单可能不全：收窄 state 或 label 再查一次（这两样会真的下推给后端；assignee 与 query 只在本层筛，收窄它们不会让后端少取）。')
-      if (truncated) notes.push('只回前 ' + sliced.length + ' 行（共 ' + total + ' 行符合）：收窄过滤或调大 limit 再取一次。')
+      else if (backendTruncated) notes.push('The backend stopped at its own limit this time (GitLab takes at most 100 per page and only the first page; GitHub caps issues at 500 and pull requests at 1000), so this list may be incomplete: narrow state or label and query again (those two are really pushed down to the backend; assignee and query are filtered in this layer only, so narrowing them does not make the backend fetch less).')
+      if (truncated) notes.push('Only the first ' + sliced.length + ' rows came back (out of ' + total + ' that match): narrow the filters or raise limit and fetch again.')
       // #1559：宿主收工具返回值时要求无损 JSON，data 上不许出现 undefined。缺省的键就不出现
       // （不用 null 顶替：金标准 03-deck_issue_list.golden.json 里本来就没有这两个键，序列化后的形状与它一致）；
       // opId 正常总有值，恒为字符串。
       // #1830：data 上两个旗标各说一件事 —— truncated 是「本地 limit 截断了这份回执」，
       // backendTruncated 是「后端到自己的取数上限就停了，这份清单可能不全」。两者可能同时成立。
       // 降级通道标了截断时，别把「到取数上限」这句硬按到它头上：notes 已说明是降级通道，正文只说可能不全。
-      const backendIncompleteText = backendTruncated ? (backendFallback ? '这份清单可能不全。' : BACKEND_INCOMPLETE) : ''
+      const backendIncompleteText = backendTruncated ? (backendFallback ? 'This list may be incomplete.' : BACKEND_INCOMPLETE) : ''
       const data: Record<string, unknown> = {
         total: total,
         returned: sliced.length,
@@ -415,7 +415,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
       return {
         value: {
           status: DECK_STATUS.OK,
-          text: 'ISSUE 列表：共 ' + total + ' 行符合（' + cond.join('，') + '），回 ' + sliced.length + ' 行，其中状态冲突 ' + statusConflictCount + ' 张。' + backendIncompleteText,
+          text: 'ISSUE list: ' + total + ' rows match (' + cond.join(', ') + '), returning ' + sliced.length + ', of which ' + statusConflictCount + ' have a status conflict.' + backendIncompleteText,
           data: data,
           notes: notes,
           touched: [],

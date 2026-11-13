@@ -19,12 +19,12 @@ import { withCap } from '../shell/capped-wait.js'
 
 /** 地图清单没取到时「下一步做什么」：partial 没有失败项时的续法就写在这里，text 与 reason 指向同一步。 */
 function partialNextStep(reason: string): string {
-  if (reason === REFUSAL_REASONS.BAD_ARGS) return '先确认工作区与后端选对了，再调一次。'
-  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return '等一会儿重调一次。'
-  if (reason === REFUSAL_REASONS.BACKEND_THREW) return '重调一次就行。'
-  if (reason === REFUSAL_REASONS.OVER_CAP) return '稍等一会儿再调。'
-  if (reason === REFUSAL_REASONS.BACKEND_UNSUPPORTED) return '这条路当前走不通，按工具故障处理或换一个后端。'
-  return '重调一次；仍然不行就按工具故障处理。'
+  if (reason === REFUSAL_REASONS.BAD_ARGS) return 'Check first that the workspace and the backend are the right ones, then call again.'
+  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return 'Wait a moment and call again.'
+  if (reason === REFUSAL_REASONS.BACKEND_THREW) return 'Just call again.'
+  if (reason === REFUSAL_REASONS.OVER_CAP) return 'Wait a little, then call again.'
+  if (reason === REFUSAL_REASONS.BACKEND_UNSUPPORTED) return 'This path does not work right now: treat it as a tool failure or use another backend.'
+  return 'Call again; if it still fails, treat it as a tool failure.'
 }
 
 /** 数字型参数的统一收口：正的有限数才要（取整），其余一律当「没给」，由调用方退自己的默认。 */
@@ -41,13 +41,13 @@ type TransportResult = { error?: { kind?: string; message?: unknown } } | null |
 /** 超时那一支的原话（kind 'timeout'）：调用处据此回独立的超时码，不抛给壳。 */
 function timeoutMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && e.kind === 'timeout') return String(e.message || '执行层没回来')
+  if (e && e.kind === 'timeout') return String(e.message || 'the execution layer did not come back')
   return null
 }
 /** 后端回包里「执行层失败」的原话；不是执行层失败（后端诚实地说做不到）就回 null，一个字不改判。 */
 function transportMessage(result: TransportResult): string | null {
   const e = result && result.error
-  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || '执行层没回来')
+  if (e && TRANSPORT_KINDS.indexOf(e.kind as string) >= 0) return String(e.message || 'the execution layer did not come back')
   return null
 }
 /**
@@ -68,17 +68,17 @@ export interface DeckContextDeps {
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_context',
-  description: '这是 dsh-skills-deck 插件提供的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo。你要创建、查看、更新 ISSUE，查看 map 与 progress 时，先调用 deck_context 一次，确认 workspace 与 backend；如果 repo 里的说法和这里写的不一样，以这里写的为准。如果 deck_context 返回这个 workspace 还没有选 backend，或拿不到 workspace，就说明本插件不适用这个 workspace，直接停下，不再调用其余 deck 开头的工具，后续怎么做由用户决定。',
+  description: 'This is the ISSUE and map management surface the dsh-skills-deck plugin provides, and it handles only the repo of the current workspace. Before you create, read or update an ISSUE, or look at a map and its progress, call deck_context once to confirm the workspace and the backend; where the repo says something different from what is written here, what is written here wins. If deck_context reports that this workspace has no backend selected yet, or that no workspace could be read, then this plugin does not apply to this workspace: stop there, do not call the other deck_ tools, and leave what happens next to the user.',
   // 参数说明不进描述（描述会进所有会话的系统提示）：本工具不要参数，语义全在返回值里。
   parameters: { type: 'object', properties: {}, additionalProperties: false },
 }
 
 /** 给人看的用法说明里所有后端共用的那一段（三后端逐字相同，改动就是行为变更：非本地后端原样回这一句）：
  *  工具清单与快数、两条跨工具规矩（原话区、在办表）。字数不写死在这里（由 tests/verify-1385-howto.ts 逐字冻结）。 */
-const BASE_HOWTO = '写票之前先用本工具确认工作区与后端；建票用 deck_issue_create，建整张地图骨架用 deck_map_plan_create，补边用 deck_map_link，改票用 deck_issue_patch，上报当前在办哪张票用 deck_issue_report，读一张票用 deck_issue_get，看一张地图的全部子票用 deck_map_snapshot，按状态与 label 和 assignee 列薄行用 deck_issue_list。要快数：扫数先用 deck_issue_list 薄行；单票反向边不急就 deck_issue_get 传 blocking=false（跳过一次全仓扫描）；子票清单要全不断就 deck_map_snapshot 传 detail=thin（统计不变）。工作区与仓库不接受参数：它们只从当前会话取。用户本人打的话都值得记进那张票的原话区：建票、改票都用 originalWords 传 {text,source}，一字不改、只追加；票上的原话是这张票的最高要求，与票面其它说法冲突时以原话为准，判不清就告诉用户有明显冲突。想看哪些会话在处理哪些票、有没有人跟自己抢同一张票，就调 deck_work_route；组上 running:true 表示那个会话此刻真有一轮开着（等审批、等回答也算）。'
+const BASE_HOWTO = 'Confirm the workspace and the backend with this tool before you write a ticket. Create tickets with deck_issue_create, a whole map skeleton with deck_map_plan_create, extra edges with deck_map_link, changes to a ticket with deck_issue_patch, the ticket you are working on with deck_issue_report, one ticket with deck_issue_get, every sub-issue of a map with deck_map_snapshot, and thin rows by state, label and assignee with deck_issue_list. To spend fewer points: scan with deck_issue_list thin rows first; for the reverse edges of one ticket, when you are not in a hurry, call deck_issue_get with blocking=false (it skips one whole-repo scan); when the list of sub-issues must be full and unbroken, call deck_map_snapshot with detail=thin (the counts stay the same). The workspace and the repo take no arguments: they come from the current session only. Everything the user types themselves is worth recording in the original words section of that ticket: when creating or changing a ticket, pass {text,source} in originalWords, unchanged and append-only; the original words on a ticket are the highest requirement for that ticket, and where the rest of the ticket conflicts with them the original words win, so if you cannot tell, tell the user there is a clear conflict. To see which sessions are working on which tickets, and whether anyone is competing with you for the same ticket, call deck_work_route; running:true on a group means that session really has a turn open at this moment (waiting for approval or for an answer counts too).'
 
 /** 本地后端才追加的那一段建票契约：票与规格都是工作区文件，写在哪、写成什么样以随包技能原文为准；deck 工具只负责执行落盘。 */
-const LOCAL_HOWTO_SUFFIX = '本地后端补一条建票契约：票与规格都是工作区里的 Markdown 文件，写在哪、写成什么样，以随包技能原文 setup-matt-pocock-skills/issue-tracker-local.md 为唯一依据：规格是 .scratch/<feature-slug>/spec.md；探索地图是 .scratch/<effort>/map.md；实施票、地图子票与普通票都是 .scratch/<effort>/issues/<NN>-<slug>.md，一个票一个文件。建票用 deck_issue_create：kind=spec 建规格，kind=map 建探索地图，kind=spec-ticket 并带 parentKey 建实施票（依赖填 blockedBy），kind=map-ticket 并带 parentKey 建地图子票（parentKey 填探索地图，label 用 wayfinder:research / wayfinder:prototype / wayfinder:grilling / wayfinder:task），kind=issue 与 kind=bug 建普通票与缺陷票；编号与文件头隐藏注释由工具写，不要手写票文件。补边用 deck_map_link，改票、认领与改状态用 deck_issue_patch，字段行与隐藏注释都由工具按原文布局维护，不要自己手改。技能原文与这段用法说明冲突时，以技能原文为准。上报是记账：deck_issue_report 只记一笔不带表，要看哪些会话在办哪些票，调 deck_work_route（默认只看近 24 小时在办，带 includeStale:true 看近 30 天）。'
+const LOCAL_HOWTO_SUFFIX = ' One more creation contract for the local backend: tickets and specs are Markdown files in the workspace, and where they are written and what they look like is decided only by the bundled skill text setup-matt-pocock-skills/issue-tracker-local.md: a spec is .scratch/<feature-slug>/spec.md; an exploration map is .scratch/<effort>/map.md; a spec ticket, a map ticket and a plain ticket are all .scratch/<effort>/issues/<NN>-<slug>.md, one ticket per file. Create tickets with deck_issue_create: kind=spec creates a spec, kind=map creates an exploration map, kind=spec-ticket with parentKey creates a spec ticket (put dependencies in blockedBy), kind=map-ticket with parentKey creates a map ticket (parentKey is the exploration map, label is one of wayfinder:research / wayfinder:prototype / wayfinder:grilling / wayfinder:task), and kind=issue and kind=bug create plain tickets and bug tickets; the tool writes the number and the hidden header comments, so do not write ticket files by hand. Add edges with deck_map_link, and change a ticket, assign it or change its state with deck_issue_patch: the tool maintains the field lines and the hidden comments in the layout of the skill text, so do not edit them yourself. Where the skill text conflicts with this usage note, the skill text wins. Reporting is bookkeeping: deck_issue_report only records one line and carries no board, so to see which sessions are working on which tickets call deck_work_route (by default it shows only what moved in the last 24 hours; pass includeStale:true to see the last 30 days).'
 
 /**
  * 按后端 id 算出用法说明（纯函数：同一个后端 id 永远回同样的话）。
@@ -186,9 +186,9 @@ export function createDeckContext(deps?: DeckContextDeps) {
         value: {
           status: DECK_STATUS.PARTIAL,
           reason: reasonForFailure({ kind: 'timeout', phase: 'read' }),
-          text: '工作区这次没确认下来（超时了：在限时内没等到后端回话）。这次读没有副作用，等一会儿重调一次就行。',
+          text: 'The workspace was not confirmed this time (it timed out: no word came back from the backend within the limit). This read has no side effects; wait a moment and call again.',
           data: { backendId: pick.backendId, partial: true, incomplete: 'timeout', error: { kind: 'timeout', message: preTimeout.slice(0, 300) } },
-          notes: ['这次是读超时：环境预检没回来，下面的地图与写权限也未必是全的。'],
+          notes: ['This was a read timeout: the environment preflight did not come back, so the maps and write permissions below may not be complete either.'],
           touched: [],
         },
         claimed: mapClaimed,
@@ -211,13 +211,13 @@ export function createDeckContext(deps?: DeckContextDeps) {
         permissions = { push: perm.data.push, triage: perm.data.triage }
       } else permissions = { unknown: true }
       const notes = []
-      if (!listed.ok) notes.push('地图清单这次没取到（后端原话：' + String((listed.error && listed.error.message) || '').slice(0, 200) + '）。')
-      if (listMapsUsed && listed.ok === true && listed.data && listed.data.truncated === true) notes.push('地图只取回了前 ' + thinRows.length + ' 张（共 ' + listed.data.total + ' 张，撞到封顶页数），剩下的这次没拿。')
-      if (pre && pre.ok === false) notes.push('环境预检没过（' + String((pre.error && pre.error.message) || '').slice(0, 200) + '）：票还是能读，写操作可能失败。')
-      if (perm && perm.ok === false) notes.push('写权限这次没问出来（' + String((perm.error && perm.error.message) || '').slice(0, 200) + '）：先按未知处理，写操作可能失败。')
+      if (!listed.ok) notes.push('The map list did not come back this time (the backend said: ' + String((listed.error && listed.error.message) || '').slice(0, 200) + ').')
+      if (listMapsUsed && listed.ok === true && listed.data && listed.data.truncated === true) notes.push('Only the first ' + thinRows.length + ' maps came back (out of ' + listed.data.total + ', the page cap was hit); the rest was not fetched this time.')
+      if (pre && pre.ok === false) notes.push('The environment preflight did not pass (' + String((pre.error && pre.error.message) || '').slice(0, 200) + '): tickets can still be read, but write operations may fail.')
+      if (perm && perm.ok === false) notes.push('Write permissions could not be read this time (' + String((perm.error && perm.error.message) || '').slice(0, 200) + '): they are treated as unknown for now, so write operations may fail.')
       if (permissions && permissions.push === false) {
-        notes.push('这个仓库只读：标签与写操作不可用。')
-        notes.push('要在只读库上长期协作，建议先 fork 到自己名下，再把工作区 origin 指向 fork（插件只认 origin，不代改配置）。')
+        notes.push('This repo is read-only: labels and write operations are not available.')
+        notes.push('To keep working on a read-only repo over time, fork it under your own account first and then point the workspace origin at the fork (the plugin only reads origin and does not change the configuration for you).')
       }
       // #1799：partial 的 reason 也走统一映射。这一支没有逐项失败清单，唯一没成的是地图清单这一读：
       // 有后端 kind 就按读阶段映射；没有就落 backend-unsupported（停）。文字要把「0 张不是真的没有」
@@ -225,13 +225,13 @@ export function createDeckContext(deps?: DeckContextDeps) {
       const listedEv = listed.ok ? null : failureOf(listed, 'read')
       const status = listed.ok ? DECK_STATUS.OK : DECK_STATUS.PARTIAL
       const mapsLine = listed.ok
-        ? '地图 ' + maps.length + ' 张。'
-        : '地图清单这次没取到（下面显示 0 张不是仓库里真的没有地图）。' + partialNextStep(listedEv ? listedEv.code : '')
+        ? 'Maps: ' + maps.length + '.'
+        : 'The map list did not come back this time (the 0 below does not mean the repo really has no maps). ' + partialNextStep(listedEv ? listedEv.code : '')
       return {
         value: {
           status: status,
           reason: listedEv ? listedEv.code : '',
-          text: '这里是 ' + s.cwd + '，后端 ' + pick.backendId + '（' + pick.source + '，用户手动选择 > 锚文件 > 自动识别），仓库 ' + (repo.refId || '（这个后端没有仓库标识）') + '，' + mapsLine,
+          text: 'This is ' + s.cwd + ', backend ' + pick.backendId + ' (' + pick.source + ', manual user choice > anchor file > auto-detected), repo ' + (repo.refId || '(this backend has no repo identifier)') + '. ' + mapsLine,
           data: {
             workspace: { root: s.cwd, key: s.workspaceKey, sessionId: s.sessionId, source: s.source },
             backend: { id: pick.backendId, source: pick.source, label: '' },

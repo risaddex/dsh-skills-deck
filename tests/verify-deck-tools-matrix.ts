@@ -338,10 +338,10 @@ async function main() {
     const parentEdge = edgesOfItems(rows.link).find((i) => i.op === 'parent')
     const blockEdge = edgesOfItems(rows.link).find((i) => i.op === 'block')
     // #971 起三个后端补父边都走契约的父子列（本地看的是文件顶注释，不再是做不到）。
-    const okParent = (parentEdge.landing.indexOf('契约的父子列') >= 0)
+    const okParent = (parentEdge.landing.indexOf('the parent column of the contract') >= 0)
     check(okParent, '[' + lane.id + '] 父子边落点如实：' + parentEdge.landing + ' ｜ ' + PRECISE[lane.id].parent)
     // GitHub 与 GitLab 的阻塞都落在原生边上（GitLab 是 is_blocked_by），只有本地 Markdown 落在正文行。
-    const okBlock = lane.id === 'markdown' ? (blockEdge.landing === '正文行') : (blockEdge.landing === '原生依赖边')
+    const okBlock = lane.id === 'markdown' ? (blockEdge.landing === 'body line') : (blockEdge.landing === 'native dependency edge')
     check(okBlock, '[' + lane.id + '] 阻塞边落点如实：' + blockEdge.landing + ' ｜ ' + PRECISE[lane.id].block)
 
     // ⑥ 带上锚：同一个锚两次只多一张；不带锚两次仍建两张（既有行为不许被改坏）
@@ -601,7 +601,7 @@ async function main() {
         const reopenText = String((reopen && reopen.text) || '')
         const afterReopenGet = await run('deck_issue_get', Object.assign({ key: specKey }, specScope))
         const afterReopen = String((afterReopenGet && afterReopenGet.data && afterReopenGet.data.ticket && afterReopenGet.data.ticket.state) || '')
-        check(!!reopen && reopen.status === 'unsupported' && reopenText.indexOf('重开') >= 0 && afterReopen === 'closed',
+        check(!!reopen && reopen.status === 'unsupported' && reopenText.indexOf('Reopening is not on this AI tool surface') >= 0 && afterReopen === 'closed',
           '[' + lane.id + '] 双轨 E 重开动作不在 AI 工具面上：被拒且票仍是关闭态（rule=' + reopenRule + '）')
         evidenceLines.push('- [' + lane.id + '] E 收口：未全关时 rule=' + earlyRule + '；缺评论时 rule=' + noCommentRule + '；带核对评论后 ' + specKey + ' 关闭；重开被拒（票仍 ' + afterReopen + '）')
         dualLanes.push(lane.id)

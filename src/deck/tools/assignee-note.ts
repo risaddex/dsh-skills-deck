@@ -21,6 +21,6 @@ function visibleStatusClaimed(body: unknown): boolean {
 /** 回执里那句「认领人记到哪了、可见状态有没有改」。
  * 两种落盘方式各说一句，都把「读回来的事实」与「这是哪种票的正常写法」分开说，不混成一句断言。 */
 export function claimNoteOf(body: unknown): string {
-  if (visibleStatusClaimed(body)) return '认领人已记录；写后读回来的票面上有可见的 Status: claimed（本地 Markdown 的地图子票认领会这样标状态）。'
-  return '认领人已记录，写后读回来的票面上可见状态没有改：本地 Markdown 的普通实施票与普通票只记认领人，别的后端认领本来也不改状态。'
+  if (visibleStatusClaimed(body)) return 'Assignee recorded. The ticket read back after the write shows a visible Status: claimed (this is how a local Markdown map ticket marks a claim).'
+  return 'Assignee recorded. The visible status on the ticket read back after the write did not change: local Markdown spec tickets and plain tickets record the assignee only, and other backends do not change status on claim either.'
 }

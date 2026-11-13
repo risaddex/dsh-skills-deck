@@ -259,7 +259,7 @@ async function main() {
   const removed = await callTool('deck_issue_patch', { key: impl4Key, feature: FEATURE, removeLabels: ['ready-for-agent'] })
   check(removed && removed.status === 'ok', '⑦ 只摘 triage 标签仍执行成功：' + JSON.stringify(removed && removed.status))
   const notes = (removed && removed.notes) || []
-  check(notes.some(function(n) { return String(n).indexOf('摘标签不会清掉状态') >= 0 }), '⑦ 回执说明摘 triage 不会清掉状态：' + JSON.stringify(notes))
+  check(notes.some(function(n) { return String(n).indexOf('is a status, not an ordinary label') >= 0 }), '⑦ 回执说明摘 triage 不会清掉状态：' + JSON.stringify(notes))
   check(/^\*\*Status:\*\* ready-for-agent$/m.test(readTicketFile(FEATURE, impl4Key)), '⑦ 摘标签后可见状态仍是 ready-for-agent')
 
   // ⑦-b §七.7：规格容器不并入单真源，改标签不能把它建票时带的 ready-for-agent 误删。

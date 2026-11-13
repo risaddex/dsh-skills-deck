@@ -98,10 +98,10 @@ async function main() {
   check(builtKeys.length === 2, '回执说建出两张子票（实得 ' + builtKeys.length + ' 张：' + JSON.stringify(builtKeys) + '）')
   check(String((plan && plan.data && plan.data.counts && plan.data.counts.actual) || '') === '3', '逐项校验认为实际建了 3 张（地图 + 2 子票，实得 ' + ((plan && plan.data && plan.data.counts && plan.data.counts.actual) || '?') + '）')
   const planNotes = ((plan && plan.notes) || []).join('\n')
-  check(planNotes.indexOf('建后读回核对通过') >= 0, '建后读回核对通过：' + JSON.stringify(((plan && plan.notes) || []).slice(-2)))
-  check(planNotes.indexOf('与 Type 行') >= 0, '读回核到了 Type 行（原文布局的文件头注释认得出）：' + JSON.stringify(((plan && plan.notes) || []).filter((n) => n.indexOf('读回核对') >= 0)))
-  check(planNotes.indexOf('没对上') < 0, '读回没有报「没对上」：' + JSON.stringify(((plan && plan.notes) || []).filter((n) => n.indexOf('没对上') >= 0)))
-  check(planNotes.indexOf('这次没核对') < 0, '读回没有退成「这次没核对」：' + JSON.stringify(((plan && plan.notes) || []).filter((n) => n.indexOf('没核对') >= 0)))
+  check(planNotes.indexOf('The read-back check after building passed') >= 0, '建后读回核对通过：' + JSON.stringify(((plan && plan.notes) || []).slice(-2)))
+  check(planNotes.indexOf('and the Type line') >= 0, '读回核到了 Type 行（原文布局的文件头注释认得出）：' + JSON.stringify(((plan && plan.notes) || []).filter((n) => n.indexOf('读回核对') >= 0)))
+  check(planNotes.indexOf('mismatches') < 0, '读回没有报「没对上」：' + JSON.stringify(((plan && plan.notes) || []).filter((n) => n.indexOf('没对上') >= 0)))
+  check(!/no check was made|were not checked/.test(planNotes), '读回没有退成「这次没核对」：' + JSON.stringify(((plan && plan.notes) || []).filter((n) => n.indexOf('没核对') >= 0)))
 
   // ② 盘上位置：map.md 在 effort 目录下，旧扁平布局的 01-map.md 不再出现。
   const mapPath = path.join(effortDir, 'map.md')

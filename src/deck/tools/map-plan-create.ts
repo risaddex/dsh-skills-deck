@@ -1,6 +1,6 @@
 // src/deck/tools/map-plan-create.ts —— deck_map_plan_create（#713 第六批，本批价值最高的一个；#1019 换到新树、#1035 转 TypeScript）
 //
-// 一次把一整张地图的骨架建出来：地图票 + 一票子票 + 子票之间的依赖边，最后逐项校验计数。
+// 一次把一整张地图的骨架建出来：Map ticket + 一票子票 + 子票之间的依赖边，最后逐项校验计数。
 // 它贵，所以三件事都做在明面上：
 //   1. **先算账再动手**：调用前算出点数、出站请求条数、会不会超单次顶、建议分几片（src/refresh/kernel/tool-call-budget.ts）；
 //      超过一片就只做第一片，把「下一次要带的子票清单」原样回给 AI，自己绝不一口气建几百张。
@@ -38,24 +38,24 @@ import { withCap } from '../shell/capped-wait.js'
 
 export const definition = {
   name: 'deck_map_plan_create',
-  description: '同属 dsh-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。一次建一整张 map 的骨架（map ISSUE + child ISSUE + 依赖边），带逐项校验与可续跑中间态。',
+  description: 'The ISSUE and map management of the dsh-skills-deck plugin; it only handles the repo of the current workspace. Before touching an ISSUE, call deck_context to confirm the workspace and backend, and stop if it says there is no backend. Build the whole skeleton of a map in one call (map ISSUE + child ISSUEs + dependency edges), with per-item checks and a resumable intermediate state.',
   parameters: {
     type: 'object',
     properties: {
-      title: { type: 'string', description: '地图票的标题' },
-      body: { type: 'string', description: '地图正文；缺省时自动补五个区块' },
-      planId: { type: 'string', description: '这次计划的标识；重跑时带同一个值就能接着上次没做完的部分继续；想建第二张内容相同的计划时传一个不同的值' },
+      title: { type: 'string', description: 'Title of the map ticket' },
+      body: { type: 'string', description: 'Body of the map; when left out, the five sections are filled in automatically' },
+      planId: { type: 'string', description: 'Identifier of this plan; re-run with the same value to continue the part that was left unfinished last time; to build a second plan with the same content, pass a different value' },
       children: {
         type: 'array',
-        description: '要建的子票清单',
+        description: 'The list of sub-issues to create',
         items: {
           type: 'object',
           properties: {
-            key: { type: 'string', description: '计划内的短标识，边用它来指代这张票' },
+            key: { type: 'string', description: 'A short identifier inside the plan; edges use it to refer to this ticket' },
             title: { type: 'string' },
             body: { type: 'string' },
-            kind: { type: 'string', enum: ['map-ticket', 'bug', 'issue'], description: '这张子票是三种位置里的哪一种：map-ticket（地图工单，必须同时给 label，四选一）/ bug（缺陷票）/ issue（普通票）。地图本体由这个工具自己建，不要放进 children。' },
-            label: { type: 'string', enum: MAP_TICKET_LABELS, description: '地图工单的种类，只在 kind=map-ticket 时给：wayfinder:research / wayfinder:prototype / wayfinder:grilling / wayfinder:task，四选一；别的 kind 别给。' },
+            kind: { type: 'string', enum: ['map-ticket', 'bug', 'issue'], description: 'Which of the three positions this sub-issue takes: map-ticket (a map ticket, which must also get a label, one of four) / bug (a bug ticket) / issue (a plain ticket). The map itself is created by this tool, do not put it in children.' },
+            label: { type: 'string', enum: MAP_TICKET_LABELS, description: 'The kind of map ticket; give it only when kind=map-ticket: wayfinder:research / wayfinder:prototype / wayfinder:grilling / wayfinder:task, one of four; do not give it for other kinds.' },
             labels: { type: 'array', items: { type: 'string' } },
             assignees: { type: 'array', items: { type: 'string' } },
           },
@@ -67,13 +67,13 @@ export const definition = {
         type: 'array',
         // #1421：方向只靠参数名读不出来（from 读成「阻塞方」也说得通），所以必须在这一层用大白话说清
         // 「这条边写进哪张票、指向哪张票」；宿主把这段交给模型，模型看不到下面的实现。
-        description: '子票之间的边。from 是这条边写进哪张票（写的是它的字段），to 是这条边指向的另一张票。type 只有两个值：省略或写 blocked-by 是阻塞边，{from: "D3", to: "D1"} 表示 D3 的 Blocked by 里加上 D1，也就是 D3 被 D1 阻塞、要先做完 D1；写 parent 是父子边，表示 from 的父票是 to，常规写法是 {from: "C1", to: "@map"}，把子票 C1 挂到本次计划新建的地图票底下。@map 指本次计划建的那张地图票；from 和 to 都可以写，但父子边的常规写法是 to 写 @map。',
+        description: 'Edges between sub-issues. from is the ticket this edge is written into (the edge writes a field of that ticket), to is the other ticket the edge points at. type has only two values: left out or blocked-by means a blocking edge, {from: "D3", to: "D1"} adds D1 to the Blocked by of D3, that is D3 is blocked by D1 and D1 has to be done first; parent means a parent edge, saying the parent of from is to, usually written {from: "C1", to: "@map"} to attach sub-issue C1 under the map ticket this plan creates. @map means the map ticket this plan creates; both from and to can be written, but a parent edge is usually written with @map in to.',
         items: {
           type: 'object',
           properties: {
-            from: { type: 'string', description: '这条边写进哪张票（写的是它的字段）：阻塞边是被阻塞的那张，父子边是子票' },
-            to: { type: 'string', description: '这条边指向的另一张票：阻塞边是阻塞方（要先做完它），父子边是父票，常规写法是 @map' },
-            type: { type: 'string', enum: ['blocked-by', 'parent'], description: '边的类型：省略或写 blocked-by 是阻塞边（from 的 Blocked by 里加上 to），写 parent 是父子边（from 的父票是 to）' },
+            from: { type: 'string', description: 'Which ticket this edge is written into (the edge writes a field of that ticket): for a blocking edge the blocked one, for a parent edge the sub-issue' },
+            to: { type: 'string', description: 'The other ticket this edge points at: for a blocking edge the blocker (it has to be done first), for a parent edge the parent ticket, usually written as @map' },
+            type: { type: 'string', enum: ['blocked-by', 'parent'], description: 'The kind of edge: left out or blocked-by is a blocking edge (to is added to the Blocked by of from), parent is a parent edge (the parent of from is to)' },
           },
           required: ['from', 'to'],
           additionalProperties: false,
@@ -212,7 +212,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
     const children = Array.isArray(a.children) ? a.children.filter((c: Record<string, unknown>) => c && c.key && c.title) : []
     const edges = Array.isArray(a.edges) ? a.edges.filter((e: Record<string, unknown>) => e && e.from && e.to) : []
     const est = shell.estimateFor('deck_map_plan_create', a)
-    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, 'workRouteDetail 参数已退役（#1561）：在办表不再跟在写回执里，要看就调 deck_work_route（默认只看近 24 小时在办，带 includeStale:true 看近 30 天）。这次什么都没做：没选后端、没花点数、没写盘。', { cost: { estimated: est } })
+    if (Object.prototype.hasOwnProperty.call(a, 'workRouteDetail') && a.workRouteDetail !== undefined) return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, 'The workRouteDetail parameter is retired (#1561): the work board no longer comes back inside write receipts; to see it, call deck_work_route (by default it only covers work from the last 24 hours; pass includeStale:true for the last 30 days). Nothing was done this time: no backend was selected, no points were spent, and nothing was written to disk.', { cost: { estimated: est } })
     const s = await sessionContextOfAsync(exec, { canonicalKey: d.canonicalKey, workspaceKeyOf: d.workspaceKeyOf })
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 是会话壳里的运行时布尔，那一层还没标类型，
     // 见 #1040），所以这里按形状取 reason —— 取到的值与老写法逐字相同。
@@ -220,8 +220,8 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
     // #1832：地图本体的标签也在动手之前收口。这个工具建地图票时走的是 ensureLabels(a.labels, 'map')，
     // 不经过单票建票的 resolveCreateKind；两枚状态标签如果放进来，会原样写到地图票上，与「一张票任何时刻
     // 至多一枚 triage 状态」冲突。这里在选后端、开计划锁之前整批拒绝，盘上一张票都不动。
-    const mapLabelProblem = triageStateProblem(a.labels, '地图票的 labels')
-    if (!title || !children.length || mapLabelProblem) return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, mapLabelProblem ? mapLabelProblem + '这一批子票也没建，一张票都没动。' : '建整张地图至少要给 title 与一张子票（children 里每项要有 key 与 title）。', { cost: { estimated: est } })
+    const mapLabelProblem = triageStateProblem(a.labels, 'the labels of the map ticket')
+    if (!title || !children.length || mapLabelProblem) return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, mapLabelProblem ? mapLabelProblem + ' None of this batch of sub-issues was created either; not a single ticket was touched.' : 'Building a whole map needs at least a title and one sub-issue (each item in children needs a key and a title).', { cost: { estimated: est } })
     // #1413：子票改用两层词表。先在动手之前把每个 child 的位置与标签收口一遍，任何一张说不清就整批拒绝 ——
     // 这时还没选后端、没开计划锁、没发一个调用，盘上一张票都不会动。
     // 为什么 parentKey 固定传 '@map'：这个工具的子票父票永远是本次计划的地图票（state.mapKey），children 不再收
@@ -232,18 +232,18 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
       const rawKind = String(ch.kind === undefined || ch.kind === null ? '' : ch.kind).trim()
       let problem = ''
       if (CHILD_KINDS.indexOf(rawKind) < 0) {
-        if (!rawKind) problem = '缺 kind：地图骨架的子票要说明位置，三选一：map-ticket（地图工单，必须同时给 label）、bug（缺陷票）、issue（普通票）。'
-        else if (rawKind === 'task') problem = '传了旧的 kind=task：地图骨架里不再按 task 建票 —— 要当地图工单请改成 kind=map-ticket 并给 label（四选一：wayfinder:research / wayfinder:prototype / wayfinder:grilling / wayfinder:task）；只是普通票就改成 kind=issue。'
-        else if (rawKind === 'ticket') problem = '传了旧的 kind=ticket：那是规格下的实施票，请改用 deck_issue_create 的 kind=spec-ticket 建；地图骨架的子票只认 map-ticket、bug、issue。'
-        else if (rawKind === 'map') problem = '传了 kind=map：地图本体由这个工具自己建（固定一张），children 里只放子票 —— map-ticket、bug、issue 三选一。'
-        else if (rawKind === 'spec' || rawKind === 'spec-ticket') problem = '传了 ' + rawKind + '：规格票与实施票要走 deck_issue_create 建，不在地图骨架里；这里只认 map-ticket、bug、issue。'
-        else problem = '没有这个位置值「' + rawKind.slice(0, 40) + '」：地图骨架的子票只认 map-ticket、bug、issue 三个值。'
+        if (!rawKind) problem = 'Missing kind: a sub-issue of a map skeleton has to state its position, one of three: map-ticket (a map ticket, which must also get a label), bug (a bug ticket), issue (a plain ticket).'
+        else if (rawKind === 'task') problem = 'The old kind=task was passed: a map skeleton no longer creates tickets as task — to make a map ticket, change it to kind=map-ticket and give a label (one of four: wayfinder:research / wayfinder:prototype / wayfinder:grilling / wayfinder:task); if it is only a plain ticket, change it to kind=issue.'
+        else if (rawKind === 'ticket') problem = 'The old kind=ticket was passed: that is a spec ticket under a spec, so create it with kind=spec-ticket through deck_issue_create; a sub-issue of a map skeleton only accepts map-ticket, bug and issue.'
+        else if (rawKind === 'map') problem = 'kind=map was passed: the map itself is created by this tool (always exactly one), so children only holds sub-issues — map-ticket, bug or issue.'
+        else if (rawKind === 'spec' || rawKind === 'spec-ticket') problem = 'Passed ' + rawKind + ': a spec and the spec tickets under it are created through deck_issue_create, not inside a map skeleton; here only map-ticket, bug and issue are accepted.'
+        else problem = 'There is no such position value "' + rawKind.slice(0, 40) + '": a sub-issue of a map skeleton only accepts map-ticket, bug and issue.'
       }
       const resolved: CreateKindResolution = problem
         ? { ok: false, problem: problem }
         : resolveCreateKind({ kind: rawKind, label: ch.label, labels: ch.labels, parentKey: '@map' })
       if (!resolved.ok) {
-        return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, '子票「' + planKey.slice(0, 40) + '」' + String(resolved.problem || '没说明原因') + '这一批子票都没建，一张票都没动。', { cost: { estimated: est } })
+        return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, 'sub-issue "' + planKey.slice(0, 40) + '"' + String(resolved.problem || 'gave no reason') + ' None of this batch of sub-issues was created; not a single ticket was touched.', { cost: { estimated: est } })
       }
       childKinds.set(planKey, resolved)
     }
@@ -255,7 +255,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
       if (rawType === undefined || rawType === null) continue
       const typeText = String(rawType)
       if (typeText === 'blocked-by' || typeText === 'parent') continue
-      return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, '边「' + String(e.from).slice(0, 40) + ' → ' + String(e.to).slice(0, 40) + '」的 type 写成「' + typeText.slice(0, 40) + '」：type 只认 blocked-by 与 parent 两个值（省略 type 按 blocked-by 算）。这一批边一条都没写，整次调用没有动任何票。', { cost: { estimated: est } })
+      return shell.unsupported('deck_map_plan_create', REFUSAL_REASONS.BAD_ARGS, 'The type of edge "' + String(e.from).slice(0, 40) + ' → ' + String(e.to).slice(0, 40) + '" is written as "' + typeText.slice(0, 40) + '": type only accepts blocked-by and parent (a missing type counts as blocked-by). None of this batch of edges was written, and this whole call touched no ticket.', { cost: { estimated: est } })
     }
     // #1245：自动计划标识必须稳定（不带时间窗），否则重试跨过 5 分钟窗口就会变成新计划、按新锚建重复票。
     // 显式 planId 优先；没传时用内容哈希（会话或工作区加标题加子键），同一份输入永远得到同一个标识。
@@ -265,7 +265,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
     const planId = String(usingAutoPlanId ? autoPlanId : String(a.planId))
     if (ACTIVE_PLANS.get(planId)) {
       // #1799：同计划并发锁是本地失败，下一步是等它做完或换 planId（重试安全），不是「后端不支持」。
-      return shell.unsupported('deck_map_plan_create', reasonForFailure({ phase: 'write', local: 'lock' }), '同一个计划标识（' + planId.slice(0, 60) + '）正在另一次执行里跑（进行中），这次没动手：等它做完再来，或换一个 planId。', { cost: { estimated: est } })
+      return shell.unsupported('deck_map_plan_create', reasonForFailure({ phase: 'write', local: 'lock' }), 'The same plan identifier (' + planId.slice(0, 60) + ') is running in another execution right now (in progress), so nothing was done: come back when it finishes, or use a different planId.', { cost: { estimated: est } })
     }
     ACTIVE_PLANS.set(planId, 1)
     const pick = await openDeckSession({ deps: d, exec: exec, session: s, estimate: est, tool: 'deck_map_plan_create', kind: 'write' })
@@ -320,9 +320,9 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
       const state: PlanState = { planId: planId, mapKey: prev.mapKey || '', keys: Object.assign({}, prev.keys), edges: Array.isArray(prev.edges) ? prev.edges.slice() : [], done: Array.isArray(prev.done) ? prev.done.slice() : [] }
       const items = [], notes = []
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
-      if (usingAutoPlanId) notes.push('这次没传 planId，用了自动计划标识（' + planId.slice(0, 80) + '）：重试时必须显式传回这个 planId，否则会被当成新计划建重复票；想建第二张内容相同的计划时，必须显式传一个不同的 planId，否则会被当成重试而复用旧票。')
+      if (usingAutoPlanId) notes.push('No planId was passed this time, so an automatic plan identifier was used (' + planId.slice(0, 80) + '): a retry has to pass this planId back explicitly, otherwise it counts as a new plan and builds duplicate tickets; to build a second plan with the same content, pass a different planId explicitly, otherwise it counts as a retry and reuses the old tickets.')
       const storeDurable = store.durable !== false
-      if (!storeDurable) notes.push('这次的中间态只记在本进程的内存里（没有注入落盘的存储器）：进程重启后重跑同一个 planId 会重新建票。')
+      if (!storeDurable) notes.push('This time the intermediate state is kept only in the memory of this process (no durable store was injected): after a process restart, re-running the same planId builds the tickets again.')
       let stoppedEarly = false
 
       // ① 地图票本身：只建一次，锚由 planId 推出来。
@@ -339,7 +339,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
         state.done.push('map'); await store.save(planId, state)
         items.push({ key: state.mapKey, role: 'map', title: title, status: 'ok' })
       } else {
-        notes.push('地图票 ' + state.mapKey + ' 上次已经建好了，这次直接接着做。')
+        notes.push('Map ticket ' + state.mapKey + ' was already created last time, so this call continues from there.')
         items.push({ key: state.mapKey, role: 'map', title: title, status: 'ok', skipped: true })
       }
 
@@ -390,13 +390,13 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
           const childBag = (created.data || {}) as { parentError?: { kind?: unknown; message?: unknown } }
           const pErr = (childBag.parentError && childBag.parentError.message) ? String(childBag.parentError.message).slice(0, 200) : ''
           if (pErr) {
-            items.push(Object.assign({ key: state.keys[String(o.ch.key)], role: 'child', planKey: String(o.ch.key), title: String(o.ch.title), status: 'failed', reason: '子票建成了（票号 ' + (state.keys[String(o.ch.key)] || '后端没回票号') + '），但父子边没挂上：' + pErr }, failureFields(childBag.parentError, 'write')))
+            items.push(Object.assign({ key: state.keys[String(o.ch.key)], role: 'child', planKey: String(o.ch.key), title: String(o.ch.title), status: 'failed', reason: 'The sub-issue was created (ticket ' + (state.keys[String(o.ch.key)] || 'the backend returned no ticket number') + '), but the parent edge was not attached: ' + pErr }, failureFields(childBag.parentError, 'write')))
           } else {
             state.done.push('child:' + String(o.ch.key))
             items.push({ key: state.keys[String(o.ch.key)], role: 'child', planKey: String(o.ch.key), title: String(o.ch.title), status: 'ok' })
           }
         } else {
-          const msg = String((created && created.error && created.error.message) || '后端没给出原因').slice(0, 200)
+          const msg = String((created && created.error && created.error.message) || 'the backend did not give a reason').slice(0, 200)
           items.push(Object.assign({ key: '', role: 'child', planKey: String(o.ch.key), title: String(o.ch.title), status: 'failed', reason: msg }, failureFields(created, 'write')))
         }
         await store.save(planId, state)
@@ -413,7 +413,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
       const edgeJobs = []
       for (const e of edges) {
         const from = keyOf(e.from), to = keyOf(e.to)
-        if (!from || !to) { items.push(Object.assign({ key: from || '', role: 'edge', status: 'failed', reason: '边的端点还没有票号（' + String(e.from) + ' → ' + String(e.to) + '）：先把它那一张建出来再补这条边。' }, failureFields(null, 'write', 'input'))); continue }
+        if (!from || !to) { items.push(Object.assign({ key: from || '', role: 'edge', status: 'failed', reason: 'An endpoint of this edge has no ticket number yet (' + String(e.from) + ' → ' + String(e.to) + '): build that ticket first, then add this edge.' }, failureFields(null, 'write', 'input'))); continue }
         edgeJobs.push({ idx: edgeJobs.length, from: from, to: to, parent: e.type === 'parent' })
       }
       const parentByFrom = new Map()
@@ -467,7 +467,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
       if (picked.children) {
         counts = { planned: plannedLive + 1, actual: picked.children.length + 1, ok: picked.children.length === plannedLive, compared: picked.filtered }
       }
-      if (!counts.ok) notes.push('逐项校验没对上：计划里有 ' + counts.planned + ' 张（含地图票），按父票列出来 ' + (counts.actual === null ? '拿不到（后端没给出原因）' : counts.actual + ' 张') + '。以这个数字为准，别按计划数字往下走。')
+      if (!counts.ok) notes.push('The per-item check did not match: the plan has ' + counts.planned + ' tickets (including the map ticket), and listing by parent returned ' + (counts.actual === null ? 'nothing (the backend did not give a reason)' : counts.actual + ' tickets') + '. Trust this number, not the plan numbers.')
       if (picked.note) notes.push(picked.note)
 
       // ④b 建后读回核对（#1413）：张数对上只说明计数没错，类型标签、父票与 ## 进度还得落到盘上才算对。
@@ -489,9 +489,9 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
       const status = (rawStatus === DECK_STATUS.OK && (stoppedEarly || restKeys.length)) ? DECK_STATUS.PARTIAL : rawStatus
       // #1799：有失败项时取它们映射码里最该先说的一个；只是没做完（没有失败项）时留空，续法写在 text 里。
       const reason = status === DECK_STATUS.OK ? '' : reasonForItems(items)
-      let text = '计划 ' + planId + '：这一片建了 ' + shard.length + ' 张子票（共计划 ' + children.length + ' 张），建成 ' + edgeCount + ' 条边' +
-        (restKeys.length ? '；还有 ' + restKeys.length + ' 张没建（' + restKeys.join('、') + '），带同一个 planId 再调一次就接着建。' : '。') + leadFailureText(items, reason)
-      if (stoppedEarly) text += '时间不够先停在这里（剩余额度不足），已建的不用重建。'
+      let text = 'Plan ' + planId + ': this shard created ' + shard.length + ' sub-issues (of ' + children.length + ' planned) and built ' + edgeCount + ' edges' +
+        (restKeys.length ? '; ' + restKeys.length + ' are still not built (' + restKeys.join(', ') + '); call again with the same planId and the build continues.' : '.') + leadFailureText(items, reason)
+      if (stoppedEarly) text += 'Stopped here because time ran out (not enough quota left); what was already built does not have to be built again.'
       if (status === DECK_STATUS.OK && !restKeys.length && typeof store.remove === 'function') {
         try { await store.remove(planId) } catch (eRm) {}
       }
@@ -505,7 +505,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
             builtKeys: Object.values(state.keys), skippedKeys: skippedKeys, restKeys: restKeys,
             edges: state.edges, counts: counts,
             shards: { suggested: est.shards, perShard: est.perShard, maxChildTicketsPerCall: budget.AI_TOOL_MAX_CHILD_TICKETS_PER_CALL },
-            nextCall: restKeys.length ? { tool: 'deck_map_plan_create', planId: planId, hint: '带同一个 planId、把 restKeys 这些子票再传一次' } : null,
+            nextCall: restKeys.length ? { tool: 'deck_map_plan_create', planId: planId, hint: 'Pass the same planId and pass these restKeys sub-issues again' } : null,
           },
           items: items,
           notes: notes,

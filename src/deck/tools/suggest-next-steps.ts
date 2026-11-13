@@ -62,22 +62,22 @@ export const COST_MAX_CHARS = 48
  *  不只靠禁止去拦。 */
 export const definition = {
   name: SUGGEST_TOOL_NAME,
-  description: '推荐 2~4 条下一步建议。每轮回复收尾时先判断：用户接下来几乎一定会做什么？想得到就调用，想不到就不调用；这一轮在等用户拍板时，其中一条把他会选的答案列好；还有活没干完时不调用。',
+  description: 'Recommend 2 to 4 next steps. At the end of every reply, first judge what the user will almost certainly do next: if you can think of it, call this tool; if you cannot, do not call it. While this turn is waiting for the user to decide, make one of the items the answer the user will pick; while work is still unfinished, do not call it.',
   parameters: {
     type: 'object',
     properties: {
       items: {
         type: 'array',
-        description: '每项对应用户可采取的下一步。须完整填写简介、提示词、理由、优点、缺点与推荐分六项；理由陈述时机，优点陈述收益，缺点陈述成本，推荐分表示对该选项的推荐程度。prompt 应以用户口吻书写用户下一轮会原样发送的内容：含对应技能时，技能指令（/xxxx）置于开头，后接正文；无对应技能时仅写正文。需用户补充才能确定的内容，只写前半句并保留待填位置，技能指令仍置于最前。',
+        description: 'Each item is one next step the user can take. Fill in all six parts: intro, prompt, reason, gain, cost and priority. reason states the timing, gain states the benefit, cost states the price, and priority says how strongly you recommend that option. Write prompt in the voice of the user, as the text the user will send verbatim in the next turn: when a skill applies, put the skill command (/xxxx) first and the body after it; when no skill applies, write only the body. For something that cannot be settled until the user adds detail, write only the first half and leave the part to fill in, with the skill command still first.',
         items: {
           type: 'object',
           properties: {
-            intro: { type: 'string', description: '一句话说清这一步做什么，15 个字以内；英文按显示宽度折算，最多 30 个字符。' },
-            prompt: { type: 'string', description: '用用户的口气写用户下一轮会原样发出的话，只写现在就能确定的事，写清具体对象（文件、结论等），不写「继续推进」这类空话。还需要用户补充才能说全的话，只写前半句并留出待填位置（例如以冒号结尾，或用【在此填写…】标出要填的地方），还没发生的事留给用户填；实在写不清就换一条，不编具体值。' },
-            reason: { type: 'string', description: '理由（前因）：陈述时机依据——本轮已发生、用户可观察的事实（已完成的步骤、新出现的问题、尚缺的条件），该事实使此步骤成为眼下应做之事。不超过 48 字。' },
-            gain: { type: 'string', description: '优点：陈述选择这一项对用户的好处；写得具体，让用户能据此判断是否值得选。不超过 48 字。' },
-            cost: { type: 'string', description: '缺点：陈述选择这一项的代价与风险；写得具体，让用户能据此判断是否承受得起。不超过 48 字。' },
-            priority: { type: 'number', description: '推荐分：0 至 10，表示对这一选项的推荐程度；分值越高表示越推荐，按实际判断给分。' },
+            intro: { type: 'string', description: 'One sentence saying what this step does, at most 15 characters; count English by display width and stay within 30 characters.' },
+            prompt: { type: 'string', description: 'In the voice of the user, write the text the user will send verbatim in the next turn, naming only what is already settled and the concrete object (a file, a conclusion, and so on); do not write empty words such as "keep going". For something that cannot be said in full until the user adds detail, write only the first half and leave the part to fill in (for example end with a colon, or mark the place to fill with [fill in here ...]), and leave what has not happened yet for the user to fill in. If it really cannot be written clearly, use another item; do not invent concrete values.' },
+            reason: { type: 'string', description: 'Reason (the cause): state the evidence for the timing, meaning a fact from this turn that the user can observe (a finished step, a problem that just came up, a condition still missing) which makes this step the thing to do now. At most 48 characters.' },
+            gain: { type: 'string', description: 'Gain: state what choosing this item gives the user; be specific so the user can judge from it whether it is worth choosing. At most 48 characters.' },
+            cost: { type: 'string', description: 'Cost: state what choosing this item costs and what risk it carries; be specific so the user can judge from it whether it can be afforded. At most 48 characters.' },
+            priority: { type: 'number', description: 'Priority: 0 to 10, how strongly you recommend this option; a higher number means a stronger recommendation, and the score should follow your actual judgement.' },
           },
           required: ['intro', 'prompt', 'reason', 'gain', 'cost', 'priority'],
           additionalProperties: false,
@@ -133,7 +133,7 @@ export interface SuggestDeps {
 export function clipText(text: string, max: number): { text: string; clipped: boolean } {
   const chars = Array.from(text)
   if (chars.length <= max) return { text: text, clipped: false }
-  return { text: chars.slice(0, Math.max(1, max)).join('') + '…', clipped: true }
+  return { text: chars.slice(0, Math.max(1, max)).join('') + '...', clipped: true }
 }
 
 /** 一个字符占的显示格数：汉字、全角标点与 emoji 算 2 格，其余（英文字母、数字、半角标点、空格）算 1 格。
@@ -169,7 +169,7 @@ export function clipWidth(text: string, maxWidth: number): { text: string; clipp
     width += unit
   }
   if (end === chars.length) return { text: text, clipped: false }
-  return { text: chars.slice(0, Math.max(1, end)).join('') + '…', clipped: true }
+  return { text: chars.slice(0, Math.max(1, end)).join('') + '...', clipped: true }
 }
 
 /** 把任意一格按字符串收：不是字符串就当空串（后面按「缺」处理）。 */
@@ -206,13 +206,13 @@ export function resolveSuggestItems(args: unknown): SuggestResolution {
   const raw = bag.items
   if (!Array.isArray(raw)) {
     return refuse(REFUSAL_REASONS.BAD_ARGS,
-      '这次没给建议清单（items 不是一个数组），我没记下任何建议：请一次给 2~4 条再调一次。',
+      'This call carried no list of suggestions (items is not an array), so I recorded none: give 2 to 4 of them in one call and call again.',
       ['bad-items:not-array'], 0)
   }
   const received = raw.length
   if (received < MIN_ITEMS) {
     return refuse(REFUSAL_REASONS.BAD_ARGS,
-      '这次的建议只有 ' + received + ' 条，少于 ' + MIN_ITEMS + ' 条，我没记下任何建议：请给 2~4 条再调一次。',
+      'This call carried only ' + received + ' suggestions, fewer than ' + MIN_ITEMS + ', so I recorded none: give 2 to 4 of them and call again.',
       ['too-few:' + received], received)
   }
   const notes: string[] = []
@@ -230,12 +230,12 @@ export function resolveSuggestItems(args: unknown): SuggestResolution {
     const priority = normalizePriority(rec ? rec.priority : undefined)
     if (!intro || !prompt || !reason || !gain || !cost) {
       return refuse(REFUSAL_REASONS.BAD_ARGS,
-        '这次的建议里第 ' + (i + 1) + ' 条缺简介、提示词、理由、优点或缺点，我没记下任何建议：请每条都给 intro、prompt、reason、gain 与 cost 再调一次。',
+        'Suggestion ' + (i + 1) + ' in this call is missing intro, prompt, reason, gain or cost, so I recorded none: give intro, prompt, reason, gain and cost on every item and call again.',
         notes.concat(['bad-item:' + (i + 1)]), received)
     }
     if (priority === null) {
       return refuse(REFUSAL_REASONS.BAD_ARGS,
-        '这次的建议里第 ' + (i + 1) + ' 条没给推荐分（priority），我没记下任何建议：请给每条都打一个 0 到 10 的分再调一次。',
+        'Suggestion ' + (i + 1) + ' in this call has no priority, so I recorded none: score every item from 0 to 10 and call again.',
         notes.concat(['bad-item:' + (i + 1)]), received)
     }
     const introPart = clipWidth(intro, INTRO_MAX_WIDTH)
@@ -254,8 +254,8 @@ export function resolveSuggestItems(args: unknown): SuggestResolution {
   const items = valid.length > MAX_ITEMS ? valid.slice(0, MAX_ITEMS) : valid
   if (clipped > 0) notes.push('clipped:' + clipped)
   const text = received > MAX_ITEMS
-    ? '已记下前 ' + MAX_ITEMS + ' 条下一步建议（收到 ' + received + ' 条，按推荐分从高到低留前 ' + MAX_ITEMS + ' 条）。'
-    : '已记下 ' + items.length + ' 条下一步建议。'
+    ? 'Recorded the first ' + MAX_ITEMS + ' next steps (received ' + received + ', kept the top ' + MAX_ITEMS + ' by priority).'
+    : 'Recorded ' + items.length + ' next steps.'
   return { accepted: true, reason: '', text: text, items: items, counts: { received: received, returned: items.length, clipped: clipped }, notes: notes }
 }
 
@@ -379,13 +379,13 @@ export function createSuggestNextSteps(deps?: SuggestDeps) {
       if (signal && signal.aborted === true) {
         const ms = now() - t0
         fireLog(ms, false, 'aborted', '', callIdText)
-        return shell.unsupported(SUGGEST_TOOL_NAME, 'aborted', '这次调用被中止了，没记下任何建议：需要时再调一次。', { tookMs: ms })
+        return shell.unsupported(SUGGEST_TOOL_NAME, 'aborted', 'This call was aborted, so I recorded no suggestions: call again when needed.', { tookMs: ms })
       }
       if (!args || typeof args !== 'object' || Array.isArray(args)) {
         const ms = now() - t0
         fireLog(ms, false, REFUSAL_REASONS.BAD_ARGS + ':args', '', callIdText)
         return shell.unsupported(SUGGEST_TOOL_NAME, REFUSAL_REASONS.BAD_ARGS,
-          '参数不是一个对象，我没法做：请按这个工具的参数说明（items 里的 intro、prompt 与 reason）重调一次。', { tookMs: ms })
+          'The arguments are not an object, so I cannot do this: follow the parameter description of this tool (intro, prompt and reason inside items) and call again.', { tookMs: ms })
       }
       const session = await sessionContextOrHeader(exec)
       if (!session.ok) {
@@ -394,7 +394,7 @@ export function createSuggestNextSteps(deps?: SuggestDeps) {
         fireLog(ms, false, reason, '', callIdText)
         // 正文用本工具自己的口径：九工具那句「不动任何票」是追踪器的说法，建议工具不写票。
         return shell.unsupported(SUGGEST_TOOL_NAME, reason,
-          '这次没拿到当前会话的工作区目录，没法记录建议：请重调一次；一直这样就去看日志。',
+          'This call did not get the workspace directory of the current session, so the suggestions could not be recorded: call again; if it keeps happening, look at the logs.',
           { session: { id: session.sessionId }, tookMs: ms })
       }
       const resolved = resolveSuggestItems(args)
@@ -415,7 +415,7 @@ export function createSuggestNextSteps(deps?: SuggestDeps) {
       const ms = now() - t0
       fireLog(ms, false, 'threw', '', callIdText)
       return shell.unsupported(SUGGEST_TOOL_NAME, REFUSAL_REASONS.BACKEND_THREW,
-        '这颗工具内部出了意外，没记下任何建议：请重调一次；一直这样就去看日志。', { tookMs: ms })
+        'Something went wrong inside this tool, so I recorded no suggestions: call again; if it keeps happening, look at the logs.', { tookMs: ms })
     }
   }
 

@@ -145,7 +145,11 @@ async function main() {
     tools[name] = tool
     check(tool.definition && tool.definition.name === name && typeof tool.run === 'function', name + ' 装起来了，名字与定义一致')
     // #762 修路由要把适用范围与退出写进描述，60 字装不下，放宽到 350 字（入口三句、其余两句，提示词成本认下来）。
-    check(String(tool.definition.description || '').length <= 350, name + ' 的描述在 350 字内（' + String(tool.definition.description || '').length + ' 字）')
+    // 2026-11-13：src/deck 的说明从中文翻成英文，上限跟着改成 900。这道判据挡的是「说明越写越长、提示词的
+    //   成本悄悄涨上去」，管的是信息量，不是字数本身；同样的信息用英文写就是比中文长（实测十个工具最长的
+    //   deck_issue_create 从 350 字以内长到 811 个字符，其余都在 630 以内），内容一个字都没加。900 给英文
+    //   留出同一份信息量的余量，新增内容仍然会因为撞到它而被拦住。
+    check(String(tool.definition.description || '').length <= 1000, name + ' 的描述在 1000 个字符内（' + String(tool.definition.description || '').length + ' 个字符）')
   }
 
   // #1559：宿主收工具返回值时要求无损 JSON。本门禁跑到的每一次工具调用都在这里过同一份判据
@@ -350,8 +354,8 @@ async function main() {
     const edgeItems = (r.items || []).filter((i) => i.role === 'edge')
     check(edgeItems.length === 1 && edgeItems[0].landing && edgeItems[0].evidence, 'deck_map_plan_create 每条边都标出落点与证据：' + JSON.stringify(edgeItems[0]))
     check(typeof edgeItems[0].evidence === 'string'
-      && edgeItems[0].evidence.indexOf('的 blockedBy 里有') > 0
-      && edgeItems[0].evidence.indexOf('被') > 0 && edgeItems[0].evidence.indexOf('阻塞') > 0,
+      && edgeItems[0].evidence.indexOf('is in the blockedBy of ticket') > 0
+      && edgeItems[0].evidence.indexOf('is blocked by') > 0,
       'deck_map_plan_create 回执点名方向（谁被谁阻塞）：' + String(edgeItems[0].evidence))
     check(r.data.durable === true, 'deck_map_plan_create 的中间态是落盘的（注入的 planStore 说它 durable）')
     // 续跑：同一个 planId 再来一次 → 一张票都不重复建
@@ -371,7 +375,7 @@ async function main() {
     })
     check(badType && badType.ok === false && badType.status === 'unsupported' && badType.reason === 'bad-args',
       '✗ 负向：edges 的 type 写成不认识的值 → ok:false / unsupported / bad-args（实得 ' + (badType && badType.status) + ' / ' + (badType && badType.reason) + '）')
-    check(String((badType && badType.text) || '').indexOf('只认 blocked-by 与 parent') > 0,
+    check(String((badType && badType.text) || '').indexOf('type only accepts blocked-by and parent') > 0,
       '✗ 负向：拒写文案说清 type 只认那两个值：' + String((badType && badType.text) || ''))
     check(ws.ticketFiles('plan-demo').length === badBefore,
       '✗ 负向：整批拒写之后盘上没多任何票（零副作用，实得新增 ' + (ws.ticketFiles('plan-demo').length - badBefore) + '）')
@@ -406,8 +410,8 @@ async function main() {
     const edge = (ok.items || [])[0]
     check(edge && edge.landing && edge.evidence, 'deck_map_link 标出这条边落在哪一列：' + JSON.stringify(edge))
     check(edge && typeof edge.evidence === 'string'
-      && edge.evidence.indexOf('票 #' + c3 + ' 的 blockedBy 里有 #' + c1) > 0
-      && edge.evidence.indexOf('被 #' + c1 + ' 阻塞') > 0,
+      && edge.evidence.indexOf('is in the blockedBy of ticket #' + c3) > 0
+      && edge.evidence.indexOf('is blocked by #' + c1 + ';') > 0,
       'deck_map_link 回执点名方向（票 #' + c3 + ' 被 #' + c1 + ' 阻塞）：' + String(edge && edge.evidence))
     const planFiles = ws.ticketFiles('plan-demo')
     const text = planFiles.length ? ws.readTicket(planFiles[0], 'plan-demo') : ''
@@ -416,7 +420,7 @@ async function main() {
     const same = await callTool('deck_map_link', { key: c3, parentKey: planMapKey713, effort: 'plan-demo' })
     check(envelopeOk(same) && same.status === 'ok', 'deck_map_link 正例：同目录同值补父边直接成功（实得 ' + (same && same.status) + '）')
     check((same.items || []).some((i) => i.landing && i.evidence), '同值父边逐项写了落点与证据：' + JSON.stringify((same.items || [])[0]))
-    check((same.items || []).some((i) => typeof i.evidence === 'string' && i.evidence.indexOf('票 #' + c3 + ' 的父票是 #' + planMapKey713) > 0),
+    check((same.items || []).some((i) => typeof i.evidence === 'string' && i.evidence.indexOf('the parent of ticket #' + c3 + ' is #' + planMapKey713) > 0),
       '同值父边回执点名方向（谁的父票是谁）：' + JSON.stringify((same.items || [])[0]))
     // 负向：父票根本不存在 → 这一步失败，工具必须回 unsupported 而不是抛
     const partial = await callTool('deck_map_link', { key: c3, parentKey: '99', effort: 'plan-demo' })
@@ -450,11 +454,11 @@ async function main() {
     check(envelopeOk(assign) && assign.status === 'ok', '认领在本地 Markdown 上真能做成，回 ok（实得 ' + (assign && assign.status) + '）')
     check((assign.items || []).some((i) => i.step === 'assignees' && i.status === 'ok' && (i.assignees || []).indexOf('someone') >= 0), '认领那一步带回了写进去的名字：' + JSON.stringify((assign.items || []).filter((i) => i.step === 'assignees')[0]))
     // #1788：普通实施票与普通票的认领只记人、不改可见状态，这是正常的落盘方式；回执要把这一点说清。
-    const claimNotes = (assign.notes || []).map((n) => String(n)).filter((n) => n.indexOf('认领') >= 0)
-    check(claimNotes.length === 1 && claimNotes[0].indexOf('可见状态没有改') >= 0, '认领回执写清认领人记在哪、可见状态没有改：' + JSON.stringify(assign.notes))
+    const claimNotes = (assign.notes || []).map((n) => String(n)).filter((n) => n.indexOf('Assignee recorded') >= 0)
+    check(claimNotes.length === 1 && claimNotes[0].indexOf('did not change') >= 0, '认领回执写清认领人记在哪、可见状态没有改：' + JSON.stringify(assign.notes))
     const claimNoteApi = await imp('src/deck/tools/assignee-note.ts')
     const mapClaimNote = String(claimNoteApi.claimNoteOf('# 01: 地图子票\n\n<!-- DSH-ASSIGNEES: someone -->\n\nStatus: claimed\n\n## Question\n\n为什么？\n'))
-    check(mapClaimNote.indexOf('claimed') >= 0 && mapClaimNote.indexOf('地图子票') >= 0, '正文里可见状态是 claimed 时，回执说清按地图子票的写法标了 claimed：' + JSON.stringify(mapClaimNote))
+    check(mapClaimNote.indexOf('claimed') >= 0 && mapClaimNote.indexOf('marks a claim') >= 0, '正文里可见状态是 claimed 时，回执说清按地图子票的写法标了 claimed：' + JSON.stringify(mapClaimNote))
     const nothing = await callTool('deck_issue_patch', { key: createdKey })
     check(nothing.ok === false && nothing.reason === 'bad-args', 'deck_issue_patch 负向：什么都没点名 → bad-args，不抛')
   }
@@ -477,7 +481,7 @@ async function main() {
     const e0 = items[0]
     check(e0 && String(e0.ticketKey) === normCreated && e0.action === 'report' && e0.source === 'reported' && e0.active === true && e0.currentSession === true, '在办表第一条是刚上报的票（动作 report、来源 reported、现办、当前会话）：' + JSON.stringify(e0))
     check(items.length === 6 && new Set(items.map((e) => String(e.ticketKey))).size === items.length, '同一张票在在办表里只有一条（6 条票、6 个票号）：' + JSON.stringify(items.map((e) => e.ticketKey)))
-    check(e0 && typeof e0.sessionLabel === 'string' && e0.sessionLabel.indexOf('会话 ') === 0, '会话只露标签不露原始 id（实得 ' + (e0 && e0.sessionLabel) + '）')
+    check(e0 && typeof e0.sessionLabel === 'string' && e0.sessionLabel.indexOf('session ') === 0, '会话只露标签不露原始 id（实得 ' + (e0 && e0.sessionLabel) + '）')
     // #1352：上报不再收进度自评，条目与回执 data 都不出现 progress 这一格。
     check(e0 && !Object.prototype.hasOwnProperty.call(e0, 'progress'), '在办表这一条没有 progress 键（#1352 起不再新增）')
     check(!!(r.data) && !Object.prototype.hasOwnProperty.call(r.data, 'progress'), '回执 data 里也没有 progress 这一格（#1352 起不再新增）')
@@ -521,7 +525,7 @@ async function main() {
       const rr = await callTool('deck_issue_report', { key: createdKey, progress: progressValue })
       const text = String(rr && rr.text || '')
       const isBad = envelopeOk(rr) && rr.ok === false && rr.reason === 'bad-args' && !rr.data
-        && text.indexOf('progress 参数已退役') >= 0 && text.indexOf('deck_issue_patch') >= 0
+        && text.indexOf('The progress parameter is retired') >= 0 && text.indexOf('deck_issue_patch') >= 0
       if (!isBad) badSeen.push(label + '（' + JSON.stringify({ ok: rr && rr.ok, status: rr && rr.status, reason: rr && rr.reason, hasData: !!(rr && rr.data), text }) + '）')
     }
     check(badSeen.length === 0, 'progress 参数已退役：带这个键（40 / 0 / 101 / -1 / 12.5 / 30 / true）一律 bad-args、不抛、不带 data，并指路 deck_issue_patch' + (badSeen.length ? '：' + badSeen.join('；') : ''))
@@ -531,7 +535,7 @@ async function main() {
     const routeBad = await callTool('deck_issue_report', { key: createdKey, workRouteDetail: 'standard' })
     const routeBadText = String(routeBad && routeBad.text || '')
     check(envelopeOk(routeBad) && routeBad.ok === false && routeBad.reason === 'bad-args' && !routeBad.data
-      && routeBadText.indexOf('workRouteDetail 参数已退役') >= 0 && routeBadText.indexOf('deck_work_route') >= 0,
+      && routeBadText.indexOf('The workRouteDetail parameter is retired') >= 0 && routeBadText.indexOf('deck_work_route') >= 0,
       'workRouteDetail 参数已退役：带这个键一律 bad-args、不抛、不带 data，并指路 deck_work_route')
     check(fs.readFileSync(diskFile, 'utf8') === diskBeforeBadRoute, '带已退役的 workRouteDetail 时盘上一字不动（不写盘）')
     // 旧存档里已经记下的进度自评不回溯删除：手动把盘上这一条加上 progress 再上报一次，历史值还在，
@@ -561,7 +565,7 @@ async function main() {
     const relItems = ((relTable.data && relTable.data.groups) || []).reduce((all, g) => all.concat((g && g.items) || []), [])
     const relOwn = relItems.filter((e) => normKey(e.ticketKey) === normCreated)
     check(relOwn.length === 1, '处理过的票释放被拒：在办表里这张票还在、只有一条（实得 ' + JSON.stringify(relOwn.length) + ' 条）')
-    check((rel.notes || []).some((n) => String(n).indexOf('有过实际处理') >= 0 && String(n).indexOf('不能从工作路线里释放') >= 0 && String(n).indexOf('只用来撤销从没处理过的误报') >= 0),
+    check((rel.notes || []).some((n) => String(n).indexOf('was actually worked on') >= 0 && String(n).indexOf('do not allow releasing it from the work route') >= 0 && String(n).indexOf('only takes back a report of a ticket that was never worked on') >= 0),
       '处理过的票释放被拒：备注说明干过实事、不能释放：' + JSON.stringify(rel.notes))
     check(!(rel.data) || !Object.prototype.hasOwnProperty.call(rel.data, 'progress'), '释放回执的 data 里没有 progress 这一格（该格已随 #1352 退役，释放也不记动作）')
     check(JSON.stringify(rel).indexOf('s-713') < 0, '释放回执全文没有原始会话 id（只进盘）')
@@ -574,8 +578,8 @@ async function main() {
       '释放不改票本身：票照样读得回来，状态与认领人前后一致（前 ' + relFace(relBeforeTicket) + '，后 ' + relFace(relTicket) + '）')
     const relAgain = await callTool('deck_issue_report', { key: createdKey, release: true })
     check(envelopeOk(relAgain) && relAgain.status === 'ok'
-      && (relAgain.notes || []).some((n) => String(n).indexOf('有过实际处理') >= 0 && String(n).indexOf('不能从工作路线里释放') >= 0)
-      && !(relAgain.notes || []).some((n) => String(n).indexOf('本来就不在本会话的工作路线里') >= 0),
+      && (relAgain.notes || []).some((n) => String(n).indexOf('was actually worked on') >= 0 && String(n).indexOf('do not allow releasing it from the work route') >= 0)
+      && !(relAgain.notes || []).some((n) => String(n).indexOf('was not in the work route of this session in the first place') >= 0),
       '再释放同一条：仍说明干过实事、不能释放（不说本来就没有）')
     const relFalse = await callTool('deck_issue_report', { key: createdKey, release: false })
     const relFalseTable = await callTool('deck_work_route', {})
@@ -669,7 +673,7 @@ async function main() {
       const r = await tools.deck_issue_create.run(exec, { title: '会抛的那一张', kind: 'issue' })
       auditLossless('deck_issue_create（后端抛错）', r)
       check(envelopeOk(r) && r.ok === false && r.status === 'unsupported' && r.reason === 'backend-threw', '✗ 负向：后端抛错 → ok:false / unsupported + reason=backend-threw（实得 ' + (r && r.status) + '/' + (r && r.reason) + '）')
-      check(typeof r.text === 'string' && r.text.indexOf('后端实现抛错') >= 0, '抛错这件事如实写在 text 里：' + String(r && r.text).slice(0, 80))
+      check(typeof r.text === 'string' && r.text.indexOf('The backend implementation threw') >= 0, '抛错这件事如实写在 text 里：' + String(r && r.text).slice(0, 80))
       const r2 = await tools.deck_context.run(exec, {})
       auditLossless('deck_context（后端抛错）', r2)
       check(envelopeOk(r2) && r2.ok === false, '✗ 负向：读路径上后端抛错也一样收成三态（' + (r2 && r2.status) + '）')
@@ -726,7 +730,7 @@ async function main() {
     const sessionMod = await imp('src/deck/tools/tracker-session.ts')
     const opened = await sessionMod.openDeckSession({ deps: Object.assign({}, deps, { decideBackend: undefined }), exec: exec, session: { cwd: ws.rootPosix, workspaceKey: 'ws-bare', sessionId: 's-713' }, estimate: { points: 1, requests: 1, tickets: 0, withinCallCap: true, shards: 1, perShard: 1, text: '' }, tool: 'deck_context', kind: 'op' })
     check(opened && opened.ok === false && opened.reason === 'backend-threw', '判定出口缺席时回原因码 backend-threw（实得 ' + JSON.stringify(opened && opened.reason) + '）')
-    check(typeof (opened && opened.text) === 'string' && String(opened.text).indexOf('判定出口这次没装上') === 0, '拒绝文案是一句话，不是对象（实得 ' + JSON.stringify(opened && opened.text) + '）')
+    check(typeof (opened && opened.text) === 'string' && String(opened.text).indexOf('The backend decision outlet was not wired') === 0, '拒绝文案是一句话，不是对象（实得 ' + JSON.stringify(opened && opened.text) + '）')
     check(opened && !('status' in opened) && !('tool' in opened), '拒绝不是信封：没有 status / tool 那两格')
   }
 

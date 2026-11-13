@@ -85,7 +85,7 @@ export function refuseCyclicBlockBatch(input: BlockBatchInput): BlockBatchVerdic
       // 成环的那一条不许留在图上：留着会让后面每一条都被带成环，一次误判变成一片误判。
       if (before === undefined) adj.delete(key)
       else adj.set(key, before)
-      refused.set(key, '写前整批预检：这一组阻塞边和同一批里其它边合起来会让依赖图成环（要 ' + want.join('、') + '），所以这条边没写。')
+      refused.set(key, 'Batch pre-check before writing: this group of blocked-by edges together with the other edges in the same call would make the dependency graph cyclic (the blockers would be ' + want.join(', ') + '), so this edge was not written.')
     }
   }
   return { refused: refused }

@@ -134,7 +134,7 @@ async function main() {
     const r1 = await p1
     check(r1 && r1.status === 'ok', '持锁那笔照样成')
     const v2 = r2 && r2.status !== undefined ? r2 : null
-    const failedHonest = v2 && v2.status !== 'ok' && JSON.stringify(v2.items || []).indexOf('正被另一次调用改着') >= 0
+    const failedHonest = v2 && v2.status !== 'ok' && JSON.stringify(v2.items || []).indexOf('is being changed by another call') >= 0
     check(failedHonest, '等锁超时逐项诚实记（不是静默丢，也不是抛）')
   }
 

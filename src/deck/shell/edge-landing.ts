@@ -78,7 +78,7 @@ export function edgeEvidence(op: string, target: unknown, evidence: unknown, ext
     op: op,
     target: String(target || ''),
     landing: landingOfRules(op, ev),
-    evidence: (typeof ev.text === 'string' && ev.text) || (ev.kind === 'unsupported' ? '后端原话：做不到' : '这次没有拿到能判落点的证据'),
+    evidence: (typeof ev.text === 'string' && ev.text) || (ev.kind === 'unsupported' ? 'the backend\'s exact words: it cannot do this' : 'this call got no evidence that could decide the landing'),
     ok: ev.ok !== false,
   }, (extra && typeof extra === 'object') ? extra as Record<string, unknown> : {})
 }
@@ -86,7 +86,7 @@ export function edgeEvidence(op: string, target: unknown, evidence: unknown, ext
 /** 后端自己说做不到时，落点那一格照它的原话写，不翻译、不改写。 */
 export function unsupportedEvidence(message: unknown): EdgeEvidence {
   const text = (typeof message === 'string') ? message : ''
-  return { kind: 'unsupported', ok: false, text: '后端原话：' + (text || '这个后端做不到这条操作') }
+  return { kind: 'unsupported', ok: false, text: 'the backend\'s exact words: ' + (text || 'this backend cannot do this operation') }
 }
 
 /**
@@ -104,7 +104,7 @@ export function childrenOf(rows: unknown, mapKey: unknown): { children: Record<s
     return row.parentKey !== undefined && row.parentKey !== null && row.parentKey !== ''
   })
   if (!anyInfo) {
-    return { children: list, filtered: false, note: '这个后端的清单接口没带父子信息（它回的是一批票、不是按父票筛过的），下面的子票清单是按原文列的：要精确的子票清单，请逐张用 deck_issue_get 看 parentKey。' }
+    return { children: list, filtered: false, note: 'The list call of this backend carried no parent and child information (it returned a batch of tickets, not a list filtered by parent), so the sub-issue list below is what it returned: for an exact list of sub-issues, read parentKey of each ticket with deck_issue_get.' }
   }
   return {
     children: list.filter((r) => {
@@ -141,7 +141,7 @@ function failureText(reply: ContractReply | null | undefined): string {
   const r = (reply && typeof reply === 'object') ? reply : {}
   const err = (r.error && typeof r.error === 'object') ? r.error : {}
   const msg = (typeof err.message === 'string') ? err.message : ''
-  return String(msg || '后端没给出原因').slice(0, 200)
+  return String(msg || 'the backend gave no reason').slice(0, 200)
 }
 
 /**
@@ -167,7 +167,7 @@ export async function applyParentEdge(
   const written = await t.setParent(repo, from, want, {}, opCtx)
   if (!written || written.ok !== true) {
     // #1421：失败回执也要说清方向 —— 只留「后端原话」的话，读回执的人得回头翻参数才知道要写的是什么。
-    const ev: EdgeEvidence = { kind: 'unsupported', ok: false, text: '写这一步就没成：要把 #' + want + ' 写成票 #' + from + ' 的父票（后端原话：' + failureText(written) + '）' }
+    const ev: EdgeEvidence = { kind: 'unsupported', ok: false, text: 'The write step did not go through: #' + want + ' was to be written as the parent of ticket #' + from + ' (the backend\'s exact words: ' + failureText(written) + ')' }
     return { item: Object.assign({ key: from, role: 'edge', status: 'failed' }, edgeEvidence('parent', want, ev, failureFields(written, 'write'))), applied: false }
   }
   // 契约没提供可选的读票方法时，这一步根本没读回 —— 不是「读回来了、里面没有这条边」。
@@ -177,7 +177,7 @@ export async function applyParentEdge(
   const back = (t && typeof t.get === 'function') ? await t.get(repo, from, {}, opCtx) : null
   const afterIssue = (back && back.ok === true) ? back.data : null
   const readFailed = !canRead || !(back && back.ok === true)
-  const backError = readFailed ? (canRead ? failureText(back) : '契约没有提供可选的读票方法') : ''
+  const backError = readFailed ? (canRead ? failureText(back) : 'the contract offers no optional ticket read method') : ''
   const issueRow = (afterIssue && typeof afterIssue === 'object') ? afterIssue as { parentKey?: unknown } : {}
   let ev: EdgeEvidence = classifyEdgeLandingRules('parent', want, { issue: afterIssue, dependencies: null }, from)
   const landedKey = (issueRow.parentKey !== undefined && issueRow.parentKey !== null) ? String(issueRow.parentKey) : ''
@@ -187,11 +187,11 @@ export async function applyParentEdge(
   let extra: Record<string, string> | undefined
   if (!landedOk) {
     if (readFailed) {
-      ev = { kind: 'unknown', ok: false, text: '写动作回了成功，但' + (canRead ? '读票没成功' : '契约没有提供可选的读票方法') + '：写后没读回票 #' + from + '，判不了「票 #' + from + ' 的父票是 #' + want + '」有没有写成；这条边可能已建成但没确认' + (canRead ? '（后端原话：' + backError + '）' : '') }
+      ev = { kind: 'unknown', ok: false, text: 'The write action reported success, but ' + (canRead ? 'the ticket read did not succeed' : 'the contract offers no optional ticket read method') + ': ticket #' + from + ' was not read back after the write, so I cannot tell whether "ticket #' + from + ' has #' + want + ' as its parent" was written; this edge may be in place but unconfirmed' + (canRead ? ' (the backend\'s exact words: ' + backError + ')' : '') }
       // 写成了、读回没成：下一步是先读回确认，别把整条边再写一遍（写两遍的副作用不一定可逆）。
       extra = failureFields(canRead ? back : null, 'read', 'unconfirmed')
     } else {
-      ev = { kind: 'missing', ok: false, text: '写后读回：票 #' + from + ' 的父票读到的是 ' + (landedKey || '空') + '，要的是 #' + want + '。' }
+      ev = { kind: 'missing', ok: false, text: 'Read back after the write: the parent of ticket #' + from + ' came back as ' + (landedKey || 'empty') + ', and #' + want + ' was wanted.' }
       // 后端说写成了、读回来却没有：后端没做到这条边，重试同样的写法没有意义，说出来让人换路。
       extra = failureFields(null, 'write', 'verify')
     }
@@ -223,9 +223,9 @@ export async function applyBlockEdges(
   if (!written || written.ok !== true) {
     // #1421：写失败时点名「要把哪张票加进哪张票的 blockedBy」，别让读回执的人自己反推方向。
     const why = failureText(written)
-    const failed: EdgeEvidence = { kind: 'unsupported', ok: false, text: '写这一步就没成：要把 #' + want.join('、') + ' 加进票 #' + from + ' 的 blockedBy（也就是票 #' + from + ' 被这些票阻塞）（后端原话：' + why + '）' }
+    const failed: EdgeEvidence = { kind: 'unsupported', ok: false, text: 'The write step did not go through: #' + want.join(', ') + ' was to be added to the blockedBy of ticket #' + from + ' (that is, ticket #' + from + ' is blocked by these tickets) (the backend\'s exact words: ' + why + ')' }
     return {
-      items: list.map((to) => Object.assign({ key: from, role: 'edge', status: 'failed' }, edgeEvidence('block', to, { kind: 'unsupported', ok: false, text: '写这一步就没成：要把 #' + to + ' 加进票 #' + from + ' 的 blockedBy（也就是票 #' + from + ' 被 #' + to + ' 阻塞）（后端原话：' + why + '）' }, failureFields(written, 'write')))),
+      items: list.map((to) => Object.assign({ key: from, role: 'edge', status: 'failed' }, edgeEvidence('block', to, { kind: 'unsupported', ok: false, text: 'The write step did not go through: #' + to + ' was to be added to the blockedBy of ticket #' + from + ' (that is, ticket #' + from + ' is blocked by #' + to + ') (the backend\'s exact words: ' + why + ')' }, failureFields(written, 'write')))),
       applied: [], landed: [], after: { issue: null, dependencies: null }, failed: failed, readOk: false,
     }
   }
@@ -242,12 +242,12 @@ export async function applyBlockEdges(
   const items = list.map((to) => {
     if (!readOk) {
       // #1421：读失败这句是我们自己的判断，不该挂「后端原话：」前缀；后端原话单独放进括号里。
-      const ev: EdgeEvidence = { kind: 'unknown', ok: false, text: '写动作回了成功，但读票没成功：写后没读回票 #' + from + '，判不了 #' + from + ' 的 blockedBy 里有没有 #' + to + '；这条边可能已建成但没确认（后端原话：' + (readError || '读回没成功') + '）' }
+      const ev: EdgeEvidence = { kind: 'unknown', ok: false, text: 'The write action reported success, but the ticket read did not succeed: ticket #' + from + ' was not read back after the write, so I cannot tell whether #' + to + ' is in the blockedBy of #' + from + '; this edge may be in place but unconfirmed (the backend\'s exact words: ' + (readError || 'the read-back did not succeed') + ')' }
       // 写成了、读回没成：下一步是先读回确认，别把整批边再写一遍。
       return Object.assign({ key: from, role: 'edge', status: 'failed' }, edgeEvidence('block', to, ev, failureFields((back && back.ok !== true) ? back : dep, 'read', 'unconfirmed')))
     }
     const hit = edgeVerdictRules('block', to, after) === 'landed'
-    const ev: EdgeEvidence = hit ? classifyEdgeLandingRules('block', to, after, from) : { kind: 'missing', ok: false, text: '写后读回：票 #' + from + ' 的 blockedBy 里没有 #' + to + '（读回来的是 ' + (landed.join('、') || '空') + '）' }
+    const ev: EdgeEvidence = hit ? classifyEdgeLandingRules('block', to, after, from) : { kind: 'missing', ok: false, text: 'Read back after the write: #' + to + ' is not in the blockedBy of ticket #' + from + ' (what came back is ' + (landed.join(', ') || 'empty') + ')' }
     // 写成了、读回来却没有：后端没做到这条边，重试同样的写法没有意义，说出来让人换路。
     return Object.assign({ key: from, role: 'edge', status: hit ? 'ok' : 'failed' }, edgeEvidence('block', to, ev, hit ? undefined : failureFields(null, 'write', 'verify')))
   })

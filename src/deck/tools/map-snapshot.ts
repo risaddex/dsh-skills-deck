@@ -22,12 +22,12 @@ import { withCap } from '../shell/capped-wait.js'
 /** 失败回执里的「下一步做什么」：reason 已经回答了下一步，text 要跟它指向同一件事。
  *  只给本工具判断得了的几种码补一句；其余（后端说做不到等）保持原话，不替后端发明退路。 */
 function nextStepText(reason: string): string {
-  if (reason === REFUSAL_REASONS.BAD_ARGS) return '票号可能写错了：先用 deck_issue_list 或 deck_issue_get 确认这张地图票存在，再重读。'
-  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return '等一会儿重调一次。'
-  if (reason === REFUSAL_REASONS.BACKEND_THREW) return '读没有副作用，可以直接重调一次。'
-  if (reason === REFUSAL_REASONS.OVER_CAP) return '稍等一会儿再调。'
-  if (reason === REFUSAL_REASONS.BACKEND_UNSUPPORTED) return '这条路当前走不通，按工具故障处理或换一个后端后再试。'
-  return '重调一次再看数。'
+  if (reason === REFUSAL_REASONS.BAD_ARGS) return 'The ticket number may be wrong: check with deck_issue_list or deck_issue_get that this map ticket exists, then read again.'
+  if (reason === REFUSAL_REASONS.BACKEND_TIMEOUT) return 'Call again in a moment.'
+  if (reason === REFUSAL_REASONS.BACKEND_THREW) return 'Reading has no side effects, so the same call can be made again.'
+  if (reason === REFUSAL_REASONS.OVER_CAP) return 'Call again shortly.'
+  if (reason === REFUSAL_REASONS.BACKEND_UNSUPPORTED) return 'This path does not work right now; treat it as a tool failure or switch to another backend and try again.'
+  return 'Call again and look at the numbers.'
 }
 
 /** 数字型参数的统一收口：正的有限数才要（取整），其余一律当「没给」，由调用方退自己的默认。 */
@@ -53,13 +53,13 @@ export interface DeckMapSnapshotDeps {
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_map_snapshot',
-  description: '同属 dsh-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。看一个 map 的全部 child ISSUE、进度统计与五个区块，用来判断 map 做到哪一步。detail=thin 只要薄行不断（见 detail 参数）。',
+  description: 'The ISSUE and map management of the dsh-skills-deck plugin; it only handles the repo of the current workspace. Before touching an ISSUE, call deck_context to confirm the workspace and backend, and stop if it says there is no backend. Look at all child ISSUEs of a map, the progress stats and the five sections, to judge how far the map has got. detail=thin keeps thin rows so the list is not cut off (see the detail parameter).',
   parameters: {
     type: 'object',
     properties: {
-      key: { type: 'string', description: '地图那张票的票号' },
-      frontierOnly: { type: 'boolean', description: '只回可接的子票（未关闭、未认领、阻塞已满足），缺省回全部' },
-      detail: { type: 'string', enum: ['full', 'thin'], description: '子票行要多细。缺省 full：每行带正文进度（回包大，票多时被截断）。thin：只要键、标题、状态、标签、认领、阻塞（回包小、清单不断；统计与进度表照算不变；要正文用 deck_issue_get 逐张取）。' },
+      key: { type: 'string', description: 'The ticket number of the map ticket' },
+      frontierOnly: { type: 'boolean', description: 'Only return sub-issues that can be picked up (not closed, not assigned, blockers satisfied); by default all are returned' },
+      detail: { type: 'string', enum: ['full', 'thin'], description: 'How detailed the sub-issue rows are. Default full: each row carries the progress from the body (a large response, cut off when there are many tickets). thin: only the key, title, state, labels, assignees and blockers (a small response, the list is not cut off; the stats and the progress table are computed exactly the same; for a body, read each ticket with deck_issue_get).' },
       ...MD_SCOPE_LOCATE,
     },
     required: ['key'],
@@ -153,7 +153,7 @@ export function createDeckMapSnapshot(deps?: DeckMapSnapshotDeps) {
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 在会话壳里是运行时布尔，
     // 那一层还没标类型，见 #1040），所以这里按形状取 reason —— 取到的值与老写法逐字相同。
     if (!s.ok) return shell.unsupported('deck_map_snapshot', (s as { reason: string }).reason, s.text, { cost: { estimated: est } })
-    if (!key) return shell.unsupported('deck_map_snapshot', REFUSAL_REASONS.BAD_ARGS, '要看哪一张地图：把地图那张票的票号写在 key 里。', { cost: { estimated: est } })
+    if (!key) return shell.unsupported('deck_map_snapshot', REFUSAL_REASONS.BAD_ARGS, 'Which map to look at: put the ticket number of the map ticket in key.', { cost: { estimated: est } })
 
     const pick = await openDeckSession({ deps: d, exec: exec, session: s, estimate: est, tool: 'deck_map_snapshot', kind: 'read' })
     if (!pick.ok) return shell.unsupported('deck_map_snapshot', pick.reason, pick.text, { workspace: { root: s.cwd, key: s.workspaceKey }, cost: { estimated: est } })
@@ -175,14 +175,14 @@ export function createDeckMapSnapshot(deps?: DeckMapSnapshotDeps) {
       const kidsPromise = t.list(repo, { parentKey: key }, opCtx)
       const gotMap = await mapPromise
       if (!gotMap || gotMap.ok !== true) {
-        const msg = String((gotMap && gotMap.error && gotMap.error.message) || '后端没给出原因').slice(0, 300)
+        const msg = String((gotMap && gotMap.error && gotMap.error.message) || 'the backend did not give a reason').slice(0, 300)
         // #1799：reason 走统一映射（读地图也是读后端），失败证据留后端原档位与映射后的码。
         const ev = failureOf(gotMap, 'read')
         return {
           value: {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
-            text: '这张地图没读回来（后端原话：' + msg + '）。' + nextStepText(ev.code),
+            text: 'This map did not come back (backend words: ' + msg + ').' + nextStepText(ev.code),
             data: { key: key, error: Object.assign({ message: msg }, evidenceFields(ev)) },
           },
           claimed: { requests: 1, points: 3 },
@@ -199,10 +199,10 @@ export function createDeckMapSnapshot(deps?: DeckMapSnapshotDeps) {
       const opId = String(((opCtx as Record<string, unknown> | null | undefined) || {}).opId || '')
       const notes = []
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
-      if (!kids || kids.ok !== true) notes.push('子票没取全（后端原话：' + String((kids && kids.error && kids.error.message) || '').slice(0, 200) + '，opId ' + (opId || '未知') + '）：下面的进度是手上这几张票算出来的，偏乐观。')
+      if (!kids || kids.ok !== true) notes.push('The sub-issues were not all fetched (backend words: ' + String((kids && kids.error && kids.error.message) || '').slice(0, 200) + ', opId ' + (opId || 'unknown') + '): the progress below is computed from the tickets at hand and is optimistic.')
       else if (kidsFallback === 'rest') {
-        if (kidsFallbackReason === 'quota') notes.push('子票清单这次因配额耗尽走了 REST 降级通道（opId ' + (opId || '未知') + '）：只回已经拿到的，数偏乐观，收窄再查一次。')
-        else notes.push('子票清单这次走了 REST 降级通道（原因 ' + (kidsFallbackReason || 'other') + '，opId ' + (opId || '未知') + '，日志里按 opId 查 read.degraded 就是同一趟）：只回已经拿到的，数偏乐观。')
+        if (kidsFallbackReason === 'quota') notes.push('The sub-issue list went through the REST fallback this time because the quota ran out (opId ' + (opId || 'unknown') + '): only what was already fetched is returned, the numbers are optimistic; narrow the query and check again.')
+        else notes.push('The sub-issue list went through the REST fallback this time (reason ' + (kidsFallbackReason || 'other') + ', opId ' + (opId || 'unknown') + '; search read.degraded by opId in the log to find the same run): only what was already fetched is returned, the numbers are optimistic.')
       }
       if (picked.note) notes.push(picked.note)
       // 进度统计走共享层同一份投影：把它当成只有这一张地图的 deck 来算。
@@ -232,7 +232,7 @@ export function createDeckMapSnapshot(deps?: DeckMapSnapshotDeps) {
           }
           return true
         })
-        frontierNote = '已按 frontierOnly 只回可接的 ' + shown.length + ' 张（总数 ' + children.length + ' 张）。'
+        frontierNote = 'frontierOnly is on, so only the ' + shown.length + ' sub-issues that can be picked up are returned (out of ' + children.length + ').'
       }
       if (frontierNote) notes.push(frontierNote)
       // 行级明细缺省全量：只有显式传 thin 才变薄。统计、进度表、阻塞键都用全量行算好
@@ -241,14 +241,14 @@ export function createDeckMapSnapshot(deps?: DeckMapSnapshotDeps) {
       // #1790 缺陷 A 的 P4：text 里的冲突数按这次回给调用方的行数（frontierOnly 筛过也照它数）。
       const statusConflictCount = shown.filter(function (t) { return !!t.statusConflict }).length
       const thin = String(a.detail || 'full').trim().toLowerCase() === 'thin'
-      if (thin) notes.push('子票行是薄的（detail=thin：无正文无行级进度，回包小、清单不断；统计与进度表照算不变；要正文用 deck_issue_get 逐张取，远端拉取量今天与 full 相同）。')
+      if (thin) notes.push('The sub-issue rows are thin (detail=thin: no body and no per-row progress, so the response stays small and the list is not cut off; the stats and the progress table are computed exactly the same; for a body, read each ticket with deck_issue_get; the remote fetch volume is the same as full today).')
       // labels 是后端回来的运行时真值（元素可能是名字串，也可能是带 name 的对象，契约层没建模），
       // 所以给 data.map 里那个回调参数就地标 any：取到的值、判据与顺序与老写法逐字相同。
       return {
         value: {
           status: partial ? DECK_STATUS.PARTIAL : DECK_STATUS.OK,
           reason: kidsEv ? kidsEv.code : '',
-          text: partial ? '地图 ' + key + '：子票没取全（后端没给全），手上这 ' + children.length + ' 张算出来的数偏乐观。' + nextStepText(kidsEv ? kidsEv.code : '') : '地图 ' + key + '：子票 ' + children.length + ' 张，未关闭 ' + projection.stats.open + ' 张、已关闭 ' + projection.stats.closed + ' 张、可接 ' + projection.stats.frontier + ' 张、被阻塞 ' + projection.stats.blocked + ' 张，其中状态冲突 ' + statusConflictCount + ' 张。',
+          text: partial ? 'Map ' + key + ': the sub-issues were not all fetched (the backend did not return all of them), so the ' + children.length + ' tickets at hand give optimistic numbers.' + nextStepText(kidsEv ? kidsEv.code : '') : 'Map ' + key + ': ' + children.length + ' sub-issues, ' + projection.stats.open + ' open, ' + projection.stats.closed + ' closed, ' + projection.stats.frontier + ' can be picked up, ' + projection.stats.blocked + ' blocked, of which ' + statusConflictCount + ' have a status conflict.',
           data: {
             map: { key: map.key, title: map.title, state: map.state, labels: Array.isArray(map.labels) ? map.labels.map((l: any) => (l && l.name) || String(l)) : [], updatedAt: map.updatedAt || '', url: map.url || '' },
             children: shown.map((t) => (thin ? thinRow(t) : childRow(t))),
