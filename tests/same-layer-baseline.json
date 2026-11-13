@@ -417,15 +417,6 @@
       "note": "补记 #690 遗留的装配扇入边：当时没记进基线，门禁一直红着"
     },
     {
-      "file": "src/host/index.ts",
-      "spec": "./updateFromPackage.js",
-      "resolved": "src/host/updateFromPackage.ts",
-      "layer": "host",
-      "count": 1,
-      "owner": "#875 薄接线",
-      "note": "宿主入口到更新包接线的引用边（旧实现边已随文件删除，基线同步清理）"
-    },
-    {
       "file": "src/host/workspaceCwd.ts",
       "spec": "./workspaceLabelColors.js",
       "resolved": "src/host/workspaceLabelColors.ts",

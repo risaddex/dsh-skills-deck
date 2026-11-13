@@ -550,9 +550,9 @@ async function main(): Promise<void> {
       const appendix = readFileSync(path.join(ROOT, 'research/489-appendix.md'), 'utf8')
       check(appendix.indexOf('#154') >= 0 && appendix.indexOf('snapshot.read') >= 0 && appendix.indexOf('#155') >= 0 && appendix.indexOf('snapshot.degrade') >= 0,
         'D4 附录第 1 章记明 #154 snapshot.read 与 #155 snapshot.degrade')
-      check(appendix.indexOf('常驻 81 条、按需 63 条、自监控 5 条、总数 149 条') >= 0,
-        'D5 附录条数字面同步为常驻 81、按需 63、自监控 5、总数 149')
-      check(appendix.indexOf('153、154、155（共 81 条') >= 0, 'D6 附录常驻编号清单接续到 155（共 81 条）')
+      check(appendix.indexOf('常驻 79 条、按需 63 条、自监控 5 条、总数 147 条') >= 0,
+        'D5 附录条数字面同步为常驻 79、按需 63、自监控 5、总数 147')
+      check(appendix.indexOf('153、154、155（共 79 条') >= 0, 'D6 附录常驻编号清单接续到 155（共 79 条）')
 
       const fieldsGate = readFileSync(path.join(ROOT, 'tests/verify-log-fields.ts'), 'utf8')
       check(fieldsGate.indexOf("'snapshot.read'") >= 0 && fieldsGate.indexOf("'snapshot.degrade'") >= 0,

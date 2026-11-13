@@ -20,13 +20,14 @@ console.log('日志计数门禁（#494/#498/#499/#548/#606/#618/#635/#652/#655/#
 // 2026-09-25 #709 登记收口增补 #83 chain.backoff 成 37 条；#724 增补 #88 host.dispatch.empty 成 38 条；2026-10-04 #817 增补 #94 git.exec 与 #95 git.exec.fail 成 43 条（版本管理宿主侧 git 适配器每一次 git 外部命令一行）；2026-10-14 #1054 增补 #100 edge.write 成 44 条（关系边写没写下去、走的哪条路、为什么，一趟一行）；2026-10-14 #1053 增补 #104 issue.write 成 45 条（票的增删改评论贴标签：写没写下去、走的哪条路、为什么，一趟一行）；2026-10-14 #1053 同日增补 #106 labelDefs.write 与 #107 repo.init 成 47 条（标签定义改写与开仓发布各自的结论线，三条事件共用同一份机制 write-log.ts）；2026-10-14 #1052 补做增补 #108 read.degraded 与 #109 preflight.gate 成 49 条（读路径「本来能成、这一趟没成或成得不完整」的结论线，与探测三项门禁每过一关一行的过关门线；2026-10-19 #1083 再退役 #80 sessionTickets.chain 并增补 #110 workRoute.write、#111 workRoute.read 之后为 50 条；2026-10-20 #1294 增补 #113 locale.registration.fail 之后为 51 条；2026-10-20 #1295 给 #10 snapshot.built 增补 specs 一格，条数不变；2026-10-21 map 1010 逐票复核增补 #120 gh.auth.env、#122 guide.banner 之后为 55 条；2026-10-21 #1101 排查增补 #125 gh.lane.wait 之后为 56 条）。另有 3 条已退役只作追溯；加上 #1083 的 #80 共 4 条只作追溯）。
 // 2026-10-22（#1363/#1220）：新增常驻 #126 chain.flow，并把按需 #123 probe.loop 提升为常驻（编号与字段
 //   表不变，新增 timerOk 一格）。两条都服务同一件事：查「状态栏该出条却没出、初始化完了条还在」。
-const RESIDENT = ['snapshot.request', 'snapshot.cache.miss', 'repo.resolve.tier', 'gh.exec', 'gh.timeout', 'gh.resolve.fail', 'graphql.fallback', 'issues.fallback', 'snapshot.built', 'panelSync.dirty', 'registry.select', 'detection.detect', 'skill.probe', 'skill.pending.cap', 'host.call', 'host.call.fail', 'snapshot.hydrate', 'backend.switch', 'naming.guard', 'naming.lock', 'panel.open', 'statusbar.fallback', 'dock.rehydrate', 'storage.fail', 'chain.derive.error', 'fallback.chain', 'client.snapshot.miss', 'host.start', 'update.install.exec', 'labelColors.write', 'guide.inject', 'healthCheck.inject', 'choiceStore.file.bad', 'choiceStore.write.fail', 'issues.page', 'chain.backoff', 'host.dispatch.empty', 'naming.summary', 'cwd.persisted', 'update.install.manifestSync', 'git.exec', 'git.exec.fail', 'edge.write', 'issue.write', 'labelDefs.write', 'repo.init', 'read.degraded', 'preflight.gate', 'workRoute.write', 'workRoute.read', 'locale.registration.fail', 'entry.open', 'entry.pick', 'gh.auth.env', 'guide.banner', 'gh.lane.wait', 'chain.flow', 'probe.loop', 'gh.transport', 'chain.predicate.timeout', 'newsession.decide', 'quota.window', 'quota.incident', 'quota.detail', 'quota.recover', 'quota.sync', 'quota.pressure', 'quota.op', 'tool.receipt', 'settings.merge', 'settings.toggle', 'settings.merge.fail', 'notification.event', 'git.task', 'snapshot.workingSet', 'workspaceSnapshot.open', 'workspaceSnapshot.lease', 'workspaceSnapshot.ingest', 'workspaceSnapshot.corrupt', 'snapshot.read', 'snapshot.degrade'] // 2026-11-05 #1899：新增常驻 #154 snapshot.read 与 #155 snapshot.degrade（读数与退化原因）
+const RESIDENT = ['snapshot.request', 'snapshot.cache.miss', 'repo.resolve.tier', 'gh.exec', 'gh.timeout', 'gh.resolve.fail', 'graphql.fallback', 'issues.fallback', 'snapshot.built', 'panelSync.dirty', 'registry.select', 'detection.detect', 'skill.probe', 'skill.pending.cap', 'host.call', 'host.call.fail', 'snapshot.hydrate', 'backend.switch', 'naming.guard', 'naming.lock', 'panel.open', 'statusbar.fallback', 'dock.rehydrate', 'storage.fail', 'chain.derive.error', 'fallback.chain', 'client.snapshot.miss', 'host.start', 'labelColors.write', 'guide.inject', 'healthCheck.inject', 'choiceStore.file.bad', 'choiceStore.write.fail', 'issues.page', 'chain.backoff', 'host.dispatch.empty', 'naming.summary', 'cwd.persisted', 'git.exec', 'git.exec.fail', 'edge.write', 'issue.write', 'labelDefs.write', 'repo.init', 'read.degraded', 'preflight.gate', 'workRoute.write', 'workRoute.read', 'locale.registration.fail', 'entry.open', 'entry.pick', 'gh.auth.env', 'guide.banner', 'gh.lane.wait', 'chain.flow', 'probe.loop', 'gh.transport', 'chain.predicate.timeout', 'newsession.decide', 'quota.window', 'quota.incident', 'quota.detail', 'quota.recover', 'quota.sync', 'quota.pressure', 'quota.op', 'tool.receipt', 'settings.merge', 'settings.toggle', 'settings.merge.fail', 'notification.event', 'git.task', 'snapshot.workingSet', 'workspaceSnapshot.open', 'workspaceSnapshot.lease', 'workspaceSnapshot.ingest', 'workspaceSnapshot.corrupt', 'snapshot.read', 'snapshot.degrade'] // 2026-11-05 #1899：新增常驻 #154 snapshot.read 与 #155 snapshot.degrade（读数与退化原因）
 // 按需 63 条编号（#498 增补 #52、#53、#54、#56，#606 增补 #58、#59，#618 增补 #61，#635 增补 #62，#652 增补 #63，#655 增补 #64，#66 为 2026-09-21 新增 chain.stale.drop，#67 为同日新增 snapshot.stale.drop，#71、#72、#73 为 2026-09-22 #683 新增，#75、#76、#77 为 2026-09-23 #706 第二批新增，#78、#79 为同一天 #707 第三批新增 attention.report / attention.sweep，#81 为同一天 #710 第二批新增 write.event，#82 为同一天 #708 第三批新增 refresh.patch，#84、#85、#86、#87 为 2026-09-25 #709 登记收口新增，#89 为 2026-09-27 #727 新增 snapshot.late.install，#91 为 2026-09-28 #776 新增 input.observe，#96 为 2026-10-05 #864 新增 vc.cache.screen，#97 为 2026-10-09 #958 新增 labelColors.listed，#98 为 2026-10-14 #1048 新增 detection.step，#99 为 2026-10-14 #1131 新增 detection.cache.hit，#101、#102、#103 为 2026-10-14 #1054 新增 edge.cycle / edge.roster / edge.repair，#105 为 2026-10-14 #1048 收口补做新增 detection.fallback —— 号位避让同票的常驻 #100 edge.write 与 #1053 的 #104 issue.write；2026-10-20 #1294 增补 #112 locale.registration；2026-10-20 #1295 增补 #114 container.split；2026-10-20 #1296 增补 #115 container.accent；2026-10-21 #1314 排查时新增 #118 write.sent；2026-10-21 map 1010 逐票复核增补 #121 gh.lane.saturated、#123 probe.loop、#124 prompt.link；2026-10-23 #1409 新增 #127 suggest.bind、#128 suggest.call、#129 suggest.ready；2026-10-25 #1514 新增 #131 preflight.check）：含 #45，不含已退役。
 const ONDEMAND = ['snapshot.cache.hit', 'probe.eval', 'panelSync.eval', 'registry.stub', 'workspaceStore.hit', 'chain.cache.hit', 'chain.predicate', 'workspaceKey.canonical', 'platform.resolve', 'naming.sweep', 'snapshot.fanout', 'dedup.hit', 'statusbar.hydrate', 'error.normalize', 'timer.schedule', 'privacy.scrub', 'chain.cache.miss', 'workspaceStore.miss', 'client.snapshot.hit', 'detail.cache.hit', 'exec.run', 'panel.render', 'labelColors.read', 'labelColors.panelPatch', 'workspaceRoot.resolve', 'inject.decision', 'chain.stale.drop', 'snapshot.stale.drop', 'choiceStore.read', 'choiceStore.evict', 'quota.spend', 'refresh.decide', 'refresh.skipped', 'attention.report', 'attention.sweep', 'write.event', 'refresh.patch', 'chain.cache.write', 'chain.event', 'naming.guard.event', 'chain.preflight.reuse', 'snapshot.late.install', 'input.observe', 'vc.cache.screen', 'labelColors.listed', 'detection.step', 'detection.cache.hit', 'edge.cycle', 'edge.roster', 'edge.repair', 'detection.fallback', 'locale.registration', 'container.split', 'container.accent', 'write.sent', 'ui.action', 'gh.lane.saturated', 'prompt.link', 'suggest.bind', 'suggest.call', 'suggest.ready', 'preflight.check', 'chain.auto.retry']
 // 2026-10-22（#1363/#1220）：#123 probe.loop 从这张表提升为常驻，按需清单不再含它。
 // 2026-10-23（#1409）：新增 #127 suggest.bind、#128 suggest.call、#129 suggest.ready 三条按需调试线。
 // 退役三条 + 2026-10-12 起的第四条：choiceStore.hint.reject（#1003 删掉上报优先与修订号仲裁之后，这一档在代码里不再存在）；2026-10-19 #1083 起的第五条：sessionTickets.chain（工作路线改成新的存档之后，旧链落盘那一路不再发日志）。
-const RETIRED = ['issuePath.push', 'issuePath.record', 'settings.save', 'choiceStore.hint.reject', 'sessionTickets.chain']
+// 2026-11-13 issue #3（2.0 硬分叉删除上游自更新包）：update.install.exec 与 update.install.manifestSync 两条退役。
+const RETIRED = ['issuePath.push', 'issuePath.record', 'settings.save', 'choiceStore.hint.reject', 'sessionTickets.chain', 'update.install.exec', 'update.install.manifestSync']
 // 自监控 5 条（#499，附录 1.6 节，编号 46～50，错误与告警级、始终落盘）。
 const SELFMON = ['host.dispatch.error', 'log.persist.fail', 'log.forward.summary', 'log.switch.watchdog', 'log.export.fail']
 // #1143 包拥有事件白名单：dsh-log 升到 0.4.1 后，旧实现三件套（src/host/logStore.ts、src/host/logPhones.ts、src/client/kernel/log.ts）已删除，
@@ -216,6 +217,11 @@ check(appendix.includes('#116') && appendix.includes('entry.open') && appendix.i
   check(counts1899, '附录 counts 字面为常驻 81 条、按需 63 条、自监控 5 条、总数 149 条（2026-11-05 #1899 新增常驻 #154 snapshot.read 与 #155 snapshot.degrade）')
   const events1899 = appendix.includes('#154') && appendix.includes('snapshot.read') && appendix.includes('#155') && appendix.includes('snapshot.degrade')
   check(events1899, '附录记明 #154 snapshot.read 与 #155 snapshot.degrade 两条新增常驻事件（1.4 表行保留）')
+  // 2026-11-13 issue #3：2.0 硬分叉删掉上游自更新包，常驻 #57 update.install.exec 与 #93 update.install.manifestSync 退役。
+  //   总数 149 → 147（常驻 81 → 79、按需 63 不动、自监控 5 条不动）。
+  const countsIssue3 = appendix.includes('退役常驻 2 条') && appendix.includes('常驻 79 条、按需 63 条、自监控 5 条、总数 147 条（issue #3')
+  check(countsIssue3, '附录 counts 字面为常驻 79 条、按需 63 条、自监控 5 条、总数 147 条（issue #3 退役 #57、#93）')
+  check(appendix.includes('、154、155（共 79 条'), '附录常驻编号清单 79 个（issue #3 去掉 57、93）')
   check(events1796, '附录记明 #149 snapshot.workingSet 一条新增常驻事件（首屏工作集拉到哪些东西、坏在哪几张，1.4 表行保留）')
 }
 
@@ -252,22 +258,6 @@ function collectQuotedNames() {
   return found
 }
 const quoted = collectQuotedNames()
-// #1016 起的委托核对：宿主侧日志库改成直接取用已安装的 dsh-log 包之后，插件不再自带
-// src/host/logPkg/ 那份副本，而 update.install.exec 这个事件名在本仓 src/ 下已无落点
-// （它不是本仓代码发出的，发射器在已安装的更新包里）。本仓找不到时，到更新包的编译产物里核对
-// 事件名常量与五字段用法 —— 与 tests/verify-log-fields.ts 里 #875 对该事件的委托口径一致；
-// 包内也找不到仍然红，不放过。
-// 2026-10-17 修：原先读 dsh-log/dist/store.js 找事件名，0.3.x 的 store.js 已是通用库、
-// 不再是本插件的事件白名单，那条路找不到就静默吞掉，门禁因此假红。改读更新包的 log-events.js。
-if (!quoted['update.install.exec']) {
-  try {
-    const evtDef = fs.readFileSync(path.join(ROOT, 'node_modules', 'dsh-plugin-update', 'dist', 'shared', 'log-events.js'), 'utf8')
-    const store = fs.readFileSync(path.join(ROOT, 'node_modules', 'dsh-plugin-update', 'dist', 'core', 'executor.js'), 'utf8')
-    if (evtDef.includes('"update.install.exec"') && store.includes('LOG_EVENT_INSTALL_EXEC')) {
-      quoted['update.install.exec'] = ['node_modules/dsh-plugin-update/dist/core/executor.js（包内发射，常量名 LOG_EVENT_INSTALL_EXEC）']
-    }
-  } catch {}
-}
 // #1143 包拥有事件核对：白名单里的四个事件到 dsh-log 包内编译产物里核对发射点（读包文件文本断言，不调用包）。
 // 缺口只认“全仓扫不到 + 又不在白名单里”；白名单事件在这里补上包内落点后，后面按名单逐个点的断言与总数断言照旧全过。
 for (const name of PACKAGE_OWNED) {
@@ -304,8 +294,8 @@ for (const name of SELFMON) {
   const known = RESIDENT.concat(ONDEMAND).concat(SELFMON)
   const missing = known.filter((n) => !quoted[n] && !PACKAGE_OWNED.includes(n))
   const hitKnown = known.filter((n) => quoted[n])
-  check(RESIDENT.length === 81 && ONDEMAND.length === 63 && SELFMON.length === 5 && known.length === 149, '清单总数 149（常驻 81、按需 63、自监控 5）')
-  check(missing.length === 0, '149 个事件全部落点无缺口' + (missing.length ? ' —— 缺口：' + missing.join('、') : '（命中 ' + hitKnown.length + ' 个）'))
+  check(RESIDENT.length === 79 && ONDEMAND.length === 63 && SELFMON.length === 5 && known.length === 147, '清单总数 147（常驻 79、按需 63、自监控 5；issue #3 退役 #57、#93）')
+  check(missing.length === 0, '147 个事件全部落点无缺口' + (missing.length ? ' —— 缺口：' + missing.join('、') : '（命中 ' + hitKnown.length + ' 个）'))
 }
 
 console.log(failed ? '\n存在失败 — verify-log-count 未通过' : '\n全部通过 — 计数门禁生效（' + total + ' 项断言）')

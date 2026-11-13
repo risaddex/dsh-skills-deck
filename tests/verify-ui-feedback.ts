@@ -230,17 +230,14 @@ function audit(read: (p: string) => string): AuditResult[] {
     check(miss.length === 0, 'D ' + what + '（' + file.split('/').pop() + '）都有 data-log' + (miss.length ? '；缺：' + miss.join(', ') : ''))
   }
 
-  // ============ I 组：设置页页头交给 base 0.1.5 的静默簇（ActionGroup 胶囊退役） ============
-  // 这里守源码这一侧：用错组件、退回旧落点、旧表情按钮与旧悬停文案又回来都要报红。
-  // 页面真实渲染出的 DOM（.dsh-base-cluster、三枚彩色按钮、逐钮 aria-label）由
-  // tests/smoke-render.test.ts 在产物上真挂一遍验（图标形状、悬停文案与点击日志都由 base 包自己带）。
+  // issue #3：源码守移除边界，构建产物的实际渲染由 smoke-render 检查。
   const settingsSrc = read('src/client/views/SettingsPage.ts')
-  check(settingsSrc.indexOf('ui.ActionCluster') >= 0, 'I1 页头用 base 0.1.5 的 ActionCluster（静默簇）渲染')
-  check(settingsSrc.indexOf('ui.ActionGroup') < 0, 'I2 旧的 ActionGroup 用法已退役（0.1.5 起不再走胶囊）')
-  check(settingsSrc.indexOf('DeckContactRow') < 0 && settingsSrc.indexOf('ui.ContactRow') < 0, 'I3 设置面板底部不再单独画联系行（联系入口已收进页头静默簇）')
-  check(settingsSrc.indexOf("dsh-skills-deck/issues'") >= 0 && settingsSrc.indexOf('/issues/new') < 0, 'I4 Issue 落点是工单列表页 .../issues（不再直开新建工单页）')
-  check(settingsSrc.indexOf('去 GitHub 点 Star') < 0 && settingsSrc.indexOf('反馈问题') < 0, 'I5 自绘表情按钮的旧悬停文案已删（图标与提示由 base 包提供）')
-  check(settingsSrc.indexOf('size: 16') >= 0, 'I6 页头静默簇按 base 默认 16 号图标排（按钮 28×28）')
+  check(!/ui\.(ActionCluster|ActionGroup|ContactRow|PluginList)/.test(settingsSrc), 'I1 设置页不再挂载上游推广组件')
+  check(settingsSrc.indexOf('UpdateEntryHost') < 0, 'I2 设置页不再挂载自更新入口')
+  check(settingsSrc.indexOf('settingsViewReload()') >= 0, 'I3 设置页仍在打开时重读设置')
+  check(settingsSrc.indexOf('href: DSW_REPO_URL') >= 0, 'I4 版本链接仍使用仓库配置')
+  check(settingsSrc.indexOf('renderWsOverview(') >= 0, 'I5 工作区总览仍保留')
+  check(settingsSrc.indexOf('h(DiagnosticLogSection,') >= 0, 'I6 诊断日志分组仍保留')
 
   // ============ E 组：日志定位串的命名纪律 ============
   const literals: string[] = []
@@ -899,9 +896,9 @@ const variants: Variant[] = [
     change: (s) => replaceAll(s, 'body:not([data-ds-dark-theme]) .dsws-chain-form label', '.dsws-chain-form label'),
   },
   {
-    label: '页头退回旧 ActionGroup 胶囊：0.1.5 的静默簇白升了',
+    label: '已移除的上游推广组件重新挂回设置页',
     file: 'src/client/views/SettingsPage.ts',
-    group: 'I2',
+    group: 'I1',
     change: (s) => s + "\n// 反例：页头又用回旧胶囊\nconst fakeOldGroup = 'ui.ActionGroup'\n",
   },
   {

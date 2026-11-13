@@ -61,10 +61,11 @@ const slots = {
 }
 // #646：原生右侧边栏类型登记表（本插件自己那条入口要用它；没有它就不注册标签内容体）
 const nativeTypes = []
+const rpcMethods: string[] = []
 const services = {
   slots,
   sidebarRightTabs: { register: (def) => { nativeTypes.push(def); return () => {} } },
-  connection: { rpc: { call: async () => ({ ok: true, value: { ok: true, maps: [], checks: [], ready: 0, total: 0 } }) } },
+  connection: { rpc: { call: async (_path, _channel, args) => { rpcMethods.push(String(args?.method || "")); return { ok: true, value: { ok: true, maps: [], checks: [], ready: 0, total: 0 } } } } },
   locale: { register: (ns, d) => { Object.assign(dict, d.zh || {}, d.en || {}); return () => {} }, bind: () => trFn },
   workspaces: { list: async () => [] },
   sessions: { list: async () => [] },
@@ -217,9 +218,7 @@ if (PanelTitleComp) {
   check(false, '右侧边栏标题栏组件未捕获')
 }
 
-// ---- 设置页渲染（base 0.1.5 页头静默簇：ActionCluster 三枚彩色图标按钮）----
-// ticket 05 起设置页页头不再自画表情按钮：这里在产物上真挂一遍，钉住「0.1.5 的静默簇真的渲染出来了」，
-// 而不只是源码里写了 ActionCluster；同时钉住旧 ActionGroup 胶囊与旧悬停文案不在场。
+// ---- 设置页渲染：移除上游推广后，构建产物仍须正常挂载设置内容。----
 if (SettingsComp) {
   const settingsContainer = window.document.createElement('div')
   window.document.body.appendChild(settingsContainer)
@@ -231,24 +230,14 @@ if (SettingsComp) {
       await new Promise(r => setTimeout(r, 30))
     })
     const settingsHtml = settingsContainer.innerHTML
-    const cluster = settingsContainer.querySelector('.dsh-base-cluster')
-    check(!!cluster, '设置页页头渲染出 base 0.1.5 的静默簇（.dsh-base-cluster）')
-    const clusterBtns = settingsContainer.querySelectorAll('.dsh-base-cluster__btn')
-    check(clusterBtns.length === 3, `静默簇是三枚按钮（实际 ${clusterBtns.length}）`)
-    const ariaLabels = Array.prototype.map.call(clusterBtns, (b: any) => b.getAttribute('aria-label')).join('|')
-    check(ariaLabels === '联系我们|Star 这个项目|提交 Issue', `逐钮 aria-label 是 联系我们 / Star 这个项目 / 提交 Issue（实际 ${ariaLabels}）`)
-    check(!!cluster && cluster.getAttribute('role') === 'group' && cluster.getAttribute('aria-label') === '快捷操作', '静默簇是 role=group、aria-label=快捷操作 的一个组')
-    check(/lineargradient/i.test(settingsHtml) && /radialgradient/i.test(settingsHtml), '静默簇图标是彩色渐变 SVG（linearGradient / radialGradient 都在场）')
-    check(!settingsHtml.includes('dsh-base-actions'), '旧 ActionGroup 胶囊不在场（dsh-base-actions）')
-    check(!settingsHtml.includes('去 GitHub 点 Star') && !settingsHtml.includes('反馈问题'), '自绘表情按钮的旧悬停文案不在场')
-    /* 2026-10-31 owner 真机：底部「作者的其他插件」卡外面多包了一层 .dsws-cfg-group，而卡自带 .dsh-base-plugins
-     * 外框 ⇒ 双层边框。钉死：卡在场、自带外框、祖先里没有 .dsws-cfg-group；条目数 = 五条推荐里排除自己 = 4。 */
-    const plugins = settingsContainer.querySelector('.dsh-base-plugins')
-    check(!!plugins, '底部渲染出 base 公共「作者的其他插件」卡（.dsh-base-plugins）')
-    check(!!plugins && !plugins.closest('.dsws-cfg-group'), '卡片外面不再套 .dsws-cfg-group（真机双层边框的根因）')
-    const pluginRows = settingsContainer.querySelectorAll('.dsh-base-plugins__item')
-    check(pluginRows.length === 4, `作者插件卡四条推荐（排除自己，实际 ${pluginRows.length}）`)
-    check(!!plugins && String(plugins.textContent).indexOf('作者的其他插件') >= 0, '卡片标题来自 base 文案（不再由本仓写死）')
+    // issue #3：在构建产物上确认推广与更新入口消失，但设置内容仍然可用。
+    check(!settingsContainer.querySelector('.dsh-base-cluster, .dsh-base-plugins'), '设置页不再挂载上游推广组件')
+    check(!settingsHtml.includes('UpdateEntryHost') && !settingsHtml.includes('upd-entry'), '设置页没有自更新入口')
+    check(!!settingsContainer.querySelector('.dsws-cfg-head'), '正常设置页页头仍渲染')
+    check(!!settingsContainer.querySelector('.dsws-cfg-group'), '正常设置分组仍渲染')
+    check(!rpcMethods.some(method => /update(Status|Check|Install|Changelog)/.test(method)), '启动客户端与打开设置页没有调用自更新电话')
+    const versionLink = settingsContainer.querySelector('[data-log="settings.version"]')
+    check(versionLink?.getAttribute('href') === 'https://github.com/risaddex/dsh-skills-deck', '设置页版本链接指向分叉仓库')
   } catch (e: any) {
     check(false, `设置页渲染异常: ${(e && e.message) || e}`)
   } finally {

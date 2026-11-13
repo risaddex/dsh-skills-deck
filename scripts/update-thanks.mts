@@ -25,7 +25,8 @@ import url from 'node:url';
 
 const ROOT: string = path.dirname(path.dirname(url.fileURLToPath(import.meta.url)));
 const REPO_OWNER: string = 'FeatherHunter';
-const REPO_NAME: string = 'dsh-skills-deck';
+// 保留这份历史贡献数据原属仓库的链接；分叉改名不能把既有票号指到另一个仓库。
+const REPO_NAME: string = 'dsh-mattpocock-skills-deck';
 const DATA_PATH: string = path.join(ROOT, 'docs', 'thanks-data.json');
 
 // 表格在正文里的起止标记：readme:sync 只替换标记之间的内容，标记之外的介绍语、结尾语一个字都不碰。

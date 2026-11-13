@@ -242,9 +242,6 @@ export default {
     // ==== kernel:modalFields (spliced by build) ====
     // ==== kernel:config (spliced by build) ====
     // ==== kernel:log (spliced by build) ====
-    // base 包接入：联系入口与作者插件卡的客户端产物由 scripts/derive-base-from-package.mts 从已安装的
-    //   dsh-featherhunter-plugin-base 内联；工厂不依赖其它分块的求值顺序，只要在 SettingsPage 叶子之前就位。
-    // ==== kernel:baseClient (spliced by build) ====
     // #1296：两套容器身份色的按需日志（container.accent）不在启动段发射——日志契约要求
     //   对账前不产生调试日志，发射点在 panelAssembly 的启动对账之后（见 leaf:panelAssembly）。
     // 本次界面反馈需求：全客户端唯一的按压委托与点击日志口。必须排在 kernel:log 之后（日志开关要能读），
@@ -548,13 +545,8 @@ export default {
 
     // ==== leaf:OverlayGate (spliced by build) ====
 
-    // ==== kernel:updateClient (spliced by build) ====
-
-    // ==== kernel:updateEntryBundle (spliced by build) ====
-
     // ==== leaf:diagnosticLogModel (spliced by build) ==== // ==== leaf:diagnosticLogActions (spliced by build) ==== // ==== leaf:diagnosticLogSection (spliced by build) ==== // ==== leaf:SettingsWorkspaces (spliced by build) ====
-    // #876：更新入口挂载点（只挂包的入口件，含内部 dialog 面板；本仓不再自带按钮状态机与浮层弹窗）
-    // ==== leaf:updateEntryHost (spliced by build) ==== // ==== leaf:settingsPage (spliced by build) ====
+    // ==== leaf:settingsPage (spliced by build) ====
     // ==== leaf:runPanel (spliced by build) ==== // ==== leaf:panelAssembly (spliced by build) ====
   },
 }

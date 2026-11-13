@@ -107,6 +107,11 @@ const dispatchOnce = async function (endpoint: string, args: Record<string, unkn
   check(!!res && res.ok === true, 'logGetSwitch dispatch ok=true')
   const bad = await dispatchOnce('nonexistent', {})
   check(!!bad && bad.ok === false, '未知端点 ok=false（RpcResult 错误信封）')
+  // issue #3：从真实注册路由调用，必须是未注册，而不是执行器加载失败。
+  for (const endpoint of ['updateStatus', 'updateCheck', 'updateInstall', 'updateChangelog', 'logAppend']) {
+    const removed: any = await dispatchOnce(endpoint, {})
+    check(removed?.ok === false && removed?.error?.message === 'unknown endpoint: ' + endpoint, endpoint + ' 已从宿主注册表移除')
+  }
 }
 
 // ---- #627 标签配色两条电话：端点名与契约操作名一致，经同一条路由调到宿主处理器 ----

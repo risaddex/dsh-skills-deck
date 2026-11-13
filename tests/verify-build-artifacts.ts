@@ -54,30 +54,6 @@ try {
   check(false, '产物 git 跟踪检查失败（应能列出已跟踪文件）：' + e.message)
 }
 
-// 3b) 入口件绑定包：纯生成物，不入库（#824）
-//   scripts/generated/updateEntryPanel.bundle.js 由 scripts/bundle-update-entry.mts 每次构建
-//   按已安装更新包现场生成，是上游包产物的逐字拷贝。入库的副本会被集中扫描器误判成硬编码密钥，
-//   而构建时现场生成的那份不在扫描范围内，所以它和 client.js/host.js 一样不入库。
-//   锁三件事：磁盘上有（构建负责生成）、被忽略、未被跟踪，缺一件就红。
-{
-  const rel = 'scripts/generated/updateEntryPanel.bundle.js'
-  const abs = path.resolve(rel)
-  check(fs.existsSync(abs), rel + ' 存在（构建按已安装更新包现场生成，缺失请跑 node scripts/build.mts）')
-  try {
-    const out = execSync('git check-ignore -v ' + rel, { encoding: 'utf8' })
-    check(out.includes('.gitignore'), rel + ' 被 .gitignore 忽略（生成物不入库）')
-  } catch (e) {
-    check(false, rel + ' 应被忽略：' + e.message)
-  }
-  try {
-    const all = execSync('git ls-files --cached', { encoding: 'utf8' })
-    const bad = all.split('\n').map(s => s.trim()).filter(l => l === rel)
-    check(bad.length === 0, rel + ' 未被 git 跟踪（入库副本会被扫描器误判）')
-    if (bad.length) console.log('    不该被跟踪:', bad.join(', '))
-  } catch (e) {
-    check(false, rel + ' 跟踪检查失败：' + e.message)
-  }
-}
 // 4) 方案 C 原样复制 L2 门禁（#136/#172）：glob 双向差集 + sha256
 //    （原有 4c「import 卫生」段读 src/host 与 src/shared 的手写源码文本，断言相对 import 必带 .js；
 //      这类「读源码文本钉写法」的门禁已按维护者要求删除，其余段一条未动）
@@ -257,8 +233,8 @@ console.log('\n四棵新树镜像校验（后缀换算 + 转译结果比对）')
 //        其中工具与追踪器两棵是 #1018 按源码位置镜像新增的（package/deck 对 src/deck、
 //        package/tracker 对 src/tracker，TypeScript 转成 JavaScript 再进包）。
 //     ② 仓库根两份开发态产物：client.js、host.js
-//     ③ 构建缓存目录：scripts/generated/**（按需存在；已入库三件点名为例外：logKernel.derived.js、
-//        updateClient.derived.js、baseClient.derived.js，它们必须入库，因为客户端那份闭包要能离线拼出来）
+//     ③ 构建缓存目录：scripts/generated/**（按需存在；已入库一件点名为例外：logKernel.derived.js，
+//        它必须入库，因为客户端那份闭包要能离线拼出来；上游的更新包与 base 包两件派生已随 issue #3 删除）
 //     ④ 子包各自产物目录：packages/*/dist/**
 //   追踪器契约目录旁那份旧 JavaScript 影子文件（src/tracker/contract/vocabulary.js）的去向：
 //   它是词汇表六份真源拼段转译的拼接输入。#1026 收拾契约目录时没有直接删掉它，而是把拼段产物
@@ -266,7 +242,7 @@ console.log('\n四棵新树镜像校验（后缀换算 + 转译结果比对）')
 //   下面的已知产物名单跟着去掉这一条。
 //   两条断言：
 //     A. 入库（git ls-files）里一件产物都没有：四类里的 ①②④ 不该被跟踪，src/ 下「有同名 .ts 的 .js」
-//        是转译产物、同样不该被跟踪（③ 里的两件例外是唯一允许入库的产物）。
+//        是转译产物、同样不该被跟踪（③ 里的那件例外是唯一允许入库的产物）。
 //     B. 盘上的产物只许落在四类里，或者落在源码树里那两处**还没搬家的过渡位**
 //        （src/client/** 与 src/shared/<域>/**，共 34 + 35 = 69 件）。过渡位的件数记在上限里，
 //        只许降不许升；「把客户端闭包那批产物搬进构建缓存目录」是 Q4 第 5 节那条单独工作线的事，
@@ -287,7 +263,7 @@ console.log('\n四棵新树镜像校验（后缀换算 + 转译结果比对）')
   const CATEGORY_PREFIXES = ['package/lib/', 'package/shared/', 'package/deck/', 'package/tracker/', 'package/refresh/', 'package/workspace-snapshot/', 'scripts/generated/', '.build/']
   const CATEGORY_FILES = ['client.js', 'host.js']
   const SUBPKG_DIST_RE = /^packages\/[^/]+\/dist\//
-  const IN_GIT_PRODUCT_EXCEPTIONS = ['scripts/generated/logKernel.derived.js', 'scripts/generated/updateClient.derived.js', 'scripts/generated/baseClient.derived.js']
+  const IN_GIT_PRODUCT_EXCEPTIONS = ['scripts/generated/logKernel.derived.js']
   // 2026-10-13 实测 69 件（src/client 34 + src/shared 35）。这是「还没搬家」的存量，不是允许长期存在的额度：
   // 只许降不许升，降到 0 之后这条上限就改成 0。
   // 另有几件已知产物单列在 KNOWN_PRODUCTS_OUT_OF_SCOPE 里、不计进这 69（见那里的出处说明）。
