@@ -606,10 +606,10 @@ const evalPromptHelpers = (function () {
 // 单文件模式（L2 注入的子进程）拿不到语言清单，用这份与 config/languages.yaml 同形的替身兜住；
 //   正常流程一定传真的那一份进来（见下面的 readRegistryTables().languages）。
 const FALLBACK_LANGUAGES = {
-  default: 'zh',
+  default: 'en',
   languages: {
-    zh: { label: { zh: '简体中文', en: 'Simplified Chinese' }, fallback: [] },
-    en: { label: { zh: 'English', en: 'English' }, fallback: ['zh'] },
+    zh: { label: { zh: '简体中文', en: 'Simplified Chinese' }, fallback: ['en'] },
+    en: { label: { zh: 'English', en: 'English' }, fallback: [] },
   },
 }
 // #1293：auditRegistryShape 整条退场（源码形状规则，不是质量规则）。
@@ -2491,10 +2491,13 @@ const selfDigest = function () {
 //   不要 fork 当前对话」，与 /implement-spec v1.3.2 口径一致；V_MIN 7 → 8，中英各两条关键词断言，自摘要按新内容重算。
 // 2026-11-01：tpl.diagnose v22→v23 —— 新增「说明诊断结论」节（诊断结束后在会话回复里讲清问题本身，
 //   中途出现反转结论的事实时先给简短结论），V_MIN 21 → 23，自摘要按新内容重算。
+// 2026-11-13（2.0.0-alpha.0 英文先行）：语言清单的缺省语言从 zh 换成 en（config/languages.yaml），
+//   「清单里没有的语言退到哪一门」那条断言原来写死 'zh'，改为照真清单的 default 算（同一处还同步了
+//   FALLBACK_LANGUAGES 替身），自摘要按新内容重算。
 const LOCK = {
   'tests/prompt-gate-exempt.json': '65e3acb4c066f83a74996dda33196bb19cce7d0421ce1a9a9dc6d87187c53bcd',
   'tests/prompt-gate-payloads.json': '0d5a71daafeb4a3bb1052a614f77ad6778a72fbe50801e146e518e1e7c273468',
-  'tests/verify-prompts.ts': 'f1b9b9aa2bb9a5a18227257017b3e479e0a95e1f93da46975f9b2ececba53582',
+  'tests/verify-prompts.ts': 'aceae578d23c9964b5a721bbbfe2aca2da706350ab027a9832b702f4799d868e',
 }
 // ---- LOCK-END ----
 
@@ -2677,11 +2680,16 @@ if (reg) {
     //   链绕回自己时不死循环、清单为空时退回 zh；语言快照本身读不到（返回 null / 没装方法 / 抛异常）时
     //   也必须按清单的 default 走，不能掉进写死的兜底。
     const pLang = problems.length
+    // 真清单（config/languages.yaml 读出来的那一份）里的缺省语言：判定「清单里没有的语言退到哪一门」
+    //   时照这份清单算，不写死语言 id —— 缺省语言从 zh 换成 en 那次（2.0.0-alpha.0 英文先行）
+    //   正是因为这里写死了 'zh' 而变红。
+    const realLangCfg = languagesData || FALLBACK_LANGUAGES
+    const realLangDefault = String((realLangCfg && realLangCfg.default) || '')
     const LANG_CASES = [
-      [languagesData || FALLBACK_LANGUAGES, 'en', 'en', '语言快照 en → en'],
-      [languagesData || FALLBACK_LANGUAGES, 'en-US', 'en', '语言快照 en-US 按主标签匹配到 en'],
-      [languagesData || FALLBACK_LANGUAGES, 'zh', 'zh', '语言快照 zh → zh'],
-      [languagesData || FALLBACK_LANGUAGES, 'ja', 'zh', '清单里没有的语言（ja）退到缺省语言 zh'],
+      [realLangCfg, 'en', 'en', '语言快照 en → en'],
+      [realLangCfg, 'en-US', 'en', '语言快照 en-US 按主标签匹配到 en'],
+      [realLangCfg, 'zh', 'zh', '语言快照 zh → zh'],
+      [realLangCfg, 'ja', realLangDefault, '清单里没有的语言（ja）退到缺省语言 ' + realLangDefault],
       [{ default: 'en', languages: { en: { fallback: [] } } }, 'zh', 'en', '清单只列了 en 时，zh 快照退到缺省 en（回退链终点是 en）'],
       [{ default: 'ja', languages: { ja: { fallback: ['en'] }, en: { fallback: ['zh'] }, zh: { fallback: [] } } }, 'ja-JP', 'en', '列了 ja 但正文没带 ja 时沿回退链退到第一门有正文的 en'],
       [{ default: 'ja', languages: { ja: { fallback: ['zh'] }, zh: { fallback: [] } } }, 'ja', 'zh', '回退链多跳：ja → zh 一路退到有正文的 zh'],
