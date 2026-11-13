@@ -90,9 +90,9 @@ function findBundledDir() {
   try {
     const home = os.homedir()
     if (home) {
-      const cand1 = path.join(home, '.dsh/profiles/web/node_modules/dsh-mattpocock-skills-deck/bundled-skills')
+      const cand1 = path.join(home, '.dsh/profiles/web/node_modules/dsh-skills-deck/bundled-skills')
       try { if (statSync(cand1).isDirectory()) return cand1 } catch {}
-      const cand2 = path.join(home, '.dsh/profiles/desktop/node_modules/dsh-mattpocock-skills-deck/bundled-skills')
+      const cand2 = path.join(home, '.dsh/profiles/desktop/node_modules/dsh-skills-deck/bundled-skills')
       try { if (statSync(cand2).isDirectory()) return cand2 } catch {}
     }
   } catch {}

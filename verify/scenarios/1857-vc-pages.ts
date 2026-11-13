@@ -18,7 +18,7 @@
 //   DSH_1857_OUT     截图与读数另存目录（默认仓库下的 .scratch/1857/evidence）
 //
 // 隔离实例的批次 home 必须真的装上了本插件（profile 的 dsh.profile.bundles 里有
-// dsh-mattpocock-skills-deck），否则右侧栏不会出现 MattSkills 入口，本场景会在
+// dsh-skills-deck），否则右侧栏不会出现 MattSkills 入口，本场景会在
 // 打开面板那一步报 blocked —— 那是环境问题，不是页面问题。
 import fs from 'node:fs'
 import path from 'node:path'
@@ -80,7 +80,7 @@ const VERSION_TAB = 'button[data-ink-key="versionControl"]'
 // 宿主面板上的页签本身也带 data-log；两个选择器都留着，哪个在就用哪个。
 const VERSION_TAB_ALT = 'button.dsws-tab[data-log="panel.tab.versioncontrol"]'
 const RIGHTBAR_HANDLE = '[data-side="rightbar"]'
-const PANEL_ENTRY = 'button[data-sidebar-right-guide-entry="dsh-mattpocock-skills-deck:deck-map"]'
+const PANEL_ENTRY = 'button[data-sidebar-right-guide-entry="dsh-skills-deck:deck-map"]'
 const GEAR_BTN = '[data-vc-gear-btn]'
 const EXTRA_LINK_PREFIX = '[data-vc-extra-link="'
 
@@ -1060,7 +1060,7 @@ export default defineScenario<ScenarioContext>({
             facts.panelShotProblem = messageOf(error)
           }
           await save('panel-open.json', facts, '打开面板与页签的读数')
-          return observations.concat([observe({ checkId: 'version-tab-open', title: '用真鼠标能打开 MattSkills 面板并进版本管理页', ok: false, status: 'blocked', detail: '侧栏 ' + JSON.stringify(sideClick) + '，入口 ' + JSON.stringify(entryClick) + '，页签 ' + JSON.stringify(tabClick) + '，页面根 ' + JSON.stringify(root), expected: '版本管理页签打开后页面里有 [data-vc-shell]', actual: 'root=' + JSON.stringify(root), hint: '批次 home 的 profile bundles 里必须有 dsh-mattpocock-skills-deck' })])
+          return observations.concat([observe({ checkId: 'version-tab-open', title: '用真鼠标能打开 MattSkills 面板并进版本管理页', ok: false, status: 'blocked', detail: '侧栏 ' + JSON.stringify(sideClick) + '，入口 ' + JSON.stringify(entryClick) + '，页签 ' + JSON.stringify(tabClick) + '，页面根 ' + JSON.stringify(root), expected: '版本管理页签打开后页面里有 [data-vc-shell]', actual: 'root=' + JSON.stringify(root), hint: '批次 home 的 profile bundles 里必须有 dsh-skills-deck' })])
         }
         const comboSummaries: any[] = []
         const enabledPages = PAGES.filter(function (p) { return ENABLED_PAGES.indexOf(p.id) >= 0 })

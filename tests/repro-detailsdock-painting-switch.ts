@@ -72,13 +72,13 @@ function storeOf(sid, sessions, stores){
 // 场景：两工作区
 const sessions = {
   'sid-chinese': { cwd: 'D:/dsh-plugin/dsh-chinese-skill-patch' },
-  'sid-current-a': { cwd: 'D:/dsh-plugin/dsh-mattpocock-skills-deck' },
-  'sid-current-b': { cwd: 'D:/dsh-plugin/dsh-mattpocock-skills-deck' },
+  'sid-current-a': { cwd: 'D:/dsh-plugin/dsh-skills-deck' },
+  'sid-current-b': { cwd: 'D:/dsh-plugin/dsh-skills-deck' },
 }
 const snapChinese = { ok:true, maps:[{number:1,title:'chinese map'}], repo:{owner:'o',name:'dsh-chinese-skill-patch'}, repoRoot:'D:/dsh-plugin/dsh-chinese-skill-patch', generatedMs: 1000 }
-const snapCurrent = { ok:true, maps:[{number:1,title:'current map'}], repo:{owner:'o',name:'dsh-mattpocock-skills-deck'}, repoRoot:'D:/dsh-plugin/dsh-mattpocock-skills-deck', generatedMs: 2000 }
+const snapCurrent = { ok:true, maps:[{number:1,title:'current map'}], repo:{owner:'o',name:'dsh-skills-deck'}, repoRoot:'D:/dsh-plugin/dsh-skills-deck', generatedMs: 2000 }
 setCached('D:/dsh-plugin/dsh-chinese-skill-patch', snapChinese)
-setCached('D:/dsh-plugin/dsh-mattpocock-skills-deck', snapCurrent)
+setCached('D:/dsh-plugin/dsh-skills-deck', snapCurrent)
 
 // 旧逻辑：DetailsDock 挂载后空 deps，不随 sid 变化重跑，导致 polluted store 常驻
 // 模拟旧 bug：sid-current-a 的 store 在之前被 probe 广播污染为 chinese
@@ -153,7 +153,7 @@ function newDetailsDockRender(sid, stores, sessions){
   return s
 }
 const sNewRender = newDetailsDockRender('sid-current-a', storesNew, sessions)
-const newFixed = sNewRender.snapshot.maps[0].title === 'current map' && sNewRender.cwd === 'D:/dsh-plugin/dsh-mattpocock-skills-deck'
+const newFixed = sNewRender.snapshot.maps[0].title === 'current map' && sNewRender.cwd === 'D:/dsh-plugin/dsh-skills-deck'
 console.log('  新 DetailsDock 渲染后 cwd=', sNewRender.cwd, 'title=', sNewRender.snapshot.maps[0].title)
 console.log('  新逻辑已自愈:', newFixed, '(预期 true)')
 ok(newFixed, '新逻辑：切绘画后自动校正为 current（自愈成功）')

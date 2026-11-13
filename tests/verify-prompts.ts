@@ -2033,13 +2033,13 @@ const FIXTURE_BYPASS = [
   ['T41 String.fromCharCode 拼命令', 'ev' + 'al(String.fromCharCode(103,104,32,105,115,115,117,101))'],
   ['T42 同形字母 ɡh（U+0261）', '写回用 ɡh issue edit 573 --body-file x.md'],
   ['T43 真仓库名把间隔撑到 48（宽写法窗口不许有上限）', '写回用 gh -R FeatherHunter/dsh-mattpocock-skills-deck issue edit 573 --body-file x.md'],
-  ['T44 真实绝对路径把间隔撑到 46', '写回用 gh -C D:\\dsh-plugin\\dsh-mattpocock-skills-deck issue edit 573 --body-file x.md'],
+  ['T44 真实绝对路径把间隔撑到 46', '写回用 gh -C D:\\dsh-plugin\\dsh-skills-deck issue edit 573 --body-file x.md'],
   ['T45 glab + 真仓库名 + --hostname', '写回用 glab -R FeatherHunter/dsh-mattpocock-skills-deck --hostname gitlab.com issue update 573'],
   ['T46 gh --json body issue edit', '写回用 gh --json body issue edit 573 --body-file x.md'],
   ['T47 前置检查后接跟踪器命令', '先跑 gh auth status，再 gh issue edit 573 --body-file x.md'],
   // #603：这两条是旧两步写法（第 ① 步解析插件目录 / 第 ② 步调脚本）后面接跟踪器命令。
   //   新口径下它们仍然红，但红的原因主要落在 R8（含 dsh plugin / require.resolve / 脚本名），R1 也一并命中（后面那句 gh issue edit）。
-  ['T48 第 ① 步后接跟踪器命令（#603：红在 R8，R1 也命中）', 'dsh plugin --profile <配置名> exec node -e "console.log(require.resolve(\'dsh-mattpocock-skills-deck/package.json\'))" && gh issue edit 1 --body-file y.md', { rules: ['R8'] }],
+  ['T48 第 ① 步后接跟踪器命令（#603：红在 R8，R1 也命中）', 'dsh plugin --profile <配置名> exec node -e "console.log(require.resolve(\'dsh-skills-deck/package.json\'))" && gh issue edit 1 --body-file y.md', { rules: ['R8'] }],
   ['T49 第 ② 步后接跟踪器命令（#603：红在 R8，R1 也命中）', 'node "<插件目录>/scripts/fix-issue-body.mjs" --issue 1 --body-file x.md && gh issue edit 1 --body-file y.md', { rules: ['R8'] }],
   // —— #603：以下 13 条原来算合法（登记在绿色误报组 F09–F17 / F23–F26），现在一律判红 ——
   //   它们都是「提示词自己调包内脚本」的写法，正是本票要消灭的那套间接写法，判定落在 R8
@@ -2055,13 +2055,13 @@ const FIXTURE_BYPASS = [
   ['T58 原 F17：两个脚本调用同段', '先 node scripts/fix-issue-body.mjs --issue 1 --body-file x.md，再 node scripts/wire-subissues.mjs --map 1 --children 2 --body-file x.md', { rules: ['R8'] }],
   ['T59 原 F23：脚本调用版正文格式块（zh）', '## 正文格式（写/改 issue 正文时必须遵守）\n- [ ] 正文先写成文件（文件里是真实换行：每个 `## 章节` 独占一行、段落间留空行），再调 `node scripts/fix-issue-body.mjs --issue <号> --body-file <文件>` 写回；脚本回包 ok 为真才算写完（剥开头不可见字符、按阈值还原字面转义、格式只告警不改写，都由脚本负责）', { rules: ['R8'] }],
   ['T60 原 F24：脚本调用版正文格式块（en）', '## Body format (mandatory when writing/editing an issue body)\n- [ ] Write the body to a file first (real newlines in the file: each `## section` on its own line, a blank line between paragraphs), then write it back with `node scripts/fix-issue-body.mjs --issue <issue> --body-file <file>`; only when the script returns ok true is the write done (the script strips the leading invisible character, restores literal escapes within the threshold, and only warns about formatting)', { rules: ['R8'] }],
-  ['T61 原 F25：两步走版正文格式块（zh）', '## 正文格式（写/改 issue 正文时必须遵守）\n- [ ] 先跑 `gh auth status`，没登录先按 ghAuthLogin 指引登完再继续\n- [ ] 第 ① 步拿插件安装目录：跑 `dsh plugin --profile <配置名> exec node -e "console.log(require.resolve(\'dsh-mattpocock-skills-deck/package.json\'))"`，记下输出的目录（下面叫 <插件目录>）；第 ② 步写回：跑 `node "<插件目录>/scripts/fix-issue-body.mjs" --issue <号> --body-file <绝对路径文件>`；第 ② 步的当前目录可能是插件目录而不是你的工作区，所以 `--body-file` 必须用绝对路径', { rules: ['R8'] }],
-  ['T62 原 F26：精确第 ① 步调用', '跑 `dsh plugin --profile <配置名> exec node -e "console.log(require.resolve(\'dsh-mattpocock-skills-deck/package.json\'))"` 拿插件安装目录', { rules: ['R8'] }],
+  ['T61 原 F25：两步走版正文格式块（zh）', '## 正文格式（写/改 issue 正文时必须遵守）\n- [ ] 先跑 `gh auth status`，没登录先按 ghAuthLogin 指引登完再继续\n- [ ] 第 ① 步拿插件安装目录：跑 `dsh plugin --profile <配置名> exec node -e "console.log(require.resolve(\'dsh-skills-deck/package.json\'))"`，记下输出的目录（下面叫 <插件目录>）；第 ② 步写回：跑 `node "<插件目录>/scripts/fix-issue-body.mjs" --issue <号> --body-file <绝对路径文件>`；第 ② 步的当前目录可能是插件目录而不是你的工作区，所以 `--body-file` 必须用绝对路径', { rules: ['R8'] }],
+  ['T62 原 F26：精确第 ① 步调用', '跑 `dsh plugin --profile <配置名> exec node -e "console.log(require.resolve(\'dsh-skills-deck/package.json\'))"` 拿插件安装目录', { rules: ['R8'] }],
   // —— #603 新增：R8 自己的绕过样例（模板面与后端声明面都不许出现这套间接写法）——
-  ['T63 旧写法 dsh plugin exec（不带 --profile）', '先跑 dsh plugin exec node -e "console.log(require.resolve(\'dsh-mattpocock-skills-deck/package.json\'))" 拿目录', { rules: ['R8'] }],
+  ['T63 旧写法 dsh plugin exec（不带 --profile）', '先跑 dsh plugin exec node -e "console.log(require.resolve(\'dsh-skills-deck/package.json\'))" 拿目录', { rules: ['R8'] }],
   ['T64 <pluginDir> 英文占位符 + 脚本名', 'node "<pluginDir>/scripts/wire-subissues.mjs" --map 1 --children 2', { rules: ['R8'] }],
   ['T65 只写插件目录占位符（不含脚本名）', '第 ① 步拿 <插件目录>，第 ② 步再调写回脚本', { rules: ['R8'] }],
-  ['T66 require.resolve 单独出现（拆开写也认）', 'const dir = require.resolve("dsh-mattpocock-skills-deck/package.json")', { rules: ['R8'] }],
+  ['T66 require.resolve 单独出现（拆开写也认）', 'const dir = require.resolve("dsh-skills-deck/package.json")', { rules: ['R8'] }],
   ['T67 R8 拆字规避：反斜杠插进脚本名', 'node "<插件目录>/scripts/fix-issue\\-body.mjs" --issue 1 --body-file x.md', { rules: ['R8'] }],
 ]
 const FIXTURE_FALSE_POS = [
@@ -2134,7 +2134,7 @@ const runFixtureSelfCheck = function (reg, backendSrc) {
   //   往 prompts.subIssue 里塞回「先解析插件目录，再调包内脚本」那套间接写法，必须判红。
   //   注入锚点先自证存在：锚点没了就是空操作，等于这条自检失效（旧锚点「输出有多行时…」随两步写回一起撤掉了）。
   const anchor603 = '建边用 deck_map_link'
-  const injected = String(backendSrc).replace(anchor603, anchor603 + '；先跑 dsh plugin --profile <配置名> exec node -e "console.log(require.resolve("dsh-mattpocock-skills-deck/package.json"))" 拿插件安装目录')
+  const injected = String(backendSrc).replace(anchor603, anchor603 + '；先跑 dsh plugin --profile <配置名> exec node -e "console.log(require.resolve("dsh-skills-deck/package.json"))" 拿插件安装目录')
   if (injected === String(backendSrc)) fail('L1 后端面绕过自检失效：注入锚点在新文本里找不到（注入成了空操作）')
   const subLits = scanAllLiterals(extractObjectLiteral(injected, 'export const prompts') || '')
   let subCaught = 0
@@ -2286,7 +2286,7 @@ const runL2Injection = function () {
         //   注入的内容是本票要消灭的间接写法（先解析插件目录，再调包内脚本）：github 面允许 gh 命令，但 R8 在 github 面照样判。
         const srcBefore = String(backendSrc)
         const injectAt = '建边用 deck_map_link'
-        const injectedText = '先跑 dsh plugin --profile <配置名> exec node -e "console.log(require.resolve("dsh-mattpocock-skills-deck/package.json"))" 拿插件安装目录，再 ' + injectAt
+        const injectedText = '先跑 dsh plugin --profile <配置名> exec node -e "console.log(require.resolve("dsh-skills-deck/package.json"))" 拿插件安装目录，再 ' + injectAt
         const mutatedBackend = srcBefore.replace(injectAt, injectedText)
         if (mutatedBackend === srcBefore) fail('L2 payload「' + p.n + '」注入锚点在新文本里找不到（注入成了空操作；锚点要跟着提示词一起改）')
         fs.writeFileSync(bpath, mutatedBackend)
@@ -2494,7 +2494,7 @@ const selfDigest = function () {
 const LOCK = {
   'tests/prompt-gate-exempt.json': '65e3acb4c066f83a74996dda33196bb19cce7d0421ce1a9a9dc6d87187c53bcd',
   'tests/prompt-gate-payloads.json': '0d5a71daafeb4a3bb1052a614f77ad6778a72fbe50801e146e518e1e7c273468',
-  'tests/verify-prompts.ts': 'bf75d022732f0907185cc1fb69eaabd53011dc756bb843d7ff6c7bee621bfaa0',
+  'tests/verify-prompts.ts': 'f1b9b9aa2bb9a5a18227257017b3e479e0a95e1f93da46975f9b2ececba53582',
 }
 // ---- LOCK-END ----
 

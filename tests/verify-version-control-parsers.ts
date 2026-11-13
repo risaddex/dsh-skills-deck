@@ -246,7 +246,7 @@ async function main() {
   // ---- 4) 首屏组装：一次读全成败一起 ----
   if (cs.ok === true && cw.ok === true && cr.ok === true && cl.ok === true && cd.ok === true) {
     const asm = state.assemble({
-      repoRoot: 'D:/dsh-plugin/dsh-mattpocock-skills-deck', bare: false,
+      repoRoot: 'D:/dsh-plugin/dsh-skills-deck', bare: false,
       statusHead: cs.branch.head, statusDetached: cs.branch.detached, statusOid: cs.branch.oid,
       statusUpstream: cs.branch.upstream, statusAhead: cs.branch.ahead, statusBehind: cs.branch.behind,
       statusEntries: cs.entries, worktrees: cw.worktrees, refs: cr.refs,

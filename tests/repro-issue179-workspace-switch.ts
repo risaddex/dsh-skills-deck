@@ -38,11 +38,11 @@ function hydrateFromCache(st){
 }
 function cwdBasename(cwd){ const parts=String(cwd).split(/[\\/]/); for(let i=parts.length-1;i>=0;i--) if(parts[i]) return parts[i]; return '' }
 
-// 场景：用户先在 DSH 本体工作区，再切到 dsh-mattpocock-skills-deck
+// 场景：用户先在 DSH 本体工作区，再切到 dsh-skills-deck
 const cwdDSH = 'D:/2Study/nodejs/node_modules/@deepseek-ai/dsh'
-const cwdDeck = 'D:/dsh-plugin/dsh-mattpocock-skills-deck'
+const cwdDeck = 'D:/dsh-plugin/dsh-skills-deck'
 const snapDSH = { ok:true, maps:[{number:120,title:'DSH map'}], repo:{owner:'deepseek-ai',name:'dsh'}, repository:{backend:'github', name:'deepseek-ai/dsh', url:'https://github.com/deepseek-ai/dsh'}, repoRoot:cwdDSH, generatedMs:1000 }
-const snapDeck = { ok:true, maps:[{number:120,title:'Deck map'}], repository:{backend:'github', name:'FeatherHunter/dsh-mattpocock-skills-deck', url:'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck'}, repo:{owner:'FeatherHunter',name:'dsh-mattpocock-skills-deck'}, repoRoot:cwdDeck, generatedMs:2000 }
+const snapDeck = { ok:true, maps:[{number:120,title:'Deck map'}], repository:{backend:'github', name:'FeatherHunter/dsh-mattpocock-skills-deck', url:'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck'}, repo:{owner:'FeatherHunter',name:'dsh-skills-deck'}, repoRoot:cwdDeck, generatedMs:2000 }
 setCached(cwdDSH, snapDSH)
 setCached(cwdDeck, snapDeck)
 

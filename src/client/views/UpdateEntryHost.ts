@@ -49,7 +49,7 @@ const UpdateEntryHost = (props: any) => {
       // 插件标识与电话名前缀与宿主侧一致（单源在 scripts/derive-update-from-package.mjs，
       // 宿主适配器按包默认值校验一遍；这里只传值，不拼电话名字面量）。
       entry = bundle.mountUpdateEntry(el, {
-        pluginId: 'dsh-mattpocock-skills-deck',
+        pluginId: 'dsh-skills-deck',
         prefix: 'wf',
         call: callThrough,
         theme: 'archive',

@@ -38,13 +38,13 @@ export function createPkgStyles(getCtx: () => PkgCtx): {
     insert(css) {
       const ctx = getCtx()
       const styleEl = document.createElement('style')
-      styleEl.setAttribute('data-plugin', 'dsh-mattpocock-skills-deck')
+      styleEl.setAttribute('data-plugin', 'dsh-skills-deck')
       styleEl.textContent = typeof css === 'string' ? css : Array.isArray(css) ? css.join('') : String(css)
       document.head.appendChild(styleEl)
       if (ctx && typeof ctx.effect === 'function') {
         ctx.effect(() => () => {
           try { if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl) } catch (e) { /* 忽略清理期错误 */ }
-        }, 'dsh-mattpocock-skills-deck: styles')
+        }, 'dsh-skills-deck: styles')
       }
       return () => {
         try { if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl) } catch (e) { /* 忽略 */ }

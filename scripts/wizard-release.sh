@@ -33,7 +33,7 @@ fi
 source "$WIZARD_LIB"
 
 TOTAL_STAGES=6
-PKG="dsh-mattpocock-skills-deck"
+PKG="dsh-skills-deck"
 REGISTRY="https://registry.npmjs.org"
 
 # 解析参数

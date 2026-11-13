@@ -65,7 +65,7 @@ async function main() {
 
   // ---- 2) 接线只走包 ----
   const pkg = await import(pathToFileURL(path.join(ROOT, 'node_modules', 'dsh-plugin-update', 'dist', 'host.js')).href)
-  const holder = pkg.createHostUpdate({ ctx: null, logCtx: null }, { pluginId: 'dsh-mattpocock-skills-deck', prefix: 'wf' })
+  const holder = pkg.createHostUpdate({ ctx: null, logCtx: null }, { pluginId: 'dsh-skills-deck', prefix: 'wf' })
   check(JSON.stringify(holder.phoneNames) === JSON.stringify(PHONE_NAMES), '六个电话名从包读出且与旧字面一致（0.18 新增 wf.updateCheckFallback）')
   const wired = await import(pathToFileURL(path.join(ROOT, 'src', 'host', 'updateFromPackage.js')).href)
   const handlers = wired.createUpdatePhoneHandlers({ ctx: null, logCtx: null })

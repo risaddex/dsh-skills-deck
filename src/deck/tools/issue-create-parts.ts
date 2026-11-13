@@ -18,7 +18,7 @@ import * as budget from '../../refresh/kernel/host-budget.js'
 /** 工具定义（唯一事实）：路由、参数名与给 AI 看的那句话都从这里出，别在别处再抄一份。 */
 export const definition = {
   name: 'deck_issue_create',
-  description: '同属 dsh-mattpocock-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。建一张票：kind 必填，六值 map / map-ticket / spec / spec-ticket / bug / issue；map 与 spec 是顶层容器，地图工单挂探索地图、实施票挂规格，用 parentKey，工单要 label。自动补 label 与进度；规格与实施票写类型标记；originalWords 照抄；blockedBy 写成依赖边。本地后端编号与文件头标记由工具写，不要手写票文件。',
+  description: '同属 dsh-skills-deck 插件的 ISSUE 与 map 管理能力，只处理当前 workspace 对应的 repo；动 ISSUE 前先调用 deck_context 确认 workspace 与 backend，若它说没 backend 就停下。建一张票：kind 必填，六值 map / map-ticket / spec / spec-ticket / bug / issue；map 与 spec 是顶层容器，地图工单挂探索地图、实施票挂规格，用 parentKey，工单要 label。自动补 label 与进度；规格与实施票写类型标记；originalWords 照抄；blockedBy 写成依赖边。本地后端编号与文件头标记由工具写，不要手写票文件。',
   parameters: {
     type: 'object',
     properties: {

@@ -26,7 +26,7 @@ const calls: Array<{ repoRef: { refId: string }; key: unknown; body: string }> =
 // 两条同步定位口（describe）房间实例必须有：写会话靠它把仓库身份补齐，缺了就回「refId missing」。
 const ghTracker: { id: string; describe: (...args: unknown[]) => unknown; comment: (...args: unknown[]) => Promise<unknown> } = {
   id: 'github',
-  describe: () => ({ backend: 'github', refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-mattpocock-skills-deck', url: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck' }),
+  describe: () => ({ backend: 'github', refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-skills-deck', url: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck' }),
   comment: async (repoRef, key, body, opCtx) => { calls.push({ repoRef: repoRef as { refId: string }, key, body: body as string }); return { ok: true, data: { id: '42', author: { login: 'tester' }, body } } },
 }
 const badTracker = { id: 'gitlab-x', describe: () => ({ backend: 'gitlab-x', refId: 'grp/proj', name: 'proj', url: '' }) }
@@ -38,7 +38,7 @@ const fakeRegistry = {
   has: (id) => id === 'github' || id === 'gitlab-x',
   // canWrite:true = 用户在这个工作区里显式选过后端；写会话要拿它过写权限硬顶。
   select: async () => ({ backendId: 'github', source: 'explicit', canWrite: true, reason: '工作区文件里人显式选过' }),
-  describe: (_handle, backendId) => ({ backend: backendId, refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-mattpocock-skills-deck', url: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck' }),
+  describe: (_handle, backendId) => ({ backend: backendId, refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-skills-deck', url: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck' }),
   get: (id) => id === 'github' ? ghTracker : badTracker,
   // 会话要按后端编号取预算声明：缺 modules 或某一格没预算，openTracker 会回 pending（不再走向下转发）。
   modules: () => [

@@ -1,4 +1,4 @@
-// verify-ctx.ts — dsh-mattpocock-skills-deck 阶段 2 步骤 1（#95）：Ctx 接线模块验证
+// verify-ctx.ts — dsh-skills-deck 阶段 2 步骤 1（#95）：Ctx 接线模块验证
 // 2026-10-17 从 .js 转成 TypeScript：只改文件名、用法这行与几处类型标注，判据与断言一条没动。
 // 验证：
 //   1) src/client/kernel/ctx.js 模块可用：DswsCtx = React.createContext(null)（缺省值 null → Provider 缺失兜底）

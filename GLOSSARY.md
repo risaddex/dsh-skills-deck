@@ -8,6 +8,14 @@
 - **未来变更**：未来任何讨论或方案若改动当前定版内容，**以未来版本为准**——今天的内容不是不可变的，只是当前生效的基线。
 - **读写约定**：每次落盘方案/契约文档时，必须写明生效日期与上述两条规则；后续 AI 读到旧规则时，不得误认为旧内容比新内容新，也不得把今日内容当作永久不可变。
 
+## Linear terms (2026-11-13 · fork `dsh-skills-deck`)
+
+- **Linear backend**: the tracker that keeps a workspace's maps, specs and tickets as issues in one Linear team. _Avoid_: Linear integration, Linear plugin
+- **Account alias**: the short, unique name a user gives one configured Linear workspace (organization); every Linear reference outside a bound workspace is qualified by it. _Avoid_: account id, org name
+- **Binding**: the declaration that ties a repository workspace to one account alias and one team, optionally narrowed to one Linear project. _Avoid_: link, connection
+- **Qualified ref**: `alias:ENG-123`, an issue identifier prefixed with its account alias; the only form that is unique across accounts. _Avoid_: bare identifier (outside a bound workspace)
+- **Linear inbox**: the cross-account view of the issues assigned to me and the issues waiting in review states. _Avoid_: overview, sidebar
+
 ## 工程阶段词（票名范式）
 
 - **讨论**：方案论证阶段（选项 + 推荐 + 边界场景，HITL 拍板前）；票名 `讨论：X`。

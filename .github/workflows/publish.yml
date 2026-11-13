@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PKG_NAME: dsh-mattpocock-skills-deck
+  PKG_NAME: dsh-skills-deck
 
 jobs:
   publish:

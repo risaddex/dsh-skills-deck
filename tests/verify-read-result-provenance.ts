@@ -466,7 +466,7 @@ console.log('#1685 D. 接缝：stub 执行器真调 listIssues / getIssue / list
 const REPO: any = {
   backend: 'github',
   refId: 'FeatherHunter/dsh-mattpocock-skills-deck',
-  name: 'dsh-mattpocock-skills-deck',
+  name: 'dsh-skills-deck',
   url: '',
 }
 
@@ -1072,7 +1072,7 @@ check(
 // 看到的页码序列断请求条数与「探测只打一次」，不经过 listIssues 的降级包装。
 console.log('#1769 F. REST 整仓列表枚举的请求上界')
 
-const REST_PARSED: any = { owner: 'FeatherHunter', name: 'dsh-mattpocock-skills-deck' }
+const REST_PARSED: any = { owner: 'FeatherHunter', name: 'dsh-skills-deck' }
 const REST_PAGE = PAGINATION.github.restPageSize
 const REST_MAX = PAGINATION.github.restMaxPages
 

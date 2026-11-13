@@ -7,7 +7,7 @@
   },
   "step0": {
     "code": 0,
-    "out": "D:/dsh-plugin/dsh-mattpocock-skills-deck/.git\ntrue\nfalse\n",
+    "out": "D:/dsh-plugin/dsh-skills-deck/.git\ntrue\nfalse\n",
     "err": ""
   },
   "status": {
@@ -17,7 +17,7 @@
   },
   "worktrees": {
     "code": 0,
-    "out": "worktree D:/dsh-plugin/dsh-mattpocock-skills-deck\u0000HEAD edfc5b888735b10b9162dcfa62beb2ef123d620b\u0000branch refs/heads/main\u0000\u0000worktree D:/dsh-plugin/dsh-mattpocock-skills-deck/.tmp/baseline-wt\u0000HEAD 97abd757478a3ba780cfc2e23818fa5f12196cc4\u0000detached\u0000prunable gitdir file points to non-existent location\u0000\u0000",
+    "out": "worktree D:/dsh-plugin/dsh-skills-deck\u0000HEAD edfc5b888735b10b9162dcfa62beb2ef123d620b\u0000branch refs/heads/main\u0000\u0000worktree D:/dsh-plugin/dsh-skills-deck/.tmp/baseline-wt\u0000HEAD 97abd757478a3ba780cfc2e23818fa5f12196cc4\u0000detached\u0000prunable gitdir file points to non-existent location\u0000\u0000",
     "err": ""
   },
   "refs": {

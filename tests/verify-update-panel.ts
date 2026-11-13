@@ -48,10 +48,10 @@ async function main(): Promise<void> {
   check(typeof mod.createUpdatePhoneHandlers === 'function', '电话工厂可被动态加载')
   const INTEGRITY = `sha512-${'A'.repeat(86)}==`
   const releaseBody = (version) => JSON.stringify({
-    name: 'dsh-mattpocock-skills-deck',
+    name: 'dsh-skills-deck',
     version,
     engines: {},
-    dist: { tarball: `https://registry.npmjs.org/dsh-mattpocock-skills-deck/-/dsh-mattpocock-skills-deck-${version}.tgz`, integrity: INTEGRITY },
+    dist: { tarball: `https://registry.npmjs.org/dsh-skills-deck/-/dsh-skills-deck-${version}.tgz`, integrity: INTEGRITY },
   })
   const fakeFetch = (version) => async () => ({ ok: true, headers: { get: () => null }, text: async () => releaseBody(version) })
   const scratch = (tag) => path.join(fs.mkdtempSync(path.join(os.tmpdir(), `upd876-${tag}-`)), 'profiles', 'web')

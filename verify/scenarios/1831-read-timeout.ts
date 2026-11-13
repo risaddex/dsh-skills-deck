@@ -176,7 +176,7 @@ async function recordEvidence(context: ScenarioContext, name: string, value: unk
  * 候选身份由批次记录绑定；这里回答的是「跑起来的那份代码里到底有没有这次修复」。
  */
 function inspectInstalledPlugin(home: string, profile: string): InstalledProbe {
-  const pkgDir = path.join(home, 'profiles', profile, 'node_modules', 'dsh-mattpocock-skills-deck')
+  const pkgDir = path.join(home, 'profiles', profile, 'node_modules', 'dsh-skills-deck')
   const empty: InstalledProbe = { version: null, readCallTimeoutMs: null, valuesPath: null, getHasFix: false, listHasFix: false, problem: null }
   let version: string | null = null
   try {

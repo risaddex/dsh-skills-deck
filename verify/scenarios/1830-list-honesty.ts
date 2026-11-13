@@ -34,7 +34,7 @@ import type { PageHandle, ScenarioContext, ScenarioObservation } from 'dsh-feath
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(HERE, '..', '..')
 const OWNER = 'FeatherHunter'
-const REPO_NAME = 'dsh-mattpocock-skills-deck'
+const REPO_NAME = 'dsh-skills-deck'
 /** 票面点名的例子：一张早就关闭、带 bug 标签的老票，必须落在「已关闭且带 bug」的全集里。 */
 const EXAMPLE_KEY = '1303'
 /** 允许 gh 与工具两次独立读数之间的漂移：两次调用之间如果有人刚关了或开了票，数字会差几条。 */
@@ -175,7 +175,7 @@ interface InstalledProbe {
  * 候选身份由批次记录绑定；这里回答的是「跑起来的那份代码里到底有没有这次修复」。
  */
 function inspectInstalledPlugin(home: string, profile: string): InstalledProbe {
-  const pkgDir = path.join(home, 'profiles', profile, 'node_modules', 'dsh-mattpocock-skills-deck')
+  const pkgDir = path.join(home, 'profiles', profile, 'node_modules', 'dsh-skills-deck')
   let version: string | null = null
   try {
     const parsed = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8')) as Record<string, unknown>

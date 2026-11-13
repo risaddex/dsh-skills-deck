@@ -128,7 +128,7 @@ const partA = async function (): Promise<void> {
     logEvent: function (level: string, event: string, fields: any): void { logged.push({ level: level, event: event, fields: fields }) },
     isEnabled: function (): boolean { return false },
   }
-  const repo: any = { backend: 'github', refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-mattpocock-skills-deck', url: '' }
+  const repo: any = { backend: 'github', refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-skills-deck', url: '' }
 
   // 查询文本本身先钉两处：窗口变量已声明、filterBy 真的用它（变量声明了却没用，等于没窗口）。
   check(LIST_PAGE_QUERY.indexOf('$since:DateTime') >= 0, 'A、整仓列表查询声明了 $since:DateTime')
@@ -273,7 +273,7 @@ const partB = async function (): Promise<void> {
   }
   const deps: any = {
     openSession: async function (): Promise<any> { return { ok: true, backendId: 'github', call: async function (fn: any): Promise<any> { return fn(session, {}) } } },
-    getRepoKey: async function (): Promise<any> { return { owner: 'FeatherHunter', name: 'dsh-mattpocock-skills-deck' } },
+    getRepoKey: async function (): Promise<any> { return { owner: 'FeatherHunter', name: 'dsh-skills-deck' } },
     setCache: noop, issueIndexFromSnapshot: function (): any { return null }, issueIndexChanged: function (): boolean { return false },
     rememberIssueIndex: noop, readDiskCache: function (): any { return null }, logCtx: {},
   }

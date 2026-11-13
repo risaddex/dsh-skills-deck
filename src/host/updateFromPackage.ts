@@ -41,7 +41,7 @@ import { fileURLToPath } from 'node:url'
 // 本插件在更新包里的三个注册参数：插件标识（必填）、电话名前缀与版本通道。
 // 按规格，前缀取包里的默认值即等于旧值 wf，所以这里从头两个电话名的字面一眼可校对，
 // 不另写第二份「期望值」常量去和包里的默认值各说各话。
-export const UPDATE_PLUGIN_ID: string = 'dsh-mattpocock-skills-deck'
+export const UPDATE_PLUGIN_ID: string = 'dsh-skills-deck'
 export const UPDATE_PHONE_PREFIX: string = 'wf'
 // 版本通道取预发布档（2026-10-10 维护者拍板）：跑着测试版、候选版的人也能正常查更新，
 // 不会被报「使用范围或插件位置认不出」。代价是跑稳定版的人也可能收到预发布推送——

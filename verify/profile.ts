@@ -8,7 +8,7 @@ import { pluginChecks } from "./checks/index.ts";
 
 export default defineVerificationProfile({
   id: "matt-skills-deck",
-  packageName: "dsh-mattpocock-skills-deck",
+  packageName: "dsh-skills-deck",
   defaultProfile: "web",
   clientEntry: "lib/client.js",
   pluginCacheDir: ".dsh-mattskillsdeck-cache",

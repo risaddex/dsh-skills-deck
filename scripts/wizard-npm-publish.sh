@@ -185,13 +185,13 @@ finish() {
 
 TOTAL_STAGES=6
 
-banner "发布 dsh-mattpocock-skills-deck v1.7.3 到 npm（官方源）"
+banner "发布 dsh-skills-deck v1.7.3 到 npm（官方源）"
 
 # ── Stage 1: 前置三查 ────────────────────────────────────────────────────────
 stage "前置三查 — 环境 / 登录态 / 包名 / 源"
 say "本向导将把 package/ 目录的 1.7.3 发布到官方源，并确认 latest 变为 1.7.3。"
 say "官方源 https://registry.npmjs.org 与镜像不同步时，只有官方源的 latest 才算数。"
-note "包名 dsh-mattpocock-skills-deck 已存在；发同名同版本会 E409，需升版（本次 1.7.3 未占用，可直接发）。"
+note "包名 dsh-skills-deck 已存在；发同名同版本会 E409，需升版（本次 1.7.3 未占用，可直接发）。"
 echo ""
 say "自动检查："
 node -v
@@ -205,7 +205,7 @@ else
   cat /tmp/whoami.txt | sed 's/^/    /'
 fi
 echo -n "npm view latest (官方源 --prefer-online): "
-LATEST=$(npm view dsh-mattpocock-skills-deck version --registry=https://registry.npmjs.org --prefer-online 2>&1 | tail -n1)
+LATEST=$(npm view dsh-skills-deck version --registry=https://registry.npmjs.org --prefer-online 2>&1 | tail -n1)
 if [ "$LATEST" = "1.7.2" ]; then
   echo "1.7.2（符合预期，1.7.3 待发布）"
 elif [ "$LATEST" = "1.7.3" ]; then
@@ -276,10 +276,10 @@ stage "发布 — 交互式终端 + 浏览器 2FA 审批"
 warn "关键约束：发布命令不要重定向输出（> file 会让 stdout 非 TTY 而触发 EOTP）"
 say "将在可交互终端执行：(cd package && npm publish --registry=https://registry.npmjs.org)"
 note "账号开启 2FA 时会打印：Authenticate your account at: https://www.npmjs.com/auth/cli/<uuid>"
-step "按回车 → 浏览器自动打开授权页 → 完成 2FA 审批 → 回终端按回车 → 出现 + dsh-mattpocock-skills-deck@1.7.3 即成功"
+step "按回车 → 浏览器自动打开授权页 → 完成 2FA 审批 → 回终端按回车 → 出现 + dsh-skills-deck@1.7.3 即成功"
 echo ""
 say "备选：若你偏好一次性码，可在认证器 App 复制 6 位码后改用：npm publish --otp=<code> --registry=https://registry.npmjs.org"
-open_url "https://www.npmjs.com/package/dsh-mattpocock-skills-deck"
+open_url "https://www.npmjs.com/package/dsh-skills-deck"
 echo ""
 if confirm "现在执行发布？（需在有 TTY 的终端，不要在后台 job）"; then
   # 输出直连终端、不接管道：npm 只有在 stdout 是 TTY 时才会打印授权链接并等浏览器审批，
@@ -287,7 +287,7 @@ if confirm "现在执行发布？（需在有 TTY 的终端，不要在后台 jo
   (cd package && npm publish --registry=https://registry.npmjs.org --auth-type=web)
   PUB_EXIT=$?
   if [ "$PUB_EXIT" = "0" ]; then
-    echo "发布命令退出 0：成功时上方会出现 + dsh-mattpocock-skills-deck@<版本>"
+    echo "发布命令退出 0：成功时上方会出现 + dsh-skills-deck@<版本>"
   else
     warn "发布未成功（exit $PUB_EXIT）。常见原因："
     warn "  EOTP：终端不是交互终端，或输出被接了管道/重定向 —— 请在可见窗口直接跑，不要接管道"
@@ -302,8 +302,8 @@ pause "回车进入验证阶段"
 # ── Stage 5: 验证 ───────────────────────────────────────────────────────────
 stage "验证 — 官方源最新版与可安装性"
 say "验证必须显式 --registry=https://registry.npmjs.org 并 --prefer-online 跳过本地缓存"
-echo -n "npm view dsh-mattpocock-skills-deck version --prefer-online: "
-VER=$(npm view dsh-mattpocock-skills-deck version --registry=https://registry.npmjs.org --prefer-online 2>&1 | tail -n1)
+echo -n "npm view dsh-skills-deck version --prefer-online: "
+VER=$(npm view dsh-skills-deck version --registry=https://registry.npmjs.org --prefer-online 2>&1 | tail -n1)
 echo "$VER"
 if [ "$VER" = "1.7.3" ]; then
   echo "最新版已是 1.7.3（发布成功）"
@@ -314,15 +314,15 @@ else
 fi
 echo ""
 echo "npm view dist-tags (官方源): "
-npm view dsh-mattpocock-skills-deck dist-tags --registry=https://registry.npmjs.org --json 2>&1 | sed 's/^/  /'
+npm view dsh-skills-deck dist-tags --registry=https://registry.npmjs.org --json 2>&1 | sed 's/^/  /'
 echo ""
 echo "包主页："
-open_url "https://www.npmjs.com/package/dsh-mattpocock-skills-deck"
+open_url "https://www.npmjs.com/package/dsh-skills-deck"
 echo ""
 echo "可选：临时目录试装（验证包可被下载安装）"
-if confirm "是否现在做临时试装？（mkdir /tmp/npm-verify && npm install dsh-mattpocock-skills-deck --registry=https://registry.npmjs.org）"; then
+if confirm "是否现在做临时试装？（mkdir /tmp/npm-verify && npm install dsh-skills-deck --registry=https://registry.npmjs.org）"; then
   TMPDIR=$(mktemp -d 2>/dev/null || mktemp -d -t npm-verify)
-  (cd "$TMPDIR" && npm install dsh-mattpocock-skills-deck --registry=https://registry.npmjs.org 2>&1 | sed 's/^/  /')
+  (cd "$TMPDIR" && npm install dsh-skills-deck --registry=https://registry.npmjs.org 2>&1 | sed 's/^/  /')
   echo "试装目录：$TMPDIR"
   note "试装完成即证明包已可在官方源被拉取"
 else
@@ -333,12 +333,12 @@ pause "回车查看收尾说明"
 # ── Stage 6: 收尾 ───────────────────────────────────────────────────────────
 stage "收尾 — DSH 侧生效与回滚预案"
 say "npm 官方源发布后，DSH 桌面端的 pnpm 供应链策略 minimumReleaseAge 会让 dsh plugin update 数小时内静默忽略新版（不报错也不更新）"
-step "验证后请告知用户显式更新：dsh plugin --profile web add dsh-mattpocock-skills-deck@1.7.3 --registry https://registry.npmjs.org"
+step "验证后请告知用户显式更新：dsh plugin --profile web add dsh-skills-deck@1.7.3 --registry https://registry.npmjs.org"
 step "并提醒：完全退出 DSH 再重开 + Ctrl+F5 刷新页面才能看到新版本（右下角 DSW_VERSION=v1.7.3）"
 echo ""
 say "撤回预案（慎用，发布时间 = 公开）："
-note "72 小时内可 npm unpublish dsh-mattpocock-skills-deck@1.7.3 --registry=https://registry.npmjs.org（但历史记录保留，重发同版本仍可能 E409，需升版）"
-note "超 72 小时只能 npm deprecate dsh-mattpocock-skills-deck@1.7.3 \"reason\" --registry=https://registry.npmjs.org 标记废弃"
+note "72 小时内可 npm unpublish dsh-skills-deck@1.7.3 --registry=https://registry.npmjs.org（但历史记录保留，重发同版本仍可能 E409，需升版）"
+note "超 72 小时只能 npm deprecate dsh-skills-deck@1.7.3 \"reason\" --registry=https://registry.npmjs.org 标记废弃"
 echo ""
 say "令牌安全：本次登录的令牌已写入 npm 本地配置；若泄露立即到 https://www.npmjs.com/settings/feather_wch/tokens 吊销"
 finish

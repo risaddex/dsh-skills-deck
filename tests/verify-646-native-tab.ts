@@ -93,7 +93,7 @@ for (const rel of SET_ROUTER) {
   // 这条判据原先写的是 `DECK_NATIVE_TAB_KIND = '...'` 子串比对：产物里类型标注被剥掉，所以对得上；
   // 换成 .ts 真源后中间隔着 `: string` 类型标注，子串对不上。判据本身不放松（常量名与那个确切取值
   // 都必须在），只是允许中间出现类型标注 —— 源码与产物两种写法都认。
-  const kindDecl = /DECK_NATIVE_TAB_KIND\s*(?::\s*[^=\n]+)?=\s*['"]dsh-mattpocock-skills-deck:deck-map['"]/
+  const kindDecl = /DECK_NATIVE_TAB_KIND\s*(?::\s*[^=\n]+)?=\s*['"]dsh-skills-deck:deck-map['"]/
   check(kindDecl.test(t), rel + ' 面板类型名仍是本插件自己那条')
   check(t.includes('DECK_NATIVE_TYPE_ID'), rel + ' 类型 id 有自己的常量')
   const code = stripComments(t)
@@ -240,9 +240,9 @@ console.log('== 运行时断言：拿桩上下文跑一遍 apply，看真的注�
   check(injectSeat !== null && injectSeat.deps.includes('sidebarRightTabs'), 'apply 里用 ctx.inject 等了 sidebarRightTabs')
   check(registeredTypes.length === 1, '只注册了 1 个原生 tab 类型（实际 ' + registeredTypes.length + '）')
   const def = registeredTypes[0] || {}
-  check(def.kind === 'dsh-mattpocock-skills-deck:deck-map', '类型的 kind 是本插件自己那条（实际 ' + JSON.stringify(def.kind) + '）')
+  check(def.kind === 'dsh-skills-deck:deck-map', '类型的 kind 是本插件自己那条（实际 ' + JSON.stringify(def.kind) + '）')
   check(def.priority === 'builtin', '类型的档位 = builtin（实际 ' + JSON.stringify(def.priority) + '）')
-  check(def.id === 'dsh-mattpocock-skills-deck/deck:map', '类型 id = 包名 + 面板名（实际 ' + JSON.stringify(def.id) + '）')
+  check(def.id === 'dsh-skills-deck/deck:map', '类型 id = 包名 + 面板名（实际 ' + JSON.stringify(def.id) + '）')
   check(typeof def.title === 'function', '类型带标题函数')
   check(Array.isArray(def.guide) && def.guide.length === 1 && def.guide[0].order === 60, '带一条引导页入口（order 60）—— 引导页里因此只有一枚')
   check(Array.isArray(def.guide) && typeof def.guide[0].title === 'function' && typeof def.guide[0].icon === 'function', '引导页入口自带标题与图标函数')
@@ -252,7 +252,7 @@ console.log('== 运行时断言：拿桩上下文跑一遍 apply，看真的注�
   check(names.includes('sidebar.right.pane.tab.title'), '注册了标签标题栏槽位')
   check(!names.includes('shell.overlay'), '没有把面板挂到 shell.overlay（页内浮窗仍是退役状态）')
   const body = registrations.find((r) => r.meta.name === 'sidebar.right.pane.tab')
-  check(!!body && body.meta.key === 'dsh-mattpocock-skills-deck/deck:map', '内容体按我们自己的类型 id 分格')
+  check(!!body && body.meta.key === 'dsh-skills-deck/deck:map', '内容体按我们自己的类型 id 分格')
   check(!!body && typeof body.meta.inject === 'function' && (body.meta.inject as (sid: string) => { sessionId: string })('sid-1').sessionId === 'sid-1', '内容体从槽位拿到 sessionId')
   check(sidebarRightCalls.length === 0, 'apply 阶段不打开面板（打开只由用户操作触发）')
 

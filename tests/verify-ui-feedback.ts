@@ -238,7 +238,7 @@ function audit(read: (p: string) => string): AuditResult[] {
   check(settingsSrc.indexOf('ui.ActionCluster') >= 0, 'I1 页头用 base 0.1.5 的 ActionCluster（静默簇）渲染')
   check(settingsSrc.indexOf('ui.ActionGroup') < 0, 'I2 旧的 ActionGroup 用法已退役（0.1.5 起不再走胶囊）')
   check(settingsSrc.indexOf('DeckContactRow') < 0 && settingsSrc.indexOf('ui.ContactRow') < 0, 'I3 设置面板底部不再单独画联系行（联系入口已收进页头静默簇）')
-  check(settingsSrc.indexOf("dsh-mattpocock-skills-deck/issues'") >= 0 && settingsSrc.indexOf('/issues/new') < 0, 'I4 Issue 落点是工单列表页 .../issues（不再直开新建工单页）')
+  check(settingsSrc.indexOf("dsh-skills-deck/issues'") >= 0 && settingsSrc.indexOf('/issues/new') < 0, 'I4 Issue 落点是工单列表页 .../issues（不再直开新建工单页）')
   check(settingsSrc.indexOf('去 GitHub 点 Star') < 0 && settingsSrc.indexOf('反馈问题') < 0, 'I5 自绘表情按钮的旧悬停文案已删（图标与提示由 base 包提供）')
   check(settingsSrc.indexOf('size: 16') >= 0, 'I6 页头静默簇按 base 默认 16 号图标排（按钮 28×28）')
 

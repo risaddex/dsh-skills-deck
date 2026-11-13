@@ -1,5 +1,5 @@
 /**
- * dsh-mattpocock-skills-deck · Host 半（数据层实现 · T3 #345）
+ * dsh-skills-deck · Host 半（数据层实现 · T3 #345）
  * 这是宿主入口：装配动态加载的各个工作模块与几十条宿主电话；实现都在各自文件里（#723 起刷新机制的 装配在 ../refresh/rooms/host/refresh-runtime.js），本文件只负责装配与注册。
  * 这套装配分组的「从哪来、为什么留在这里、搬走的实现去了哪」见 docs/design/837-host-index-wiring-ledger.md。
  * #1074 从 .js 转成 .ts：只加类型标注，逻辑一行未动。200 处「原样转交实参」由 function()+arguments 改成 rest+args，实参表一致；删掉一处死传参（平台通道解构不收 getChoiceStore，传了也收不到）。
@@ -12,7 +12,7 @@ type WfArgs = Record<string, any>
 interface HostCtx { get(key: string): any; inject(keys: string[], fn: () => void): unknown }
 // ===== 规范方言（dynamic dialect）：harness 为自由变量；pkg entry 提供 shim =====
 export default {
-  name: 'dsh-mattpocock-skills-deck',
+  name: 'dsh-skills-deck',
   // 声明 connection + llm + sessionQuery：webServer 仍不加（#596）；llm 给首轮摘要调模型用，sessionQuery 给读首轮两段用（读而不激活），缺任何一个对应功能静默降级（#746）。
   inject: ['connection', 'llm', 'sessionQuery'],
   // 宿主插件主入口：为什么留在单文件装配——集中注册 65 条宿主电话与启动门，所有具体实现按需动态引入；什么约定不能改——subprocess/timer 未就绪时必须挂起等待而非直接放弃，且本文件总行数受门禁上限 400 行与电话精确计数 65 条约束；
@@ -391,7 +391,7 @@ export default {
     import('../shared/time-config/src/values.js').then(function (tc: any) {
       setTimeout(() => {
         if (booted) return
-        try { console.warn('[dsh-mattpocock-skills-deck] host boot deferred: subprocess/timer not ready after ' + tc.HOST_BOOT_DEFER_MS + 'ms, deck tools not registered') } catch (eW) {}
+        try { console.warn('[dsh-skills-deck] host boot deferred: subprocess/timer not ready after ' + tc.HOST_BOOT_DEFER_MS + 'ms, deck tools not registered') } catch (eW) {}
       }, tc.HOST_BOOT_DEFER_MS)
     }).catch(function () {})
   },

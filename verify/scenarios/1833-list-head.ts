@@ -545,7 +545,7 @@ export default defineScenario<ScenarioContext>({
         //    会被组件里的 pointerdown 处理跳过（前三版探针踩过）。
         await realClick(raw, 'button[aria-label="打开右侧边栏"]')
         await sleep(1500)
-        const entrySelector = 'button[data-sidebar-right-guide-entry="dsh-mattpocock-skills-deck:deck-map"]'
+        const entrySelector = 'button[data-sidebar-right-guide-entry="dsh-skills-deck:deck-map"]'
         const deckEntry = await realClick(raw, entrySelector)
         facts.panelEntry = deckEntry
         // 列表取数要等宿主把票真的读回来（本机实测 GitHub 后端一次要十几秒）；轮询到列表行出现、

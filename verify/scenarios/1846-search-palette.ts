@@ -91,7 +91,7 @@ const BODY_DARK_SCRIPT = 'document.body.hasAttribute("data-ds-dark-theme")'
 const SEL_CLOSE = 'button[aria-label="关闭"]'
 const SEL_WORKSPACE = 'button[aria-label="选择工作区"]'
 const SEL_SIDEBAR = 'button[aria-label="打开右侧边栏"]'
-const SEL_GUIDE = 'button[data-sidebar-right-guide-entry="dsh-mattpocock-skills-deck:deck-map"]'
+const SEL_GUIDE = 'button[data-sidebar-right-guide-entry="dsh-skills-deck:deck-map"]'
 const SEL_VC_TAB = 'button.dsws-tab[data-log="panel.tab.versioncontrol"]'
 
 function sleep(ms: number): Promise<void> {

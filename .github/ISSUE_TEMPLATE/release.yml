@@ -67,7 +67,7 @@ body:
       label: 2 项发布验证（官方源与已装形态）
       description: 发布后独立可验证已生效
       options:
-        - label: "1. 官方源查询验证通过（`npm view dsh-mattpocock-skills-deck --registry https://registry.npmjs.org --prefer-online` 可查到 `vX.Y.Z`）"
+        - label: "1. 官方源查询验证通过（`npm view dsh-skills-deck --registry https://registry.npmjs.org --prefer-online` 可查到 `vX.Y.Z`）"
           required: true
         - label: "2. 已装形态验证通过（在已装 DSH 中版本号可见，面板行为符合发布内容）"
           required: true

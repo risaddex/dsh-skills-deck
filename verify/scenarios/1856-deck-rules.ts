@@ -332,7 +332,7 @@ export default defineScenario<ScenarioContext>({
         if (page === null) return observations
 
         const instance = context.instance!
-        const pkgDir = path.join(instance.record.home, 'profiles', instance.record.profile, 'node_modules', 'dsh-mattpocock-skills-deck')
+        const pkgDir = path.join(instance.record.home, 'profiles', instance.record.profile, 'node_modules', 'dsh-skills-deck')
         const instanceDir = instance.record.dir === undefined ? '' : instance.record.dir
         const workspacePath = instanceDir === '' ? '' : seededWorkspacePath(instanceDir)
 

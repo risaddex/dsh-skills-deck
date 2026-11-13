@@ -258,13 +258,13 @@ const PKG_CLIENT_SHIMS: string = `    // ===================== seam shims（pkg 
       insert: (css) => {
         const ctx = __DSW_CTX__
         const styleEl = document.createElement('style')
-        styleEl.setAttribute('data-plugin', 'dsh-mattpocock-skills-deck')
+        styleEl.setAttribute('data-plugin', 'dsh-skills-deck')
         styleEl.textContent = typeof css === 'string' ? css : Array.isArray(css) ? css.join('') : String(css)
         document.head.appendChild(styleEl)
         if (ctx && typeof ctx.effect === 'function') {
           ctx.effect(() => () => {
             try { if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl) } catch (e) { /* 忽略 */ }
-          }, 'dsh-mattpocock-skills-deck: styles')
+          }, 'dsh-skills-deck: styles')
         }
         return () => {
           try { if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl) } catch (e) { /* 忽略 */ }
@@ -1297,7 +1297,7 @@ async function buildClient({ version, repoUrl, buildCommit }: { version: string;
   const pkgCode: string = `${header}
 
 window.__ModuleLoader__.load({
-  id: 'dsh-mattpocock-skills-deck',
+  id: 'dsh-skills-deck',
   factory: (require) => {
     var module = { exports: {} }
     var exports = module.exports

@@ -50,7 +50,7 @@ function replyEnvelope(rpcId?: any, result?: any) {
 
 /** 读版本时只认这几条候选路径（相对本文件）；读到的清单名字对不上就当下一条。 */
 const MANIFEST_CANDIDATES = ['../package.json', '../../package/package.json']
-const MANIFEST_NAME = 'dsh-mattpocock-skills-deck'
+const MANIFEST_NAME = 'dsh-skills-deck'
 let servingVersion: any = null
 let servingVersionRaw: any = null
 
@@ -206,7 +206,7 @@ export function createRpcChannel(deps?: any): any {
     })
     // 注册是同步生效的；返回的销毁函数交给注册表自己管，有些版本同时想挂 ctx.effect 才多挂一次，挂不上不影响路由本身。
     if (typeof disposed !== 'function' && typeof ctx.effect === 'function') {
-      try { ctx.effect(function() { return function() {} }, 'dsh-mattpocock-skills-deck: ' + DSW_RPC_ROUTE) } catch (eEff) {}
+      try { ctx.effect(function() { return function() {} }, 'dsh-skills-deck: ' + DSW_RPC_ROUTE) } catch (eEff) {}
     }
     return { ok: true, path: DSW_RPC_ROUTE }
   } catch (eReg) {

@@ -25,7 +25,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          REPO="FeatherHunter/dsh-mattpocock-skills-deck"
+          REPO="risaddex/dsh-skills-deck"
           # 不吞退出码：拉取失败就让这一步红，别把「没拉到」伪装成「没有新数据」而直接跳过。
           gh api -H "Accept: application/vnd.github.star+json" "repos/$REPO/stargazers" --paginate --jq ".[].starred_at" > /tmp/stars.txt
           if [ ! -s /tmp/stars.txt ]; then echo "No stars fetched"; exit 0; fi

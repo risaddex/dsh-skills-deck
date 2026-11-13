@@ -91,7 +91,7 @@ async function runChain(handler: FakeGh) {
     getCurrentUser: async () => ({ ok: false }),
   }
   const deps = {
-    getRepoKey: async () => ({ owner: 'FeatherHunter', name: 'dsh-mattpocock-skills-deck' }),
+    getRepoKey: async () => ({ owner: 'FeatherHunter', name: 'dsh-skills-deck' }),
     openSession: async () => ({ ok: true, call: async (fn: (s: unknown, c: unknown) => Promise<unknown>) => fn(fakeSession, baseCtx) }),
   }
   const probe = probeChainEnv(deps as never, '.')
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
     const r = await runChain((args) => {
       if (args[0] === 'auth') return { stderr: SAMPLES.proxyAuthStatus, code: 1 }
       if (args[0] === 'api' && args[1] === 'user') return { stdout: 'FeatherHunter\n', code: 0 }
-      if (args[0] === 'api') return { stdout: '{"id":1,"name":"dsh-mattpocock-skills-deck"}', code: 0 }
+      if (args[0] === 'api') return { stdout: '{"id":1,"name":"dsh-skills-deck"}', code: 0 }
       return new Error('unexpected gh command: ' + args.join(' '))
     })
     check(r.reply.stage === 'pass', '三、第二关按过处理，三关全过', JSON.stringify(r.reply))

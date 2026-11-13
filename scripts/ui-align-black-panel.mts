@@ -56,7 +56,7 @@ async function shotSelector(sel: string, name: string): Promise<boolean> {
 
 // Align: list elements user mentioned
 await shotByText('工作区', '02-workspace-label.png')
-await shotByText('dsh-mattpocock-skills-deck', '03-workspace-dsh-deck.png')
+await shotByText('dsh-skills-deck', '03-workspace-dsh-deck.png')
 await shotByText('新会话', '04-new-session.png')
 await shotSelector('.dsws-seg', '05-statusbar-seg.png')
 await shotByText('可接', '06-seg-ke-jie.png')
@@ -64,12 +64,12 @@ await shotByText('列表', '07-tab-list.png')
 await shotByText('技能', '07b-tab-skills.png')
 await shotByText('环境检查', '07c-tab-checks.png')
 
-// Try to activate session for dsh-mattpocock-skills-deck
+// Try to activate session for dsh-skills-deck
 // left sidebar sessions: look for the workspace folder then session
-console.log('[align] trying to activate session for dsh-mattpocock-skills-deck...')
+console.log('[align] trying to activate session for dsh-skills-deck...')
 try {
-  // click workspace folder dsh-mattpocock-skills-deck in left
-  const ws = page.getByText('dsh-mattpocock-skills-deck').first()
+  // click workspace folder dsh-skills-deck in left
+  const ws = page.getByText('dsh-skills-deck').first()
   if (await ws.count()>0){
     const box = await ws.evaluate((el: HTMLElement)=>{ const r=el.getBoundingClientRect(); return {x:r.x+r.width/2, y:r.y+r.height/2}})
     // just log, not clicking workspace? Instead click a session under it

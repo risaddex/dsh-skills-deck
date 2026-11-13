@@ -1,6 +1,6 @@
 // 由 dsh-plugin-update@0.18.39 的集成工具生成，人手不改。
 // 生成命令：node dsh-plugin-update/derive-client-values.mjs --prefix wf --out <本文件路径>
-// 生成对象：dsh-mattpocock-skills-deck。改了前缀或想升级本包，重新跑一次这条命令即可。
+// 生成对象：dsh-skills-deck。改了前缀或想升级本包，重新跑一次这条命令即可。
 // node_modules/.pnpm/dsh-plugin-update@0.18.39/node_modules/dsh-plugin-update/dist/shared/config.js
 // 派生后处理（#800）：已按 #597 把三个重名函数改名（build* → updBuild*），顶撞检查已过；数据源是已安装的更新包，本地包目录不是来源。
 var CHECK_FALLBACK_PHONE_ACTION = "updateCheckFallback";

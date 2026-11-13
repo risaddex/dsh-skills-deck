@@ -121,7 +121,7 @@ declare const CONTAINER_ACCENT: any;
     //   原来挂在这个位置的是页内浮窗组件（shell.overlay 槽位），它已随这次退役整份删除；
     //   它当年负责的提示条与切换弹窗，Dock 那边本来就有。
     __injectOnce('conversation.input.dock', function () {
-      return slots.register({ name: 'conversation.input.dock', id: 'dsh-mattpocock-skills-deck', order: 40 }, withCx(StatusBar))
+      return slots.register({ name: 'conversation.input.dock', id: 'dsh-skills-deck', order: 40 }, withCx(StatusBar))
     })
     __injectOnce('tool.view.cordis', function () {
       return slots.register({ name: 'tool.view.cordis', key: 'self' }, withCx(RunPanel))
@@ -189,7 +189,7 @@ declare const CONTAINER_ACCENT: any;
         try { if (nativeTabDisposer) nativeTabDisposer() } catch (e) { /* 忽略 */ }
         nativeTabDisposer = null
       }
-    }, 'dsh-mattpocock-skills-deck: native right sidebar tab')
+    }, 'dsh-skills-deck: native right sidebar tab')
 
     // #490 client 日志底座：开关启动对账（本地秒显已在 log.ts 顶层同步完成；
     //   此处再向宿主读开关，以宿主为准；宿主不可用就保持本地值，不阻断启动）。

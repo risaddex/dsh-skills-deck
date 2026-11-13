@@ -1,5 +1,5 @@
 /**
- * dsh-mattpocock-skills-deck · Client 半（UX v25 · 2026-08-14 T2a 配置页骨架）
+ * dsh-skills-deck · Client 半（UX v25 · 2026-08-14 T2a 配置页骨架）
  *
  * v27 变更（#95 · 阶段 2 步骤 1 Ctx 接线）：src/client/kernel/ctx.js（createCx + DswsCtx，
  *   G3 冻结 8 字段 #91）经构建注入 apply 闭包顶部；插槽组件注册处包 DswsCtx.Provider（withCx）。

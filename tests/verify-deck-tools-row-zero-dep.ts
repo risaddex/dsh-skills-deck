@@ -42,7 +42,7 @@ async function main() {
   const deps = (pkg && pkg.dependencies) || {}
   check(!Object.hasOwn(deps, '@deepseek-ai/dsh-tools'), '发布清单运行时依赖无工具包（不再多装一份）')
   const patch = readText('package/cordis.patch.yml')
-  check(patch.indexOf('dsh-mattpocock-skills-deck/tools') >= 0, '装配补丁含工具行（agent 层能装上）')
+  check(patch.indexOf('dsh-skills-deck/tools') >= 0, '装配补丁含工具行（agent 层能装上）')
 
   // 2. 行模块交出十个加探针和建议，且形状过真原生判定
   let row = null

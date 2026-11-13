@@ -19,7 +19,7 @@
   },
   "step0": {
     "code": 0,
-    "out": "D:/dsh-plugin/dsh-mattpocock-skills-deck/.tmp-817-numstat/.git\ntrue\nfalse\n",
+    "out": "D:/dsh-plugin/dsh-skills-deck/.tmp-817-numstat/.git\ntrue\nfalse\n",
     "err": ""
   },
   "status": {
@@ -29,7 +29,7 @@
   },
   "worktrees": {
     "code": 0,
-    "out": "worktree D:/dsh-plugin/dsh-mattpocock-skills-deck/.tmp-817-numstat\u0000HEAD 991f0ee2297407781439bfecdb77bb5b66752e68\u0000branch refs/heads/main\u0000\u0000",
+    "out": "worktree D:/dsh-plugin/dsh-skills-deck/.tmp-817-numstat\u0000HEAD 991f0ee2297407781439bfecdb77bb5b66752e68\u0000branch refs/heads/main\u0000\u0000",
     "err": ""
   },
   "refs": {

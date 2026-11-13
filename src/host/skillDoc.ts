@@ -123,7 +123,7 @@ export function createSkillDoc(deps?: any): any {
         let cur = cwd
         for (let i = 0; i < 4; i++) {
           candidates.push(pathMod.join(cur, 'package/bundled-skills'))
-          candidates.push(pathMod.join(cur, 'node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
+          candidates.push(pathMod.join(cur, 'node_modules/dsh-skills-deck/bundled-skills'))
           cur = pathMod.dirname(cur)
         }
       }
@@ -131,8 +131,8 @@ export function createSkillDoc(deps?: any): any {
     try {
       const home = osMod.homedir()
       if (home) {
-        candidates.push(pathMod.join(home, '.dsh/profiles/web/node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
-        candidates.push(pathMod.join(home, '.dsh/profiles/desktop/node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
+        candidates.push(pathMod.join(home, '.dsh/profiles/web/node_modules/dsh-skills-deck/bundled-skills'))
+        candidates.push(pathMod.join(home, '.dsh/profiles/desktop/node_modules/dsh-skills-deck/bundled-skills'))
       }
     } catch {}
     const seen = new Set()

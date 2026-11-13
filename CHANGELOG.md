@@ -1,3 +1,12 @@
+## 2026-11-13 · v2.0.0-alpha.0 alpha: hard fork as dsh-skills-deck (#2)
+
+- **What this is**: the first release of the hard fork `risaddex/dsh-skills-deck`, taken from `FeatherHunter/dsh-mattpocock-skills-deck` at `5b4d78f`. The package, the DSH plugin entries and the GitHub repository are renamed to `dsh-skills-deck`; behavior is unchanged. Decision record: `docs/adr/20261113-hard-fork-dsh-skills-deck.md`.
+- **Why a new name**: the fork goes English first and adds a native Linear backend, so it will not merge upstream routinely; keeping the old name would let the upstream updater and marketplace offer upstream builds over it.
+- **Changes**: package and plugin ids `dsh-skills-deck` / `dsh-skills-deck/tools`; repository, homepage and release-tarball URLs point at the fork; stray `tmp-*`, `.scratch-*` and `notion-intro.html` removed; `GLOSSARY.md` gains the Linear terms; gates that hard-code the package name or the candidate version follow the rename.
+- **Install**: uninstall `dsh-mattpocock-skills-deck` first; the two plugins register the same `deck_*` tools.
+- **Verification**: `npm run verify:parallel`, compared with a pristine upstream checkout on the same machine; remaining reds are the same environment-bound gates, plus the upstream updater gates that ticket #3 removes.
+- **Commit**: this commit.
+
 ## 2026-11-01 · v1.9.0-beta.34 测试版：修 GitLab 房间在真机批次里暴露的三处缺陷——详情页评论被快照挡住、评论只取第一页、认领人写错（#1783、#1784、#1785）
 
 - **这是什么**：版本号从 `1.9.0-beta.33` 推进到 `1.9.0-beta.34`。这一版只改 GitLab 后端的行为，不动别的后端：真机批次在 GitLab 项目上跑出三处会让人看错票面的地方，这一版把它们改对，并补三道门禁守住。

@@ -39,7 +39,7 @@ const TEMPLATE_TEXT = '【摘要】' + NEWLINE + NEWLINE + '- 改了什么：' +
 const HOOK_LOG = path.join(FIXTURE_REPO, '.git', 'hooks-ran.log')
 
 const RAIL_BUTTON = 'button[aria-label=' + QUOTE + '打开右侧边栏' + QUOTE + ']'
-const GUIDE_ENTRY_BUTTON = 'button[data-sidebar-right-guide-entry=' + QUOTE + 'dsh-mattpocock-skills-deck:deck-map' + QUOTE + ']'
+const GUIDE_ENTRY_BUTTON = 'button[data-sidebar-right-guide-entry=' + QUOTE + 'dsh-skills-deck:deck-map' + QUOTE + ']'
 const VC_TAB_BUTTON = 'button.dsws-tab[data-log=' + QUOTE + 'panel.tab.versioncontrol' + QUOTE + ']'
 const NEW_SESSION_BUTTON = 'button[aria-label=' + QUOTE + '新建会话' + QUOTE + ']'
 const WORKSPACE_BUTTON = 'button[aria-label=' + QUOTE + '选择工作区' + QUOTE + ']'

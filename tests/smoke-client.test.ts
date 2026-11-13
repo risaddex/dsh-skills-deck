@@ -68,7 +68,7 @@ let failures = 0
 const check = (ok: unknown, msg: string): void => { console.log((ok ? '  PASS ' : '  FAIL ') + msg); if (!ok) failures++ }
 
 check(!!loaded, 'ModuleLoader.load 被调用')
-check(loaded && loaded.id === 'dsh-mattpocock-skills-deck', `id = ${loaded && loaded.id}`)
+check(loaded && loaded.id === 'dsh-skills-deck', `id = ${loaded && loaded.id}`)
 
 const mod = loaded.factory((m) => {
   if (m === 'react') return window.React

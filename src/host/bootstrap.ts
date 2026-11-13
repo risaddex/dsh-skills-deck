@@ -63,20 +63,20 @@ export function createBootstrap(deps: BootstrapDeps): BootstrapPhones {
               let cur: string = cwd
               for (let i: number = 0; i < 4; i++) {
                 candidates.push(pathMod.join(cur, 'package/bundled-skills'))
-                candidates.push(pathMod.join(cur, 'node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
+                candidates.push(pathMod.join(cur, 'node_modules/dsh-skills-deck/bundled-skills'))
                 cur = pathMod.dirname(cur)
               }
             }
             try {
               const home: string = osMod.homedir()
               if (home) {
-                candidates.push(pathMod.join(home, '.dsh/profiles/web/node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
-                candidates.push(pathMod.join(home, '.dsh/profiles/desktop/node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
+                candidates.push(pathMod.join(home, '.dsh/profiles/web/node_modules/dsh-skills-deck/bundled-skills'))
+                candidates.push(pathMod.join(home, '.dsh/profiles/desktop/node_modules/dsh-skills-deck/bundled-skills'))
                 try {
                   const profilesDir: string = pathMod.join(home, '.dsh/profiles')
                   // @ts-expect-error —— 见上，node:fs/promises 同理。
                   const entries: any = await (await import('node:fs/promises')).readdir(profilesDir, { withFileTypes: true }).catch(() => [])
-                  for (const e of (entries as any[])) if (e.isDirectory()) candidates.push(pathMod.join(profilesDir, e.name, 'node_modules/dsh-mattpocock-skills-deck/bundled-skills'))
+                  for (const e of (entries as any[])) if (e.isDirectory()) candidates.push(pathMod.join(profilesDir, e.name, 'node_modules/dsh-skills-deck/bundled-skills'))
                 } catch {}
               }
             } catch {}

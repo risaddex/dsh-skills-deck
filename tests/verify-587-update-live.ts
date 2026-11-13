@@ -36,7 +36,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
   let pkgDir = ''
   try {
     for (const name of fs.readdirSync(profilesDir)) {
-      const candidate = path.join(profilesDir, name, 'node_modules', 'dsh-mattpocock-skills-deck')
+      const candidate = path.join(profilesDir, name, 'node_modules', 'dsh-skills-deck')
       // 只认「完好」的那一份：三个入口文件都在（出版方清单里的 main / exports[./client] / dsh.bundle.patch）。
       // 本机桌面那份是旧版实装，缺 cordis.patch.yml，宿主读取器会按「安装无效」拒收，拿它做判据会得出假结论。
       const complete = ['package.json', 'lib/index.js', 'lib/client.js', 'cordis.patch.yml'].every((rel) => fs.existsSync(path.join(candidate, rel)))
@@ -61,10 +61,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
   // 于是本该报「缺一次重启」的场景报成别的（0.10.0 及之前是「安装无效」）。
   // 本机装的是稳定版时行为一个字不变；装的是测试版时按测试版通道判，两种装法都成立（2026-10-10）。
   const releaseChannel = /-/.test(installedVersion) ? 'prerelease' : 'stable'
-  const profileSpec = (JSON.parse(fs.readFileSync(path.join(profileDir, 'package.json'), 'utf8')).dependencies || {})['dsh-mattpocock-skills-deck'] || ''
+  const profileSpec = (JSON.parse(fs.readFileSync(path.join(profileDir, 'package.json'), 'utf8')).dependencies || {})['dsh-skills-deck'] || ''
   const readEnv = async (runningVersion: string): Promise<any> => {
     const readerMod = await import(readerUrl)
-    const reader = readerMod.createUpdateReader({ runningVersion: runningVersion, profileDir: profileDir, pluginId: 'dsh-mattpocock-skills-deck', homeDir: path.join(home, '.dsh'), targetPackageDir: pkgDir, releaseChannel: releaseChannel })
+    const reader = readerMod.createUpdateReader({ runningVersion: runningVersion, profileDir: profileDir, pluginId: 'dsh-skills-deck', homeDir: path.join(home, '.dsh'), targetPackageDir: pkgDir, releaseChannel: releaseChannel })
     return await reader.readEnv()
   }
   try {
@@ -142,7 +142,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
     const el = window.document.createElement('div')
     window.document.body.appendChild(el)
     const entry = liveEntry.mountUpdateEntry(el, {
-      pluginId: 'dsh-mattpocock-skills-deck',
+      pluginId: 'dsh-skills-deck',
       prefix: 'wf',
       theme: 'archive',
       call: async (name: string) => {

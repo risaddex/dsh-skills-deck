@@ -2,7 +2,7 @@
 #
 # 向导：把一个 npm 包发到官方源，并验证官方源真的能取到。
 # 这是 /npm-publish 能力的「按包传参」版本：#586 迁移要发两个包
-# （dsh-plugin-update 与 dsh-mattpocock-skills-deck），旧脚本 scripts/wizard-npm-publish.sh
+# （dsh-plugin-update 与 dsh-skills-deck），旧脚本 scripts/wizard-npm-publish.sh
 # 把包名和版本号写死在 1.7.3，发第二个包时用不上。
 #
 # 执行主体：AI 触发与步进；人只做一件事——在浏览器里完成 npm 的二次验证。
@@ -296,7 +296,7 @@ pause "回车查看收尾说明"
 stage "收尾（已装形态生效 / 撤回预案 / 令牌安全）"
 say "发布之后，让装了旧版的宿主拿到新版还要多一步。"
 echo ""
-if [[ "$PKG_NAME" == dsh-mattpocock-skills-deck ]]; then
+if [[ "$PKG_NAME" == dsh-skills-deck ]]; then
   step "让宿主装上指定版本：dsh plugin --profile web add $PKG_NAME@$TARGET_VERSION --registry $REGISTRY"
   step "完全退出宿主再重开、刷新页面，才能看到新版本号"
 else

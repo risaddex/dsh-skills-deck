@@ -2,13 +2,13 @@ name: Release tarball
 
 # 为什么需要这个 workflow：
 # 市场（awesome-dsh-plugin 列表与 dsh-market）里那条「预构建包安装」链接写的是
-#   https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/releases/latest/download/dsh-mattpocock-skills-deck.tgz
+#   https://github.com/risaddex/dsh-skills-deck/releases/latest/download/dsh-skills-deck.tgz
 # 其中 latest 是请求时解析的，但文件名是照字面取的：只有「最新那条 Release 上恰好有一个
 # 叫这个名字的资产」，链接才会指向最新版。只要某一次发版忘了附着，链接就 404，
 # 所以这件事不能靠人记着做，交给这里自动完成。
 #
 # 附上去的是 npm 官方源上这一版的原样产物（不是另外构建的第二份），
-# 因此市场里下载到的包与 `dsh plugin add dsh-mattpocock-skills-deck` 装到的是同一份。
+# 因此市场里下载到的包与 `dsh plugin add dsh-skills-deck` 装到的是同一份。
 #
 # 下面脚本里的 NAME 与 `package/package.json` 的包名一致；改包名时这里要跟着改。
 
@@ -35,7 +35,7 @@ jobs:
           set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"
           VERSION="${TAG#v}"
-          NAME="dsh-mattpocock-skills-deck"
+          NAME="dsh-skills-deck"
           WORK="$(mktemp -d)"
           cd "$WORK"
           # npm 刚发出去时 registry 的 CDN 可能还没同步，隔一会儿重试几次

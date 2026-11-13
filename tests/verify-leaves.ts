@@ -1,4 +1,4 @@
-// verify-leaves.ts — dsh-mattpocock-skills-deck 阶段 2 叶子迁移（#97 T4）：叶子文件清单门禁
+// verify-leaves.ts — dsh-skills-deck 阶段 2 叶子迁移（#97 T4）：叶子文件清单门禁
 // 验证：
 //   1) 全部叶子文件存在（G3 共享 → views/shared/ · G4 严格一文件）
 //   2) 每个叶子文件 ≤350 行（G4 Q1：≤350 默认、>500 强制拆；在册文件按零增长基线判）

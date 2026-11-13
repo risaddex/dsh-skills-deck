@@ -19,8 +19,8 @@ import type { Issue, RepositoryRef } from '../src/tracker/contract/entities.ts'
 import { createSessionSnapshot } from '../src/refresh/rooms/host/session-snapshot-cache.ts'
 
 const GATE = 'verify-snapshot-cache-first'
-const CWD = 'D:\\dsh-plugin\\dsh-mattpocock-skills-deck'
-const REPO: RepositoryRef = { backend: 'github', refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-mattpocock-skills-deck', url: '' }
+const CWD = 'D:\\dsh-plugin\\dsh-skills-deck'
+const REPO: RepositoryRef = { backend: 'github', refId: 'FeatherHunter/dsh-mattpocock-skills-deck', name: 'dsh-skills-deck', url: '' }
 let failed = 0
 let total = 0
 function check(ok: unknown, msg: string, detail?: unknown): void {
@@ -74,7 +74,7 @@ function makeHost(opts?: { emptyLibrary?: boolean }) {
     computeLevels: () => ({ byNumber: {}, byKey: {} }),
     groupTickets: () => ({ total: 0, open: 0, closed: 0, frontier: 0, claimed: 0, blocked: 0, levels: [], levelOf: {} }),
     getRepoRoot: async () => CWD,
-    getRepoKey: async () => ({ owner: 'FeatherHunter', name: 'dsh-mattpocock-skills-deck' }),
+    getRepoKey: async () => ({ owner: 'FeatherHunter', name: 'dsh-skills-deck' }),
     adoptSnapshot: (snap: any) => { adopted.snapshot = snap; return snap },
     detectionExec: () => { net.exec += 1; throw new Error('不该执行命令') },
     getGhPath: () => '',

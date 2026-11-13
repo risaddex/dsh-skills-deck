@@ -155,7 +155,7 @@ function main() {
         launcherStubLines('').join('\n'),
         'command -v wslview >/dev/null 2>&1 || { echo "桩调起器没接上，这一条没验成"; exit 90; }',
         '# 产品那几行 open_url 的网址里用到这些变量，先照产品自己的取值补上（值本身不参与判定）',
-        'PKG="dsh-mattpocock-skills-deck"',
+        'PKG="dsh-skills-deck"',
         '# 产品源码里每一处 open_url 调用（只看以 open_url 开头那一行）按行号原样抽出来执行：',
         '# 这不是关键字扫描，跑的就是产品那一行；它下面紧挨的 step / say 行不在抽取范围内。',
         'CALL_LINES=$(grep -n "^[[:space:]]*open_url " "$REPO_REL/' + WIZARD_REL + '" | cut -d: -f1)',
@@ -201,7 +201,7 @@ function main() {
     {
       const probe = writeProbe('probe-release-eof.sh', [
         'TEST_VERSION="v1.7.19"',
-        'PKG="dsh-mattpocock-skills-deck"',
+        'PKG="dsh-skills-deck"',
         'REGISTRY="https://registry.npmjs.org"',
         'VER_NUM="1.7.19"',
         'VERSION="$TEST_VERSION"',
@@ -230,7 +230,7 @@ function main() {
     {
       const probe = writeProbe('probe-release-human.sh', [
         'TEST_VERSION="v1.7.19"',
-        'PKG="dsh-mattpocock-skills-deck"',
+        'PKG="dsh-skills-deck"',
         'REGISTRY="https://registry.npmjs.org"',
         'VER_NUM="1.7.19"',
         'VERSION="$TEST_VERSION"',

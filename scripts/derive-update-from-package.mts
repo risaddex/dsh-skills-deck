@@ -52,7 +52,7 @@ const CLIENT_OUT = resolve(ROOT, 'scripts', 'generated', 'updateClient.derived.j
 // 本插件在更新包里的注册参数：插件标识与电话名前缀。
 // 这两个值要同时喂给宿主侧（建更新能力）与客户端侧（拼电话名），
 // 所以它们只有一处声明，就是这里；宿主适配器不写第二份，按包里的默认值校验一遍。
-export const PLUGIN_ID: string = 'dsh-mattpocock-skills-deck'
+export const PLUGIN_ID: string = 'dsh-skills-deck'
 export const PHONE_PREFIX: string = 'wf'
 
 // #875：宿主侧派生已删（旧派生目录随 #875 删除，运行时按包名直引已安装包）。

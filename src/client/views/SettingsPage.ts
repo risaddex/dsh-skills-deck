@@ -52,8 +52,8 @@ function deckBaseUI(): any {
     __deckBaseUICache = __baseCreateUI(React, {
       lang: lang,
       selfId: 'deck',
-      repoUrl: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck',
-      issuesUrl: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues',
+      repoUrl: 'https://github.com/risaddex/dsh-skills-deck',
+      issuesUrl: 'https://github.com/risaddex/dsh-skills-deck/issues',
     })
   }
   return __deckBaseUICache

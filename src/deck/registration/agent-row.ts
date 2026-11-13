@@ -51,7 +51,7 @@ type AbortLike = { aborted?: unknown; addEventListener?: (type: string, listener
 /** 宿主回来的三态值：成功、部分成功、做不到都在值里表达，不抛。 */
 interface HostValue { status: string; text: string; reason?: unknown }
 
-export const name = 'dsh-mattpocock-skills-deck-tools'
+export const name = 'dsh-skills-deck-tools'
 export const inject = ['tools']
 
 /** 十个工具定义（顺序与 tool-order.ts 的 DECK_TOOL_ORDER 一致；这里只负责传全，顺序的真源在那一处）。 */

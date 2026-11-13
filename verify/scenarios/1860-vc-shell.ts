@@ -1,7 +1,7 @@
 // verify/scenarios/1860-vc-shell.ts —— 真机验证 #1860：版本管理首屏（身份行 + 四页签 + 四页签正文）。
 //
 // 这个场景在隔离实例里跑，不碰真实 DSH 主目录：隔离 home 由批次流程复制，prepareHome 只改副本里的文件。
-// 夹具仓库在仓库外（默认 <TEMP>/matt1860/fixture/dsh-mattpocock-skills-deck），第一次运行时自动创建，
+// 夹具仓库在仓库外（默认 <TEMP>/matt1860/fixture/dsh-skills-deck），第一次运行时自动创建，
 // 形状对齐 docs/prototype/vc-redesign/src/data/ 的演示数据：
 //   50 条提交（其中 1 个合并提交）、11 个未提交改动（2 个已跟踪修改：+2/−2 与 +23/−1，9 个未跟踪）、
 //   1 条储藏、origin 领先 2 落后 0、当前工作区 + 59 棵其他工作树；
@@ -17,7 +17,7 @@
 // 两条都拿不到就记 blocked 并写实际面板宽，不伪造。无头适配器没有窗口 resize 也没有鼠标，宽度那部分一律记 blocked。
 //
 // 可调环境变量：
-//   DSH_1860_FIXTURE        夹具仓库（默认 <系统临时目录>/matt1860/fixture/dsh-mattpocock-skills-deck）
+//   DSH_1860_FIXTURE        夹具仓库（默认 <系统临时目录>/matt1860/fixture/dsh-skills-deck）
 //   DSH_1860_WIDTHS         宽度清单，默认 300,380,460,520
 //   DSH_1860_SKIN           启动前把皮肤锁成 dark 或 light（改隔离 home 的 ui-theme 偏好）。锁了就只验这一种，
 //                           皮肤清单自动跟着它走——一种皮肤一个实例是最可靠的口径
@@ -51,7 +51,7 @@ const QUOTE = String.fromCharCode(34)
 const MINUS_SIGN = String.fromCharCode(8722)
 
 /** 夹具仓库：默认放在系统临时目录下，绝不能落进仓库或真实 DSH 主目录。 */
-const FIXTURE_REPO = path.resolve(process.env.DSH_1860_FIXTURE || path.join(os.tmpdir(), 'matt1860', 'fixture', 'dsh-mattpocock-skills-deck'))
+const FIXTURE_REPO = path.resolve(process.env.DSH_1860_FIXTURE || path.join(os.tmpdir(), 'matt1860', 'fixture', 'dsh-skills-deck'))
 /** 夹具根目录：仓库、裸远端与工作树都放在它下面，重建时整棵删掉。 */
 const FIXTURE_ROOT = path.dirname(FIXTURE_REPO)
 const ORIGIN_BARE = path.join(FIXTURE_ROOT, 'origin.git')
@@ -109,7 +109,7 @@ const CLOSE_BUTTON = 'button[aria-label=' + QUOTE + '关闭' + QUOTE + ']'
 const WORKSPACE_BUTTON = 'button[aria-label=' + QUOTE + '选择工作区' + QUOTE + ']'
 const RAIL_BUTTON = 'button[aria-label=' + QUOTE + '打开右侧边栏' + QUOTE + ']'
 const NEW_SESSION_BUTTON = 'button[aria-label=' + QUOTE + '新建会话' + QUOTE + ']'
-const GUIDE_ENTRY_BUTTON = 'button[data-sidebar-right-guide-entry=' + QUOTE + 'dsh-mattpocock-skills-deck:deck-map' + QUOTE + ']'
+const GUIDE_ENTRY_BUTTON = 'button[data-sidebar-right-guide-entry=' + QUOTE + 'dsh-skills-deck:deck-map' + QUOTE + ']'
 const VC_TAB_BUTTON = 'button.dsws-tab[data-log=' + QUOTE + 'panel.tab.versioncontrol' + QUOTE + ']'
 const LIST_TAB_BUTTON = 'button.dsws-tab[data-log=' + QUOTE + 'panel.tab.list' + QUOTE + ']'
 const VC_ROOT_SELECTOR = '[data-vc-root]'

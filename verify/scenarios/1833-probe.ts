@@ -13,7 +13,7 @@ import type { PageHandle, ScenarioObservation } from 'dsh-featherhunter-plugin-b
 import { hooks } from '../hooks.ts'
 
 /** 本仓库根：已初始化过的真实工作区，列表页能挂出来。 */
-const REPO_ROOT = 'D:/dsh-plugin/dsh-mattpocock-skills-deck'
+const REPO_ROOT = 'D:/dsh-plugin/dsh-skills-deck'
 const WORKSPACE_BUTTON = 'button[aria-label="选择工作区"]'
 const CLOSE_BUTTON = 'button[aria-label="关闭"]'
 const OPEN_RIGHTBAR = 'button[aria-label="打开右侧边栏"]'
