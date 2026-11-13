@@ -25,16 +25,17 @@ import url from 'node:url'
 
 const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..')
 const GLOSSARY = path.join(ROOT, 'GLOSSARY.md')
-const SECTION_MARK = '面板共享语义词条'
+// 术语表在 #1561 之后是英文（英文词是正名、中文名在 （） 里留作别名），所以判据认英文词，别名只在提示语里出现。
+const SECTION_MARK = 'Panel shared-semantics vocabulary'
 const SECTION_DATE = '2026-10-31'
 const SECTION_TICKET = '#1683'
 const REVISION_DATE = '2026-11-05'
 const REVISION_TICKET = '#1922'
-const TERMS = ['通知中心', '通知事件']
-/** 「按需细节」的新决定里必须出现的五件事：变更日期、不设上限、不淘汰、只在源头删除时消失、诊断里的字节数。 */
-const DECISION_MARKERS = [REVISION_DATE, '不设上限', '不淘汰', '源头', '字节数']
+const TERMS = ['notification center', 'notification event']
+/** 「按需细节」的新决定里必须出现的五件事：变更日期、不设上限、不淘汰、只在源头删除时消失、诊断里的字节数（英文词条版）。 */
+const DECISION_MARKERS = [REVISION_DATE, 'no upper bound', 'no eviction', 'source', 'byte count']
 /** 旧口径的词：一个都不许再留在按需细节词条里。 */
-const RETIRED_MARKERS = ['按最近使用淘汰', '曾取过']
+const RETIRED_MARKERS = ['evict by most recent use', 'fetched before']
 
 let failed = false
 const check = (ok: boolean, msg: string): void => {
@@ -74,15 +75,15 @@ function glossaryProblems(text: string): string[] {
     else if (hits.length > 1) problems.push('词条「' + term + '」重复 ' + hits.length + ' 次（同一节只许一条）')
     else if (termBodyLength(hits[0]) < 60) problems.push('词条「' + term + '」只有名字、没有把定义写清楚（正文 ' + termBodyLength(hits[0]) + ' 字）')
   }
-  const detail = section.body.find((line) => line.startsWith('- **按需细节（'))
+  const detail = section.body.find((line) => line.startsWith('- **on-demand detail（'))
   if (!detail) {
-    problems.push('节里缺「按需细节」词条，不设上限与不淘汰的决定没有落点')
+    problems.push('节里缺「on-demand detail（按需细节）」词条，不设上限与不淘汰的决定没有落点')
   } else {
     for (const marker of DECISION_MARKERS) {
-      if (!detail.includes(marker)) problems.push('「按需细节」的新决定没写到「' + marker + '」')
+      if (!detail.includes(marker)) problems.push('「on-demand detail（按需细节）」的新决定没写到「' + marker + '」')
     }
     for (const marker of RETIRED_MARKERS) {
-      if (detail.includes(marker)) problems.push('「按需细节」里还留着旧口径「' + marker + '」')
+      if (detail.includes(marker)) problems.push('「on-demand detail（按需细节）」里还留着旧口径「' + marker + '」')
     }
   }
   return problems
@@ -116,11 +117,11 @@ const duplicated = mapLine(text, '- **' + TERMS[1] + '（', (line) => line + '\n
 const duplicateProblems = glossaryProblems(duplicated)
 check(duplicateProblems.some((p) => p.includes('重复')), '负例：复制出第二条「' + TERMS[1] + '」，检查函数当场判红（' + (duplicateProblems[0] || '没报') + '）')
 
-const noDecision = mapLine(text, '- **按需细节（', (line) => line.replace(/不设上限/g, ''))
+const noDecision = mapLine(text, '- **on-demand detail（', (line) => line.replace(/no upper bound/g, ''))
 const noDecisionProblems = glossaryProblems(noDecision)
 check(noDecisionProblems.some((p) => p.includes('按需细节')), '负例：把「按需细节」里的「不设上限」拿掉，检查函数当场判红（' + (noDecisionProblems[0] || '没报') + '）')
 
-const oldRuleBack = mapLine(text, '- **按需细节（', (line) => line + '旧口径：超出时按最近使用淘汰。')
+const oldRuleBack = mapLine(text, '- **on-demand detail（', (line) => line + ' The old rule: evict by most recent use once the cap is exceeded.')
 const oldRuleProblems = glossaryProblems(oldRuleBack)
 check(oldRuleProblems.some((p) => p.includes('旧口径')), '负例：把旧口径「按最近使用淘汰」塞回去，检查函数当场判红（' + (oldRuleProblems[0] || '没报') + '）')
 

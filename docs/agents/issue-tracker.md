@@ -2,124 +2,115 @@
 
 Issues and specs for this repo live as GitHub issues.
 
-## 怎么做（先看这一节）
+## How to do it (read this section first)
 
-**这个仓库的票，用插件自带的工具来读写，不要手敲跟踪器命令。** 这些工具坐在插件的契约层之上：工具自己
-按当前后端把事情做完，并且读回来核对；同一个工具在后端不是 GitHub 时照样能用，所以这份说明的正常路径里不写命令。
+**Tickets in this repository are read and written with the tools that ship inside the plugin; do not hand-type tracker commands.** These tools sit on top of the plugin's contract layer: a tool gets the job done against whichever backend is current and then reads back to check it, and the same tool still works when the backend is not GitHub, which is why the normal path in this document writes no commands.
 
-**这些工具回给你的是三段**：一段人话摘要、一段「本次调用的提示」（工具对这次拿得全不全的如实警告，
-有降级时才有，比如按节标题只取到一段正文），然后是一段标着「明细（JSON）」的明细。明细里装的是这次真正
-查到的内容——票正文、评论、标签、子票、地图五区块、补边时每条边落在哪一列的证据，按需给到。总量超过上限
-时压掉的是尾部条目并在原地写明「还有几项未带回」，不会让你把缺了东西的当完整的用。想要更小但完整的一段，
-就调该工具自己的参数（读一张票的评论条数、列票的条数、只看可接子票），而不是硬等。
+**What these tools hand back comes in three parts**: a plain-language summary, a block headed `本次调用的提示：` ("notes for this call": the tool's honest warning about whether this call got everything — it only appears when something was degraded, for example when reading by section heading returned only one part of the body), and then the detail under the heading `明细（JSON）` ("detail (JSON)"). The detail holds what was really fetched this time — the ticket body, comments, labels, child tickets, the map's five sections, and, when you add an edge, the evidence of which column each edge landed in — as much as the call asked for. When the total would exceed the cap, what gets cut is the tail entries, and the cut is written in place as `还有几项未带回` ("there are still a few items not brought back"), so you cannot take something with pieces missing as complete. If you want a smaller but complete chunk, call that tool's own parameters (how many comments to read for one ticket, how many tickets to list, only the pickable child tickets) rather than waiting on the big response.
 
-- 建一张票 → `deck_issue_create`
-- 读一张票 → `deck_issue_get`
-- 看有哪些地图、有哪些开放票 → `deck_context`
-- 看一张地图的子票与进度 → `deck_map_snapshot`
-- 按状态与标签和认领列薄行 → `deck_issue_list`
-- 一次建出一整张地图（地图本身 + 子票 + 它们之间的边）→ `deck_map_plan_create`
-- 补一条边（父子边或阻塞边）→ `deck_map_link`
-- 改一张票（评论 / 标签 / 认领 / 关闭 / 改正文）→ `deck_issue_patch`
-- 查本工作区在办（谁在处理哪张票、谁此刻真有一轮开着、有没有撞车）→ `deck_work_route`（写回执里不带表，要看在办就调它；组上 `running: true` 表示宿主此刻报那个会话有一轮开着，不标只表示问不到）
+- Create a ticket → `deck_issue_create`
+- Read one ticket → `deck_issue_get`
+- See which maps exist and which tickets are open → `deck_context`
+- See one map's child tickets and its progress → `deck_map_snapshot`
+- List thin rows by state, label and assignee → `deck_issue_list`
+- Create a whole map in one go (the map itself + its child tickets + the edges between them) → `deck_map_plan_create`
+- Add one edge (a parent-child edge or a blocking edge) → `deck_map_link`
+- Change one ticket (comment / labels / claim / close / body) → `deck_issue_patch`
+- Look up what is active in this workspace (who is handling which ticket, which session really has a turn open at this moment, whether two sessions are colliding) → `deck_work_route` (write receipts no longer carry the table; call it whenever you want to see what is active; `running: true` on a session group means the host reports that session has a turn open right now, and an absent mark only means the question cannot be answered)
 
-工具管不到的地方只剩两件事，它们都发生在跟踪器之外：
+Only two things are left outside the tools' reach, and both happen outside the tracker:
 
-- **登录**：运行 `gh auth login` 并按提示在浏览器完成授权，再用 `gh auth status` 确认已经登录。
-- **建仓库**：用 `gh repo create` 建好远端仓库并推上去。面板上的「创建并发布」向导会替你做这一件事，
-  所以正常情况下不需要手敲它。
+- **Signing in**: run `gh auth login` and finish the authorization in the browser as prompted, then confirm you are signed in with `gh auth status`.
+- **Creating the repository**: use `gh repo create` to create the remote repository and push to it. The "Create & publish" wizard on the panel does this one thing for you, so under normal circumstances you do not need to type it by hand.
 
-除了上面这两件事，正常路径里不写任何 `gh` 命令。工具本身出问题、或刚升级完插件时，按下节「工具故障」处理。
+Apart from those two things, the normal path writes no `gh` command at all. When the tools themselves go wrong, or right after the plugin was upgraded, follow the next section, "Tool failures".
 
-### 工具故障
+### Tool failures
 
-这一节只在工具本身出问题、或刚升级完插件时用；正常路径仍走上面的工具，不手敲跟踪器命令。
+This section is only for when the tools themselves go wrong or the plugin was just upgraded; the normal path still goes through the tools above and does not hand-type tracker commands.
 
-**升级后 / 工具异常时的自检**：依次调 `deck_context`、`deck_issue_list`（`limit: 3`）、`deck_issue_get`（读最近一张票）。任一条报错就停手排查，不要带着坏工具继续干活；但报的如果是下一条说的已知回归，按替代命令绕开就行，不必重新诊断。每次升级只跑一次，不必每轮跑（三条加起来点数不多，别每轮都跑）。
+**Self-check after an upgrade or when a tool misbehaves**: call `deck_context`, then `deck_issue_list` (`limit: 3`), then `deck_issue_get` (reading the most recent ticket). If any one of them reports an error, stop and investigate; do not go on working with a broken tool. But if what it reports is the known regression described in the next point, just work around it with the fallback commands and do not re-diagnose. Run this once per upgrade, not every round (the three calls together do not spend many points, but do not run them every round).
 
-**报 `gh not found` 但 `gh --version` 有输出**：说明 gh 已安装，只是它的目录不在 DSH 启动时继承的 PATH 里（deck 工具与插件都只从这份 PATH 解析 gh，不探测已知安装目录）。先重启 DSH Desktop，重启时从开始菜单、桌面或资源管理器启动（不要从旧终端或旧 IDE 会话启动，它们的进程环境可能还是旧的）；重启后仍失败，则在启动 DSH 前把 gh 所在目录加入用户级或系统级 PATH，或将本插件读取的 `DSH_GH_PATH` 设为 gh 可执行文件的绝对路径（Windows 默认安装位置是 `C:\Program Files\GitHub CLI\gh.exe`）。不要直接建议重装 gh。
+**It reports `gh not found` but `gh --version` prints output**: gh is installed; its directory is just not on the PATH that DSH inherited when it started (the deck tools and the plugin resolve gh only from that PATH and do not probe the known installation directories). First restart DSH Desktop, starting it from the Start menu, the desktop or File Explorer (do not start it from an old terminal or an old IDE session; their process environment may still be the old one). If it still fails after the restart, then before starting DSH add gh's directory to the user-level or system-level PATH, or set `DSH_GH_PATH` — which this plugin reads — to the absolute path of the gh executable (on Windows the default installation location is `C:\Program Files\GitHub CLI\gh.exe`). Do not simply suggest reinstalling gh.
 
-**按版本自过期的已知回归**：安装版本 ≤ `1.9.0-beta.26` 时，`deck_issue_list` 报 `ToolOutputError` / `value is not lossless JSON` 属已知回归（回执的 `data` 里带了 `undefined`，修复见 #1559，代码已进 main 但还没发版），不要重新诊断；等 npm 上出了含修复的版本、安装版本越过它，本条自动失效。
+**A known regression that expires by version**: with an installed version ≤ `1.9.0-beta.26`, `deck_issue_list` reporting `ToolOutputError` / `value is not lossless JSON` is a known regression (the receipt's `data` carried an `undefined`; the fix is #1559, the code is already on main but not released yet), so do not re-diagnose it; once npm publishes a version containing the fix and the installed version moves past it, this point expires on its own.
 
-**替代命令**（应急用，不进日常）：列票 `gh issue list --state open --label bug --limit 200 --json number,title,labels,updatedAt`；读回 `gh api repos/{owner}/{repo}/issues/{n}`；关单 `gh api -X PATCH repos/{owner}/{repo}/issues/{n} -f state=closed`；摘标签 `gh api -X DELETE repos/{owner}/{repo}/issues/{n}/labels/{name}`。同一套动作也封装成了 `scripts/issue-emergency.ps1`（`-Action read|close|unlabel|body`，加 `-DryRun` 只打印将要执行的命令）：四个动作都先读回、再写、写后核对，写失败还会读回确认是否其实已经落盘。
+**Fallback commands** (for emergencies, not for the daily routine): list tickets `gh issue list --state open --label bug --limit 200 --json number,title,labels,updatedAt`; read back `gh api repos/{owner}/{repo}/issues/{n}`; close `gh api -X PATCH repos/{owner}/{repo}/issues/{n} -f state=closed`; remove a label `gh api -X DELETE repos/{owner}/{repo}/issues/{n}/labels/{name}`. The same set of actions is also wrapped in `scripts/issue-emergency.ps1` (`-Action read|close|unlabel|body`, add `-DryRun` to only print the commands that would run): all four actions read back first, then write, then check after writing, and when a write fails they read back again to confirm whether it had in fact landed.
 
-应急路径上还有两条硬规矩。**建票前先确认目标仓库**：先用 `gh repo view --json nameWithOwner` 看清这次要写的是哪个仓库，确认它就是维护者自己的仓库；不是维护者自己的仓库（例如随包技能的上游仓库 `mattpocock/skills`，除非维护者本人拥有它）就停手，绝不往里建票。**关票先评论、再关闭**：评论单独发一条，再单独发命令关闭，不要把评论挂到关闭命令上（原因见下面「关票一律先评论，再关闭」一节）。
+The emergency path carries two more hard rules. **Confirm the target repository before creating a ticket**: first use `gh repo view --json nameWithOwner` to see clearly which repository this write would go to, and confirm it is the maintainer's own repository; if it is not the maintainer's own repository (for example the upstream repository of the bundled skills, `mattpocock/skills`, unless the maintainer owns it), stop — never create a ticket in it. **To close a ticket, comment first, then close**: post the comment as its own entry, then run the close command separately; do not attach the comment to the close command (the reason is in the section "Closing a ticket always means commenting first, then closing" below).
 
-**版本三查**：本机装的是哪个版本 —— `(Get-Content "$env:USERPROFILE\.dsh\profiles\desktop\package.json" -Raw | ConvertFrom-Json).dependencies.'dsh-mattpocock-skills-deck'`；工作区 `package.json` 的版号；`npm view dsh-mattpocock-skills-deck version` 的远端最新。三个数一起看：工作区版号是正在开发的版本，不是本机跑着的版本。
+**The three-version check**: which version is installed on this machine — `(Get-Content "$env:USERPROFILE\.dsh\profiles\desktop\package.json" -Raw | ConvertFrom-Json).dependencies.'dsh-mattpocock-skills-deck'`; the version in the workspace `package.json`; the newest remote version from `npm view dsh-mattpocock-skills-deck version`. Look at all three numbers together: the workspace version is the version being developed, not the version running on this machine.
 
-**失败回执怎么读**：`status`、`reason` 都在回执的「明细（JSON）」那一段里。`status` 三态（`ok` / `partial` / `unsupported`）；`reason` 回答的是「拿到回执的人下一步做什么」，不是「这个错误叫什么」，按下一步分四档——可重试（`backend-threw` 等）/ 等额度（`ai-tool-refused`）/ 后端做不到（`backend-unsupported`）/ 超时（`backend-timeout`）；另外几种少见原因码（`gate-defer` / `bad-args` / `no-backend`）遇到时直接看回执里的说明文字。写操作报 `backend-timeout` 要特别小心：它代表请求发出后没等到回执，写可能已经生效，先读回确认再决定要不要重试。要看失败细节，看 `items` 里与顶层 `reason` 同码的那一项（多项失败时顶层取的是最该先告诉人的那个，未必是执行顺序第一处）——它带 `code`（给下一步用的原因码）；失败来自后端时另带 `errorKind`、`stage`，保留原始错误分类与失败阶段，deck 本地失败（锁、额度、读回核对）没有这两格、改为带 `local`（本地失败来源）；`notes` 里若写「这份清单可能不全」，就收窄条件再查一次。整份回执被判非法（报 `invalid output`）时，先按上面的自检确认是哪把工具坏了，再按替代命令绕开。
+**How to read a failure receipt**: both `status` and `reason` sit in the receipt's `明细（JSON）` ("detail (JSON)") block. `status` has three values (`ok` / `partial` / `unsupported`); `reason` answers "what the person holding this receipt should do next", not "what this error is called", and the next step falls into four tiers — retryable (`backend-threw` and the like) / wait for quota (`ai-tool-refused`) / the backend cannot do it (`backend-unsupported`) / timed out (`backend-timeout`); the other, rarer reason codes (`gate-defer` / `bad-args` / `no-backend`) are read straight from the explanatory text in the receipt when you meet them. Be especially careful when a write reports `backend-timeout`: it means the request went out and no receipt came back, so the write may already have taken effect — read back to confirm before deciding whether to retry. To see the failure details, look at the entry in `items` that carries the same code as the top-level `reason` (when several things failed, the top level carries the one the person most needs to be told first, which is not necessarily the first one in execution order) — it carries `code` (the reason code for the next step); when the failure came from the backend it also carries `errorKind` and `stage`, keeping the original error classification and the stage that failed, while failures local to deck (locks, quota, read-back checks) do not have these two fields and carry `local` instead (the local source of the failure); if `notes` says `这份清单可能不全` ("this list may be incomplete"), narrow the conditions and ask again. When the whole receipt is judged invalid (it reports `invalid output`), first use the self-check above to confirm which of the tools is broken, then work around it with the fallback commands.
 
-**状态冲突的回执（本地 Markdown）**：本地 Markdown 后端的 triage 状态写在票文件里可见的 `Status:` 行，文件头隐藏的 `DSH-LABELS` 只留非 triage 标签。可见行与旧文件隐藏 triage 真冲突时，`deck_issue_get` / `deck_issue_list` 会带 `statusConflict`；`deck_issue_patch` 会整次不写地回 `status:'unsupported'`、`reason:'bad-args'`，并在 `data.retry.args` 里给好带 `resolveStatus` 的重试参数。按 `data.retry.args` 重发，不要原样重试；没有冲突时传 `resolveStatus` 也按普通调用执行。
+**A receipt for a state conflict (local Markdown)**: on the local Markdown backend the triage state is written in a visible `Status:` line in the ticket file, and the `DSH-LABELS` hidden in the file header keeps only the non-triage labels. When the visible line and the hidden triage label of an old file genuinely conflict, `deck_issue_get` / `deck_issue_list` carry `statusConflict`; `deck_issue_patch` writes nothing at all for the whole call, answering `status:'unsupported'`, `reason:'bad-args'`, and it puts ready-made retry arguments carrying `resolveStatus` into `data.retry.args`. Resend with `data.retry.args`; do not retry unchanged. When there is no conflict, passing `resolveStatus` runs as an ordinary call.
 
-**铁律**：写操作超时、报错（网络中断、EOF、回执判失败）后一律先读回现状，不许直接重发——超时或报错往往意味着写入其实已经落盘，重发会产生重复评论或重复关闭；只有读回确认没落盘，才允许重试。
+**The hard rule**: after a write times out or errors (network drop, EOF, a receipt judged failed), always read the current state back first; never resend straight away. A timeout or an error often means the write did in fact land, and resending would produce a duplicate comment or a duplicate close. A retry is only allowed once reading back confirms that nothing landed.
 
-### 关票一律先评论，再关闭
+### Closing a ticket always means commenting first, then closing
 
-关一张票永远分两步：先把结论写成一条评论发出去，再改状态把它关掉。工具的正常路径也是这个顺序——同一次 `deck_issue_patch` 调用里同时带 `comment` 与 `close` 时，工具先发评论、再关票。
+Closing a ticket is always two steps: first post the conclusion as a comment, then change the state to close it. The tools' normal path follows the same order — when one `deck_issue_patch` call carries both `comment` and `close`, the tool posts the comment first and then closes.
 
-**不能省成一步。** 关闭时顺带附评论有个已知的坑：对一张已经关闭的票再「带评论关闭」，评论会丢，调用却仍然返回成功——看起来像办成了，实际结论一个字都没留下。所以评论单独发、关闭单独做，两条都落下去，结论才留得住。`/wayfinder` 的 Resolve 也照这个顺序做（先评论写结论，再关闭，最后回地图补指针）。
+**This cannot be squeezed into one step.** Closing with an attached comment has a known trap: closing an already-closed ticket "with a comment" loses the comment while the call still returns success — it looks done, but not a single word of the conclusion was kept. So post the comment on its own and do the close on its own; only when both land does the conclusion survive. `/wayfinder`'s Resolve follows this order too (write the conclusion as a comment first, then close, and finally go back to the map and add the pointer).
 
-### 读票时省上下文（正文与评论按需取）
+### Saving context when reading a ticket (fetch body and comments on demand)
 
-`deck_issue_get` 缺省只给够定位的量，不把整张票一次倒进上下文：正文只回前 2000 字（回执里同时告诉你全文多长、全文指纹是多少），评论一条正文都不回、只告诉你一共有几条。反向阻塞边与地图快照的缺省口径不变（不传就是全量）。
+By default `deck_issue_get` gives only enough to locate the ticket and does not pour the whole ticket into the context at once: the body comes back only for the first 2000 characters (the receipt also tells you how long the whole body is and what its fingerprint is), and no comment text comes back at all — only how many comments there are. The reverse blocking edges and the defaults of the map snapshot are unchanged (no argument means the full set).
 
-- 正文在回执里只出现一处（#1828）：摘要档在 `data.body.text`，全文档在 `data.body.chunks`，只读某一节（`section`）时原文在 `data.section.text`，这时 `data.body` 只报档位 `section` 与全文长度、指纹（`body: 'full'` 同时带 `section` 时只回节名，全文仍看 `data.body.chunks`）。票面 `data.ticket` 里没有正文，回执顶层也没有第二份摘要——同一个事实不抄两遍。
-- 要看全文：带 `body: 'full'` 再调一次。全文按 7000 字一块分块回来（单块留足渲染余量），带全文的 SHA-256 指纹；把分块按顺序拼回去就是原文，一个字节不少。写回整段正文之前，先用这一档读一次，把拿到的指纹记下来。
-- 要看评论正文：带 `comments: N` 再调一次（最多 200）。总数那一次已经给了，这次只补正文。
-- 写整段正文：必须同时带 `bodyDigest`（上一次用 `body: 'full'` 拿到的指纹）。工具先读当前正文算指纹，对不上就一个字不动地拒绝——这是防止两个人同时改正文时，后写的把先写的覆盖掉。只改评论、标签、认领、进度、原话时不用它。
-- 同一张票一轮只读一次全文：第一次用 `body: 'full'` 拿到全文与指纹后记下来；后面只为核对写没写上时，用缺省档读标签、状态与指纹核对，不再重复拉全文。
+- The body appears in the receipt in exactly one place (#1828): the summary tier puts it in `data.body.text`, the full-document tier in `data.body.chunks`, and when you read one section (`section`) the raw text is in `data.section.text`, while `data.body` then reports only the tier `section` together with the full-text length and fingerprint (when `body: 'full'` is sent together with `section`, it returns only the section name and the full text is still in `data.body.chunks`). The ticket face `data.ticket` holds no body, and there is no second summary at the top level of the receipt either — one fact is not copied twice.
+- To read the whole body: call again with `body: 'full'`. The full body comes back in chunks of 7000 characters (each chunk leaves enough room to render), carrying the SHA-256 fingerprint of the whole body; put the chunks back together in order and you have the original text, not a byte short. Before writing a whole body back, read it once in this tier and note down the fingerprint you got.
+- To read comment text: call again with `comments: N` (at most 200). The total count was already given by that earlier call; this call only fills in the text.
+- To write a whole body: you must also pass `bodyDigest` (the fingerprint you got from the previous `body: 'full'` read). The tool first reads the current body and computes its fingerprint, and when they do not match it refuses without touching a single character — this is what keeps the later of two people editing the body at the same time from overwriting the earlier one. It is not needed when you only change comments, labels, claim, progress or original words.
+- Read the full body only once per ticket per round: note down the body and the fingerprint you got the first time with `body: 'full'`; when you later only need to check whether a write went in, read labels, state and fingerprint in the default tier and check those, rather than pulling the whole body again.
 
+### One general rule for writing a body
 
-### 写正文时的一条通用规则
+Write the body into a file first (the file must contain real line breaks: every section heading — `##` plus the section name — on a line of its own, and one blank line between paragraphs), then hand it to the tool to write back; do not paste the body into a command line, do not write line breaks as the two literal characters `\n`, and do not let the body start with an invisible character (a BOM). After writing, read it back and check it once. This rule holds for all three backends; it is not specific to GitHub.
 
-正文先写成文件（文件里是真实换行：每个 `## 章节` 独占一行、段落之间留一个空行），再交给工具写回；
-不要把正文拼进命令行，也不要把换行写成字面的 `\n` 两个字符，更不要让正文以不可见字符（BOM）开头。
-写完读回来核对一遍。这条规则三个后端通用，不是 GitHub 专有的。
+Order the body as follows. The sections near the top are rarely touched once written, while the ones further down keep growing, so the ones that will keep growing go last.
 
-正文按下面的顺序排。排在前面的章节写下来之后很少再动，排在后面的会一直追加，所以把会一直变长的放在最后。
-
-| 顺序 | 章节 | 写什么 |
+| Order | Section | What goes in it |
 | --- | --- | --- |
-| 1 | `## 目的` | 这张票要解决什么问题、给谁带来什么改变。一句话说清，不写实现方案。 |
-| 2 | `## 维护者原话` | 维护者本人说过的原话（有才写；没有就整节不出现）。写法见下面「维护者原话区怎么写」。 |
-| 3 | `## 边界` | 这次做到哪、不做什么，把容易越界的地方提前说清。 |
-| 4 | `## 做完` | 怎么算做完：能逐条核对的验收条件。 |
-| 5 | 按需章节 | 调查、讨论结论、收尾步骤之类，需要才有；每个 `##` 标题独占一行。 |
-| 6 | `## 进度` | 走到哪儿了的日志，永远是正文最后一节，后面不再跟别的章节。写法见下面「进度区怎么写」。 |
+| 1 | `## Purpose`（`## 目的`） | What problem this ticket solves and what change it brings to whom. One sentence, no implementation plan. |
+| 2 | `## The maintainer's own words`（`## 维护者原话`） | The words the maintainer themselves said, verbatim (only when there are some; otherwise the whole section does not appear). How to write it: see "How to write the original-words section" below. |
+| 3 | `## Boundaries`（`## 边界`） | How far this goes and what it does not do; say up front what could easily sprawl past the line. |
+| 4 | `## Done when`（`## 做完`） | How we know it is done: acceptance conditions that can be checked one by one. |
+| 5 | On-demand sections | Investigation, discussion conclusions, wrap-up steps and the like, only when needed; each `##` heading gets a line of its own. |
+| 6 | `## Progress`（`## 进度`） | The log of how far it has got; always the last section of the body, with no other section after it. How to write it: see "How to write the progress section" below. |
 
-**进度区怎么写**
+**How to write the progress section**
 
-标题固定写 `## 进度`，标题里不带百分比。记录一条一行，**最新的一条放在最上面**，所以读的人看一眼第一条，就知道这张票现在走到哪儿了。
+The heading is always written as `## Progress`（`## 进度`）, with no percentage in the heading. One record per line, **the newest one on top**, so a reader looks at the first line and knows how far this ticket has got right now.
 
-一条记录固定写成这样：
+A record is always written like this (the line begins with the literal prefix `进度：`, "progress:"):
 
-- 进度：{百分比}%（{ISO 8601 时间，带时区}）：{做到哪一步了的一句说明}
+- 进度：{percentage}%（{ISO 8601 time, with time zone}）：{one sentence saying how far it got}
 
-例如：
+For example:
 
-- 进度：90%（2026-10-21T20:15:32+08:00）：写完了读侧，正在跑门禁
-- 进度：40%（时间未记录）：从旧票的标题里搬过来的百分比
+- 进度：90%（2026-10-21T20:15:32+08:00）：finished the read side, running the gates now
+- 进度：40%（时间未记录）：the percentage carried over from the old ticket's heading
 
-几条规矩：
+A few rules:
 
-- **说明必填**，只给百分比的更新会被拒绝写进去：百分比回答「做了多少」，说明回答「做到哪一步」，读的人要的是后者。
-- **时间由工具盖**，写的人不要自己编。老记录没有时间时写「时间未记录」，不去猜。
-- 条数不限，旧记录原样留着，不删也不搬走。
-- 整张票正文超过 60KB 时，写进度会被拒绝，工具不会自动搬走旧记录；先由人决定怎么缩短正文，再写。
-- 老票不批量迁移，等它下一次被写进度时自然换成新写法。
+- **The note is required**; an update that gives only a percentage is refused and not written: the percentage answers "how much is done", while the note answers "how far it got", and the latter is what the reader wants.
+- **The tool stamps the time**; the person writing does not make one up. When an old record has no time, write `时间未记录` ("time not recorded") instead of guessing.
+- The number of records is unlimited; old records stay exactly as they are, neither deleted nor moved away.
+- When the whole ticket body goes past 60KB, writing progress is refused, and the tool will not move old records away on its own; a person decides how to shorten the body first, and only then does the write happen.
+- Old tickets are not migrated in bulk; they switch to the new form naturally the next time progress is written into them.
 
-写进度用 `deck_issue_patch` 的 `progress: {percent, note}` 参数：`percent` 是 0 到 100 的整数，`note` 是必填的一句话（不能换行）。工具负责盖时间、写回正文，再把正文读回来核对一遍。
+To write progress, use the `progress: {percent, note}` parameter of `deck_issue_patch`: `percent` is an integer from 0 to 100, and `note` is a required sentence (it cannot contain a line break). The tool stamps the time, writes the body back, and then reads the body back to check it once.
 
-**维护者原话区怎么写**
+**How to write the original-words section**
 
-标题固定写 `## 维护者原话`，紧跟在 `## 目的` 后面（没有目的就放正文最前面）。它是正文的一部分，不是评论。
+The heading is always written as `## The maintainer's own words`（`## 维护者原话`）, right after `## Purpose`（`## 目的`） (when there is no purpose section, it goes at the very front of the body). It is part of the body, not a comment.
 
-一条原话由出处行和引用块两部分组成：
+One set of original words is made of two parts, a source line and a quote block:
 
-- **出处行**：在引用块外面单独一行，以 `出处：` 开头，写清这句话是从哪儿来的，读的人才能自己去核对。票面上说的写完整链接；本会话里说的写「本会话（时间）」；文件里写的写 `路径:行号`；提交里说的写短哈希。
-- **引用块**：紧跟在出处行下面，放原话本身：每一行前面加 `>`，原话里的空行也写成单独一行 `>`。
+- **The source line**: a line of its own outside the quote block, starting with `出处：` ("source:"), saying where this sentence came from, so that a reader can go and check it. For something said on a ticket, write the full link; for something said in this session, write `本会话（时间）` ("this session (the time)"); for something written in a file, write `path:line`; for something said in a commit, write the short hash.
+- **The quote block**: right below the source line, holding the words themselves: every line gets a `>` in front, and a blank line inside the original words becomes a line of its own holding just `>`.
 
-例如（整段照下面这种形状写进正文）：
+For example (write the whole block into the body in the shape below):
 
 ```text
 ## 维护者原话
@@ -130,85 +121,71 @@ Issues and specs for this repo live as GitHub issues.
 > 第二段原话；原话里本来有空行的地方，保留成单独一行 `>`。
 ```
 
-几条规矩：
+A few rules:
 
-- **用户亲手打的每句话都值得记**：他们自己打的字本来就不多，不要替他们判断哪句重要，也不要等他们专门说「记下来」。
-- **原话是这张票的最高要求**：以后的所有决定，与票面其它说法冲突时以原话为准；实在判不清，就告诉用户这里有明显冲突，不要自己裁。
-- **一字不改**：不润色、不改标点、不翻译、不摘要、不合并。要解释就写到别的章节里，引用块里保持原样。
-- **只追加**：不编辑、不删除、不排序、不合并；同一句话带同一个出处已经记过，就跳过，不再记第二遍。
-- 条数不限，和正文共用一个 60KB 上限。
+- **Every sentence the user typed by hand is worth recording**: what they type themselves is not much to begin with, so do not judge for them which sentences matter, and do not wait for them to say "record this" explicitly.
+- **The original words are the highest requirement on this ticket**: in every later decision, when they conflict with anything else the ticket says, the original words win; when it truly cannot be decided, tell the user there is an obvious conflict here instead of ruling on it yourself.
+- **Not one character changes**: no polishing, no punctuation changes, no translating, no summarising, no merging. Put explanations in another section; the quote block stays exactly as it was.
+- **Append only**: no editing, no deleting, no reordering, no merging; when the same sentence with the same source has already been recorded, skip it and do not record it a second time.
+- The number of entries is unlimited, and they share the one 60KB ceiling with the body.
 
-写这一区用 `deck_issue_create` 与 `deck_issue_patch` 的 `originalWords: {text, source}` 参数（#1091 已落地）：`source` 必填，工具负责按上面的规则追加、只追加、同一段原话配同一个出处时幂等跳过，写完再把正文读回来逐字核对。
+To write this section, use the `originalWords: {text, source}` parameter of `deck_issue_create` and `deck_issue_patch` (#1091 landed it): `source` is required; the tool appends by the rules above (append only), skips idempotently when the same original words come with the same source, and after writing reads the body back and checks it character by character.
 
-读这一区有两个入口（#1092 已落地）：
+There are two entry points for reading this section (#1092 landed them):
 
-- `deck_issue_get` 回 `originalWords: [{text, source, recordedAt}]`：`text` 与引用块逐字相同（只去掉每行一个 `>` 前缀，原话里的空行照旧是空行，不做 trim）；`source` 是出处行原文；`recordedAt` 只从出处文字里认带 `T` 的 ISO 8601 时间并原样返回，出处没写时间时是 `null`（不拿票的修改时间顶替）。有原话时 `notes` 会提醒一句：原话是这张票的最高要求。只想看整区原文（含 `>` 前缀）时，给同一个工具传 `section: '维护者原话'`。
-- `deck_issue_list` 的薄行不读正文，但有原话的票行上会带 `hasOriginalWords: true`，用来在清单里认出「这张票里有用户自己说的话」，再逐张读 `deck_issue_get` 看原文。
-- `deck_map_snapshot` 的 full 行带同一份 `originalWords`，thin 行故意不带（要原话的人逐张读 `deck_issue_get`）。
+- `deck_issue_get` returns `originalWords: [{text, source, recordedAt}]`: `text` is character-for-character the same as the quote block (only the one `>` prefix on each line is removed; blank lines inside the original words stay blank lines, with no trim); `source` is the source line as written; `recordedAt` only recognises an ISO 8601 time containing a `T` inside the source text and returns it as-is, and is `null` when the source gives no time (the ticket's modification time is not used as a stand-in). When there are original words, `notes` adds one reminder: the original words are the highest requirement on this ticket. When you only want the raw text of the whole section (with the `>` prefixes), pass `section: '维护者原话'` ("the maintainer's own words") to the same tool.
+- The thin rows of `deck_issue_list` do not read the body, but a ticket that has original words carries `hasOriginalWords: true` on its row, so you can tell in a list which tickets hold words the user typed themselves, and then read `deck_issue_get` ticket by ticket for the raw text.
+- The full rows of `deck_map_snapshot` carry the same `originalWords`, while the thin rows deliberately do not (anyone who wants the original words reads `deck_issue_get` ticket by ticket).
 
-解析只有一处实现：`src/shared/issue-file/src/original-words.ts` 的 `parseOriginalWords`，读工具与写侧共用同一套按行扫描。
+Parsing is implemented in exactly one place: `parseOriginalWords` in `src/shared/issue-file/src/original-words.ts`, and the read tools and the write side share the same line-by-line scan.
 
-**这两个区的写法以 #1089 的定稿为准**：上面的区块顺序与两个区的规则出自票 [#1089 地图15讨论：进度写哪、原话区的写法](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1089) 正文的「讨论结论（2026-10-21 定稿）」一节；当初为什么这样定、查过哪些一手材料，见 `research/1089-progress-and-user-voice.md`（每条结论都注了来源）。以后要改这套写法，先回那张票的定稿里改，再改这份文档——不要让规则只活在口口相传里。
+**How these two sections are written follows the settled text of #1089**: the section order above and the rules of the two sections come from the section "讨论结论（2026-10-21 定稿）" ("discussion conclusions, settled 2026-10-21") of the body of ticket [#1089 地图15讨论：进度写哪、原话区的写法](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1089); why it was settled this way, and which primary sources were consulted, are in `research/1089-progress-and-user-voice.md` (every conclusion there cites its source). To change this way of writing in the future, first change the settled text in that ticket, then change this document — do not let the rules live only in word of mouth.
 
-### 拿不到原生能力时的降级写法
+### The fallback when the native capability is not available
 
-工具会优先用后端自己的原生能力（GitHub 上是原生子议题与原生依赖边）。真拿不到时，才退回在子票正文首行
-写一行 `Blocked by: #n`（多个阻塞票号用逗号隔开）。这一行是三后端共用的降级写法，不许拿它当默认做法。
+The tools first use the backend's own native capability (on GitHub that is native sub-issues and native dependency edges). Only when it truly cannot be had do they fall back to writing a `Blocked by: #n` line as the first line of the child ticket's body (several blocking ticket numbers are separated by commas). This line is the fallback shared by all three backends; it must not be used as the default way.
 
 ## Mandatory label set
 
-这个仓库建票时的真实做法是**按位置补标签**：看这张票在六种位置里是哪一种，补它该带的那一枚或两枚；不要求每张新票都带 triage 标签。这张表与代码里的位置表（`src/deck/rules/object-kind.ts` 的 `OBJECT_KIND_RULES`）逐条对应：
+The actual practice in this repository when creating a ticket is **adding labels by position**: see which of the six positions this ticket occupies, and add the one or two labels it should carry; not every new ticket is required to carry a triage label. This table corresponds entry by entry with the position table in the code (`OBJECT_KIND_RULES` in `src/deck/rules/object-kind.ts`):
 
-| 位置 | 建票时补的标签 |
+| Position | Labels added when creating |
 | --- | --- |
-| 探索地图（`kind: map`） | `wayfinder:map` |
-| 地图工单（`kind: map-ticket`） | 调用时 `label` 给的那一枚 `wayfinder:<类型>`（`research` / `prototype` / `grilling` / `task` 四选一） |
-| 规格（`kind: spec`）与实施票（`kind: spec-ticket`） | 类型标签不补；triage 状态没显式给时默认 `ready-for-agent` |
-| 缺陷票（`kind: bug`） | 类型标签 `bug`；triage 状态没显式给时默认 `needs-triage` |
-| 普通票（`kind: issue`） | 一枚都不补：调用方给什么标签就带什么 |
+| Exploration map (`kind: map`) | `wayfinder:map` |
+| Map ticket (`kind: map-ticket`) | the one `wayfinder:<type>` given in `label` at call time (one of `research` / `prototype` / `grilling` / `task`) |
+| Spec (`kind: spec`) and its implementation tickets (`kind: spec-ticket`) | no type label; when no triage state is given explicitly, the default is `ready-for-agent` |
+| Bug ticket (`kind: bug`) | the type label `bug`; when no triage state is given explicitly, the default is `needs-triage` |
+| Plain ticket (`kind: issue`) | none of them: it carries whatever labels the caller gives |
 
-**triage 状态在同一张票上任何时刻至多一枚**（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix` 五选一），换状态是替换不是叠加：建票时 `labels` 显式带了状态就按调用方的来（不再叠位置默认值）；改标签时 `addLabels` 带一枚状态，工具会先摘掉票上原来的状态再换新的，摘了哪几枚写进回执；一次给两枚以上状态（建票或改标签）整笔拒绝，票面一个标签都不动。状态词表在程序里的名单只有一份：`src/tracker/contract/triage-states.ts`（`canonical-labels.ts` 也从这里取名字）；本地 Markdown 后端另有配置来源 `original-skills.yaml` 的 `status.triage-roles`，两处由 `tests/verify-md-format-config.ts` 逐项比对，要改名单必须两处一起改。
+**A triage state is at most one per ticket at any moment** (one of `needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`), and changing the state replaces rather than stacks: when creating a ticket, if `labels` carries a state explicitly, the caller's choice stands (the position default is not stacked on top); when changing labels, if `addLabels` carries one state, the tool first strips the state the ticket had and then swaps in the new one, and it writes into the receipt which ones it stripped; giving two or more states at once (creating or changing labels) rejects the whole call, and not a single label on the ticket moves. The program keeps exactly one list for the state vocabulary: `src/tracker/contract/triage-states.ts` (`canonical-labels.ts` also takes the names from there); the local Markdown backend has a second configuration source, `status.triage-roles` in `original-skills.yaml`, and `tests/verify-md-format-config.ts` compares the two item by item, so changing the list means changing both places together.
 
-`deck_issue_create` 按这张表把缺的补上，补了哪几枚写进回执；改标签用 `deck_issue_patch`。本地 Markdown 后端把 triage 角色落成票文件里可见的 `Status:` 行，不写进隐藏的 `DSH-LABELS`；规格与探索地图容器没有可见状态行，仍用隐藏的 `DSH-STATUS`。读侧会把可见状态合成回 triage 标签，所以 `deck_issue_list` 按 `labels` 筛选仍然有效。
+`deck_issue_create` adds whatever is missing by this table and writes into the receipt which ones it added; change labels with `deck_issue_patch`. The local Markdown backend lands the triage role as a visible `Status:` line in the ticket file rather than writing it into the hidden `DSH-LABELS`; spec and exploration-map containers have no visible status line and still use a hidden `DSH-STATUS`. The read side folds the visible state back into a triage label, so filtering `deck_issue_list` by `labels` still works.
 
-**wayfinder 的地图与地图子票只带 wayfinder 标签，不叠 `ready-for-agent` 这类 triage 标签。** 理由：它们是决策，不是实施工作；叠上 triage 标签会让它们混进「可以交给代理直接干」的筛选里，把还在讨论的东西当成已经定好的活。
+**A wayfinder map and its map tickets carry only wayfinder labels, and do not have triage labels such as `ready-for-agent` stacked on top.** The reason: they are decisions, not implementation work; stacking triage labels on them would mix them into the filters for "can be handed straight to an agent to do", and treat something still under discussion as settled work.
 
-`bug` / `needs-triage` / `wayfinder:grilling` 这三枚标签仍然要存在于跟踪器里：它们是面板上「修复」「诊断」「讨论」三个动作的入口（分别对应 BUG / TRIAGE / discuss 筛选）。但它们不再是「每张新票至少带一枚」的硬性要求，建票时按上面那张位置表补标签即可。
+The three labels `bug` / `needs-triage` / `wayfinder:grilling` still have to exist in the tracker: they are the entry points of the three actions on the panel, "fix", "diagnose" and "discuss" (matching the BUG / TRIAGE / discuss filters). But they are no longer the hard requirement of "every new ticket carries at least one of them"; when creating a ticket, just add labels by the position table above.
 
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
 
-这一项写成 `yes` 之后，PR 与 issue 走同一套标签与状态流转，按当前后端自己的方式读写 PR（在这条后端上就是
-命令行里把 issue 那一族子命令换成 PR 那一族）。GitHub 把 issue 与 PR 编在同一套号码里，所以正文里光写
-`#42` 分不清是哪一个 —— 遇到这种编号要么把两种都查一遍，要么直接向用户确认是哪一个。
+Once this item is set to `yes`, pull requests go through the same set of labels and state transitions as issues, and PRs are read and written the way the current backend does it (on this backend, that means swapping the issue family of subcommands in the command line for the PR family). GitHub numbers issues and PRs in one shared sequence, so `#42` in a body alone does not say which of the two it is — with such a number, either look up both or simply ask the user which one it is.
 
 ## When a skill says "publish to the issue tracker"
 
-用 `deck_issue_create` 建一张票。
+Create a ticket with `deck_issue_create`.
 
 ## When a skill says "fetch the relevant ticket"
 
-用 `deck_issue_get` 读那张票（连同它的评论与标签）。
+Read that ticket with `deck_issue_get` (together with its comments and labels).
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets. 下面这几件事全部走工具，
-一处都不手敲命令。
+Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets. All of the operations below go through the tools; not one of them is done by hand-typing commands.
 
-- **Map**: 一张打了 `wayfinder:map` 标签的票，正文里放着 Notes / Decisions-so-far / Fog。用
-  `deck_map_plan_create` 建（它会把目的地、Notes 与计划写成一张地图）。
-- **Child ticket**: 挂在这张地图下的子票。用 `deck_map_link` 传 `parentKey` 建这条父子边；工具会按当前后端
-  的能力落下去，并如实回报这条边落在哪一列（原生边，还是任务清单 + 票正文的归属标记；GitLab 房落在文件头的隐藏标记 `<!-- DSH-PARENT: <地图> -->`）。
-  标签取 `wayfinder:<类型>`（`research` / `prototype` / `grilling` / `task`）；只带这一枚，不叠 `ready-for-agent` 这类 triage
-  标签（它们是决策，不是实施工作，见 `## Mandatory label set` 一节）。票被认领之后，认领人就是驱动
-  这件事的开发者（认领用 `deck_issue_patch`）。
-- **Blocking**: 阻塞关系优先落成后端自己的原生依赖边（GitHub 上是原生的 issue dependencies，界面上看得见）。
-  用 `deck_map_link` 传 `blockedBy`，工具自己判断能不能落原生边、落不了就退回正文的阻塞写法（GitLab 房是成对降级：可见行 `Blocked by: #n` + 隐藏机器表 `<!-- DSH-BLOCKED-BY: … -->`），
-  并把落在哪一列告诉你。`blockedBy` 里列的是**阻塞这一方的票**（先把它们关掉才轮到这张票）；回执会点名
-  「票 #A 的 blockedBy 里有 #B，也就是 #A 被 #B 阻塞」，读回执时按这个方向核对。一张票要等所有阻塞它的票都关闭了才算解除阻塞。
-- **Frontier query**: 用 `deck_map_snapshot` 读这张地图的开放子票，去掉还能被阻塞的（依赖边指向仍未关闭的
-  票，或正文 `Blocked by` 那行里还有没关的票）与已经被认领的；剩下的按地图里的先后顺序取第一条。
-- **Claim**: 用 `deck_issue_patch` 把这张票指给当前用户 —— 这是本会话的第一笔写操作。
-- **Resolve**: 用 `deck_issue_patch` 先发一条评论写清结论，再关闭这张票；然后到地图的 Decisions-so-far 里
-  补一行指针（一句话结论 + 链接）。顺序不能省也不能反：先评论、再关闭（原因见上面「关票一律先评论，再关闭」一节）。
+- **Map**: a ticket labelled `wayfinder:map`, with Notes / Decisions-so-far / Fog in its body. Create it with `deck_map_plan_create` (it writes the destination, the Notes and the plan as one map).
+- **Child ticket**: a child ticket hung under this map. Create this parent-child edge with `deck_map_link` by passing `parentKey`; the tool lands it according to the current backend's capability and honestly reports which column the edge landed in (a native edge, or the task list plus an ownership marker in the ticket body; the GitLab room lands it in the hidden marker `<!-- DSH-PARENT: <map> -->` in the file header). The label is `wayfinder:<type>` (`research` / `prototype` / `grilling` / `task`); carry only that one and do not stack triage labels such as `ready-for-agent` on top (they are decisions, not implementation work — see the `## Mandatory label set` section). Once the ticket is claimed, the assignee is the developer driving this piece of work (claim it with `deck_issue_patch`).
+- **Blocking**: blocking relations land as the backend's own native dependency edges first (on GitHub these are native issue dependencies, visible in the interface). Pass `blockedBy` to `deck_map_link`; the tool decides for itself whether a native edge can land, falls back to the blocking notation in the body when it cannot (the GitLab room degrades as a pair: a visible `Blocked by: #n` line plus a hidden machine table `<!-- DSH-BLOCKED-BY: … -->`), and tells you which column it landed in. What `blockedBy` lists is **the tickets that block this one** (they have to be closed first before this one's turn comes); the receipt names it explicitly — "ticket #A's blockedBy has #B, that is, #A is blocked by #B" — and you check in that direction when reading the receipt. A ticket only becomes unblocked once every ticket blocking it is closed.
+- **Frontier query**: read this map's open child tickets with `deck_map_snapshot`, drop the ones that can still be blocked (dependency edges pointing at tickets not yet closed, or tickets not yet closed left in the body's `Blocked by` line) and the ones already claimed; take the first of what remains, in the order the map lists them.
+- **Claim**: point this ticket at the current user with `deck_issue_patch` — this is the first write operation of the session.
+- **Resolve**: with `deck_issue_patch`, first post a comment stating the conclusion, then close this ticket; then go to the map's Decisions-so-far and add a line pointing at it (a one-sentence conclusion plus a link). Neither the order nor its reversal may be skipped: comment first, close second (the reason is in the section "Closing a ticket always means commenting first, then closing" above).

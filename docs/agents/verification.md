@@ -1,308 +1,319 @@
-# 门禁怎么挑、怎么跑
+# How to pick gates and how to run them
 
-这份文档写给第一次接手这个仓库的人。它讲清五件事：仓库里的门禁分几档、每档什么时候跑、各档测不出什么；
-「按这次改了哪些文件来挑门禁」这套规则是怎么定的；这套规则有哪些已知漏洞；怎么重跑归属表、
-怎么加一扇新门禁；以及产物过期了怎么排查。第五节还有一小节「读一扇大门禁」，讲上下文有限时怎么只看判据、不整份读。
+This document is written for someone picking up this repository for the first time. It makes five things clear: how many tiers of gates the repository has, when each tier runs, and what each tier cannot test; how the rule "pick the gates according to which files this change touched" was decided; which known holes that rule has; how to re-run the ownership map and how to add a new gate; and how to investigate a build output that has gone stale. Section 5 also has a short subsection, "Reading one large gate", about how to read only the criterion when context is limited, instead of reading the whole file.
 
-文中的具体数字（多少步、覆盖多少文件）取自 2026-10-12 与 2026-10-20 的实测，只用来帮你建立数量感；
-链还在变长，你读到的时候数字多半已经不一样了，跑一次 `node scripts/gate-map.mts --print`
-就能看到当前的值。推算以准的只有两处：链的名单与阶段在 `scripts/verify-stages.json`，
-归属表是生成出来的 `tests/gate-map.json`。
+The concrete numbers in this document (how many steps, how many files covered) come from measurements taken on 2026-10-12 and 2026-10-20, and are only there to give you a sense of the scale. The chain is still getting longer, so by the time you read this the numbers have most likely changed — run `node scripts/gate-map.mts --print` once to see the current values. Only two places are authoritative when you work something out: the chain's list and stages are in `scripts/verify-stages.json`, and the ownership map is the generated `tests/gate-map.json`.
 
-## 一、先认清三样东西
+## 1. Get clear on three things first
 
-- **`scripts/verify-stages.json`**：链的名单与阶段（目录约定加显式排除表，#1125）。每一步形如
-  `node tests/verify-xxx.ts`，跑的是 `tests/` 下一个独立的 Node 脚本。**这是门禁名单的唯一来源**，
-  由 `scripts/lib/discover-gates.ts` 的 `planGates()` 算出：`tests/` 下符合 `verify-*` 命名的脚本
-  自动被发现，按阶段表的 `match` 归段，默认落在 `match` 为空的那一段。`package.json` 的
-  `scripts.verify` 现在只是 `node scripts/verify-chain.ts` 一句，别在别处再抄一份清单——抄一份就一定会跟它走散。
-- **`tests/gate-map.json`（门禁归属表）**：生成物，回答「每一扇门禁守着哪些源码路径」。
-  由 `node scripts/gate-map.mts` 扫描生成，**不要手工改**。
-- **`scripts/lib/select-gates.mts`（挑选规则）**：回答「这次改了这些文件，该跑哪些门禁」。
-  输入是改动清单，输出是 `verify` 链上该跑的那些步，外加每一步被选中的理由。
+- **`scripts/verify-stages.json`**: the chain's list and stages (a directory convention plus an explicit exclusion
+  table, #1125). Every step looks like `node tests/verify-xxx.ts` and runs one independent Node script under
+  `tests/`. **This is the only source of the gate list**, computed by `planGates()` in
+  `scripts/lib/discover-gates.ts`: scripts under `tests/` whose names match `verify-*` are discovered
+  automatically and assigned to a stage by the stage table's `match`, landing by default in the stage whose
+  `match` is empty. `package.json`'s `scripts.verify` is now nothing but the single line
+  `node scripts/verify-chain.ts`; do not copy the list anywhere else — a copy is guaranteed to drift away from it.
+- **`tests/gate-map.json` (the gate ownership map)**: a generated file that answers "which source paths does each
+  gate guard". It is produced by the scan in `node scripts/gate-map.mts`; **do not edit it by hand**.
+- **`scripts/lib/select-gates.mts` (the selection rules)**: answers "given these changed files, which gates should
+  run". The input is the change list; the output is the steps on the `verify` chain that should run, plus the
+  reason each step was chosen.
 
-门禁本身是 `tests/verify-*`。当前 `tests/` 下有三百来个这样的脚本，挂在链上的约三百步；
-没挂上的是本地排查用的，不会在提交前自动跑。
+The gates themselves are `tests/verify-*`. `tests/` currently holds about three hundred of these scripts, and
+about three hundred steps of them are on the chain; the ones not on the chain are for local investigation and do not run
+automatically before a commit.
 
-## 二、门禁分三档
+## 2. Gates come in three tiers
 
-| 档 | 怎么跑 | 什么时候跑 |
+| Tier | How to run it | When to run it |
 | --- | --- | --- |
-| 快档（只跑一扇或几扇） | `node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`；按名字抽查用 `node scripts/verify-chain.ts --only <文件名里的一段>` | 写代码的过程中，改一处验一处 |
-| 受影响档（只跑这次改动碰得到的门禁） | `npm run verify:changed`（读 git 里这次的改动清单）或 `node scripts/lib/select-gates.mts <改了哪些文件...>`（自己报改动清单） | 一个模块写完、提交之前自查 |
-| 全链档（约三百步主链 + 末尾五条冒烟） | `npm run verify:parallel`（8 路并发跑主链，红也跑完再汇总，失败的那几步会自动串行重跑一次以排除互相干扰；主链跑完后按 `package.json` 的 `scripts.smoke` 顺序串行跑五条冒烟，冒烟红也算整体红） | 提交之前、推送之前，**每次都要跑** |
-| 全链·串行 | `node scripts/verify-chain.ts`（第一扇红了就停，方便先修）或 `node scripts/verify-all.mts`（全部跑完再汇总） | 想按顺序看输出、或者并发下出过怪事时用 |
+| Fast tier (one gate, or a few) | `node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`; to spot-check by name, use `node scripts/verify-chain.ts --only <a fragment of the file name>` | While writing code, verifying each change as you make it |
+| Affected tier (only the gates this change can reach) | `npm run verify:changed` (reads this change's file list from git) or `node scripts/lib/select-gates.mts <which files changed...>` (you report the change list yourself) | When a module is finished, as a self-check before committing |
+| Whole-chain tier (about three hundred steps of the main chain plus five smoke runs at the end) | `npm run verify:parallel` (runs the main chain 8 ways in parallel, running even the red steps to completion before summarising; the failing steps are then re-run once serially to rule out mutual interference; after the main chain it runs the five smoke runs serially in `package.json`'s `scripts.smoke` order, and a red smoke run also counts as an overall red) | Before committing and before pushing, **every time** |
+| Whole chain, serial | `node scripts/verify-chain.ts` (stops at the first red one, which makes fixing easier) or `node scripts/verify-all.mts` (runs everything, then summarises) | When you want to read the output in order, or when a parallel run has behaved strangely |
 
-2026-10-26 起，远端不再承担验证裁决职责：`.github/workflows/verify.yml` 已下掉（#1542），推送 main 与开 PR 都不再自动跑验证。本地验证是唯一的裁决口径，规则是三条：本地跑链必须用 Node 24.15 及以上版本（在 Node 22 上跑链本身就是 #1523 记录的装载故障）；`npm run verify:parallel` 是唯一的裁决入口，提交前与推送前每次都要跑它（#1643 起它一次盖住主链与五条冒烟，`npm test` 与 `npm run test:smoke` 仍然可用，但都不是裁决入口）；合并前要求除登记在案的已知红之外，全链真红为 0（例如 #1541 跟踪的那几道与 Node 版本无关的失败）。这三条的来龙去脉见 `docs/adr/20261026-cancel-ci-verify.md`。
+Since 2026-10-26 the remote side no longer carries the job of deciding verification: `.github/workflows/verify.yml` has been removed (#1542), so pushing to main and opening a PR no longer run verification automatically. Local verification is the only adjudicating standard, and the rule has three parts: running the chain locally must use Node 24.15 or newer (running the chain on Node 22 is itself the loading failure recorded in #1523); `npm run verify:parallel` is the only adjudicating entry point and must be run before every commit and every push (since #1643 it covers the main chain and the five smoke runs in one go, and `npm test` and `npm run test:smoke` still work but neither of them is an adjudicating entry point); before merging, apart from the known reds that are on record, the number of true reds on the whole chain must be 0 (for example the failures unrelated to the Node version that #1541 tracks). The reasoning behind these three parts is in `docs/adr/20261026-cancel-ci-verify.md`.
 
-2026-10-12 的实测（28 核机器）：当时 228 步串行 517 秒；8 路并发在源码没动过时约 36 秒，
-源码刚改过（要真跑一次构建）时约 66 秒。链今天约三百步，量级不变，绝对值会跟链长一起涨。
-并发跑的日志里每一步的起止与耗时都打了时间戳；并发跑红的步骤会自动串行重跑一次，
-重跑才红的会被标成 `flaky`（说明是并发互相干扰，不是代码坏了），重跑仍然红才是真红。
+The measurement on 2026-10-12 (a 28-core machine): 228 steps took 517 seconds serially; 8-way parallel took about 36 seconds when the source had not changed, and about 66 seconds when the source had just changed (a real build has to run). The chain has about three hundred steps today; the order of magnitude holds, and the absolute numbers grow with the length of the chain. In a parallel run the log timestamps the start, end and duration of every step; a step that goes red in a parallel run is automatically re-run once serially, and one that only goes red on that re-run is marked `flaky` (which means the parallel runs interfered with each other, not that the code is broken); only a step that is still red after the re-run is a true red.
 
-冒烟阶段（#1643）排在主链与「红的步骤串行复跑」之后：五条按 `scripts.smoke` 的顺序串行跑（其中一条会临时切换工作目录，顺序不能乱），不再参与并发的假红复跑。`--only`、`--changed` 抽查和主链首红即停时它不跑，并在汇总里明写「冒烟阶段：没跑（原因）」——「没跑」永远是明说的，不能让人从输出里猜。机器读的结果写在 `--json` 的 `smoke` 栏（`ran` / `reason` / `red` / 逐条结果），顶层 `red` 是主链加冒烟的总红数，`chainRed` 单列主链。
+The smoke stage (#1643) comes after the main chain and after "the red steps are re-run serially": the five smoke runs are run serially in `scripts.smoke` order (one of them temporarily changes the working directory, so the order must not be disturbed), and they no longer take part in the parallel re-run that filters out false reds. `--only` and `--changed` spot checks and a main chain that stops at the first red do not run it, and the summary says outright that the smoke stage did not run — the line it prints is （`冒烟阶段：没跑`） followed by the reason — so "did not run" is always stated outright, never left for the reader to guess from the output. The machine-readable result is in the `--json` output's `smoke` field (`ran` / `reason` / `red` / per-entry results); the top-level `red` is the total red count of the main chain plus the smoke stage, and `chainRed` lists the main chain separately.
 
-**每一档测不出什么**：
+**What each tier cannot test**:
 
-- **快档**只证明被跑的那一扇自己是绿的。这次改动还碰得到哪些门禁、有没有把别的门禁带红、
-  产物有没有跟上源码，它一概不知道。
-- **受影响档**只跑挑选规则圈出来的门禁，圈不出来的关系测不到（第四节那五条就是例子）。
-  它省的是时间，不能当提交前的最后一道闸。
-- **全链档**覆盖链上所有门禁，末尾还跑五条冒烟（`package.json` 的 `scripts.smoke`），所以主链与冒烟两侧都算判过。
-  它仍然测不到链外那几样：`scripts/matrix-smoke.ts`、`scripts/matrix-full.ts` 两个矩阵脚本与发布流程要各自单独跑。
-  第四节那些漏洞也不会因为全跑就消失——链上本来就没有长在那些位置的门禁。
-- **全链·串行**（`node scripts/verify-chain.ts` 或 `node scripts/verify-all.mts`）范围只有主链，**不含冒烟**：
-  它多出来的只有「按顺序看输出」和「并发下出怪事时用来对照」，验证强度比全链档少，不能替代它。
+- The **fast tier** only proves that the one gate you ran is itself green. It knows nothing about which other gates this
+  change can still reach, whether it turned some other gate red, or whether the build outputs have kept up with the source.
+- The **affected tier** runs only the gates the selection rules can circle out; relations the rules cannot circle out go
+  untested (the five holes in section 4 are the example). What it saves is time, so it cannot serve as the last gate
+  before a commit.
+- The **whole-chain tier** covers every gate on the chain, and at the end it runs the five smoke runs from `package.json`'s
+  `scripts.smoke`, so both the main chain and the smoke side count as judged. It still cannot test the things
+  outside the chain: the two matrix scripts `scripts/matrix-smoke.ts` and `scripts/matrix-full.ts`, and the
+  release flow, each have to be run on their own. Nor do the holes in section 4 disappear just because everything ran —
+  the chain never had gates living in those places.
+- **Whole chain, serial** (`node scripts/verify-chain.ts` or `node scripts/verify-all.mts`) covers only the main
+  chain and **excludes the smoke stage**: all it adds is "read the output in order" and "a baseline to compare against
+  when a parallel run behaves strangely"; its verification strength is less than the whole-chain tier, and it cannot
+  replace it.
 
-想跳过真浏览器类门禁可以跑 `npm run verify:fast`（等价于 `--tier fast`）；它比全链档少一层，
-别拿它替代提交前的全链。冒烟阶段照跑——五条冒烟都不是真浏览器步骤。
+To skip the real-browser gates you can run `npm run verify:fast` (equivalent to `--tier fast`); it is one layer short of the whole-chain tier, so do not use it in place of the whole chain before a commit. The smoke stage still runs — none of the five smoke runs is a real-browser step.
 
-并发跑得快，靠三件事，都不改任何一条断言的判据：
+The parallel run is fast because of three things, none of which changes the criterion of any single assertion:
 
-1. **慢步在等，不在算。** CPU 采样显示最慢那扇 31.8 秒里 31.7 秒是 idle，所以并发几乎能线性省时间。
-2. **按耗时从长到短排程，互斥的步骤合成一节车厢。** 每步上一轮的实测耗时记在
-   `node_modules/.cache/dsh-verify-times.json`（不进版本库）；会互相抢资源的步骤（`npm pack`、真跑构建）
-   合成一节车厢，由同一个工人依次跑完，免得两个工人同时 `npm pack` 造成假红。车厢最前面会先跑一次
-   预构建，后面的门禁就都命中构建缓存，也不会读到半旧产物。看排程用
-   `node scripts/verify-parallel.mts --tasks`。
-3. **构建有缓存，产物新鲜度按内容判。** `node scripts/build.mts` 会先比「手写输入的内容指纹」与「上次成功构建的产物哈希」，
-   两者都没变就跳过这 30 秒（链上有十几扇门禁各自跑一次构建）。缓存落在 `node_modules/.cache/dsh-build.json`，
-   要强制重建用 `node scripts/build.mts --force`。判定口径是「产物与上次成功构建逐字节相同」，
-   不是「构建没跑过所以不知道」；输入变了、产物被人改过删过，都会照常完整重建。
-   八扇新鲜度门禁（`verify-ctx`、`verify-kernel`、`verify-leaves`、`verify-parse-leaf`、`verify-tabsfold-leaf`、
-   `verify-platform-contract`、`verify-log-client`、`verify-log-artifacts`）与两个矩阵脚本读的是同一份判据
-   （`scripts/lib/build-cache.mts` 的 `judgeProducts`）：缓存可用时比产物内容摘要；缓存读不到、构建输入在上次成功构建之后
-   又变过、或者记录里没有这份产物时，才退回按修改时间判断，并打一行 `INFO` 说明原因、受影响产物与恢复办法，
-   不静默。看到这类 `INFO` 怎么处理，见第七节。
-   另有 `verify-1327-freshness-content` 一扇是判据自身的回归门禁：它在临时目录里直接验证判据本身，也在真实树上判
-   四个入口产物；它守的是判据不退化，不属于那八扇「用判据的门禁」。
+1. **The slow steps are waiting, not computing.** CPU sampling showed that, of the slowest gate's 31.8 seconds, 31.7
+   seconds were idle, so parallelism saves time almost linearly.
+2. **Schedule from longest to shortest, and merge mutually exclusive steps into one train car.** Each step's measured
+   duration from the previous round is recorded in `node_modules/.cache/dsh-verify-times.json` (which does not go
+   into the repository); steps that compete for the same resources (`npm pack`, a real build) are merged into a
+   single car, run one after another by the same worker, so that two workers never run `npm pack` at the same time
+   and produce a false red. At the head of the car a pre-build runs first, so the gates after it all hit the build cache
+   and never read a half-stale output. To look at the schedule, run `node scripts/verify-parallel.mts --tasks`.
+3. **The build is cached, and build-output freshness is judged by content.** `node scripts/build.mts` first compares
+   "the content fingerprint of the hand-written inputs" with "the hashes of the outputs from the last successful build";
+   if neither has changed it skips those 30 seconds (a dozen-odd gates on the chain each run a build). The cache lands in
+   `node_modules/.cache/dsh-build.json`; to force a rebuild use `node scripts/build.mts --force`. The
+   criterion is "the output is byte-for-byte identical to the last successful build", not "the build never ran, so we do
+   not know"; when inputs change, or an output was edited or deleted by hand, a full rebuild happens as usual.
 
-   同一工作区两个人同时跑构建、且都缓存没命中时，后到的会在构建锁上排队等（终端里写「在后面排队等它」），拿到锁先复核一次缓存——前面那个人一般已经把活干完了，后到的直接命中退出，不用再建一遍。锁只盖真构建这一段，缓存命中直接退出的那条路不碰锁，所以平时各自命中缓存时谁也不等谁。等超过五分钟还拿不到就报错退出（写清持锁进程与锁文件，人工去看）；`--break-stale-lock` 是人工闸，只在确认旧锁没主之后用。
+   The eight freshness gates (`verify-ctx`, `verify-kernel`, `verify-leaves`, `verify-parse-leaf`,
+   `verify-tabsfold-leaf`, `verify-platform-contract`, `verify-log-client`, `verify-log-artifacts`)
+   and the two matrix scripts read the same criterion (`judgeProducts` in `scripts/lib/build-cache.mts`): when
+   the cache is usable they compare the output's content digest; only when the cache cannot be read, when the build inputs
+   changed again after the last successful build, or when the record does not contain this output, do they fall back to
+   judging by modification time, and print one `INFO` line giving the reason, the affected outputs and how to
+   recover — never silently. For what to do when you see that kind of `INFO`, see section 7.
 
-三档不是三选一，是三层筛子：写代码时用快档，模块收尾用受影响档，**提交前必须用全链档**。
-下面第四节会说明为什么受影响档一定不能替代全链档。
+   One more gate, `verify-1327-freshness-content`, is the regression gate for the criterion itself: it verifies the
+   criterion directly in a temporary directory, and it also judges the four entry outputs on the real tree; what it guards
+   is that the criterion does not regress, so it is not one of those eight "gates that use the criterion".
 
-## 三、挑选规则（完整版）
+When two people in the same workspace run a build at the same time and both miss the cache, the later one queues on the build lock （the terminal prints `在后面排队等它`, meaning it is queueing behind that build）, and after taking the lock it re-checks the cache once — the earlier one has usually finished the work by then, so the later one hits the cache and exits without building again. The lock covers only the real build; the path that exits at once on a cache hit never touches it, so in ordinary times, when each of you hits the cache, nobody waits for anybody. If it waits more than five minutes without getting the lock it reports an error and exits (writing out the process holding the lock and the lock file, for a human to look at); `--break-stale-lock` is a manual gate, used only after confirming that the old lock has no owner.
 
-`selectGates({ changedPaths, map, chainSteps })` 返回
-`{ steps, reasons, fullChain, fullChainReason }`：`steps` 是 `verify` 链上该跑的步骤（按链上的原顺序），
-`reasons` 与 `steps` 一一对应、写清每一步为什么被选中，`fullChain` 为 `true` 时表示「别挑了，整条链都跑」。
-整套规则**处处往「宁可多跑，不许漏跑」的一侧偏**：拿不准就多跑几扇，绝不猜着少跑。
+The three tiers are not a choice of one; they are three layers of a sieve: use the fast tier while writing code, the affected tier when finishing a module, and **the whole-chain tier before every commit**. Section 4 below explains why the affected tier can never replace the whole-chain tier.
 
-**规则 1：改的是横切文件，直接跑全链。** 命中任意一条就 `fullChain: true`：
+## 3. The selection rules (full version)
 
-- 仓库根目录下的文件（构建入口、发布清单、仓库配置——根目录的东西谁都在用）；
-- `package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`；
-- 任何位置的 `tsconfig*.json`；
-- `scripts/**`（生成器、发布脚本、检查链自己）；
-- `tests/**`（门禁与测试夹具）；
-- `docs/**`、`research/**`、`specs/**`，以及任何位置的 `*.md`；
-- `package/**`（构建产物）；
-- `src/**/contract/**`（契约层——它是跨模块的约定，改一处几个模块一起受影响）。
+`selectGates({ changedPaths, map, chainSteps })` returns `{ steps, reasons, fullChain, fullChainReason }`: `steps` are the steps on the `verify` chain that should run (in their original order on the chain), `reasons` correspond one-to-one with `steps` and record why each step was chosen, and `fullChain` being `true` means "stop picking, run the whole chain". The rule set **leans everywhere towards "run more rather than miss one"**: when in doubt, run a few more gates, never guess your way into running fewer.
 
-**规则 2：改的是有归属的源码文件，按目录层层上溯选门禁，再加反向依赖。**
+**Rule 1: the change touches a cross-cutting file, so run the whole chain.** If any one of these matches, `fullChain: true`:
 
-- 取这个文件所在的目录，沿父目录一路上溯到仓库根，例如
-  `src/client/views/versionControl/VersionControlTab.ts` 会走出
-  `src/client/views/versionControl` → `src/client/views` → `src/client` → `src` → `.`；
-- 归属表里这些目录**各自直接守着**的门禁全选上。注意是「各自直接守着」而不是「含子目录累计」：
-  改 `src/client/views/versionControl/` 不会连带选中只守 `src/client/views/cards/` 的门禁，
-  这正是维护者要的「改 E 跑 E、B、A 三层，不碰兄弟目录 C、D」；
-- **再加反向依赖**：谁的 import 图里能走到这个文件（直接或传递），守着那些文件的门禁也要跑。
-  这一步是关键。`src/refresh/kernel/host-budget.ts` 就被好几个模块直接 import，还有更多模块间接依赖它；
-  光按目录走，改了它只会跑守 `src/refresh/kernel/` 的那几扇，上层消费者坏了本地看不到。
+- files at the repository root (the build entry, the release manifest, the repository configuration — everything at the
+  root is used by everyone);
+- `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`;
+- `tsconfig*.json` anywhere;
+- `scripts/**` (generators, release scripts, the check chain itself);
+- `tests/**` (gates and test fixtures);
+- `docs/**`, `research/**`, `specs/**`, and `*.md` anywhere;
+- `package/**` (build outputs);
+- `src/**/contract/**` (the contract layer — it is a cross-module agreement, so changing one place affects several
+  modules at once).
 
-**规则 3：改的文件没有归属，跑全链。** 「没有归属」是指它所在目录在归属表里查不到任何门禁
-（目录键不存在，或者对应的是空列表）。没人看着它，就猜不出影响面，只能全跑。
+**Rule 2: the change touches a source file that has ownership, so pick gates by walking up the directory levels, then add reverse dependencies.**
 
-**规则 4：改的是门禁或测试自己。** `tests/**` 已经在规则 1 里命中，整条链都会跑，那扇测试自然在里头。
+- take the directory the file is in and walk up through its parents all the way to the repository root; for example
+  `src/client/views/versionControl/VersionControlTab.ts` walks
+  `src/client/views/versionControl` → `src/client/views` → `src/client` → `src` → `.`;
+- select every gate that the ownership map says **directly guards each of these directories**. Note "directly guards each"
+  rather than "accumulates including subdirectories": changing `src/client/views/versionControl/` does not also
+  select gates that guard only `src/client/views/cards/`, and this is exactly what the maintainer wanted — "changing
+  E runs the three levels E, B and A, without touching the sibling directories C and D";
+- **then add reverse dependencies**: whichever files' import graphs can reach this file (directly or transitively), the
+  gates guarding those files must run too. This step is the key one. `src/refresh/kernel/host-budget.ts` is
+  imported directly by several modules, and more modules depend on it indirectly; going by directories alone, changing it
+  would run only the few gates guarding `src/refresh/kernel/`, and a broken consumer higher up would go unseen
+  locally.
 
-**规则 5：只验构建产物的门禁跟着源码一起跑。** 有几十扇门禁只读 `package/` 下的产物
-（例如 `tests/verify-958-label-name-visible.ts` 读 `package/lib/client.js`）。
-脚本看不出产物是哪个源码文件编出来的，所以只要这次动到了源码，这些门禁一律跟着跑。
+**Rule 3: the changed file has no ownership, so run the whole chain.** "No ownership" means that the ownership map holds no gate for the directory the file sits in (either the directory key does not exist, or it maps to an empty list). With nobody watching it, its blast radius cannot be guessed, so the only option is to run everything.
 
-补充两条边界：改动清单为空（比如你没传参数）按全链处理；传进来的路径既支持
-`src/client/kernel/styles.ts` 这种仓库相对路径，也支持从仓库根写起的 `./src/client/kernel/styles.ts` 和反斜杠写法。
+**Rule 4: the change touches a gate or the tests themselves.** `tests/**` has already matched in rule 1, so the whole chain runs and that test is naturally in it.
 
-**一个真实例子**（改 `src/client/views/versionControl/VersionControlTab.ts`）：
-选中 75 步 / 全链约三百步。这 75 步是几路来源并起来的结果（取并集，不是相加）——守
-`src/client/views/versionControl/` 的那几扇、守 `src/client/views/` 的、守 `src/client/` 的、守 `src/` 的，
-加上反向依赖这个文件的那些门禁，最后并上只看构建产物的那几十扇。改一个文件就从约三百步降到 75 步，
-而守这几层的门禁一扇不少。同一张表里，改 `src/refresh/kernel/host-budget.ts` 这种底层共享模块要跑 156 步——
-比 75 多得多，因为反向依赖把上游消费者都拉了进来，这正是它该有的样子。
+**Rule 5: gates that verify only build outputs run along with the source.** A few dozen gates read only the outputs under `package/` (for example `tests/verify-958-label-name-visible.ts` reads `package/lib/client.js`). The script cannot tell which source file an output was compiled from, so as long as this change touched source code, these gates all run along with it.
 
-命令行直接看挑选结果（人读得懂的那种输出）：
+Two boundary cases to add: an empty change list (for example, you passed no arguments) is treated as the whole chain; and the paths you pass in may be repository-relative such as `src/client/kernel/styles.ts`, or `./src/client/kernel/styles.ts` written from the repository root, or the backslash form.
+
+**One real example** (changing `src/client/views/versionControl/VersionControlTab.ts`): 75 steps selected out of about three hundred on the chain. These 75 steps are the union of several sources (a union, not a sum) — the gates guarding `src/client/views/versionControl/`, the ones guarding `src/client/views/`, `src/client/` and `src/`, plus the gates that depend on this file in reverse, and finally the few dozen that read only build outputs. Changing one file drops the run from about three hundred steps to 75, and not a single gate guarding those levels is missing. In the same map, changing a low-level shared module like `src/refresh/kernel/host-budget.ts` runs 156 steps — much more than 75, because reverse dependencies pull in all the upstream consumers, which is exactly how it should be.
+
+To see the selection result straight from the command line (the human-readable output):
 
 ```
 node scripts/lib/select-gates.mts src/client/views/versionControl/VersionControlTab.ts
 ```
 
-改动清单通常来自 `git status --porcelain` 或 `git diff --name-only` 的输出。
+The change list usually comes from the output of `git status --porcelain` or `git diff --name-only`.
 
-## 四、这套规则的已知漏洞
+## 4. Known holes in this rule set
 
-**这些漏洞都真实存在，而且都验证过，所以提交前必须跑一次全链。** 受影响档是用来省时间的，
-不是用来替代全链的。
+**These holes are all real, and all of them have been verified, which is why you must run the whole chain once before committing.** The affected tier is there to save time, not to replace the whole chain.
 
-1. **动态拼出来的路径认不出来。** 归属是从门禁文件里的**字符串字面量**推的；
-   路径一旦是拼出来的（变量、模板串、从配置里读出来的目录名），脚本就看不见它读的是什么。
-   真实例子：`scripts/gen-fixture-423.ts` 从 `src/client/kernel/styles.ts` 里抽出 CSS 规则，
-   生成夹具 `tests/fixtures/423-clamp-repro.html`，而门禁 `tests/verify-423-title-clamp-browser.ts`
-   只读那个 html 夹具。于是你改了 `styles.ts`，这扇浏览器门禁**不会被选中**——
-   它守着的路径落在 `tests/fixtures/` 下，跟 `styles.ts` 之间没有任何一条字面量线索。
-   识别不出来的门禁在表里会被标成「没有源码归属」：按目录挑的时候永远轮不到它，
-   只有整条链全跑时才会跑到它。兜底也救不了它——兜底看的是**你改的那个文件**有没有归属，
-   而这类门禁的问题出在**门禁自己**说不清守着谁。
-2. **构建产物与源码的对应关系看不出来。** 有几十扇门禁只读 `package/` 下的产物，脚本不知道
-   `package/lib/client.js` 是 `src/client/**` 编出来的。规则 5 用「动到源码就全带上」硬兜，
-   代价是一改源码就多跑几十扇，好处是不会漏。
-3. **跨目录的公共约定没有自己的目录。** 有些约定是几个目录一起遵守的（后端适配的字段名、
-   面板与状态栏之间的消息格式），改一处可能同时影响几个包。这种影响面既不在目录层级里，
-   也不在 import 图里，规则 2 兜不住。这类东西一旦成形，应该给它一个目录（例如
-   `src/**/contract/`），让规则 1 的契约层兜底。
-4. **构建时生成的文件。** 有些被门禁盯着的文件不是手写的，而是构建时从别处生成（文件头通常写
-   AUTO-GENERATED）。改生成它的源文件，不会让「只读生成物」的门禁被选中——两者之间没有 import 边。
-   这类文件要么让它的门禁同时守着源文件，要么在生成器跑完之后补一次全链。
-5. **「有门禁」和「有专属门禁」是两件事，别混。** 归属写成目录的门禁（`tests/verify-reuse.ts`、
-   `tests/verify-no-title.ts` 点名了 `src/client/views`）是**递归**扫那个目录的，所以它守着的文件算「有门禁」——
-   覆盖面这一栏因此是满的（`src/` 下 524 个文件、0 个无人守）。但「这一层自己有没有被点名」是另一回事：
-   `tests/gate-map.json` 的 `coverage.dedicatedDirs` 记的就是后者，`coverage.dirsWithoutDedicated`
-   列出没有专属门禁的目录和它们的文件数；这两个数以生成器跑出来的为准，别手抄。
-   想让某个目录有专属门禁，要么给它写一扇门禁，要么在既有的、确实守着它的门禁里加一条
-   `// 门禁归属:` 注释——注意注释会**取代**该门禁原有的全部线索，写的时候要写全。
+1. **Paths assembled at run time cannot be recognised.** Ownership is inferred from the **string literals** in a gate
+   file; once a path is assembled (a variable, a template string, a directory name read from configuration), the script
+   cannot see what it reads. A real example: `scripts/gen-fixture-423.ts` extracts CSS rules from
+   `src/client/kernel/styles.ts` and generates the fixture `tests/fixtures/423-clamp-repro.html`, while the
+   gate `tests/verify-423-title-clamp-browser.ts` reads only that html fixture. So when you change `styles.ts`,
+   this browser gate **will not be selected** — the paths it guards sit under `tests/fixtures/`, and there is not a
+   single literal clue linking it to `styles.ts`. A gate that cannot be recognised is marked in the map as "no
+   source ownership": when you pick by directory it never comes up, and only a full run of the whole chain reaches it. The
+   fallback cannot save it either — the fallback looks at whether **the file you changed** has ownership, while the
+   problem with this kind of gate is that **the gate itself** cannot say whom it guards.
+2. **The correspondence between build outputs and source cannot be seen.** A few dozen gates read only the outputs under
+   `package/`, and the script does not know that `package/lib/client.js` is compiled from `src/client/**`.
+   Rule 5 covers this bluntly with "any touch on source brings them all along"; the cost is a few dozen extra gates on
+   every source change, the benefit is that nothing is missed.
+3. **A cross-directory shared agreement has no directory of its own.** Some agreements are obeyed by several directories
+   together (the field names of a backend adapter, the message format between the panel and the status bar), and changing
+   one place may affect several packages at once. That blast radius is neither in the directory hierarchy nor in the
+   import graph, so rule 2 cannot cover it. Once this kind of thing takes shape, it should be given a directory (for
+   example `src/**/contract/`), so that rule 1's contract layer covers it.
+4. **Files generated at build time.** Some files that gates watch are not hand-written but generated from elsewhere during
+   the build (the file header usually says AUTO-GENERATED). Changing the source file that generates it does not cause the
+   "reads only the generated file" gate to be selected — there is no import edge between the two. For this kind of file,
+   either make its gate guard the source file at the same time, or run the whole chain once more after the generator has
+   run.
+5. **"Having a gate" and "having a dedicated gate" are two different things; do not mix them.** A gate whose ownership is
+   written as a directory (`tests/verify-reuse.ts` and `tests/verify-no-title.ts` name
+   `src/client/views`) scans that directory **recursively**, so the files it guards count as "having a gate" — which
+   is why the coverage column is full (524 files under `src/`, 0 with nobody guarding them). But whether "this level itself
+   has been named" is a different matter: `tests/gate-map.json`'s `coverage.dedicatedDirs` records the latter,
+   and `coverage.dirsWithoutDedicated` lists the directories without a dedicated gate together with their file
+   counts; the generator's numbers are authoritative for both, so do not copy them by hand. To give a directory a
+   dedicated gate, either write a gate for it or add one （`// 门禁归属:`） comment to an existing gate that really
+   does guard it — note that the comment **replaces** every clue that gate already had, so write it out in full.
 
-一句话：**归属表是「谁守着谁」的地图，不是「谁影响谁」的证明。** 它能把大部分改动的影响面框出来，
-框不全，所以最后那道闸是提交前的全链。
+In one sentence: **the ownership map is a map of "who guards whom", not a proof of "who affects whom".** It can frame the blast radius of most changes, but not all of it, which is why the last gate is the whole chain before a commit.
 
-## 五、日常操作
+## 5. Day-to-day operations
 
-### 重跑归属表
+### Re-run the ownership map
 
 ```
-node scripts/gate-map.mts            # 重新推导并写回 tests/gate-map.json
-node scripts/gate-map.mts --print    # 只看推导结果，不落盘
-node tests/verify-gate-map.ts        # 给归属表和挑选规则把关的新鲜度检查
+node scripts/gate-map.mts            # re-derive and write back tests/gate-map.json
+node scripts/gate-map.mts --print    # show the derived result only, write nothing to disk
+node tests/verify-gate-map.ts        # the freshness check that guards the ownership map and the selection rules
 ```
 
-必须在这些时候重跑，否则 `tests/verify-gate-map.ts` 会因新鲜度断言变红（它失败时会打印
-「哪一段、第几个字符不一样」，照着重跑一次即可）：
+You must re-run it at these moments, otherwise `tests/verify-gate-map.ts` goes red on its freshness assertion (when it fails it prints which segment and which character differ; re-run as it says and you are done):
 
-- `scripts/verify-stages.json` 变了（加了一扇、删了一扇、换了阶段或排除项）；
-- 新增或删除**挂在链上**的 `tests/verify-*.ts`（没挂上链的脚本不进归属表）；
-- `src/`（含四个计算核所在的 `src/shared/<功能名>/`，它们原先平铺在仓库根的
-  `refresh-core/`、`label-color-core/`、`version-control-core/`、`config-store-core/`，
-  2026-10-13 按 #1023 搬进来）下新增、删除、移动了文件——表的目录层级会跟着变；
-- 任何门禁新写了 `// 门禁归属:` 注释，或者改了它读的文件。
+- `scripts/verify-stages.json` has changed (a gate added, a gate removed, a stage or an exclusion changed);
+- a `tests/verify-*.ts` **on the chain** was added or removed (scripts not on the chain do not enter the ownership
+  map);
+- files under `src/` (including `src/shared/<feature name>/`, where the four compute cores live; they used to
+  sit flat at the repository root in `refresh-core/`, `label-color-core/`, `version-control-core/` and
+  `config-store-core/`, and were moved in on 2026-10-13 under #1023) were added, deleted or moved — the map's
+  directory hierarchy changes with them;
+- any gate has newly written a （`// 门禁归属:`） comment, or has changed the files it reads.
 
-**加一扇新门禁之后也要重跑一次**：表里存着「链上多少步」，链一变就对不上了。
+**Also re-run it once after adding a new gate**: the map stores "how many steps are on the chain", and the two go out of sync as soon as the chain changes.
 
-### 加一扇新门禁
+### Add a new gate
 
-1. 在 `tests/` 下新建 `verify-xxx.ts`（以后新增一律写 `.ts`），写法照抄既有门禁：`check(ok, msg)` 逐条断言、
-   末尾打印通过条数、失败 `process.exit(1)`。要让执行器校验「完成证据」（#1158），按
-   `tests/lib/gate-result.ts` 的约定交出 `GATE-RESULT` 行。
-2. 约定是「目录约定加显式排除表」：`tests/` 下符合 `verify-*` 命名的脚本会被自动发现、自动进链，
-   默认落在 `scripts/verify-stages.json` 里 `match` 为空的那一段；只有长期不进链的样本门禁才需要登记进
-   `exclude` 表，且理由与票号缺一不可（看守门禁 `tests/verify-1125-gate-coverage.ts` 会查这两项）。
-3. 在文件开头写 `// 门禁归属:` 注释，写清它守着哪些源码路径（格式见下一节）。这一步可选，
-   但强烈建议写——不写就只能靠「它读了哪些字面量路径」去猜，猜不准。
-4. 重跑 `node scripts/gate-map.mts` 更新归属表，再跑 `node tests/verify-gate-map.ts` 确认全绿。合并时两边都改过归属表而冲突的，不要挑任何一边，以合并后的树为准重新生成一次。
-5. 自己把那扇门禁跑一遍，确认它**能红也能绿**（故意改坏一处看它是不是真的拦得住）——
-   一扇永远绿的门禁比没有门禁更糟。
+1. Create `verify-xxx.ts` under `tests/` (from now on everything new is written as `.ts`), copying the
+   style of existing gates: one `check(ok, msg)` assertion after another, the number of passing assertions printed at
+   the end, and `process.exit(1)` on failure. To let the executor verify "completion evidence" (#1158), hand out a
+   `GATE-RESULT` line in the form specified by `tests/lib/gate-result.ts`.
+2. The convention is "a directory convention plus an explicit exclusion table": scripts under `tests/` whose names
+   match `verify-*` are discovered automatically and enter the chain automatically, landing by default in the stage
+   of `scripts/verify-stages.json` whose `match` is empty; only sample gates that stay off the chain for the
+   long term need to be registered in the `exclude` table, and both a reason and a ticket number are required (the
+   guarding gate `tests/verify-1125-gate-coverage.ts` checks both).
+3. Write a （`// 门禁归属:`） comment at the top of the file, spelling out which source paths it guards (the format is
+   in the next subsection). This step is optional but strongly recommended — without it the only option is guessing from
+   "which literal paths it reads", and guessing is unreliable.
+4. Re-run `node scripts/gate-map.mts` to update the ownership map, then run `node tests/verify-gate-map.ts` to
+   confirm it is all green. If a merge conflicts because both sides changed the ownership map, do not pick either side;
+   regenerate once from the merged tree.
+5. Run the gate yourself once and confirm that it **can go red as well as green** (break something on purpose and see
+   whether it really stops it) — a gate that is always green is worse than no gate at all.
 
-### `// 门禁归属:` 注释怎么写
+### How to write the （`// 门禁归属:`） comment
 
 ```js
 // 门禁归属: src/client/views/versionControl/vcRows.ts
 ```
 
-- 写在文件**前 4000 个字符以内**（脚本只看开头这一段），一行一条路径；写多条就是多行。
-- `//`、`/* */` 都行，冒号用中文 `：` 或英文 `:` 都行；路径写到文件或目录都行，
-  目录末尾带不带斜杠都可以。
-- 路径按**仓库相对路径**写（`src/...`、`src/refresh/...`）。
-- **写了它就以它为准，别的线索全不看**（读文件、import、字符串字面量都不再参与）。
-  所以写的时候要写全：漏写的那条路径就等于没人守。
-- 一扇门禁如果只是「顺手读了一下」某个文件，不算守它——只写它坏了该拦住谁。
+- Write it within the **first 4000 characters** of the file (the script looks only at that opening stretch), one path per
+  line; several paths means several lines.
+- Either `//` or `/* */` works, and the colon may be the Chinese `：` or the English `:`; the path may
+  point at a file or a directory, and a trailing slash on a directory is optional.
+- Write the path as a **repository-relative path** (`src/...`, `src/refresh/...`).
+- **Once it is written, it is the only thing that counts and no other clue is looked at** (file reads, imports and string
+  literals no longer take part). So write it out completely: a path you leave out is the same as nobody guarding it.
+- If a gate merely "reads a file in passing", that does not count as guarding it — write only what it should stop when it
+  fails.
 
-### 挑选这次该跑哪些门禁
+### Pick which gates to run this time
 
 ```
-node scripts/lib/select-gates.mts <改了哪些文件...>
+node scripts/lib/select-gates.mts <which files changed...>
 ```
 
-输出要么是「只跑 N / 全链 M 步」加每一步的理由，要么是「跑全链」加跑全链的理由。
-在脚本里用就是 `import { selectGates } from './lib/select-gates.mts'`。
+The output is either "run N of the M steps of the whole chain" plus the reason for each step, or "run the whole chain" plus the reason for running the whole chain. To use it inside a script: `import { selectGates } from './lib/select-gates.mts'`.
 
-### 读一扇大门禁（省上下文、又不漏判据）
+### Reading one large gate (saving context without missing the criterion)
 
-`tests/verify-prompts.ts` 这类门禁有两千多行；整份读进上下文很贵，注意力也会被排版细节吃掉。
-按下面四步走，读到的正好是判据本身：
+Gates like `tests/verify-prompts.ts` run to more than two thousand lines; reading one whole into context is expensive, and attention gets eaten by formatting details. Follow the four steps below and what you read is exactly the criterion itself:
 
-1. **先读文件头。** 前 50 行一般写着它守什么、判哪几条（R1–R8 这类口径）、产出哪些汇总计数。
-   先知道「这扇门禁回答什么问题」，再决定要不要往下读。
-2. **用 grep 找锚点，不整份读。** 常量名（`EXPECT_`、`PROTECTED`、`LOCK_`）、节标题、主要函数名、
-   汇总行（`PASS` / `FAIL`）都是好锚点：
-   `Select-String -Path tests/verify-xxx.ts -Pattern 'EXPECT_|PROTECTED|LOCK_|^(export )?(const|function) '`。
-3. **先单跑一次，看它自己报什么。** 门禁末尾的汇总行（例如 `S1=28 S2=28/28 …`）会告诉你它扫了
-   哪几个面、每面多少条，比读代码更快建立结构感；红了也直接看到是哪条判据在报。
-4. **要旧版本时用 `git show` 读。** `git show <commit>:tests/verify-xxx.ts` 直接输出旧内容；
-   要逐段比就 `git diff <commit> -- tests/verify-xxx.ts`。不要整份复制到临时文件再读一遍。
+1. **Read the file header first.** The first 50 lines usually say what it guards, which items it judges (headings like
+   R1–R8) and which summary counts it produces. Know "what question this gate answers" first, then decide whether to read
+   further.
+2. **Use grep to find anchors, not a full read.** Constant names (`EXPECT_`, `PROTECTED`, `LOCK_`),
+   section titles, main function names and summary lines (`PASS` / `FAIL`) are all good anchors:
+   `Select-String -Path tests/verify-xxx.ts -Pattern 'EXPECT_|PROTECTED|LOCK_|^(export )?(const|function) '`.
+3. **Run it once on its own first, and see what it reports.** The summary line at the end of a gate (for example
+   `S1=28 S2=28/28 …`) tells you which surfaces it scanned and how many items each one has, which builds a sense of the
+   structure faster than reading code; and when it is red you see straight away which criterion is reporting.
+4. **For an older version, read it with `git show`.** `git show <commit>:tests/verify-xxx.ts` prints the old
+   content directly; to compare section by section use `git diff <commit> -- tests/verify-xxx.ts`. Do not copy the
+   whole file to a temporary file and read it again.
 
-定点读文件用 `read` 工具的 `offset` / `limit`（或 `Get-Content ... | Select-Object -Skip N -First M`）。
-同一个文件不要两次整份读：之前读过的区间记下来，只补没读过的段。
+To read a file at a chosen spot, use the `read` tool's `offset` / `limit` (or `Get-Content ... | Select-Object -Skip N -First M`). Never read the same file in full twice: note down the range you have already read and fill in only the stretches you have not read.
 
-动手改之前，先跑一次这扇门禁确认它本来是全绿的——否则分不清「自己的改动弄红了」还是「本来就有问题」。
+Before you start changing anything, run the gate once to confirm that it is green as it stands — otherwise you cannot tell whether "my own change turned it red" or "it was already broken".
 
-## 六、门禁红了先看哪里
+## 6. Where to look first when a gate goes red
 
-- **大面积红、而且很多行都是 `Cannot find module '<三方包名>'`**：这是 `node_modules` 坏了，
-  不是代码问题（同一条缺件出现在两扇以上门禁时，并行入口会自己停下来并说明）。
-  修法是删掉整个 `node_modules` 重新装：`pnpm install --frozen-lockfile`，本机实测十几秒。
-  **不要**只删 `node_modules/.pnpm` 下的某个子目录：`pnpm install` 会回「Already up to date」，
-  目录装不回来，人会误以为已经修好，实际只是把下一次运行也变成红的。
-- **`tests/verify-gate-map.ts` 报「归属表过期」**：重跑 `node scripts/gate-map.mts`，
-  然后看 `git diff tests/gate-map.json` 里变了什么——变的地方通常就是这次真正动到的归属关系。
-- **报「某个文件既没有门禁也没有理由」**：说明 `src/` 下多了一个没人守的文件。
-  正确做法是给它补一扇门禁或补一条 `// 门禁归属:` 注释；如果它确实不需要门禁
-  （纯类型文件、派生产物、原型页面），就在 `scripts/gate-map.mts` 的 `ungatedReasonFor(rel)`
-  里加一条归类规则，把理由写清楚，让归属表把它归到「没有门禁但知道原因」那一类。
-  **不要为了让门禁变绿去删断言。**
-- **报挑选规则的场景测试失败**：说明挑选规则被改坏了，某个场景开始漏跑门禁。
-  先想清楚是不是真的漏，再改规则；这些场景断言是防止「悄悄少跑」的最后一道防线。
-- **报「产物内容与上次成功构建不一致」「缺失」，或者输出里带 `INFO 构建缓存`**：先看第七节，
-  分清是产物内容真的不对，还是本机没有可用的构建记录。
+- **A large area of red, and many lines are `Cannot find module '<third-party package name>'`**: this is
+  `node_modules` being broken, not a code problem (when the same missing piece shows up in two or more gates, the
+  parallel entry point stops by itself and says so). The fix is to delete the whole of `node_modules` and install
+  again: `pnpm install --frozen-lockfile`, which took a dozen-odd seconds on this machine when measured. **Do not**
+  delete only one subdirectory under `node_modules/.pnpm`: `pnpm install` will answer "Already up to date", the
+  directory does not come back, and you will believe it is fixed when all you did was make the next run red as well.
+- **`tests/verify-gate-map.ts` reports that the ownership map is out of date**: re-run `node scripts/gate-map.mts`,
+  then look at what changed in `git diff tests/gate-map.json` — the places that changed are usually the ownership
+  relations this change really touched.
+- **It reports that some file has neither a gate nor a reason**: this means a file under `src/` has appeared with
+  nobody guarding it. The right fix is to add a gate for it or to add a （`// 门禁归属:`） comment to one; if it
+  genuinely needs no gate (a pure type file, a derived output, a prototype page), add a classification rule to
+  `ungatedReasonFor(rel)` in `scripts/gate-map.mts`, write the reason out clearly, and let the ownership map
+  put it in the "no gate but the reason is known" class. **Do not delete assertions to make a gate go green.**
+- **The scenario tests for the selection rules fail**: this means the selection rules were broken and some scenario has
+  started missing gates. Work out whether it really is a miss before you change the rules; these scenario assertions are
+  the last line of defence against "quietly running fewer".
+- **It reports that the output content does not match the last successful build, reports that the output is missing, or
+  the output carries a （`INFO 构建缓存`） line**: read section 7 first and tell apart whether the output content
+  really is wrong or this machine has no usable build record.
 
-## 七、产物过期了怎么排查
+## 7. How to investigate a build output that has gone stale
 
-产物新鲜度只回答一个问题：**盘上这份产物，是不是用当前源码构建出来的。** 它不再比修改时间，而是比内容：
-门禁读构建缓存（`node_modules/.cache/dsh-build.json`）里记的「上次成功构建时每份产物长什么样」，
-再拿盘上产物的 sha256 去对。为什么不再看修改时间：缓存命中时构建一个字节都不写，产物的修改时间停在上次，
-按时间比会把「源码没变」误报成过期；反过来，构建收尾去 touch 产物（旧版本这样补过）又会制造大量修改时间变化、
-触发界面热更。内容摘要不受文件时间影响——源码没变、产物没变，摘要就相等；有一边变了，摘要就不等。
+Build-output freshness answers only one question: **was this output on disk built from the current source?** It no longer compares modification times but content: the gate reads what the build cache (`node_modules/.cache/dsh-build.json`) records as "what each output looked like at the last successful build", then checks it against the sha256 of the output on disk. Why modification time is no longer looked at: when the cache hits, the build writes not a single byte, so an output's modification time stays at the previous one, and comparing by time would misreport "the source did not change" as stale; conversely, a build that touches the outputs as it finishes (older versions patched things that way) creates a mass of modification-time changes and triggers UI hot reload. A content digest is unaffected by file times — if the source did not change and the output did not change, the digests are equal; if either side changed, they are not.
 
-排查时先看门禁打印的是下面哪一类。
+When investigating, first work out which of the kinds below the gate printed.
 
-### 红色：产物内容真的和上次成功构建对不上
+### Red: the output content really does not match the last successful build
 
-失败行里会出现这一段：
+The failing line contains this passage:
 
 ```
 产物内容与上次成功构建不一致（可能被人手改过，或构建没跑完）。请运行 node scripts/build.mts 重建。
 ```
 
-是哪个产物由失败行前面的「产物门禁 <产物>：」带出，原因里不再重复写一遍产物名。
+Which output it is comes from the （`产物门禁 <产物>：`） prefix in front of the failing line; the reason does not repeat the output's name a second time.
 
-说明构建记录里记的摘要和盘上这份对不上：有人手改过产物、上次构建中途失败或没跑完、产物被别的分支或别的
-工作区的构建覆盖过。**先跑 `node scripts/build.mts` 重建，再重跑刚才红的那扇门禁。** 重建后还红，多半是这次
-改了源码但构建没跑成（或者改了源码根本没跑构建），也可能是缓存记录本身坏了：跑一次不带 `--force` 的
-`node scripts/build.mts` 把「完整构建」记录补齐再看。注意 `--force` 只用于强制重建，它写的是「--force」那一档记录，
-门禁读的「完整构建（full）」档不会因此刷新，所以缓存 JSON 真坏了时跑 `--force` 反而修不回内容判据。不要手改产物去凑摘要。
+This says that the digest recorded in the build record and the one for this file on disk do not match: someone edited an output by hand, the last build failed halfway or never finished, or an output was overwritten by a build from another branch or another workspace. **First run `node scripts/build.mts` to rebuild, then re-run the gate that just went red.** If it is still red after the rebuild, it is most likely that this change touched source but the build did not run to completion (or the source changed and no build ran at all), or that the cache record itself is broken: run `node scripts/build.mts` once without `--force` to fill in the "full build" record, then look again. Note that `--force` is only for forcing a rebuild and writes the "--force" grade of record; the "full build" grade that the gates read is not refreshed by it, so when the cache JSON really is broken, running `--force` cannot restore the content criterion. Do not edit outputs by hand to match a digest.
 
-产物干脆不在时报的是「缺失（请先运行 node scripts/build.mts）」：新克隆、清过产物目录时会这样，跑一次构建即可。
+When an output is simply absent, it reports "missing" （the message begins with `缺失` and tells you to run `node scripts/build.mts` first）: this happens on a fresh clone or after the output directory has been cleaned, and one build is all it takes.
 
-### `INFO` 行：本机没有可用的构建记录（不等于源码过期）
+### An `INFO` line: there is no usable build record on this machine (which does not mean the source is stale)
 
-门禁可能照样判绿，同时打印一行 `INFO`。常见两条：
+The gate may still judge green while printing one `INFO` line. The two common ones:
 
 ```
 INFO 构建缓存<原因>，这次退回按修改时间判断（受影响产物：……）。要恢复内容判据请运行 node scripts/build.mts（这不是源码过期，是本机没有可用的构建记录）。
@@ -312,32 +323,23 @@ INFO 构建缓存<原因>，这次退回按修改时间判断（受影响产物�
 INFO 构建输入在上次成功构建之后有变化（缓存里没有逐个文件的内容摘要，无法指出是哪一份），这次退回按修改时间判断（受影响产物：……）。上次成功构建时间是 <时间>。要恢复内容判据请运行 node scripts/build.mts。
 ```
 
-第一句里的 `<原因>` 是缓存不可用的具体说法（不存在、JSON 坏了、格式版本和当前构建对不上）。两行说人话都是：
-这台机器上没有「上次成功构建」的可用记录（换机器、清过 `node_modules/.cache`、全新克隆下来还没跑过构建都会这样），
-或者记录之后构建输入又变过，这次只能退回旧的「源码比产物新就算过期」判据。**它不等于源码过期**；跑一次
-`node scripts/build.mts` 把记录补齐，之后的判断就恢复成内容判据。如果这行 `INFO` 同时还伴随红色
-「过期（<源> 比产物新，请运行 node scripts/build.mts 重新构建；这次没有可用的构建记录，只能按修改时间判断：<回落原因>）」，
-那才说明产物真的比源码旧，照旧跑构建。回落判红的行里会带上回落原因，单看这一行就能分清是内容对不上还是本机没有记录。
+The （`<原因>`） in the first line is the specific way the cache is unavailable (it does not exist, the JSON is broken, or its format version does not match the current build). In plain words both lines say: this machine has no usable record of the "last successful build" (switching machines, clearing `node_modules/.cache`, or a fresh clone that has never been built all do this), or the build inputs changed again after the record was made, so this time there is nothing but the old "the source is newer than the output, so it is stale" criterion to fall back on. **It does not mean the source is stale**; run `node scripts/build.mts` once to fill the record in, and from then on judgements go back to the content criterion. If this `INFO` line also comes with a red "expired" line （the message starts with `过期`, says the source is newer than the output and asks you to run `node scripts/build.mts` to rebuild, and notes that this time there was no usable build record so modification time was the only basis, ending with the fallback reason）, that is when the output really is older than the source, and you run the build as usual. The line that a fallback turns red carries the fallback reason, so this one line alone tells you whether the content does not match or this machine has no record.
 
-还有第三种 `INFO`：「构建记录里没有这些产物的内容摘要（产物清单变过？）」——产物清单改过、缓存还是旧清单时
-会这样，跑一次构建即可。
+There is also a third kind of `INFO`: it says that the build record has no content digest for these outputs （it asks whether the output list has changed） — this happens when the output list has changed and the cache still holds the old list; one build is enough.
 
-构建缓存的判断有边界：它只回答「这批构建输入是不是上次成功那一批」，说不出是哪一份输入变了——为了不升缓存格式
-版本，缓存里不记逐个文件的内容摘要。输入对不上时只能整批退回按修改时间判断，不会点名某一份输入。要定位具体是哪一份
-输入变了，以构建日志、门禁输出和 `git diff` 为准。
+The build cache's criterion has a boundary: it only answers "is this batch of build inputs the same batch as the last successful one", and it cannot say which input changed — to avoid bumping the cache format version, the cache does not record a per-file content digest. When the inputs do not match, the whole batch has to fall back to judging by modification time, and no single input is named. To pin down which input actually changed, go by the build log, the gate output and `git diff`.
 
-### 先跑哪一档
+### Which tier to run first
 
-按「最小面 → 影响面 → 全链」走，每一档都先看它打印的是红色还是 `INFO`：
+Go narrowest surface → blast radius → whole chain, and at every tier first look at whether it printed red or `INFO`:
 
-1. **先跑红的那一扇**（或你怀疑的那一扇）：`node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`。
-   通常就不必等全链——它会把点名的产物、原因和可照抄的命令一起打出来。
-2. **再跑受影响档**：`npm run verify:changed`。同一处源码改动往往同时带红几扇新鲜度门禁（它们盯的源码集合
-   有重叠），这一步确认它们是不是同一个原因。
-3. **最后跑全链**：`npm run verify:parallel`，确认除已知红之外没有别的新鲜度问题；末尾的冒烟阶段也要全绿
-   （它红的时候汇总里会单列「冒烟阶段」，不和主链混在一起）。
+1. **Run the red one first** (or the one you suspect): `node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`.
+   Usually you will not need to wait for the whole chain — it prints the named output, the reason and a command you can
+   copy, all together.
+2. **Then run the affected tier**: `npm run verify:changed`. One source change often turns several freshness gates
+   red at once (the source sets they watch overlap), and this step confirms whether they share the same cause.
+3. **Finally run the whole chain**: `npm run verify:parallel`, to confirm that there is no other freshness problem
+   apart from the known reds; the smoke stage at the end has to be all green too (when it is red the summary gives the
+   smoke stage its own line, not mixed in with the main chain).
 
-排查时在输出里搜这两段文字最快：`产物内容与上次成功构建不一致`（红色，内容不对）、`INFO 构建缓存`
-（回落，本机记录不可用）。想验证「缓存记录本身是不是坏了」，跑一次不带 `--force` 的 `node scripts/build.mts` 把
-「完整构建」记录补齐再看（`--force` 只用于强制重建，它写的是「--force」那一档记录，不会刷新门禁读的「完整构建」档，
-所以缓存 JSON 坏了时跑 `--force` 并不能让门禁恢复内容判据）。
+When investigating, the fastest thing is to search the output for these two pieces of text: （`产物内容与上次成功构建不一致`） (red, the content is wrong) and （`INFO 构建缓存`） (a fallback, this machine's record is unusable). To check whether "the cache record itself is broken", run `node scripts/build.mts` once without `--force` to fill in the "full build" record and look again (`--force` is only for forcing a rebuild and writes the "--force" grade of record; it does not refresh the "full build" grade that the gates read, so when the cache JSON is broken, running `--force` cannot get the gates back onto the content criterion).

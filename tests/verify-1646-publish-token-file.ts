@@ -94,10 +94,11 @@ function staticChecks(): void {
   // 旧写法会诱导人把值写进命令行：脚本头注释里不许再出现「内联赋一个 npm_ 值」的示例。
   check(!has("NODE_AUTH_TOKEN='npm_") && !has('NODE_AUTH_TOKEN = ' + String.fromCharCode(39) + 'npm_'), '脚本里没有内联写 token 值的旧示例')
 
+  // AGENTS.md 在 #1561 之后是英文（本仓库 English-first 的那一半），判据认英文原句，不再认中文词。
   const agents = fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8')
   check(agents.indexOf('-TokenFile') >= 0, 'AGENTS.md 的发布说明写了 -TokenFile 文件通道')
-  check(agents.indexOf('立刻删掉') >= 0, 'AGENTS.md 要求跑完立刻删掉临时 token 文件')
-  check(agents.indexOf('按季度轮换') >= 0 && agents.indexOf('撤销') >= 0, 'AGENTS.md 写明轮换与泄露后撤销的处置')
+  check(agents.indexOf('Delete the temporary file immediately') >= 0, 'AGENTS.md 要求跑完立刻删掉临时 token 文件')
+  check(agents.indexOf('rotate it quarterly') >= 0 && agents.indexOf('revoke') >= 0, 'AGENTS.md 写明轮换与泄露后撤销的处置')
 
   const runbook = fs.readFileSync(path.join(ROOT, 'docs', 'releases', 'RELEASE-RUNBOOK.md'), 'utf8')
   check(runbook.indexOf('## 12. 发布 token 的文件通道与轮换') >= 0, 'RELEASE-RUNBOOK.md 有第 12 节讲 token 文件通道与轮换')

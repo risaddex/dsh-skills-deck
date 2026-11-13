@@ -1,20 +1,20 @@
-# 提交信息规范
+# Commit message convention
 
-`git commit` 信息一律用中文，完整句说清改了什么、为什么改。
+Every `git commit` message is written in English, in complete sentences that say what changed and why it changed.
 
-## 规则
+## Rules
 
-1. **标题**：一句完整描述，至少 10 个字，句末括号写涉及票号：单票 `（#1136）`，多票 `（#1057、#1063）`，需说明关系时接短句 `（#1052 收尾）`。票号写 `#` 加数字、放行尾、按升序、顿号分隔；不写裸编号、不用半角括号。PR 号写作 `PR #977`，与票号区分。
-2. **正文**：说明改动内容与原因，并写一句验证情况——跑了哪几道检查、结果如何；未验证就如实说明。
-3. **票号须真实**：提交前读一眼该票，确认编号与主题对应。
-4. **一次提交只做一件可独立交付的事**；涉及多票且进展不同时，正文分条说明。
-5. **提交范围要自己点名**：提交前用 `git status` 核对这次动了哪些文件，只 `git add` 本任务动过的路径；不要用 `git commit -a` 或 `git add -A`。同一个工作区里可能还有别的会话没提交的改动，一把抓会把别人的工作卷进自己的提交。
+1. **Title**: one complete description, at least ten words long, with the tickets it serves in parentheses at the end of the line: a single ticket as `(#1136)`, several as `(#1057, #1063)`, and a short qualifier when the relation needs saying, as in `(#1052 wrap-up)`. Write a ticket as `#` plus the digits, at the end of the line, in ascending order, separated by commas; never write a bare number without the `#`. Write a pull request as `PR #977` so it never looks like a ticket.
+2. **Body**: say what changed and why, and add one sentence about verification — which checks you ran and how they turned out; when you verified nothing, say that plainly.
+3. **The ticket number must be real**: read the ticket once before committing, and check that the number and the subject match.
+4. **One commit carries one thing that can be delivered on its own**; when a commit serves several tickets at different stages, describe each of them in its own paragraph of the body.
+5. **Name the paths you commit yourself**: run `git status` before committing to see which files this task touched, and `git add` only those paths; never use `git commit -a` or `git add -A`. The same working tree may hold uncommitted changes from another session, and sweeping everything in would drag that work into your commit.
 
-## 示例
+## Example
 
 ```
-把 issueDetail 从 JavaScript 转成 TypeScript，行为零变化（#1161）
+Convert issueDetail from JavaScript to TypeScript without changing its behaviour (#1161)
 
-补齐两个入口的返回类型标注，逻辑未改。
-tsc 与 tests/verify-1053-issue-write 已跑通，冒烟五条全绿。
+Add the return type annotations at both entry points; the logic is unchanged.
+tsc and tests/verify-1053-issue-write pass, and all five smoke runs are green.
 ```

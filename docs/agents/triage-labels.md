@@ -27,29 +27,29 @@ When a skill mentions a role (for example "apply the AFK-ready triage label"), u
 
 ## Mandatory label set
 
-这个仓库建票时**按位置补标签**，不要求每张新票都带 triage 标签。六种位置各补什么（与代码里的位置表 `src/deck/rules/object-kind.ts` 的 `OBJECT_KIND_RULES` 逐条对应）：
+When this repo creates a ticket it **adds labels by position**; it does not require every new ticket to carry a triage label. Which label each of the six positions adds (one-to-one with `OBJECT_KIND_RULES` in the code's position table `src/deck/rules/object-kind.ts`; a spec and a spec ticket share one row):
 
-| 位置 | 建票时补的标签 |
+| Position | Label added when the ticket is created |
 | --- | --- |
-| 探索地图（`kind: map`） | `wayfinder:map` |
-| 地图工单（`kind: map-ticket`） | 调用时 `label` 给的那一枚 `wayfinder:<类型>`（`research` / `prototype` / `grilling` / `task` 四选一） |
-| 规格（`kind: spec`）与实施票（`kind: spec-ticket`） | 类型标签不补；triage 状态没显式给时默认 `ready-for-agent` |
-| 缺陷票（`kind: bug`） | 类型标签 `bug`；triage 状态没显式给时默认 `needs-triage` |
-| 普通票（`kind: issue`） | 一枚都不补 |
+| Exploration map (`kind: map`) | `wayfinder:map` |
+| Map ticket (`kind: map-ticket`) | whichever `wayfinder:<type>` the call passed in `label` (`research` / `prototype` / `grilling` / `task`, one of the four) |
+| Spec (`kind: spec`) and spec ticket (`kind: spec-ticket`) | no type label; when no triage state is given explicitly, it defaults to `ready-for-agent` |
+| Bug ticket (`kind: bug`) | the type label `bug`; when no triage state is given explicitly, it defaults to `needs-triage` |
+| Ordinary ticket (`kind: issue`) | none at all |
 
-`deck_issue_create` 按这张表把缺的补上。**wayfinder 的地图与地图子票只带 wayfinder 标签，不叠 `ready-for-agent` 这类 triage 标签**：它们是决策，不是实施工作。同一张表也写在 `docs/agents/issue-tracker.md` 的「Mandatory label set」一节。
+`deck_issue_create` fills in whatever is missing according to this table. **A wayfinder map and its child tickets carry only wayfinder labels, never a triage label such as `ready-for-agent`**: they are decisions, not implementation work. The same table is also written in the "Mandatory label set" section of `docs/agents/issue-tracker.md`.
 
-**triage 状态在任何时刻至多一枚**（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix` 五选一）。状态是「切换」不是「叠加」：
+**There is at most one triage state at any moment** (`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`, one of the five). A state is switched, never stacked:
 
-- 建票时 `labels` 里显式带了一枚状态标签，就按调用方的来，不再叠上面那张位置表里的默认状态。例如缺陷票带 `needs-info`，最终只有 `bug` 与 `needs-info`，不会再多一枚 `needs-triage`。
-- 改标签时 `addLabels` 带一枚状态，工具会先把票上原来的状态标签摘掉，再换上新的，并在回执里写明摘了哪几枚。所以「把 `needs-triage` 推进成 `ready-for-agent`」只要加 `ready-for-agent`，不要自己再去摘旧的那枚。
-- 一次请求给两枚以上状态标签（建票或改标签都算）直接拒绝，票面一个标签都不动：这是调用方自己表达矛盾，工具不替人挑。
+- When `labels` already carries one state label at creation, the caller's choice wins and the default state from the position table above is not added on top. A bug ticket created with `needs-info`, for example, ends up with `bug` and `needs-info` only, never a third `needs-triage`.
+- When `addLabels` carries one state, the tool first removes the ticket's existing state label, then adds the new one, and the receipt says which labels it removed. So moving a ticket from `needs-triage` to `ready-for-agent` takes only adding `ready-for-agent`; do not go and remove the old one yourself.
+- One request carrying two or more state labels (creating a ticket or changing labels alike) is refused outright and no label on the ticket changes: the caller has contradicted itself, and the tool does not choose on the caller's behalf.
 
-五枚状态在程序里的名单只有一份：`src/tracker/contract/triage-states.ts`，`src/tracker/contract/canonical-labels.ts` 也从这里取名字，不再手抄。本地 Markdown 后端另有自己的配置来源——`original-skills.yaml` 的 `status.triage-roles`；两处由 `tests/verify-md-format-config.ts` 逐项比对，要改名单必须两处一起改。
+The five states are listed in exactly one place in the program: `src/tracker/contract/triage-states.ts`, and `src/tracker/contract/canonical-labels.ts` takes the names from there too instead of copying them out. The local Markdown backend has a second source — `status.triage-roles` in `original-skills.yaml`; `tests/verify-md-format-config.ts` compares the two entry by entry, so changing the list means changing both.
 
-本地 Markdown 后端把上面的 triage 角色落成票文件里可见的 `Status:` 行，不写进文件头隐藏的 `DSH-LABELS`；规格与探索地图容器没有可见状态行，仍用隐藏的 `DSH-STATUS`。读侧会把可见状态合成回 triage 标签，所以「按标签筛选」和「按位置补标签」的用法都不变。
+The local Markdown backend writes the triage roles above as a visible `Status:` line in the ticket file, not into the hidden `DSH-LABELS` header; spec and exploration-map containers have no visible status line and still use the hidden `DSH-STATUS`. The read side merges the visible status back into the triage labels, so both "filter by label" and "add a label by position" keep working unchanged.
 
-`bug` / `needs-triage` / `wayfinder:grilling` 这三枚标签仍然保留：它们是面板上「修复」「诊断」「讨论」三个动作的入口，不是每张新票的必备项。
+The three labels `bug` / `needs-triage` / `wayfinder:grilling` stay: they are the entry points of the three panel actions — fix (修复), diagnose (诊断) and discuss (讨论) — not something every new ticket has to carry.
 
 ## Wayfinder label set
 
@@ -65,5 +65,5 @@ Edit the `Label` column to match whatever label strings you actually use.
 
 ## Checklist issue exception
 
-每个要发布的版本有一张 `[真机验证] <版本号>` 清单票（规则见 `docs/agents/real-machine-verification.md`）。它按普通票建（`kind: 'issue'`），靠标题前缀识别，**不打任何标签**：按上面那张表，普通票本来就一枚都不补；打了标签反而会混进 bug / triage 的筛选里。建票时不要给它补标签。
+Every version to be released has a checklist ticket titled `[真机验证] <version>`; the Chinese prefix is matched literally by `scripts/lib/release-checklist.mts`, so the title itself stays as it is (the rules are in `docs/agents/real-machine-verification.md`). It is created as an ordinary ticket (`kind: 'issue'`) and recognised by that title prefix, and it carries **no label at all**: by the table above an ordinary ticket adds none, and a label would only drag it into the bug / triage filters. Do not add labels to it when you create it.
 

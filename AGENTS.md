@@ -8,125 +8,125 @@ This file gives an agent working in this repo the context it needs to operate we
 
 Issues live as GitHub issues; read and write them through the deck tools (`deck_*`), not hand-written tracker commands. See `docs/agents/issue-tracker.md`.
 
-升级插件后、或 deck 工具报错 / 回执被判非法 / 整体不可用时，先跑自检并照 `docs/agents/issue-tracker.md` 的「工具故障」一节处理。
+After you upgrade the plugin, or when a deck tool reports an error, a receipt is judged invalid, or the tools as a whole are unusable, run the self-check first and then handle it as the "tool failure" section（工具故障）of `docs/agents/issue-tracker.md` says.
 
 ### Triage labels
 
-五种 triage 角色（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`）加五种 wayfinder 标签（`wayfinder:map` / `research` / `prototype` / `grilling` / `task`）。建票时**类型标签按位置补，triage 状态由状态机决定**：探索地图补 `wayfinder:map`，地图工单补调用时给的那一枚 `wayfinder:<类型>`，缺陷票补 `bug`，普通票不补类型标签。triage 状态**没显式给时**才补位置默认值（规格与实施票默认 `ready-for-agent`，缺陷票默认 `needs-triage`）；调用方显式带了状态就按调用方的来。一张票任何时刻至多一枚 triage 状态：换状态是替换不是叠加，一次给两枚以上整笔拒绝。wayfinder 的地图与子票只带 wayfinder 标签，不叠 `ready-for-agent` 这类 triage 标签（它们是决策，不是实施工作）。`bug` / `needs-triage` / `wayfinder:grilling` 三枚仍保留，它们是面板上「修复」「诊断」「讨论」三个动作的入口，不是每张新票的必备项。详见 `docs/agents/triage-labels.md`。
+Five triage roles (`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`) plus five wayfinder labels (`wayfinder:map` / `research` / `prototype` / `grilling` / `task`). When a ticket is created, **the type label follows the position and the triage state is decided by the state machine**: an exploration map gets `wayfinder:map`, a map ticket gets the one `wayfinder:<type>` passed in the call, a bug ticket gets `bug`, and a plain ticket gets no type label. A position default is filled in **only when no triage state is given explicitly** (a spec and the spec tickets under it default to `ready-for-agent`, a bug ticket defaults to `needs-triage`); when the caller passes a state explicitly, the caller's choice wins. A ticket carries at most one triage state at any moment: changing the state replaces it rather than stacking, and passing two or more in one call is rejected as a whole. A wayfinder map and its child tickets carry only wayfinder labels and never stack a triage label such as `ready-for-agent` on top (those are decisions, not implementation work). The three labels `bug` / `needs-triage` / `wayfinder:grilling` are still kept: they are the entry points for the panel's three actions "fix", "diagnose" and "discuss", not a required item on every new ticket. See `docs/agents/triage-labels.md` for details.
 
 ### Domain docs
 
 Single-context layout — root `GLOSSARY.md` plus `docs/adr/`. See `docs/agents/domain.md`.
 
-### 配置归属
+### Config ownership
 
-加新值、或者想把一个值搬进 `config/` 下的数据文件之前，先读 `docs/adr/20261021-config-ownership.md`。一句话：一个值只有一处定义；值该留在代码里还是搬成数据文件，用「编译器能不能直接把两份拷贝连起来」判断——能连起来的用导入连起来，连不上的才搬数据文件并配生成器与门禁。
+Before you add a new value, or want to move a value into a data file under `config/`, read `docs/adr/20261021-config-ownership.md` first. In one sentence: a value is defined in exactly one place; whether a value should stay in the code or move into a data file is decided by asking "can the compiler connect the two copies directly" — when it can, connect them with imports; only when it cannot do you move the value into a data file and set up a generator and a gate.
 
-### 提问方式
+### Asking questions
 
-需要人拿主意时，把问题直接写在对话正文里，不用弹窗式提问工具——弹窗会挡住正文解释，人看不到完整的来龙去脉。
+When a person has to make the call, write the question directly in the conversation body instead of using a popup-style question tool — a popup covers the explanation in the body, and the person cannot see the full background.
 
 ### Human-first wording
 
-执行任务中写下的所有文字——对话回复、issue 标题与正文、markdown 文档、代码注释、任何文件——都以「人类第一次阅读就能准确理解」为第一标准：只使用 GLOSSARY.md 词典或此前交流中已确立含义的词语；确需表达新概念时，写成完整、平实的描述，而不是造一个需要另行解释的简称或比喻。先满足人的可读性，再谈机器的便利——AI 能读懂平实的完整句，却会替读者造出只有当次会话才明白的速记。
+Every piece of text written while carrying out a task — conversation replies, issue titles and bodies, markdown documents, code comments, any file — takes "a human understands it accurately on the first reading" as its first standard: use only words that `GLOSSARY.md` defines or whose meaning was already established in earlier exchanges; when a new concept really has to be expressed, write it as a complete, plain description rather than coining a shorthand or a metaphor that then needs explaining. Satisfy what a person can read first, and talk about what is convenient for a machine after that — an AI can read plain complete sentences, but it will invent shorthand for the reader that only makes sense in this one session.
 
-**发出去之前，都停一秒问自己：**
-1. 没看过前文的人，能直接看懂这句话在说什么吗？
-2. 有没有用了只有我们这次对话才懂的叫法？有就改成大白话。
-3. 新东西是不是用一整句话说清楚了，而不是只扔一个词让别人去猜？
+**Before you send anything out, stop for a second and ask yourself:**
+1. Can someone who has not read the earlier text understand directly what this sentence is saying?
+2. Have I used a name that only this conversation understands? If so, change it to plain language.
+3. Is the new thing explained in one whole sentence, instead of just dropping a word and leaving others to guess?
 
-### 提交信息规范
+### Commit message convention
 
-所有 `git commit` 信息必须用中文，用通顺的完整句子说清“这次改了什么、为什么改”。标题至少 10 个字，不要只写 `fix` / `update`。详见 `docs/agents/commit-convention.md`。
+Every `git commit` message must be written in English, in fluent, complete sentences that say what this change changed and why it changed. The title must be at least ten words long; do not just write `fix` / `update`. See `docs/agents/commit-convention.md` for details.
 
-### 及时提交与推送
+### Commit and push promptly
 
-每个可以独立交付的模块开发完成后，就马上把代码提交并推送到远端，避免本地改动因为误操作或换机器而丢失。不要把多个模块攒在一起一次性提交。
+As soon as a module that can be delivered on its own is finished, commit the code and push it to the remote right away, so that local changes are not lost to a mistaken operation or a switch to another machine. Do not save several modules up and commit them all at once.
 
-只用不会丢文件、不改写历史的命令，例如 `git status`、`git diff`、`git log`、`git add`、`git commit`、`git push`、`git pull --ff-only`。提交信息遵守上面“提交信息规范”里的中文要求。
+Use only commands that cannot lose files and do not rewrite history, for example `git status`, `git diff`, `git log`, `git add`, `git commit`, `git push`, `git pull --ff-only`. Commit messages follow the English requirement in "Commit message convention" above.
 
-提交前先跑一次 `git status` 看清这次到底动了哪些文件，只 `git add` 本任务动过的路径；不要用 `git commit -a` 或 `git add -A` 一把抓——同一个工作区里可能还有别的会话没提交的改动，一把抓会把别人的活卷进自己的提交，或者把别人暂存好的文件提前带走。
+Before committing, run `git status` once to see which files this change actually touched, and `git add` only the paths this task touched; do not grab everything with `git commit -a` or `git add -A` — the same working tree may still hold changes another session has not committed, and grabbing everything drags other people's work into your commit, or takes files they have already staged away ahead of them.
 
-不要用任何可能丢文件或改写历史的命令，例如 `git reset --hard`、`git checkout .`、`git clean -f`、`git push --force`、`git rebase`、`git filter-branch`。拿不准某条命令会不会丢数据时，先停下来问人，不要自己试。
+Do not use any command that could lose files or rewrite history, for example `git reset --hard`, `git checkout .`, `git clean -f`, `git push --force`, `git rebase`, `git filter-branch`. When you are unsure whether a command might lose data, stop and ask a person first; do not try it yourself.
 
-### 并行会话：同一工作区有多路会话时
+### Parallel sessions: when one workspace holds several sessions
 
-默认每个会话去自己的工作树里干活，各自装一份依赖、各自构建，不同树之间不用排队；同一棵树里的第二个构建写者由文件锁排队。仓库本身是共享的：分支、`refs/stash`、面板看哪棵树只有一份；界面入口同一时刻也只指向一棵树——要看界面效果，按 `docs/agents/parallel-sessions.md` 把 profile 安装目录临时指到那棵树，看完还原。提交前先看 `git status`，只暂存自己确认过的路径，同一个分支一次只归一个会话。完整步骤见 `docs/agents/parallel-sessions.md`。
+By default each session goes to work in its own worktree, installs its own copy of the dependencies and builds on its own, and different trees never have to queue for each other; a second build writer in the same tree queues on a file lock. The repository itself is shared: there is only one copy of the branches, of `refs/stash`, and of which tree the panel looks at; the interface entry point also points at only one tree at a time — to see the interface result, point the profile install directory at that tree temporarily as `docs/agents/parallel-sessions.md` describes, and restore it after looking. Check `git status` before committing, stage only the paths you have confirmed yourself, and one branch belongs to one session at a time. The complete steps are in `docs/agents/parallel-sessions.md`.
 
-### TypeScript 优先，旧 JS 随改随迁，最终只留 TS
+### TypeScript first: old JS migrates as you touch it, and in the end only TS remains
 
-最终目标是项目里手写代码只有 TypeScript，没有手写 JavaScript（构建产物和派生文件生成的 `.js` 不算）。以后凡是需求、修 bug、做规划、写设计时动到本插件的手写代码，一律优先用 TypeScript 写；存量 JavaScript 不单独立项重写，采取“动到哪里就转到哪里”的方式转，直到清零。本条继承 `tsconfig.client.json` 里“摸到谁再转谁，不搞大爆炸”的口径，并把它推广到全仓。
+The end goal is that the hand-written code in the project is only TypeScript, with no hand-written JavaScript (the `.js` produced as build output and generated from derived files does not count). From now on, whenever a requirement, a bug fix, planning or a design touches this plugin's hand-written code, write it in TypeScript first; existing JavaScript is not rewritten as a separate project but converted in the "convert whatever you touch" way, until the count reaches zero. This rule inherits the wording in `tsconfig.client.json` — "convert whoever you touch, no big bang" — and extends it to the whole repository.
 
-1. 以文件为单位，先修后转、两次提交，不再新增手写 JS：先提交一次纯修复，再提交一次把这个文件转成 TypeScript，转完行为零变化。只转本次真正动到的文件；以后新增文件一律写 `.ts`（含 `.mts`/`.d.ts`）。派生文件（例如 `scripts/generated/*`）、自动检查本身、临时目录永不转。清零口径是手写 `.js` 归零，构建产物不计。
-2. 转完要接上构建：同步登记到对应 `tsconfig` 的 `include` 与 `scripts/build.mts` 清单（不登记会静默不编译），沿用 `target ES2020`、`strict`、`noEmit` 加 `esbuild` 转译，然后把 `tsc -p`、构建、相关 `tests/verify-*` 与冒烟跑通才算完。转完顺手把两份棘轮名单里对应的一行也删掉（`tests/handwritten-js-baseline.json` 直接删那一行；测试文件还要跑一次 `node tests/verify-unmigrated-tests.ts --record-baseline` 重录 `tests/unmigrated-tests-baseline.json`）——名单里留着树上已经找不到的路径会让这两处门禁判红，理由写在它们各自的 `note` 与错误信息里。
-3. 转完要把注释补足：公开函数、类型、关键分支用中文完整句写清为什么、什么约定不能改、什么反例，不要复述类型名。样板看 `src/shared/label-color/src/colors.ts` 开头。
-4. 转完顺手加日志，走下一节“日志埋点纪律”，以排查优先、多记但无垃圾为准。
+1. Work file by file: fix first, convert second, in two commits, and never add hand-written JS again: commit a pure fix once, then commit the conversion of that file to TypeScript, with zero behaviour change after the conversion. Convert only the files this task really touches; every file added later is written as `.ts` (including `.mts`/`.d.ts`). Derived files (for example `scripts/generated/*`), the automated checks themselves and temporary directories are never converted. The zero target means hand-written `.js` reaches zero; build output does not count.
+2. Once converted, wire it into the build: register it in the matching `tsconfig`'s `include` and in the `scripts/build.mts` list (an unregistered file is silently not compiled), keep `target ES2020`, `strict` and `noEmit` plus `esbuild` transpilation, and the work is done only once `tsc -p`, the build, the related `tests/verify-*` and the smoke runs all pass. While you are there, delete the matching line from the two ratchet lists (in `tests/handwritten-js-baseline.json` delete that line directly; for a test file, also run `node tests/verify-unmigrated-tests.ts --record-baseline` once to re-record `tests/unmigrated-tests-baseline.json`) — a path left in a list that can no longer be found in the tree turns both gates red, and the reason is written in each list's own `note` and error message.
+3. Once converted, bring the comments up to par: for public functions, types and key branches, use complete Chinese sentences to say clearly why it is this way, which conventions must not be changed and what the counter-examples are; do not restate the type names. For a model, look at the start of `src/shared/label-color/src/colors.ts`.
+4. Once converted, add logging along the way, following the next section "Logging instrumentation discipline", with troubleshooting first and "log a lot, but no junk" as the standard.
 
-### 跑门禁：先挑档位，别默认全链
+### Running the gates: pick a tier first, do not default to the whole chain
 
-门禁分三档，挑错档要么白等，要么漏跑。三种常用跑法：
+The gates come in three tiers; picking the wrong tier either makes you wait for nothing or makes you miss a run. Three common ways to run them:
 
-- 改一处、验一处：只跑那一扇——`node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`；按名字抽查用 `node scripts/verify-chain.ts --only <文件名里的一段>`。
-- 一个模块写完：`npm run verify:changed`（只跑这次改动影响得到的门禁，几十秒量级）。
-- 提交前：`npm run verify:parallel`（全链、8 路并发，主链跑完再串行跑五条冒烟，构建缓存就绪时约 1 分钟）。串行全链 `node scripts/verify-chain.ts` 只在排查顺序问题时用。
+- Change one place, verify one place: run only that one gate — `node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`; to spot-check by name, use `node scripts/verify-chain.ts --only <a fragment of the file name>`.
+- A module is finished: `npm run verify:changed` (runs only the gates this change can affect, on the order of tens of seconds).
+- Before committing: `npm run verify:parallel` (the whole chain, 8-way concurrency, and after the main chain finishes it runs the five smoke runs serially; about one minute when the build cache is ready). The serial whole chain `node scripts/verify-chain.ts` is used only for diagnosing ordering problems.
 
-动到 `tests/**`、`scripts/**`、`docs/**` 或任何 `*.md` 时，挑选规则会判「必须全链」，这是故意的，不是 bug。档位怎么选、各档测不出什么、读一扇两千行门禁怎么省上下文，都见 `docs/agents/verification.md`。
+When a change touches `tests/**`, `scripts/**`, `docs/**` or any `*.md`, the selection rule decides "the whole chain is required"; that is deliberate, not a bug. How to pick a tier, what each tier cannot detect, and how to read a two-thousand-line gate while sparing context are all in `docs/agents/verification.md`.
 
-2026-10-26 起，远端不再承担验证裁决职责（#1542，下掉了 `.github/workflows/verify.yml`，推送 main 与开 PR 都不再自动跑验证）。本地验证是唯一的裁决口径，规则写死三条：本地跑链必须用 Node 24.15 及以上版本（在 Node 22 上跑链本身就是 #1523 记录的装载故障，会出现大量与代码内容无关的失败）；`npm run verify:parallel` 是唯一的裁决入口，提交前与推送前每次都要跑它；合并前要求除登记在案的已知红之外，全链真红为 0。来龙去脉见 `docs/adr/20261026-cancel-ci-verify.md`。
+Since 2026-10-26 the remote no longer carries the responsibility of adjudicating verification (#1542, which removed `.github/workflows/verify.yml`, so neither pushing to main nor opening a PR runs verification automatically any more). Local verification is the only adjudicating standard, and the rule is fixed in three lines: running the chain locally must use Node 24.15 or newer (running the chain on Node 22 is itself the loading failure recorded in #1523, and produces a large number of failures unrelated to the content of the code); `npm run verify:parallel` is the only adjudicating entry point and must be run every time before committing and before pushing; before merging, the requirement is that, apart from the known reds on the register, truly red runs across the whole chain are zero. For the background, see `docs/adr/20261026-cancel-ci-verify.md`.
 
-### 测试怎么直接加载 .ts（Node 下限与装包守卫）
+### How tests load .ts directly (the Node floor and the install guard)
 
-旧测试与旧源码是「按单元分批」从 `.js` 转成 `.ts` 的：一个文件改名之后，引用它的地方仍然写着 `./x.js`。`scripts/ts-hook.mts` 就是这件事的装载钩子——它把这类说明符改指同目录下的同名 `.ts`；同名 `.ts` 不存在时原样交给 Node，所以没迁移的文件行为与今天完全一样。用法是把钩子挂在要跑的脚本前面：
+The old tests and the old sources were converted from `.js` to `.ts` unit by unit, in batches: after a file is renamed, the places that reference it still say `./x.js`. `scripts/ts-hook.mts` is the loading hook for exactly this — it redirects such specifiers to the `.ts` file of the same name in the same directory; when no same-named `.ts` exists it hands the specifier to Node unchanged, so a file that has not been migrated behaves exactly as it does today. To use it, put the hook in front of the script you want to run:
 
 ```
-node --import ./scripts/ts-hook.mts tests/你的测试.ts
+node --import ./scripts/ts-hook.mts tests/your-test.ts
 ```
 
-`npm test`（经 `scripts/verify-chain.ts`）、`npm run verify:parallel`（经 `scripts/verify-parallel.mts`）、`node scripts/verify-all.mts`（逐道跑完再汇总）三个入口跑测试时都会自动挂上这个钩子，写测试的人不用自己加；`npm run test:smoke`（五条冒烟）从 #1178 起也走 `scripts/verify-chain.ts`（`--script smoke` 读 `package.json` 的 `scripts.smoke` 那串清单），钩子判定跟着那一条路走；#1643 起 `npm run verify:parallel` 在主链跑完后也会按同一份清单串行跑这五条，所以它一次盖住主链与冒烟。同一个判定分散在上面三个入口各一处，冒烟清单那五条还把 `--import` 直接写死在 `package.json` 的 `scripts.smoke` 里（清单仍只有这一处来源），改一处必须全改——漏掉哪个入口，哪个入口里的 `.ts` 迁移就会跟别处表现不一样，典型症状是不同入口结论对不上（例如本机 `npm test` 全绿、另一个入口红）。远端的 `verify` 工作流已在 2026-10-26 下掉（#1542），推送与开 PR 不再触发它，上面三个都是本地入口。
+All three entry points — `npm test` (through `scripts/verify-chain.ts`), `npm run verify:parallel` (through `scripts/verify-parallel.mts`) and `node scripts/verify-all.mts` (runs each one in turn and then summarises) — attach this hook automatically when they run tests, so whoever writes a test does not add it; since #1178 `npm run test:smoke` (the five smoke runs) also goes through `scripts/verify-chain.ts` (`--script smoke` reads the list in `scripts.smoke` of `package.json`), and the hook decision follows that path; since #1643 `npm run verify:parallel` also runs these five serially from the same list after the main chain finishes, so it covers the main chain and the smoke runs in one go. The same decision is spread over the three entry points above, one copy each, and the five smoke entries even hard-code `--import` in `scripts.smoke` of `package.json` (the list still has only this one source), so changing one place means changing all of them — miss one entry point and the `.ts` migration inside that entry point behaves differently from the rest, with the typical symptom that conclusions from different entry points do not agree (for example `npm test` is all green on this machine while another entry point is red). The remote `verify` workflow was removed on 2026-10-26 (#1542); pushing and opening a PR no longer trigger it, and the three entry points above are all local.
 
-**Node 下限怎么来的**：钩子用的是同步的 `module.registerHooks()`，它同时管 ESM 的 `import` 与 CommonJS 的 `require`；异步的 `module.register()` 管不到 `require`，替代不了它。同步的 `registerHooks()` 从 Node 22.15 才有，这是这条线的起点——但 22.15 不等于能跑：钩子开着的时候测试加载的是 `.ts` 源码，而 Node 默认开启 TypeScript 类型剥离要到 22.18，再往上还有依赖自己的硬线（`jsdom` 声明 `^22.22.2 || ^24.15.0 || >=26.0.0`，8 个用例在用它）。所以根 `package.json` 的 `engines.node` 写的是 `"^22.22.2 || ^24.15.0 || >=26.0.0"`：22 线要 22.22.2 及以上，24 线要 24.15 及以上，26 及以上任意（23、25 是短命版本线，不单独支持）。这个范围是从最严的那个依赖抄来的，依赖一升要跟着复核；写窄了人会卡在「根项目通过、依赖拒绝」的信息里。本地跑验证链的版本要求比这里更严：必须用 Node 24.15 及以上版本，在 Node 22 上跑链会撞上 #1523 记录的装载故障，结论没有参考价值，详见上面跑门禁一节与 #1542 的决定。
+**Where the Node floor comes from**: the hook uses the synchronous `module.registerHooks()`, which covers ESM `import` and CommonJS `require` alike; the asynchronous `module.register()` cannot cover `require` and cannot replace it. The synchronous `registerHooks()` exists only from Node 22.15 on, which is where this line starts — but 22.15 does not mean it runs: with the hook on, the tests load `.ts` sources, and Node's default-on TypeScript type stripping only arrives in 22.18, and above that there are the dependencies' own hard lines (`jsdom` declares `^22.22.2 || ^24.15.0 || >=26.0.0`, and 8 test cases use it). So the root `package.json` writes `"^22.22.2 || ^24.15.0 || >=26.0.0"` in `engines.node`: the 22 line needs 22.22.2 or newer, the 24 line needs 24.15 or newer, and 26 and above accepts anything (23 and 25 are short-lived version lines and are not supported on their own). This range is copied from the strictest dependency, and must be re-checked whenever a dependency is upgraded; write it too narrowly and people get stuck on the message "the root project passes, the dependency refuses". The version requirement for running the verification chain locally is stricter than this: it must use Node 24.15 or newer, and running the chain on Node 22 hits the loading failure recorded in #1523, so the conclusion is worth nothing; see the section on running the gates above and the decision in #1542.
 
-**装包守卫分两处，缺一个就漏一半人**：用 npm 的人靠 `.npmrc` 的 `engine-strict=true`；用 pnpm 的人靠 `pnpm-workspace.yaml` 的 `engineStrict: true`——实测 pnpm 不认 `.npmrc` 里的 `engine-strict`（只打一条警告就继续装，退出码 0），只有 `pnpm-workspace.yaml` 那一处是硬拦截（退出码 1）。两处都会连整棵依赖树一起查。钩子自己还做一次能力检测：Node 太旧时抛出能指路的一句话，而不是难懂的 `TypeError`。
+**The install guard lives in two places, and missing one leaves half the people unprotected**: people using npm rely on `engine-strict=true` in `.npmrc`; people using pnpm rely on `engineStrict: true` in `pnpm-workspace.yaml` — measured, pnpm does not honour `engine-strict` in `.npmrc` (it prints one warning and installs anyway, with exit code 0), and only the `pnpm-workspace.yaml` place is a hard block (exit code 1). Both places check the whole dependency tree. The hook also does a capability check of its own: when Node is too old it throws one sentence that points the way, rather than a hard-to-read `TypeError`.
 
-**已知代价（不算故障）**：挂着钩子加载 `.ts` 时，Node 会打一条 `MODULE_TYPELESS_PACKAGE_JSON` 警告，提示可以给 `package.json` 加 `"type": "module"`。这条警告今天加载 `.js` 产物时同样会出现（原因相同：最近的 `package.json` 没有 `type` 字段），所以钩子没有引入新一类噪音。
+**Known cost (not a fault)**: when a `.ts` file is loaded with the hook on, Node prints a `MODULE_TYPELESS_PACKAGE_JSON` warning suggesting that `"type": "module"` could be added to `package.json`. This warning also appears today when loading `.js` build output (for the same reason: the nearest `package.json` has no `type` field), so the hook has not introduced a new kind of noise.
 
-**「同名 `.ts` 优先」意味着测试加载的是源码，不是构建产物**：`src/client/views/**` 那 94 组同名文件里的 `.js` 是构建产物，钩子开着的时候测试加载的是 `.ts` 源码。产物有没有跟上源码，是那八扇带产物新鲜度判据的门禁（`verify-ctx`、`verify-kernel`、`verify-leaves`、`verify-parse-leaf`、`verify-tabsfold-leaf`、`verify-platform-contract`、`verify-log-client`、`verify-log-artifacts`）的职责，不是这里的；另一扇 `verify-1327-freshness-content` 是判据自身的回归门禁（在临时目录里直接验证判据，也在真实树上判四个入口产物），它守判据不退化，不属于那八扇「用判据的门禁」。（这个数字会随转写推进变大：2026-10-18 由 #1251、#1253 两张票从 34 组推到 94 组，再改时顺手更新这一行。）
+**"A same-named `.ts` wins" means the tests load the source, not the build output**: the `.js` in those 94 same-named file pairs under `src/client/views/**` is build output, and with the hook on the tests load the `.ts` source. Whether the output keeps up with the source is the job of the eight gates that carry an output-freshness criterion (`verify-ctx`, `verify-kernel`, `verify-leaves`, `verify-parse-leaf`, `verify-tabsfold-leaf`, `verify-platform-contract`, `verify-log-client`, `verify-log-artifacts`), not of this one; the other gate, `verify-1327-freshness-content`, is the regression gate of the criterion itself (it verifies the criterion directly in a temporary directory, and also judges the four entry-point outputs on the real tree), and it guards the criterion against regression, so it does not belong to those eight "gates that use the criterion". (This number grows as the conversion proceeds: on 2026-10-18 tickets #1251 and #1253 pushed it from 34 pairs to 94, so update this line while you are there when it changes.)
 
-**测试侧只能写可剥离的 TypeScript**：`enum`、构造函数参数属性（`constructor(private x: T)`）这类需要真正转换的写法，在测试与链上脚本里会直接报 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`——Node 的剥离模式只删类型标注，不做语法转换。构建侧由 esbuild 转译，能吃这些写法，所以「同一份源码两边都过」不能想当然。仓里目前没有这类写法，也没有门禁拦它，靠的就是这条规矩。
+**On the test side only erasable TypeScript can be written**: constructs that need real transformation, such as `enum` and constructor parameter properties (`constructor(private x: T)`), report `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` straight away in tests and in scripts on the chain — Node's stripping mode only deletes type annotations and performs no syntax transformation. The build side is transpiled by esbuild, which can handle these constructs, so do not take it for granted that "the same source passes on both sides". The repository currently has no such constructs, and no gate blocks them; this rule is what holds the line.
 
-**链上脚本 spawn 出去的子进程不带钩子**：`tests/` 里有十几处直接用 `child_process` 起 `node` 进程（其中 5 处会重跑门禁脚本），子进程不会再挂钩子。等这些脚本自己转成 `.ts` 的时候，要么给子进程也加 `--import`，要么把它们改成同进程调用。
+**A subprocess spawned by a script on the chain does not carry the hook**: `tests/` has more than ten places that start a `node` process directly with `child_process` (5 of them re-run gate scripts), and those child processes do not carry the hook again. When these scripts are themselves converted to `.ts`, either add `--import` to the child processes too, or change them into an in-process call.
 
-### 日志埋点纪律（先读总纲票 #502：日志体系采用总纲与查阅入口）
+### Logging instrumentation discipline (read the umbrella ticket #502 first: the logging system follows an overall outline, with one place to look things up)
 
-目标：穿过不透明边界的流程做完，不用人补话，AI 只看本地诊断日志就能说出走到哪一步、停在哪个环节。日志多多益善，但只收信号、不收垃圾。
+Goal: once a flow that crosses an opaque boundary is done, an AI can say where it got to and where it stopped purely from the local diagnostic logs, without a person having to fill in the gaps. The more logs the better, but collect signal only, never junk.
 
-1. 只在三类边界留整趟轨迹：进程或模块边界、持久化边界、时间边界。每趟含起点输入摘要、分支原因、外部调用结果加耗时、状态变化、终点结论；异常行写清环节名、输入摘要、期望和实际差在哪、上游原因。老口径五种是这三类的例子。同一趟先用现有键串起来（工作区短指纹、方法名、时间）。
-2. 垃圾四种，一律不加：无变化的心跳重复记、只记结果不记原因、把整个对象倒进日志、高频不判开关直接记。加前只问一句：这行能排除哪种故障、指到下一步查哪里，答不上就不加。事件名与字段含义稳定，改含义发新事件。
-3. 量与内容分两层：常驻最小够用，按需可放宽，采样节流与开关外层判断按 `docs/design/335-logging-contract.md` 第 3 章。硬红线只有一条：可重放的凭证原文永不落盘（令牌、口令键值、授权头）。路径标题错误在按需里放宽到能定位为止，但门和表没改成按档松紧前，先按现行白名单记。
-4. 验收分级：新流程与核心链路用当天导出包走一遍只看日志定位，走不通就是埋点缺；纯重构注释类型迁移免演练。动手前跑通相关 `tests/verify-log-*`，增删事件同步改 `research/489-appendix.md` 第 1 章对照表，现行条数以该附录为准。变红先补日志点，再谈功能。
+1. Leave a full trace of a run at three kinds of boundary only: process or module boundaries, persistence boundaries and time boundaries. Each run contains a summary of the input at the start, the reason for a branch, the result of an external call plus its duration, state changes and the conclusion at the end; an exception line states clearly the step name, the input summary, where the expectation and the reality differ, and the upstream cause. The old set of five kinds are examples of these three. Tie one run together with the existing keys first (short workspace fingerprint, method name, time).
+2. Four kinds of junk, never added: repeated heartbeat lines with no change, a line that records only the result and not the reason, pouring a whole object into the log, and high-frequency recording with no switch check. Before adding a line, ask one question: which failure can this line rule out, and where does it point the next investigation — if you cannot answer, do not add it. Event names and field meanings stay stable; when a meaning changes, emit a new event.
+3. Quantity and content are two layers: an always-on minimum that is just enough, relaxed on demand; sampling, throttling and outer switch checks follow chapter 3 of `docs/design/335-logging-contract.md`. There is only one hard red line: replayable credential plaintext never reaches disk (tokens, password key-values, authorization headers). Errors in path and title are relaxed in the on-demand layer to the point of being locatable, but until the gates and the tables are changed to be tight or loose by tier, record them per the current allowlist.
+4. Acceptance is graded: walk a new flow or a core path once with the export package of the day and locate it from the logs alone; if that does not work, instrumentation is missing; a pure refactor, added comments or a type migration is exempt from the drill. Before starting, get the related `tests/verify-log-*` passing, and change the comparison table in chapter 1 of `research/489-appendix.md` whenever events are added or removed; the current counts are whatever that appendix says. When something goes red, add the logging points first, then talk about functionality.
 
-### 终端纪律
+### Terminal discipline
 
-手工跑命令用 DSH 原生的侧栏终端（右侧栏那颗「终端」标签页，标签标题写成 `<票号>-<用途>`，方便事后回看）。这套终端由 DSH 自带，与 better-sidebar 无关——better-sidebar 从 0.21 版起已经把自己带的那套终端删掉了。
+When you run a command by hand, use the sidebar terminal that DSH provides natively (the "Terminal" tab in the right sidebar; write the tab title as `<ticket number>-<purpose>` so you can look back at it later). This terminal comes with DSH and has nothing to do with better-sidebar — since version 0.21, better-sidebar has removed the terminal it used to ship.
 
-AI 这边没有可用的终端工具（better-sidebar 删掉了它自带的 `terminal_*` 工具，DSH 侧对应的 `dsh-tool-terminal` 本机也没安装），开不出侧栏终端，所以 AI 的命令一律用系统原生的 `pwsh` 工具跑；跑什么、为什么跑，在对话正文里写清楚。
+On the AI side there is no usable terminal tool (better-sidebar removed the `terminal_*` tools it shipped, and `dsh-tool-terminal`, the DSH-side counterpart, is not installed on this machine either), so a sidebar terminal cannot be opened; therefore every command the AI runs is executed with the system-native `pwsh` tool; say in the conversation body what you are running and why.
 
-工具入参里不能有 `undefined`（可选参数要么不传、要么给值）；报 `lossless JSON` 时去掉该参数或给值，再重试一次同样的工具调用。
+Tool arguments must not contain `undefined` (an optional parameter is either not passed at all or given a value); when a `lossless JSON` error is reported, drop that parameter or give it a value, and retry the same tool call once.
 
-### 真机验证清单
+### Real-machine verification checklist
 
-每个要发布的版本都有一张 `[真机验证] <版本号>` 清单票；关票、发布前、发布后的动作都写在这一份规则里，见 `docs/agents/real-machine-verification.md`。
+Every version that is going to be published has a checklist ticket titled `[真机验证] <version number>` — the bracketed prefix stays Chinese because `scripts/lib/release-checklist.mts` matches it literally; the actions for closing the ticket and for before and after publishing are all written in this one rule document, see `docs/agents/real-machine-verification.md`.
 
-真机验证时遇到的、因当前功能开发不到位而产生的故障，必须在这张票内修复并复验到通过，不允许为它另开新票。只有确认与本次改动无关、且不影响本票验收的既有缺陷，才可以另开票；另开票必须得到用户的明确批准，并在本票写清「本次不修、原因与影响」。
+A failure met during real-machine verification that arises because the current feature's development is not complete enough must be fixed inside this ticket and re-verified until it passes; opening a separate ticket for it is not allowed. Only an existing defect that is confirmed unrelated to this change and does not affect this ticket's acceptance may be opened as a separate ticket; a separate ticket requires the user's explicit approval, and this ticket must state plainly "not fixed this time, with the reason and the impact".
 
-### Release 发布
+### Release publishing
 
 Publish `package` (the main plugin; skills ship inside it, never separately). `dsh-log` and `dsh-plugin-update` now live in standalone repos and are only consumed from npm, never published from here (#878, #892). Private package shells are skipped automatically.
 
-无人值守发布（有写权限 token 时优先用它，不需要人点）：**token 一律走文件通道**。把值写成命令行参数、或写成 `$env:NODE_AUTH_TOKEN='值'` 这种内联赋值，整条命令都会以明文被完整记进会话记录与进程参数（#1646 实测泄露过），所以这两样都不许再用。做法：
+Unattended publishing (prefer it when there is a token with write permission; it needs no human click): **the token always goes through the file channel**. Writing the value as a command-line argument, or as an inline assignment such as `$env:NODE_AUTH_TOKEN='<value>'`, records the whole command in plain text in the session transcript and in the process arguments (#1646 leaked it for real), so neither of these may be used any more. The way to do it:
 
-1. 人把写权限 token 写进一个只给本人可读的临时文件的第一行，例如 `%TEMP%\dsh-publish-token.txt`；不要放仓库目录里，也不要加注释。文件权限怎么收紧、值怎么写进去，见 `docs/releases/RELEASE-RUNBOOK.md` 第 12 节。
-2. Agent 的命令里只出现路径：`pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile <路径> -Probe` 先跑（必须说 PROBE-OK），再跑 `pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile <路径>` 做正式发布（构建与测试门禁 → 发布 → 一次可见性采样；对外宣布前加 `-FullPost`）。
-3. 每趟跑完立刻删掉临时文件（`Remove-Item -LiteralPath <路径> -Force`）。token 一旦可能泄露，先到 npm 撤销那一枚再重新签发；平时按季度轮换。
+1. A person writes the token with write permission as the first line of a temporary file that only they can read, for example `%TEMP%\dsh-publish-token.txt`; do not put it in the repository directory, and do not add comments. For how to tighten the file permissions and how to write the value in, see section 12 of `docs/releases/RELEASE-RUNBOOK.md`.
+2. The agent's command mentions only a path: run `pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile <path> -Probe` first (it must say PROBE-OK), then run `pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile <path>` for the real publish (build and test gates → publish → one visibility sample; add `-FullPost` before announcing it publicly).
+3. Delete the temporary file immediately after every run (`Remove-Item -LiteralPath <path> -Force`). Once the token may have leaked, revoke that one at npm first and then issue a new one; otherwise rotate it quarterly.
 
-`$env:NODE_AUTH_TOKEN` 环境变量入口仍然兼容（`-TokenEnv` 可改首选变量名），但只建议人在自己的终端里设：Agent 执行时一律用文件通道。Accepted is not the same as visible: `E409 previously-staged` means the registry received the package, so wait a few minutes instead of republishing or bumping the version. The old interactive flow (`scripts\publish-all-window.ps1` via schtasks) stays as fallback. Publishing ends the job; installing is always done by the user (marketplace upgrade, in-app upgrade, or their own install command).
+The `$env:NODE_AUTH_TOKEN` environment-variable entry point is still compatible (`-TokenEnv` changes the preferred variable name), but it is only recommended that a person sets it in their own terminal: when an agent runs, always use the file channel. Accepted is not the same as visible: `E409 previously-staged` means the registry received the package, so wait a few minutes instead of republishing or bumping the version. The old interactive flow (`scripts\publish-all-window.ps1` via schtasks) stays as fallback. Publishing ends the job; installing is always done by the user (marketplace upgrade, in-app upgrade, or their own install command).

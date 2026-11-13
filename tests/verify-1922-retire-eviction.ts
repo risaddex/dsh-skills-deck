@@ -326,10 +326,11 @@ async function run(): Promise<void> {
       'E2 ADR 正文写明数据只在源头删除时消失，旧的「超出按最近使用淘汰」已不成立', adrSection.length)
 
     const glossary = srcText('GLOSSARY.md')
-    const detailLine = glossary.split(/\r?\n/).find((l) => l.indexOf('- **按需细节（') >= 0) || ''
-    check(detailLine.length > 0 && detailLine.indexOf('2026-11-05') >= 0 && detailLine.indexOf('不设上限') >= 0,
-      'E3 术语表「按需细节」词条写明 2026-11-05 起不设上限、不淘汰')
-    check(detailLine.indexOf('源头') >= 0 && detailLine.indexOf('字节数') >= 0 && detailLine.indexOf('按最近使用淘汰') < 0 && detailLine.indexOf('曾取过') < 0,
+    // 术语表 #1561 起是英文：词条正名是 on-demand detail，中文名留在 （按需细节） 里当别名，所以判据认英文句。
+    const detailLine = glossary.split(/\r?\n/).find((l) => l.indexOf('- **on-demand detail（') >= 0) || ''
+    check(detailLine.length > 0 && detailLine.indexOf('2026-11-05') >= 0 && detailLine.indexOf('no upper bound') >= 0,
+      'E3 术语表「on-demand detail（按需细节）」词条写明 2026-11-05 起不设上限、不淘汰')
+    check(detailLine.indexOf('source') >= 0 && detailLine.indexOf('byte count') >= 0 && detailLine.indexOf('evict by most recent use') < 0 && detailLine.indexOf('fetched before') < 0,
       'E4 术语表写明数据只在源头删除时消失，并指向诊断读数里的字节数', detailLine.slice(0, 160))
 
     const plan = srcText('docs/design/20261030-panel-snapshot-and-room-layering-plan.md')

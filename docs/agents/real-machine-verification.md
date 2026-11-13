@@ -1,213 +1,213 @@
-# 版本真机验证清单
+# Release real-machine verification checklist
 
-每个要发布的版本有一张 `[真机验证] <版本号>` 票，下面简称**清单票**。开发完成的票可以没有经过真机验证就关闭，但关闭前必须把「这次改动要在真机上验什么」登记到清单票；版本发布前，清单票里的场景必须全部验完（通过，或豁免被接受），清单票必须已经关闭。发布脚本会检查这件事，没关就发不出去。
+Every version that is going to be released has one ticket whose title starts with a fixed bracketed prefix followed by the version number（the shipped literal is `[真机验证]`, because `scripts/lib/release-checklist.mts` matches it verbatim）; below, that ticket is called the **checklist ticket**. A development ticket that is finished may be closed without having gone through real-machine verification, but before it is closed you must register what this change needs verified on a real machine into the checklist ticket; before a version is released, every scenario in the checklist ticket must already be verified (passed, or its exemption accepted), and the checklist ticket must already be closed. The release script checks this, and if the ticket is not closed the release cannot go out.
 
-一句话分工：**开发票负责做完并登记场景，清单票负责攒场景和执行验证，发布前检查负责拦。**
+The division of labour in one sentence: **the development ticket is responsible for finishing the work and registering the scenarios, the checklist ticket is responsible for collecting the scenarios and executing the verification, and the pre-release check is responsible for stopping the release.**
 
-## 为什么要把验证集中到一张票
+## Why the verification is collected into one ticket
 
-- 一张开发票的「做完」写的是代码层面的验收条件，不等于它在真机上真的有效果。两件事分开记，才不会用「门禁全绿」冒充「用户看得见的效果已经对」。
-- 验证记录散在各开发票的评论里，发布前没人能一眼说出「这版还差什么没验、证据在哪」。清单票把这些集中在同一处，发布前逐个核对就行。
-- 发布前检查是脚本自动跑的，不依赖谁记得。忘记登记场景，清单票就关不上；清单票没关，发布就中止。
+- The "done" of a development ticket states acceptance conditions at the code level, which is not the same as the change actually taking effect on a real machine. Keeping the two recorded separately is what stops "every gate is green" from passing for "the effect the user can see has been confirmed".
+- With verification records scattered across the comments of individual development tickets, nobody can say at a glance before a release "what is still unverified in this version, and where the evidence is". The checklist ticket keeps them in one place, so the pre-release check only has to go through them one by one.
+- The pre-release check is run automatically by a script and does not depend on anyone remembering it. Forget to register a scenario and the checklist ticket cannot be closed; leave the checklist ticket unclosed and the release is stopped.
 
-## 名词
+## Terms
 
-- **来源票**：产生「需要真机验证的东西」的那张开发票，可能是 bug、新功能或改造。
-- **清单票**：`[真机验证] <版本号>`，一个要发布的版本一张。标题里的方括号前缀是它的身份标志，不靠标签识别。
-- **验证主持人**：负责发起验证批次、执行验证、记录结果、维护清单票正文的人。发布准备阶段指定，可以由同一个人或 AI 担任。
-- **批次**：一次集中验证。几个版本的改动攒到一起验，或者每版单独验，都算一批。每一批都从批次开始时的 HEAD 重新冻结候选，批次记录写在批次目录的 `batch.json` 里。
-- **场景块**：清单票里的一条固定格式评论，由一张来源票产出一条或几条场景。
-- **豁免**：某条来源票的改动经判断不需要单独做真机验证（例如纯文案修改），按格式登记并由主持人接受，算作「已处理」，但不算「通过」。
+- **Source ticket**: the development ticket that produced "the thing that needs real-machine verification"; it may be a bug, a new feature, or a rework.
+- **Checklist ticket**: the ticket whose title is the bracketed prefix plus the version number（`[真机验证] <version number>`）, one per version to be released. The bracketed prefix in the title is how it identifies itself; it is not recognised by a label.
+- **Verification facilitator**: the person responsible for starting a verification batch, executing the verification, recording the results, and maintaining the body of the checklist ticket. Designated during release preparation, and may be held by the same person or by an AI.
+- **Batch**: one concentrated verification run. Verifying the changes of several versions together, or verifying each version on its own, both count as a batch. Every batch re-freezes its candidate from the HEAD at the start of the batch, and the batch record is written into `batch.json` in the batch directory.
+- **Scenario block**: a comment in the checklist ticket with a fixed format, in which one source ticket produces one or several scenarios.
+- **Exemption**: when the change of a source ticket is judged not to need real-machine verification of its own (a pure wording change, for example); it is registered in the required format and accepted by the facilitator, and counts as "handled" but not as "passed".
 
-## 一、开发中：来源票关闭前登记场景
+## 1. During development: register scenarios before the source ticket is closed
 
-来源票可以没有真机验证就关闭，这样做的前提是把场景登记好了。关闭前做三件事：
+A source ticket may be closed without real-machine verification, and the precondition for that is that its scenarios are registered. Before closing, do three things:
 
-1. **找本版清单票**：用 `deck_issue_list` 搜 `[真机验证]`。有就用；没有就按 [清单票模板](checklist-issue-template.md) 建一张，并先确认要发布的是哪个版本号（版本号还没定就先用占位标题，见模板里的说明）。
-2. **在清单票发一条场景块评论**。格式见下一节。同一张来源票只有一条场景块；后续补充场景，在**新评论**里追加，已经写下的场景编号不改、不复用。
-3. **关闭来源票时写明去处**：关闭评论里写一句 `真机验证场景已登记到 #<清单票号> 的「场景块：<来源票号>」`，读票的人能直接跳到验证记录。
+1. **Find this version's checklist ticket**: use `deck_issue_list` to search for that bracketed title prefix（the literal to search for is the Chinese `[真机验证]`）. If one exists, use it; if not, create one from the [checklist ticket template](checklist-issue-template.md), and first confirm which version number is going to be released (if the version number is not settled yet, start with the placeholder title, see the notes in the template).
+2. **Post one scenario-block comment in the checklist ticket**. The format is in the next section. One source ticket has only one scenario block; scenarios added later are appended in **a new comment**, and scenario numbers already written are neither changed nor reused.
+3. **Say where it went when closing the source ticket**: in the closing comment write one sentence saying that the real-machine verification scenario has been registered in #<checklist ticket number> as the scenario block of <source ticket number>（the wording used today is the Chinese literal 「真机验证场景已登记到 #<清单票号> 的「场景块：<来源票号>」」）, so that whoever reads the ticket can jump straight to the verification record.
 
-场景明细为什么写在评论里而不是清单票正文：正文只能有一个写者（主持人），多人同时改会互相覆盖，还会撞上正文 60KB 的上限；评论一条一个作者、一条一个时间，只追加不覆盖，天然不会冲突。正文只放规则、总览和批次记录。
+Why the scenario details are written into comments rather than the checklist ticket body: the body can have only one writer (the facilitator), several people editing it at the same time overwrite each other and would also hit the 60KB limit on the body; a comment has one author and one timestamp each, is only appended and never overwritten, so it cannot conflict by nature. The body holds only the rules, the overview, and the batch records.
 
-### 场景块格式
+### Scenario block format
 
-标题固定写：
-
-```text
-## 场景块：<来源票号> <一句话说明这张票要在真机上验什么>
-```
-
-正文按下面的结构写，没有内容的段落写「无」，不要留空段：
-
-- **前置条件**：环境、数据、后端选择、网络状态等，开始验证前要准备好的东西。
-- **操作步骤**：编号步骤，写清人手动做什么。
-- **预期结果**：做完以后看得见的现象。
-- **通过标准**：什么算通过、什么算失败。有硬指标（必须满足）和目标值（期望达到）的，分开写；例如「网络恢复后不点任何按钮，黄条在 5 分半内自消」里的时间就是目标值，硬指标是「一定会自消」。
-- **证据看点**：要留下的截图、日志或接口返回，以及看哪个字段才能判定通过。
-
-场景编号写成 `<来源票号>-01`、`-02`……。建议每张来源票写 1 到 3 条，只写用户看得见的变化；纯内部重构可以只写一条「行为与改动前一致」的抽查。编号一旦写进清单票正文就不再改动；作废的场景标「作废」并说明原因，编号不复用。
-
-登记时先看来源票是不是已经在真机上验过了。验过的（来源票评论、走查记录或发布记录里能查到证据）场景状态直接写「已验证」，并在清单票场景总览的备注里写清证据出处——哪张票的哪条评论、哪份走查记录、截图或日志在哪里。已验证的场景不再排进验证批次；找不到证据的一律按「待验证」排进批次，不要凭印象标「已验证」。
-
-示例：
+The heading line is fixed: it starts with the Chinese literal `## 场景块：`（scenario block）, which the consistency checker and the release gate match verbatim, so that opening stays exactly as it is; the description after it is written in English.
 
 ```text
-## 场景块：1474 断网恢复后黄条自己消失
-
-- 前置条件：装有候选版本的 DSH，工作区已绑定 GitHub，网络先断开（例如把代理指向没人监听的端口）。
-- 操作步骤：1. 打开该工作区的 MattSkills 面板；2. 确认出现「登录状态暂时确认不了」的黄条；3. 恢复网络，不点任何按钮，面板保持可见。
-- 预期结果：黄条在退避档内自己消失；链快照里 `gh:authed` 与 `gh:repoAccess` 从 pending 变成 done。
-- 通过标准：硬指标是不点按钮一定自愈；目标值 2 分钟内自消，最坏约 5 分半。
-- 证据看点：黄条前后截图；日志里 `chain.event reason=auto-retry` 与 `chain.flow request reason=auto-retry`。
+## 场景块：<source ticket number> <one sentence saying what this ticket must verify on a real machine>
 ```
 
-## 二、工具与环境
+Write the body in the structure below; a paragraph with no content is written as "none"（the Chinese literal is `无`）, and do not leave an empty paragraph:
 
-真机验证的工具分两层：通用能力在 base 仓的 real-machine-verification（命令行 `dsh-verify`，由根 `devDependencies` 钉的 npm 发布精确版本提供，见 [verify/README.md](../../verify/README.md)），插件特有命令留在本仓 `scripts/real-machine/`。接入方式、命令表与场景写法见 [verify/README.md](../../verify/README.md) 与 base 的 `AGENTS-USAGE.md`；这一节只写与规则有关的部分：环境和产物放在哪、验完怎么清、怎么确认验的是哪个候选。
+- **Prerequisites**: the environment, data, backend choice, network state and so on that must be ready before verification starts.
+- **Steps**: numbered steps, clearly stating what the person does by hand.
+- **Expected result**: the phenomenon you can see once the steps are done.
+- **Pass criteria**: what counts as passing and what counts as failing. Where there are hard requirements (must be met) and target values (expected to be reached), write them separately; for example, in "after the network comes back, without clicking any button, the yellow bar clears itself within five and a half minutes" the time is a target value, and the hard requirement is "it definitely clears itself".
+- **Evidence to capture**: the screenshots, logs or API responses to leave behind, and which field to look at in order to decide a pass.
 
-- **命令怎么跑**：通用命令在仓库根跑 `node <baseCli> <命令>`（`<baseCli>` 是 `node_modules/dsh-featherhunter-plugin-base/dist/real-machine-verification/cli/main.js`，或 `node_modules/.bin/dsh-verify`）；`freeze` 必须在 `package/` 下跑并带 `--declaration ../verify/profile.ts`。插件特有命令在仓库根跑 `node --import ./scripts/ts-hook.mts scripts/real-machine/commands/<命令>.mts <参数>`。两种命令都是：`--json` 时 stdout 只有一段 JSON；失败时退出码非 0，stderr 一句中文说清原因。完整参数与输出字段看 `dsh-verify describe --json` 与命令文件开头的注释。
-- **工作根**：`dsh-verify` 默认写到 `<cwd>/.scratch/verify/`，该目录被版本库忽略；要留档时用 `--work-root` 指到仓外临时目录。命令只往工作根、系统临时目录和命令显式给的目录写，写别处会被拒绝。
-- **启动与隔离**：每个实例用自己复制出来的 `DSH_HOME`（批次 home）、独立启动目录、独立 `USERPROFILE`/`HOME`，端口用 `--port 0` 交给系统分配，所以多开不会抢端口。冷启动到打印访问地址约 10 到 18 秒，页面可交互再等约 6 秒。四层隔离（home、启动目录、USERPROFILE、浏览器上下文）是否真的生效由 `dsh-verify isolation` 回答：它对比真实用户设置文件在探针前后的 SHA256，没变才算通过；验证批次里要保留这条结论。真实 home 只读，任何命令都不要对它跑：写目标是真实 home 本身或它里面（含子目录、junction）时，`install`、`model --fix` 与显式写目标（`--work-root` / `--out` / `--archive-root`）会硬拒（exit 2），`--dry-run` 只警告。
-- **模型与密钥**：实例的模型由声明里的 `model` 字段与 `dsh-verify model` 描述/修复（`--provider`、`--model`、`--api-key-env`，带 `--fix` 才写盘；默认 provider `minimax-cn`、模型 `Minimax-M3.1-Flash`、密钥变量 `MINIMAX_CN_API_KEY`）。写的是批次 home 里 `profiles/<profile>/cordis.patch.yml`，真实 profile 不动。密钥不写进 profile；profile 里的 `apiKeyEnv` 是凭证引用，DSH 先查批次 home 的 `.credentials.yaml`，再查实例启动环境（注入的密钥就在这一层）。`model-configured` 与 `model-credential` 两条检查只消费引用名，回执只记 provider、模型名、变量名与来源，不记值；命令行、`instance.json`、stdout/stderr、插件日志与证据里都不出现值。
-- **浏览器窗口**：判断「浮层会不会被别的界面元素盖住」「提示贴到屏幕边缘会不会越界」这类空间问题时，必须有头、必须真全屏：页面视口与外框（`innerWidth`/`outerWidth`、`innerHeight`/`outerHeight`）都要等于 `screen.width`/`screen.height`。固定视口（例如 1600x1000）或无头窗口只看得到「这个尺寸下长什么样」，不能拿来判定遮挡与越界——2026-10-29 验 1655-01 时，Playwright 的 `--start-fullscreen` 被忽略、窗口只有 1083 像素宽，再用 `setViewportSize` 强设页面视口，截图看起来铺满屏幕，据此得出的「浮层被右侧面板盖住」结论后来被真全屏复核推翻。这层保护现在落在 `verify/windows.mjs`：判据（含 2px 容差、NaN 拒绝）与 CDP `Browser.setWindowBounds` 执行函数都在里面，切不成直接报错；有头核对的尺寸记录与截图要写进证据。
-- **三款窗口尺寸**：2026-10-29 定版，真机验证只跑三款窗口形态，定义在 `verify/presets.mjs` 的 `VIEWPORT_PRESETS`：`wide` 真全屏、`narrow` 外框宽 800 且高铺满屏幕（插件面板落在 300–359 像素）、`short` 外框宽铺满屏幕且高 600。设置窗口后要核对插件真的进了那一支布局，对不上直接抛中文错误；空间类结论的证据里必须有窗口外框、页面视口、面板宽与窄态的快照。窄窗是 800 不是 720：窗口宽与面板宽不线性，720 宽时宿主把右侧面板切成整宽覆盖，反而进不了插件窄态；实测映射与理由见 [verify/README.md](../../verify/README.md)。
-- **日志位置**：插件日志写在 `<启动目录>/.dsh-mattskillsdeck-cache/logs/<日期>.log`。用 `log-query` 按事件名、级别、字段过滤；写证据时把关键几行贴进评论，只给路径不算证据。
-- **工作区注入**：无头环境点不了原生目录选择器，所以验证工作区由场景钩子 `prepareHome` 在宿主启动前写进 home 的 `storages/workspace.json`：`beforeLaunch` 时 home 还不存在，`afterLaunch` 时 DSH 已经起来，它会在首次页面加载时用内存里的默认工作区覆盖注册表，只有「home 刚复制完、进程还没启动」这一瞬间可靠。夹具内容（`docs/agents/workspace.yaml` 与 `.scratch/` 下的地图）放在实例目录里，`verify/hooks.ts` 负责写，`verify/scenarios/ui.ts` 断言启动后菜单里就能看到它。验证用的工作区不要放在本仓库里，否则插件会把本仓库的 git 根当成仓库身份，结论会被污染。
-- **GitLab 沙箱项目**：需要 GitLab 后端时，先用 `gitlab-sandbox create --batch <批次目录> --path <group>/<project>` 在 gitlab.com 建一个带批次标记的私有空项目（记录写在 `<批次目录>/gitlab-projects.json`）。GitLab 的删除接口返回 202 之后延迟生效，所以 `gitlab-sandbox delete --batch <批次目录> --id <项目 id>` 会按 id 读回 `marked_for_deletion_at`，读到才算删掉；读回失败时项目 id 保留在清单里、状态标成 `delete-failed`，重跑 delete 可以补完。每批只建 1-2 个，场景验完立刻删。
-- **GitLab 种子票池**：票池用 `seed-gitlab --batch <批次目录> --project <group>/<project>` 幂等种出：默认 101 张票（含 5 张已关闭）、两张地图与子票、5 个标签、指派、父子与阻塞关系。每张票正文文件头带稳定键 `<!-- DSH-SEED-KEY: … -->`（子票另带 `<!-- DSH-PARENT: <地图 iid> -->`），重跑按稳定键认回已有的，只补缺的；种好后 `<批次目录>/gitlab-seed.json` 的 `mode` 是 `read-only`，之后补种必须显式加 `--unlock-readonly`，补完自动恢复只读。免费档可能拿不到原生 `is_blocked_by` 边，命令会自动回落成正文成对两行（`Blocked by: #N` 与 `<!-- DSH-BLOCKED-BY: N -->`），验证结论里要写清实际用了哪种。B1 批次要核对票数与关系，并把 `gitlab-seed.json` 的 `stats` 抄进批次记录。
-- **批次身份与候选**：批次是两段式，先开批、再冻结、再封存。
-  1. `dsh-verify batch open --name <批次名> --base-ref <基线> --work-root <工作根>`（prepare）：建批次目录，把批次名、`startHead` 与基线 tip / 目标版本（从基线 `package.json` 读，不用候选自证）写成 `batch.json`（`candidate: null`），打印基线行与下一步提示——批次必须在候选生成之前开始，否则「候选早于批次」永远失败。
-  2. `dsh-verify freeze --out <批次目录>/pkg --declaration <声明>`（本仓在 `package/` 下跑，声明用 `../verify/profile.ts`）把候选冻进批次目录，产出 `candidate.json`（候选提交、包名/版本、tgz sha256、逐文件摘要 `fileDigest`、`validity`/`sourceStable`）。freeze 会在 `pkg/` 下建一个 `<提交前缀>-<时间戳>/` 子目录，封存时 `--candidate` 指向它。
-  3. `dsh-verify batch open --name <批次名> --candidate <批次目录内路径> --work-root <工作根>`（seal）：按固定顺序实测并拒收（不在批次目录 → 早于批次 → HEAD 不一致 → 构建提交不一致 → 源码不稳定 → 基线包含关系未判定/不成立 → 版本与基线不等 → 包缺失/哈希不符 → 文件摘要重算不符），通过才写候选身份并给出两条逐字契约行：`- 验证身份：批次 <批次名>；候选提交 <40位小写hex>；候选包 sha256 <64位小写hex>` 与 `- 验证基线：本地 <ref> <tip>；目标版本 <version>`。拒收时不写候选（exit 1）；前置无法测量（git 读不到、哈希算不出）时 exit 2。
+Write scenario numbers as `<source ticket number>-01`, `-02` and so on. One to three scenarios per source ticket is recommended, covering only changes the user can see; a purely internal rework may have just one spot check saying "behaviour is the same as before the change". Once a number is written into the checklist ticket body it is never changed; a scenario that is dropped is marked void with the reason stated, and its number is not reused.
 
-  身份行里的「候选包 sha256」绑定候选 tgz 的 sha256（`candidate.json` 的 `package.tgzSha256`），发布门禁用它和传入的候选清单逐字比对；证据绑定另用清单摘要，两者不要混用；没有基线时 batch 记 blocked（`--allow-stale` 只降级「HEAD 已移动」与「基线前进」两项，版本与包摘要仍逐条判定）。之后用 `batch status` 复核新鲜度（并重算候选清单/tgz 摘要，漂移记 `candidate-identity` fail）；发布前检查不读本机批次目录，只核对票面评论与传入的 `candidate.json`。
-- **证据目录**：每个批次一个目录 `<工作根>/batches/<批次名>/`（或 `--work-root` 指定的位置），证据先落在 `evidence/files/` 下，再由 `dsh-verify evidence add` 登记成带每个文件 SHA256 的 `evidence.json`；`evidence archive` 归档（`SHA256SUMS`）、`evidence verify` 复核，同名证据加序号而不覆盖。规则要求证据能独立看懂：评论里贴截图关键区域、日志关键行或接口返回字段，不把临时目录路径当唯一证据。
-- **清理要求与上限**：用 `dsh-verify cleanup --yes` 先报账、确认后再删（`--keep-batches` / `--keep-homes` 控制保留份数，`--include-pkg` 连候选包一起清）。工作根总量建议不超过 15GB、批次目录不超过 20 个、单个批次不超过 2GB；每次批次结束、发布前、换版本重跑之前各清一次。批次里的 GitHub 工作区是源仓库的 `git worktree`，批次目录删掉之后在源仓库跑一次 `git worktree prune` 清掉失效登记。
-- **从零可用**：`dsh-verify self-check`、`dsh-verify concurrent --count 2` 与 `npm run verify:ui` / `npm run verify:smoke` 要能在一个从没跑过真机验证的检出里跑通「起两个隔离实例、界面可交互、停干净」；`verify/scenarios/smoke.ts` 就是这条冒烟的终态，用来证明接入本身是好的。
-- **GitLab 实例环境**：批次实例要访问 GitLab 时，由声明里的 `instanceEnvAllowlist`（恰为 `GLAB_CONFIG_DIR`、`GITLAB_TOKEN`、`GLAB_BIN`）限定可注入变量；`dsh-verify launch` 从当前进程环境取这些变量传给实例，命令行、`instance.json`、日志与证据里只记变量名、不记值。token 放在环境文件里加载进当前 shell，不要写进命令行；只需要看计划时用 `--dry-run`。
-- **GitLab 写场景直调入口**：要证明「隔离实例里能直调 deck 写工具」时，用 `deck-write --tool <工具名> --args <入参 JSON 文件> --ref <group>/<project> --workspace <工作区目录>` 按固定入参调一次 `deck_issue_create` / `deck_issue_patch` / `deck_map_link`，回执是无损 JSON（`--out` 另存一份，缺省 `tool-response.json`）；再用 `deck-readback --ref <group>/<project> --key <票号>` 直接走 `glab api` 独立读回，写与读是两条路径，读回一致才算数。缺 `GLAB_BIN`、`GLAB_BIN` 指向的文件不存在、工作区不存在或仓库标识不是 `<group>/<project>` 时退出码 3 并说明原因；工具名不在清单或入参文件读不了时退出码 2；工具回失败时退出码 1。提交门禁是 `tests/verify-1709-deck-entry.ts`（加 `--negative` 可单独触发负例）。B0 批次要真建一张票、真改一次、真挂一次父票，再用 `deck-readback` 读回并把回执与读回两份 JSON 贴进证据。
+When registering, first check whether the source ticket has already been verified on a real machine. For a scenario that has been verified (evidence can be found in the source ticket's comments, a walkthrough record, or a release record), write the status as already verified straight away, and in the remark column of the scenario overview in the checklist ticket state exactly where the evidence is: which ticket's which comment, which walkthrough record, where the screenshot or log is. Scenarios that are already verified are not scheduled into a verification batch again; anything whose evidence cannot be found is scheduled into the batch as to be verified, and do not mark it already verified on the strength of an impression（the status cells are the Chinese literals `已验证` and `待验证`）.
 
-### 版本口径与开批基线
+Example:
 
-真机验证验的永远是**下一个要发布的版本**：候选版本必须等于本地基线分支（默认 `main`）`package.json` 里的 `version`。已发布 `1.9.0-beta.32` 时，`main` 的版本已经是 `1.9.0-beta.33`，所以这一轮验的是 `1.9.0-beta.33`；稳定版同理，已发布 `1.9.0` 就验 `1.9.1`。这就是 #1777 定下的口径：不看候选自己声称什么版本，也不看旧候选文件里写着什么，而是看基线分支此刻的版本。
+```text
+## 场景块：1474 The yellow bar goes away by itself once the network comes back
 
-候选提交还必须包含本地基线分支的 tip——「这一批验的是不是最新代码」由 `git merge-base --is-ancestor` 在封存时现算，不由人说；封存拒绝候选时不产生身份行，批次事后是否陈旧由 `dsh-verify batch status` 重读 HEAD 与基线 tip 判定：
+- Prerequisites: DSH with the candidate version installed, the workspace already bound to GitHub, and the network cut first (for example by pointing the proxy at a port nobody is listening on).
+- Steps: 1. Open the MattSkills panel of that workspace; 2. confirm the yellow bar saying "the signed-in state cannot be confirmed right now" appears; 3. restore the network without clicking any button, keeping the panel visible.
+- Expected result: the yellow bar goes away by itself within the backoff window; in the chain snapshot, `gh:authed` and `gh:repoAccess` go from pending to done.
+- Pass criteria: the hard requirement is that it heals itself without any button being clicked; the target value is that it clears within 2 minutes, and within about 5 minutes 30 seconds at the worst.
+- Evidence to capture: screenshots of the yellow bar before and after; in the log, `chain.event reason=auto-retry` and `chain.flow request reason=auto-retry`.
+```
 
-- 候选提交不包含基线 tip：这一批验的是落后于最新代码的版本。默认拒绝；只在开发验证里可以用 `--allow-stale` 放行，放行后这条批次会标成陈旧，不能用于发布收口。
-- 候选版本不等于基线 `package.json` 的版本：版本口径不对，重新冻结。`--allow-stale` 不能绕过这条。
+## 2. Tools and environment
 
-批次开始评论里除了机器可读的验证身份行，再写一行基线行（`batch open` 输出里给的那一行），让读评论的人一眼看出这批验的是哪个基线 tip、哪个目标版本。批次结束时用 `dsh-verify batch status` 重读基线 tip；如果这期间基线前进了，这条批次同样标成陈旧——只比 HEAD 抓不到这种情况：在集成分支上开批时，集成分支 HEAD 可以一直不动，`main` 却已经前进了。
+The tools for real-machine verification come in two layers: the general capabilities live in the base repository's real-machine-verification (the command line is `dsh-verify`, provided by the exact published npm version pinned in the root `devDependencies`, see [verify/README.md](../../verify/README.md)), and the plugin-specific commands stay in this repository under `scripts/real-machine/`. How to connect them, the command table and how scenarios are written are covered in [verify/README.md](../../verify/README.md) and the base `AGENTS-USAGE.md`; this section only covers what the rules need: where environments and artifacts live, how to clean up after verification, and how to confirm which candidate was verified.
 
-### 证据归档、不可变与批次环境记录
+- **How to run the commands**: for the general commands, run `node <baseCli> <command>` at the repository root (`<baseCli>` is `node_modules/dsh-featherhunter-plugin-base/dist/real-machine-verification/cli/main.js`, or `node_modules/.bin/dsh-verify`); `freeze` must be run under `package/` and must take `--declaration ../verify/profile.ts`. Plugin-specific commands run at the repository root as `node --import ./scripts/ts-hook.mts scripts/real-machine/commands/<command>.mts <arguments>`. Both kinds behave the same way: with `--json`, stdout is a single JSON document; on failure the exit code is non-zero and stderr says why in one Chinese sentence. For the full arguments and output fields see `dsh-verify describe --json` and the comment at the top of the command file.
+- **Work root**: by default `dsh-verify` writes into `<cwd>/.scratch/verify/`, a directory the version control system ignores; when the evidence must be kept, point `--work-root` at a temporary directory outside the repository. Commands only write into the work root, the system temporary directory, and directories explicitly given to the command; writing anywhere else is refused.
+- **Launch and isolation**: each instance uses its own copied `DSH_HOME` (the batch home), its own launch directory, its own `USERPROFILE`/`HOME`, and takes the port from `--port 0` so the system assigns it, which means several instances can run at once without fighting over ports. A cold start takes about 10 to 18 seconds until the access address is printed, plus about 6 more seconds until the page is interactive. Whether the four layers of isolation (home, launch directory, USERPROFILE, browser context) really take effect is answered by `dsh-verify isolation`: it compares the SHA256 of the real user's settings file before and after the probe, and only an unchanged value counts as a pass; keep that conclusion in the verification batch. The real home is read-only, and no command may be run against it: when the write target is the real home itself or anything inside it (including subdirectories and junctions), `install`, `model --fix` and explicit write targets (`--work-root` / `--out` / `--archive-root`) refuse outright (exit 2), and `--dry-run` only warns.
+- **Model and key**: the instance's model is described and repaired by the declaration's `model` field together with `dsh-verify model` (`--provider`, `--model`, `--api-key-env`; the write happens only with `--fix`; the default provider is `minimax-cn`, the model `Minimax-M3.1-Flash`, and the key variable `MINIMAX_CN_API_KEY`). What gets written is `profiles/<profile>/cordis.patch.yml` inside the batch home; the real profile is not touched. The key is not written into the profile; the profile's `apiKeyEnv` is a reference to a credential, and DSH looks first in the batch home's `.credentials.yaml` and then in the instance's launch environment (the injected key sits at that layer). The two checks `model-configured` and `model-credential` consume only the reference name, and the receipt records only the provider, the model name, the variable name and where it came from, never the value; the value appears in no command line, `instance.json`, stdout/stderr, plugin log or evidence.
+- **Browser window**: when judging spatial questions such as "will this overlay be covered by another interface element" or "will this hint run past the edge when it is stuck to the screen border", the browser must be headed and must be truly full screen: the page viewport and the outer window (`innerWidth`/`outerWidth`, `innerHeight`/`outerHeight`) must all equal `screen.width`/`screen.height`. A fixed viewport (1600x1000, for example) or a headless window only shows "what it looks like at that size", and must not be used to judge occlusion and out-of-bounds behaviour — when 1655-01 was verified on 2026-10-29, Playwright's `--start-fullscreen` was ignored and the window was only 1083 pixels wide, the page viewport was then forced with `setViewportSize`, and the screenshot looked as if it filled the screen; the conclusion drawn from it, that "the overlay is covered by the right-hand panel", was later overturned by a re-check in true full screen. This protection now lives in `verify/windows.mjs`: both the criterion (including the 2px tolerance and the rejection of NaN) and the CDP `Browser.setWindowBounds` executor are in there, and it errors out when the switch cannot be made. The size record and the screenshots of the headed check must go into the evidence.
+- **Three window sizes**: settled on 2026-10-29, real-machine verification runs only three window shapes, defined in `VIEWPORT_PRESETS` in `verify/presets.mjs`: `wide` is true full screen, `narrow` has an 800-wide outer window with the height filling the screen (the plugin panel lands at 300–359 pixels), and `short` has the outer width filling the screen with a height of 600. After the window is set, check that the plugin really entered that layout branch, and throw a Chinese error when it does not; the evidence for a spatial conclusion must contain a snapshot of the outer window, the page viewport, and the panel width in its narrow state. The narrow window is 800 and not 720: window width and panel width are not linear, and at 720 the host turns the right-hand panel into a full-width cover, which is the opposite of the plugin's narrow state; the measured mapping and the reasoning are in [verify/README.md](../../verify/README.md).
+- **Log location**: plugin logs are written to `<launch directory>/.dsh-mattskillsdeck-cache/logs/<date>.log`. Use `log-query` to filter by event name, level and field; when writing evidence, paste the key lines into the comment, a path alone does not count as evidence.
+- **Workspace injection**: a headless environment cannot click the native directory picker, so the verification workspace is written into the home's `storages/workspace.json` by the scenario hook `prepareHome` before the host starts: at `beforeLaunch` the home does not exist yet, and at `afterLaunch` DSH is already up and overwrites the registry with the in-memory default workspace on the first page load, so only the instant of "the home has just been copied and the process has not started yet" is reliable. The fixture contents (`docs/agents/workspace.yaml` plus the map under `.scratch/`) live in the instance directory, `verify/hooks.ts` writes them, and `verify/scenarios/ui.ts` asserts that the workspace is already visible in the menu after launch. Do not put the verification workspace inside this repository, otherwise the plugin would treat this repository's git root as the repository identity and the conclusion would be polluted.
+- **GitLab sandbox project**: when a GitLab backend is needed, first use `gitlab-sandbox create --batch <batch directory> --path <group>/<project>` to create a private empty project on gitlab.com carrying the batch marker (the record is written into `<batch directory>/gitlab-projects.json`). GitLab's delete API returns 202 and takes effect after a delay, so `gitlab-sandbox delete --batch <batch directory> --id <project id>` reads back `marked_for_deletion_at` by id, and only a successful read counts as deleted; when the read-back fails, the project id stays in the list with its status marked `delete-failed`, and re-running delete finishes the job. Create only 1-2 per batch and delete them as soon as the scenarios are verified.
+- **GitLab seed ticket pool**: the pool is seeded idempotently with `seed-gitlab --batch <batch directory> --project <group>/<project>`: by default 101 tickets (5 of them closed), two maps with their child tickets, 5 labels, assignees, and parent-child and blocking relations. Every ticket's body file header carries a stable key `<!-- DSH-SEED-KEY: … -->` (child tickets additionally carry `<!-- DSH-PARENT: <map iid> -->`), so a re-run recognises the existing ones by their stable key and only adds what is missing; once seeded, the `mode` in `<batch directory>/gitlab-seed.json` is `read-only`, and any later seeding must explicitly pass `--unlock-readonly` and is switched back to read-only automatically when it finishes. The free tier may not provide the native `is_blocked_by` edges, and the command then falls back to a pair of lines in the body (`Blocked by: #N` and `<!-- DSH-BLOCKED-BY: N -->`), and the verification conclusion must state which of the two was actually used. The B1 batch must check the ticket count and the relations, and copy the `stats` of `gitlab-seed.json` into the batch record.
+- **Batch identity and candidate**: a batch has two stages: open the batch, then freeze, then seal.
+  1. `dsh-verify batch open --name <batch name> --base-ref <baseline> --work-root <work root>` (prepare): creates the batch directory, writes the batch name, `startHead` and the baseline tip / target version (read from the baseline's `package.json`, not self-declared by the candidate) into `batch.json` (`candidate: null`), and prints the baseline line and a hint for the next step — the batch must start before the candidate is produced, otherwise "the candidate is older than the batch" fails forever.
+  2. `dsh-verify freeze --out <batch directory>/pkg --declaration <declaration>` (run under `package/` in this repository, with the declaration `../verify/profile.ts`) freezes the candidate into the batch directory and produces `candidate.json` (the candidate commit, package name/version, tgz sha256, a per-file digest `fileDigest`, and `validity`/`sourceStable`). freeze creates a `<commit prefix>-<timestamp>/` subdirectory under `pkg/`, and sealing points `--candidate` at it.
+  3. `dsh-verify batch open --name <batch name> --candidate <path inside the batch directory> --work-root <work root>` (seal): measures in a fixed order and rejects (not in the batch directory → older than the batch → HEAD does not match → build commit does not match → sources not stable → baseline containment not decided or not satisfied → version differs from the baseline → package missing or hash mismatch → recomputed file digest mismatch), and only a pass writes the candidate identity and prints two contract lines that must be reproduced verbatim. The first is the verification identity line（`- 验证身份：批次 <批次名>；候选提交 <40位小写hex>；候选包 sha256 <64位小写hex>`）, the second the verification baseline line（`- 验证基线：本地 <ref> <tip>；目标版本 <version>`）, and the release gate matches both character for character. A rejection writes no candidate (exit 1); when a precondition cannot be measured (git cannot be read, the hash cannot be computed) it exits 2.
 
-批次留下的证据是发布结论的唯一凭据，但批次目录会被清理、文件也可能被下一次重跑覆盖，所以另外定三条规矩：
+  The "candidate package sha256" in the identity line binds the sha256 of the candidate tgz (the `package.tgzSha256` of `candidate.json`), and the release gate compares it verbatim against the candidate manifest that was passed in; evidence binding separately uses the manifest digest, and the two must not be mixed up; when there is no baseline the batch is recorded as blocked (`--allow-stale` only downgrades the two items "HEAD has moved" and "the baseline has advanced", while the version and the package digest are still judged item by item). Afterwards use `batch status` to re-check freshness (and recompute the candidate manifest/tgz digests, recording a drift as a `candidate-identity` fail); the pre-release check does not read the local batch directory, it only checks the ticket-face comments and the `candidate.json` it was given.
+- **Evidence directory**: one directory per batch, `<work root>/batches/<batch name>/` (or wherever `--work-root` points); evidence lands first under `evidence/files/`, is then registered by `dsh-verify evidence add` into `evidence.json` with a SHA256 for every file; `evidence archive` archives it (`SHA256SUMS`), `evidence verify` re-checks it, and evidence with the same name gets a sequence number instead of being overwritten. The rules require evidence to be understandable on its own: paste the key area of a screenshot, the key log lines or the fields of an API response into the comment, and do not treat a temporary directory path as the only evidence.
+- **Cleanup requirements and limits**: `dsh-verify cleanup --yes` first reports what it would delete and deletes after you confirm (`--keep-batches` / `--keep-homes` control how many are kept, and `--include-pkg` cleans the candidate packages too). The recommended limits are 15GB in total for the work root, no more than 20 batch directories, and no more than 2GB per batch; clean once at the end of every batch, before a release, and before re-running with a new version. A GitHub workspace inside a batch is a `git worktree` of the source repository, so after the batch directory is deleted run `git worktree prune` in the source repository to clear the stale registration.
+- **Usable from scratch**: `dsh-verify self-check`, `dsh-verify concurrent --count 2` and `npm run verify:ui` / `npm run verify:smoke` must run through "start two isolated instances, the interface becomes interactive, stop cleanly" in a checkout that has never run real-machine verification; `verify/scenarios/smoke.ts` is the end state of that smoke test, used to prove that the integration itself is sound.
+- **GitLab instance environment**: when the batch instance needs to reach GitLab, the declaration's `instanceEnvAllowlist` (exactly `GLAB_CONFIG_DIR`, `GITLAB_TOKEN`, `GLAB_BIN`) limits which variables may be injected; `dsh-verify launch` takes those variables from the current process environment and passes them to the instance, and the command line, `instance.json`, logs and evidence record only the variable names, not the values. Load the token from an environment file into the current shell and do not write it into the command line; use `--dry-run` when you only want to see the plan.
+- **Direct entry for GitLab write scenarios**: when you need to prove "a deck write tool can be called directly inside the isolated instance", use `deck-write --tool <tool name> --args <JSON file of arguments> --ref <group>/<project> --workspace <workspace directory>` to call `deck_issue_create` / `deck_issue_patch` / `deck_map_link` once with fixed arguments, and the receipt is lossless JSON (`--out` saves another copy, `tool-response.json` by default); then use `deck-readback --ref <group>/<project> --key <ticket number>` to read it back independently through `glab api` — writing and reading are two paths, and it only counts when the read-back agrees. When `GLAB_BIN` is missing, `GLAB_BIN` points at a file that does not exist, the workspace does not exist, or the repository identity is not `<group>/<project>`, the exit code is 3 with the reason stated; when the tool name is not in the list or the argument file cannot be read, the exit code is 2; when the tool returns a failure, the exit code is 1. The commit gate is `tests/verify-1709-deck-entry.ts` (add `--negative` to trigger the negative case on its own). The B0 batch must really create a ticket, really change one and really attach a parent ticket once, then read them back with `deck-readback` and paste both the receipt and the read-back JSON into the evidence.
 
-- **每批结束立刻归档**：结果评论发出前后，用 `dsh-verify evidence archive` 把整批证据复制到 `<工作根>/evidence-archive/<批次名>-<时间戳>/`。归档目录放在批次目录之外（`cleanup` 只删批次目录，不碰归档），原文件不删不改；同时复制 `candidate.json`，并生成一份 `SHA256SUMS.txt` 记录每个文件的哈希。归档副本至少保留到下一版发布结束。起因：2026-10-30 beta.32 批次重跑一次就覆盖了 `measure-banner.json`，1661-02 矮窗的机器可读证据丢失，只剩一张截图和一份日志。
-- **证据不可变**：证据 JSON 与截图写出之后不再编辑。需要更正（例如脚本里残留了旧提交号）时，新写一份旁注文件说明「哪个文件、哪个字段、为什么改、以哪份为准」，再在清单票评论里写清楚，不要直接改原件冒充当时的记录。beta.32 批次手动改过证据副本里的 `commit` 字段，虽然测量数值没动，但「测量当刻写下的原件」因此不复存在。
-- **每批开始记录宿主显示状态**：批次开始那条评论的「验证环境」里要有这一项。跑一次 `dsh-verify self-check --screen --json`，抄报告里 `screen-present` 检查的实际值（显示器数量与分辨率；只有一台显示器时 base 只报总数与尺寸，多显示器时补一句人工确认的主屏与分辨率）。预检不靠人回忆；批次记录以这份报告为准。
+### The version rule and the baseline a batch starts from
 
-这只是「批次开始那一刻主机是什么样」的快照，不能证明整个批次期间都稳定；真正的视口以有头核对留下的窗口外框、页面视口与截图为准。宿主在多个显示器或分辨率之间自动切换时，先请人把显示器固定住再开批；不要用看门狗去抢每次只出现两三分钟的横屏窗口——切屏会打断测量，留下的证据不可信，还要整批重跑。beta.32 批次因此两次作废 1660 的证据，最终 wide/short 没能按登记尺寸复跑。
+Real-machine verification always verifies **the next version to be released**: the candidate version must equal the `version` in the baseline branch's `package.json` (the baseline branch is `main` by default). With `1.9.0-beta.32` released, `main`'s version is already `1.9.0-beta.33`, so this round verifies `1.9.0-beta.33`; the same holds for a stable release: with `1.9.0` released you verify `1.9.1`. That is the rule settled in #1777: you do not look at what version the candidate claims for itself, nor at what an old candidate file says, but at the version the baseline branch has at this moment.
 
-### 报告索引：把批次证据汇总成报告能用的数字
+The candidate commit must also contain the local baseline branch's tip — whether "this batch verifies the latest code" holds is computed on the spot at sealing time by `git merge-base --is-ancestor` and is not asserted by a person; a seal that rejects a candidate produces no identity line, and whether the batch is stale afterwards is decided by `dsh-verify batch status` re-reading HEAD and the baseline tip:
 
-批次归档之后，用一条命令汇总 `evidence-archive/index.jsonl` 与 `conditions.jsonl`：
+- The candidate commit does not contain the baseline tip: this batch verifies a version behind the latest code. Rejected by default; only in development verification may `--allow-stale` let it through, and after that the batch is marked stale and cannot be used to close a release.
+- The candidate version is not equal to the baseline `package.json` version: the version rule is wrong, freeze again. `--allow-stale` cannot bypass this.
+
+In addition to the machine-readable verification identity line, put one baseline line into the batch-start comment (the line `batch open` prints in its output), so that whoever reads the comment can see at a glance which baseline tip and which target version this batch verified. When the batch ends, re-read the baseline tip with `dsh-verify batch status`; if the baseline has advanced in the meantime, this batch is likewise marked stale — comparing only HEAD cannot catch this case: when a batch is opened on an integration branch, the integration branch's HEAD can stay put while `main` has already advanced.
+
+### Archiving evidence, immutability, and the batch environment record
+
+The evidence a batch leaves behind is the only proof behind a release conclusion, but batch directories get cleaned up and files can be overwritten by the next re-run, so three more rules are settled:
+
+- **Archive immediately when every batch ends**: around the time the result comment goes out, use `dsh-verify evidence archive` to copy the whole batch's evidence into `<work root>/evidence-archive/<batch name>-<timestamp>/`. The archive directory sits outside the batch directory (`cleanup` deletes only batch directories and does not touch archives), and the original files are neither deleted nor changed; also copy `candidate.json` and produce a `SHA256SUMS.txt` recording the hash of every file. Keep the archived copy at least until the next version's release has finished. Origin: on 2026-10-30 a single re-run of the beta.32 batch overwrote `measure-banner.json`, the machine-readable evidence for the short-window case 1661-02 was lost, and only one screenshot and one log were left.
+- **Evidence is immutable**: an evidence JSON or a screenshot is never edited after it has been written. When a correction is needed (an old commit id left behind in a script, for example), write a new side note saying "which file, which field, why it was changed, and which copy is authoritative", and state it clearly in a comment on the checklist ticket; do not edit the original and pass it off as the record taken at the time. The beta.32 batch manually edited the `commit` field in a copy of the evidence; the measured numbers did not move, but "the original written at the moment of measurement" ceased to exist because of it.
+- **Record the host's display state when every batch starts**: this item must be in the "verification environment" of the batch-start comment. Run `dsh-verify self-check --screen --json` once and copy the actual value of the `screen-present` check from the report (the number of monitors and their resolutions; with only one monitor the base reports just the total and the size, and with several monitors add one sentence of manual confirmation on the primary screen and its resolution). The pre-check does not rely on a person's recollection; the batch record goes by this report.
+
+This is only a snapshot of what the host looked like at the moment the batch started, and it cannot prove the host stayed that way for the whole batch; the real viewport is whatever the headed check's outer window, page viewport and screenshots say. When the host switches automatically between several monitors or resolutions, ask a person to pin the display down before opening the batch; do not use a watchdog to grab a landscape window that only shows up for two or three minutes at a time — switching screens interrupts the measurement, the evidence left behind is not trustworthy, and the whole batch has to be re-run. The beta.32 batch therefore voided 1660's evidence twice, and in the end wide/short could not be re-run at the registered sizes.
+
+### Report index: turning batch evidence into the numbers a report can use
+
+Once a batch is archived, one command summarises `evidence-archive/index.jsonl` and `conditions.jsonl`:
 
 ```
 node --import ./scripts/ts-hook.mts scripts/real-machine/commands/report-index.mts --markdown-out evidence-archive/report-summary.md
 ```
 
-它按 8 条支持度断言分组计数，给出 P0/P1/P2 缺陷票与重验状态、每个候选的通过率与未测数、条件账本条数，并把同一份汇总渲染成 Markdown，贴进验证报告即可。三点要记住：`index.jsonl` 一行只记一次尝试（verdict 六类、candidate 写完整 40 位提交哈希），同一场景多次尝试会被合并统计，所以断言次数相加会大于行数；缺陷票在 `index.jsonl` 里只有票号没有等级，报告默认按该行场景在 #1675 里的最高 P 级上限推定，需要精确等级时用 `--defects` 传 `[{"ticket":"#2001","level":"P1"}]` 这样的清单；条件清单来自 `conditions.jsonl`，一行一个条件，字段是 condition、scope、scenario、evidence、alternative、expiry、owner，报告里的条件条数由它汇总。更正记录按现行约定另写在 `corrections.jsonl`，本版汇总脚本还没有读它。
+It counts, grouped by the 8 support assertions, and gives the P0/P1/P2 defect tickets with their re-verification status, the pass rate and the number of untested cases per candidate, and the number of condition ledger entries, and renders the same summary as Markdown that can be pasted into the verification report. Three things to remember: a line in `index.jsonl` records one attempt (six verdict classes, and `candidate` written as the full 40-character commit hash), and several attempts at the same scenario are merged into the tally, so the assertion counts add up to more than the number of lines; a defect ticket in `index.jsonl` has only a ticket number and no level, so the report assumes by default the highest P level that this line's scenario reaches in #1675, and when you need the exact level pass a list such as `[{"ticket":"#2001","level":"P1"}]` through `--defects`; the condition list comes from `conditions.jsonl`, one condition per line, with the fields condition, scope, scenario, evidence, alternative, expiry and owner, and the number of conditions in the report is summarised from it. Correction records are written separately into `corrections.jsonl` under the current convention, and this version's summary script does not read it yet.
 
-## 三、验证批次
+## 3. Verification batches
 
-验证主持人从当前 HEAD 重新冻结的候选上跑一批（`dsh-verify freeze` + `batch open` 就是这样做的）。每批做四件事：
+The verification facilitator runs a batch on a candidate freshly frozen from the current HEAD (that is what `dsh-verify freeze` + `batch open` do). Every batch does four things:
 
-1. **批次开始时发一条评论**：批次号、版本与提交、构建产物及其 sha256、验证环境（操作系统、DSH 版本、隔离的 home/profile、已装插件版本、网络条件、自检结果（`dsh-verify self-check --json` 的报告，含 `screen-present` 的屏幕分辨率与主屏））、本批要验的场景编号清单、开始时间。这条评论必须含一行机器可读的验证身份，精确格式是 `- 验证身份：批次 <批次名>；候选提交 <40位小写提交>；候选包 sha256 <64位小写候选 tgz 摘要>`（这一项绑定 `candidate.json` 的 `package.tgzSha256`；候选清单摘要只用于证据绑定）；批次名、候选提交与候选包 sha256 要和本批 `batch.json` / `candidate.json` 里的记录一致（`dsh-verify evidence add` 收证据时会核；发布前检查不读本机批次目录，只核对票面评论与传入的 `candidate.json`）。另外还要写一行基线行（`batch open` 输出里的格式 `- 验证基线：本地 <基线分支> <40位提交>；目标版本 <版本号>`），让人看出这批验的是哪个基线 tip、哪个目标版本。
-2. **逐场景执行并记录结果**。每验完一条就记下通过还是失败，不要等整批结束再凭记忆补。每条记录场景结果的评论都要带同一行验证身份（同一个批次名、候选提交、候选包 sha256）；缺这一行或身份与批次开始评论对不上，这条结果不算进通过项。
-3. **批次结束时发一条结果评论**（同样要带验证身份行）：逐场景写 `通过` / `失败（→ #新票号）` / `未测（原因）`，每条附决定性证据。证据要能独立看懂：截图路径、关键日志行、接口返回字段；临时目录里的文件路径不能作为唯一证据，因为目录会删，要把关键几行贴进评论。
+1. **Post one comment when the batch starts**: the batch number, version and commit, the build artifact and its sha256, the verification environment (operating system, DSH version, the isolated home/profile, installed plugin versions, network conditions, the self-check result — the report of `dsh-verify self-check --json`, including the screen resolutions and primary screen from `screen-present` — the list of scenario numbers to verify in this batch, and the start time). This comment must contain one machine-readable verification identity line, whose exact format is the Chinese literal the gate matches character for character（`- 验证身份：批次 <批次名>；候选提交 <40位小写提交>；候选包 sha256 <64位小写候选 tgz 摘要>`）; this item binds the `package.tgzSha256` of `candidate.json`, and the candidate manifest digest is used only for evidence binding; the batch name, candidate commit and candidate package sha256 must agree with what this batch's `batch.json` / `candidate.json` records (`dsh-verify evidence add` checks it when it collects evidence; the pre-release check does not read the local batch directory and only checks the ticket-face comments and the `candidate.json` it was given). Also write one baseline line, in the format `batch open` prints in its output（`- 验证基线：本地 <基线分支> <40位提交>；目标版本 <版本号>`）, so that people can see which baseline tip and which target version this batch verified.
+2. **Execute scenario by scenario and record the results**. As soon as one scenario is verified, note whether it passed or failed; do not wait until the whole batch is over and then fill it in from memory. Every comment that records a scenario result must carry the same verification identity line (the same batch name, candidate commit and candidate package sha256); if this line is missing, or the identity disagrees with the batch-start comment, that result does not count towards the passed items.
+3. **Post one result comment when the batch ends** (again with the verification identity line): for each scenario write passed（`通过`）, failed（`失败` plus a full-width parenthesised `→ #new ticket number`）or not tested（`未测` plus the reason in the same full-width parentheses）, each with decisive evidence attached. Evidence must be understandable on its own: screenshot paths, key log lines, API response fields; a file path in a temporary directory cannot be the only evidence, because the directory gets deleted, so paste the key lines into the comment.
 
-   发布前检查要读这条评论，所以每条结论请用下面任一种明确格式写（散文里顺口提一句不算结论，读不到就会按「找不到明确结果」拦住发布）：
+   The pre-release check reads this comment, so please write every conclusion in one of the explicit formats below (a passing mention in prose does not count as a conclusion, and if none can be read the release is blocked as "no explicit result found"):
 
-   - `场景 <编号>：<结果>`，多个编号并列写 `场景 1600-01 / 1600-02：通过`；
-   - Markdown 表格行：首格写编号，第二格写结果；
-   - 加粗要点：`**<编号> <结果>**`。
+   - A line `Scenario <number>: <result>`, with several numbers side by side written `Scenario 1600-01 / 1600-02: passed`（the literals the checker matches are Chinese, the same shapes: `场景 <编号>：<结果>` and `场景 1600-01 / 1600-02：通过`）;
+   - A Markdown table row: the first cell holds the number, the second cell holds the result;
+   - A bold bullet: `**<number> <result>**`（the Chinese literal shape is `**<编号> <结果>**`）.
 
-   同一条评论里同一个场景出现多个结论时（常见于收口评论既写分批叙述、又写最终计数），按「失败 > 豁免 > 通过 > 已验证 > 未测 > 阻塞 > 待验证」取最终结论；所以收口评论要把最终结论写清楚，不要把过程结论当成最终结论。
-4. **更新清单票正文**里的「场景总览」与「批次记录」两张表。正文只有主持人写，每批开始和结束各更新一次，保护性地说：只改表格状态，不改场景说明。
+   When the same scenario gets several conclusions inside one comment (which often happens when a closing comment both narrates the batches and gives the final counts), take the final conclusion in the order failed > exempt > passed > already verified > not tested > blocked > to be verified（the status words are the Chinese literals `失败`, `豁免`, `通过`, `已验证`, `未测`, `阻塞`, `待验证`）; so the closing comment must state the final conclusion clearly, and must not let a process conclusion stand as the final one.
+4. **Update the "scenario overview" and the "batch records" tables** in the body of the checklist ticket（the two body headings are still the Chinese literals `## 场景总览` and `## 批次记录`）. Only the facilitator writes the body, and it is updated once when each batch starts and once when it ends; to be safe: change only the status cells in the tables, do not change the scenario descriptions.
 
-其他规则：
+Other rules:
 
-- 失败先判归属：因当前功能开发不到位产生的故障，必须在来源票内修复并复验到通过，不允许为它另开新票；只有确认与本次改动无关、且不影响本票验收的既有缺陷，才另开票；另开票必须得到用户的明确批准，并在来源票写清「本次不修、原因与影响」。修好后进入下一批重验；重验通过之前，这条场景不算通过，也就不能计入发布。
-- 因为环境原因（网络不可用、缺 gh 等）没法验的，记「未测」并在下一批重跑，不记失败，也不当成通过。
-- 批次之间新登记的场景照常进下一批；已经通过的场景，除非后来被改动直接影响，不重复验（改了就直接补验那一条）。
-- **批次评论不要用收口关键词，也不写收口计数行**：`发布就绪`、`验证收口`、`收口关闭`、`已登记场景` 这四个词只留给清单票真正关闭时那一条收口评论；`通过 N / 失败 M / 豁免 K` 这种斜杠计数也只在收口评论里写。原因：`scripts/lib/checklist-consistency.mts` 会把**所有**含这四个词的评论都当成收口评论，逐条核对计数；批次评论里写一次，等到最终统计变化时，后来的人就只能去改历史评论，而历史评论又不该改写。beta.31 阶段那条旧收口评论就是这样被迫作废的（2026-10-29 写下「通过 4」，beta.32 收口前要改成作废说明）。
-- **收口评论只发一条，只在真正关闭清单票时发**：给批次做汇总时写「本批 5 条全部通过」这样的自然句就够，不要写斜杠计数、不要带上面四个词。
-- **历史评论不改写**：批次评论、收口评论、发布记录发出后不再编辑；需要更正时追加一条新评论，写清更正哪一条评论的哪句话、为什么。GitHub 不提供可查的评论编辑历史，改掉原始结论等于让审计链断掉。
+- Decide where a failure belongs first: a failure caused by the current feature work being incomplete must be fixed inside the source ticket and verified again until it passes, and a new ticket may not be opened for it; only an existing defect that is confirmed to be unrelated to this change and that does not affect this ticket's acceptance may get a new ticket, and opening it requires the user's explicit approval, with the source ticket stating that it is not fixed this time, why, and what the impact is. Once it is fixed it goes into the next batch for re-verification; until the re-verification passes, this scenario does not count as passed and therefore cannot be counted in the release.
+- Something that cannot be verified for environmental reasons (the network is unavailable, `gh` is missing and so on) is recorded as not tested and re-run in the next batch; it is not recorded as a failure, and not counted as a pass either.
+- Scenarios registered between batches go into the next batch as usual; a scenario that has already passed is not verified again unless a later change directly affects it (in that case verify that one scenario again right away).
+- **Do not use the closing keywords in a batch comment, and do not write a closing count line there either**: the four phrases ready to release, verification closed, closing closed and scenarios registered（the Chinese literals `发布就绪`, `验证收口`, `收口关闭`, `已登记场景`）are reserved for the one closing comment posted when the checklist ticket really closes; slash counts such as passed N / failed M / exempt K（the Chinese literal form `通过 N / 失败 M / 豁免 K`）are also written only in the closing comment. Reason: `scripts/lib/checklist-consistency.mts` treats **every** comment containing those four phrases as a closing comment and checks the counts one by one; write one in a batch comment and, when the final tally changes later, whoever comes next can only go and edit a historical comment, and historical comments should not be rewritten. That is how the old closing comment from the beta.31 stage was forced to be voided (it said "passed 4" when written on 2026-10-29, and before the beta.32 close it had to be turned into a void note).
+- **Post only one closing comment, and only when the checklist ticket really closes**: when summarising a batch, a natural sentence such as "all five in this batch passed" is enough; do not write slash counts and do not use the four phrases above.
+- **Historical comments are not rewritten**: batch comments, closing comments and release records are never edited once posted; when a correction is needed, append a new comment saying which comment's which sentence is corrected and why. GitHub does not offer an auditable edit history for comments, so changing an original conclusion means breaking the audit chain.
 
-## 四、豁免
+## 4. Exemptions
 
-豁免是正式状态，不是「口头略过」。核准一条豁免需要四样东西，缺一不可：
+An exemption is a formal status, not a verbal "let it slide". Approving one exemption needs four things, and none of them may be missing:
 
-1. **类别**：纯文案 / 纯内部重构 / 只影响构建或工具链 / 已被其它场景覆盖 / 紧急发布（先发后验，必须写拍板人和补验期限）。
-2. **可观察面声明**：说明这次改动在真机上能观察到什么、为什么不需要单独验。属于「已被覆盖」的要给出覆盖它的场景编号。
-3. **登记人**：谁提出这条豁免。
-4. **主持人接受**：主持人必须明确接受，不接受就只能转成正式场景。
+1. **Category**: pure wording / purely internal rework / affects only the build or the toolchain / already covered by another scenario / urgent release (release first and verify afterwards, with the decision maker and the deadline for the follow-up verification written down).
+2. **Statement of the observable surface**: say what about this change can be observed on a real machine and why it does not need a separate verification. For "already covered", give the number of the scenario that covers it.
+3. **Registrant**: who proposed this exemption.
+4. **Acceptance by the facilitator**: the facilitator must explicitly accept it; without acceptance it can only be turned into a formal scenario.
 
-有争议的豁免转成正式场景验证。主持人每批可以抽一条豁免做冒烟，抽检结果记在批次结果评论里。豁免不算通过，发布计数时把「通过」和「豁免」分开写。
+A disputed exemption is turned into a formal scenario and verified. The facilitator may spot-check one exemption per batch, and the spot check result is recorded in the batch result comment. An exemption does not count as a pass; when counting for a release, write "passed" and "exempt" separately.
 
-## 五、发布前：机器检查六道
+## 5. Before the release: the six machine checks
 
-发布前检查有六条判据。规则实现在 base 仓的 `runReleaseGate` 里，本仓只接线：
-`scripts/release-preflight.mts` 是薄命令行，`scripts/lib/release-preflight-gate.mts` 是唯一的组合根
-（读 `verify/profile.ts` 与 `verify/ticket-face.mts`、取发布提交、调 base 门禁一次），规则本身不在这里复制。
-六条判据：
+The pre-release check has six criteria. The rules are implemented in `runReleaseGate` in the base repository, and this repository only wires it up:
+`scripts/release-preflight.mts` is a thin command line, `scripts/lib/release-preflight-gate.mts` is the single composition root
+(it reads `verify/profile.ts` and `verify/ticket-face.mts`, takes the release commit, and calls the base gate once); the rules themselves are not copied here.
+The six criteria:
 
-1. 本版清单票**恰好一张**。
-2. 这张清单票**已经关闭**。
-3. 这张票的**正文与评论记录内部一致**：场景总览表的编号集合、每条场景的状态，与评论里的场景块、批次结果、收口计数对得上；正文自称的条数、分组计数、发布计数也和表的实际统计一致。
-4. 本版**批次评论都带验证身份**：批次开始评论与每条场景结果评论里都有格式正确的「验证身份」行，批次名、候选提交与候选包 sha256 和传入的 `candidate.json`（`--candidate`）记录一致。发布前检查不读本机 `batch.json`：发布可能不在做真机验证的那台机器上，机器检查只凭票面评论与候选清单判断；找不到身份行、格式不对或同一批次的记录互相矛盾的，不算通过。
-5. **候选提交与发布提交的关系成立**：所有候选提交都能在发布提交的历史里找到（是发布提交的祖先）；候选提交与发布提交不同时，清单票正文的「候选与发布差异审计」一节必须写清差异为什么可以接受（一行 `- 候选提交 <40位小写提交> → 发布提交 <40位小写提交>：<一句话说明差异为什么可接受>`）。候选提交不是发布提交的祖先，或两者不同却没有差异审计，都拦住发布。
-6. **候选清单是可发布产物**：传入 `--candidate` 时，`validity` 必须是 `release`、`sourceStable` 必须为真、各类摘要格式正确；`development` 候选直接拒绝。不传候选时这一条记 `skip`（不是通过），输出会写明「只核对票面与身份行，不证明要发的字节」。
+1. This version has **exactly one** checklist ticket.
+2. That checklist ticket **is already closed**.
+3. That ticket's **body and comment record are internally consistent**: the set of numbers in the scenario overview table and the status of each scenario agree with the scenario blocks, batch results and closing counts in the comments; the counts the body claims for itself, the per-group counts, and the release counts also agree with the actual tally of the table.
+4. All of this version's **batch comments carry the verification identity**: the batch-start comment and every scenario result comment contain a correctly formatted verification identity line, and the batch name, candidate commit and candidate package sha256 agree with the records in the `candidate.json` passed in (`--candidate`). The pre-release check does not read the local `batch.json`: the release may not happen on the machine that ran the verification, so the machine check judges only from the ticket-face comments and the candidate manifest; a missing identity line, a wrong format, or records of the same batch that contradict each other does not count as a pass.
+5. **The relation between the candidate commit and the release commit holds**: every candidate commit can be found in the release commit's history (it is an ancestor of the release commit); when the candidate commit and the release commit differ, the "candidate and release difference audit" section of the checklist ticket body must state why the difference is acceptable（one line, the Chinese literal `- 候选提交 <40位小写提交> → 发布提交 <40位小写提交>：<一句话说明差异为什么可以接受>`）. A candidate commit that is not an ancestor of the release commit, or two that differ without a difference audit, both block the release.
+6. **The candidate manifest is a releasable artifact**: when `--candidate` is passed, `validity` must be `release`, `sourceStable` must be true, and every kind of digest must be well formed; a `development` candidate is rejected outright. When no candidate is passed this item is recorded as `skip` (not a pass), and the output states plainly that it only checks the ticket face and the identity lines, not the bytes that are going to be released.
 
-六条都满足才能继续发布。检查挂在两条发布路径上，走的都是同一个脚本，没有跳过开关：
+Only when all six are satisfied can the release continue. The check is wired into both release paths, both go through the same script, and there is no switch to skip it:
 
-- `scripts/publish-token.ps1`（有写权限 token 时的无人值守路径，token 经 `-TokenFile` 临时文件传入，命令行里只有路径；传法与轮换见 [`RELEASE-RUNBOOK.md` 第 12 节](../releases/RELEASE-RUNBOOK.md)）：按检查退出码四态分流，`-DryRun` 试运行时任何非 0 只提示不阻断。
-- `scripts/wizard-release.sh`（需要人扫码的交互向导）：同样在发布步骤之前检查，按退出码四态分流；`--dry-run` 时只提示。
+- `scripts/publish-token.ps1` (the unattended path when you have a token with write permission; the token is passed through a temporary file with `-TokenFile`, so only the path appears on the command line; how to pass and rotate it is in [Section 12 of `RELEASE-RUNBOOK.md`](../releases/RELEASE-RUNBOOK.md)): it branches on the check's four-state exit code, and in a `-DryRun` rehearsal any non-zero value only warns and does not block.
+- `scripts/wizard-release.sh` (the interactive wizard where a person has to scan a QR code): it runs the same check before the release step and branches on the same four-state exit code; in `--dry-run` it only warns.
 
-发布前检查的退出码分四态，两条发布路径按它分流：`0` 通过（`PREFLIGHT-OK`）；`1` 票面或候选要人改
-（`PREFLIGHT-FAIL`，逐条列出 finding 与「改法」）；`2` 无法判定（`PREFLIGHT-BLOCKED` / `PREFLIGHT-ENV`，
-例如 gh 没登录、git 不可用、票面适配器缺失）；未知退出码也按环境失败处理。`-DryRun` / `--dry-run` 只改
-「要不要中止发布」，不改检查本身跑不跑——检查永远跑，演练只决定提不提示。票面从哪读由
-`verify/ticket-face.mts`（gh CLI + git）回答；没有适配器时门禁记 blocked（exit 2）并给出三步注入方法，绝不绿。
+The pre-release check's exit code has four states, and the two release paths branch on them: `0` passed (`PREFLIGHT-OK`); `1` the ticket face or the candidate needs a person to change it
+(`PREFLIGHT-FAIL`, listing each finding with its "fix"); `2` undecidable (`PREFLIGHT-BLOCKED` / `PREFLIGHT-ENV`,
+for example when `gh` is not signed in, git is unavailable, or the ticket-face adapter is missing); an unknown exit code is treated as an environment failure too. `-DryRun` / `--dry-run` only changes
+whether the release is aborted, not whether the check itself runs — the check always runs, the rehearsal only decides whether to warn. Where the ticket face is read from is answered by
+`verify/ticket-face.mts` (gh CLI + git); with no adapter the gate records blocked (exit 2) and gives a three-step injection method, and never turns green.
 
-通过这六道检查之后，发布脚本还可以再做一道字节对账（#1766）：`scripts/publish-token.ps1 -Candidate <candidate.json>` 在发布前把待发字节的逐文件清单指纹与候选包的 `package.fileDigest` 比一次。一致就继续发布；不一致但清单票里有差异审计（发布前检查会打 `PREFLIGHT-CANDIDATE-AUDIT`）时继续发布并记 `CANDIDATE-DIFF-AUDITED`；不一致又没有差异审计时打 `CANDIDATE-DIFF` 并中止。候选的 `validity` 是 `development` 时直接拒绝发布。不传 `-Candidate` 时记 `CANDIDATE-SKIP`，只做票面检查、不做字节对账，行为与以前一样。
+After these six checks pass, the release script can do one more byte reconciliation (#1766): `scripts/publish-token.ps1 -Candidate <candidate.json>` compares the per-file manifest fingerprint of the bytes about to be released with the candidate package's `package.fileDigest` once before the release. If they agree, the release continues; if they do not agree but the checklist ticket has a difference audit (the pre-release check prints `PREFLIGHT-CANDIDATE-AUDIT`), the release continues and `CANDIDATE-DIFF-AUDITED` is recorded; if they do not agree and there is no difference audit, it prints `CANDIDATE-DIFF` and aborts. When the candidate's `validity` is `development`, the release is refused outright. Without `-Candidate` it records `CANDIDATE-SKIP`, does only the ticket-face check and no byte reconciliation, and behaves as before.
 
-清单票什么时候能关：所有已登记场景都是「已验证」「通过」或「豁免被接受」。如果验的过程中发现了新问题，就开新 bug 票；这个问题需要真机复验的话，把场景追加进清单票并标成待验证，于是清单票关不上、发布自然被拦。这就是整套机制的闭环，不需要额外检查代码改了什么。
+When can a checklist ticket be closed: when every registered scenario is already verified, passed, or exempted with acceptance. If a new problem turns up during verification, open a new bug ticket; if that problem needs real-machine re-verification, append the scenario to the checklist ticket and mark it to be verified, and then the checklist ticket cannot be closed and the release is blocked automatically. That is the loop the whole mechanism closes, and it does not need an extra check of what the code changed.
 
-关闭评论里写一行计数给读的人看（例如 `[发布就绪] 通过 12 / 失败 0 / 豁免 3`；开发期已验过的场景计入「通过」，在备注里写明验证时间与证据出处）。这一行以及正文里各处的数字现在也参与机器核对：正文「## 场景总览」一节开头写的条数、各状态分组计数、来源票数，正文「## 发布前对账」与关闭评论里的通过/失败/豁免计数，以及收口评论里「N 条已登记场景」「N 条登记前已验证」「N 条本版真机通过」「N 条豁免」这类自称计数，都必须和场景总览表的实际统计一致；对不上会逐条列出「哪里写了什么、实际是什么、按什么改」，修正前发布被拦住。脚本只核对记录是否自洽；某个豁免该不该接受、场景是不是真的验过，仍然由人判断。
+In the closing comment, write one count line for the reader; the literal the checker matches is Chinese（for example `[发布就绪] 通过 12 / 失败 0 / 豁免 3`, i.e. 12 passed, 0 failed, 3 exempt, where scenarios verified during development count as passed and the verification time and the source of the evidence are noted in the remark）. This line and the numbers elsewhere in the body now also take part in the machine check: the counts at the start of the scenario overview section of the body（`## 场景总览`）, the per-status group counts, the number of source tickets, the passed/failed/exempt counts in the body's "before the release, reconcile" section（`## 发布前对账`）and in the closing comment, and the self-declared counts in the closing comment such as "N registered scenarios", "N already verified before registration", "N verified on a real machine in this version" and "N exempt"（the Chinese literals `N 条已登记场景`, `N 条登记前已验证`, `N 条本版真机通过`, `N 条豁免`）, must all agree with the actual tally of the scenario overview table; where they do not, it lists one by one "what was written where, what the actual number is, and what to change", and the release is blocked until that is fixed. The script only checks whether the record is self-consistent; whether an exemption should be accepted, and whether a scenario was really verified, are still for a person to judge.
 
-发布前建议再做一次人工对账：用 CHANGELOG 里的「对应提交」与自上一版发布以来合并的提交逐票对照，确认每个影响使用方的票都有场景块。代码冻结是规则的一部分，不是「安排批次的建议」：每一批都必须从当前 HEAD 重新冻结候选（`dsh-verify freeze` + `batch open` 这样做），不能拿早先冻结的旧候选冒充新批次；批次结束后用 `dsh-verify batch status` 收尾，HEAD 或本地基线前进了就把这条批次标成陈旧（stale），它的证据只对它自己那个候选提交有效，不能用于发布收口。发布前人工对账只认最后一批干净批次（`validity=release`）且候选提交是发布提交祖先的那条记录（机器检查只看票面评论与候选清单，见第五节）；候选提交与发布提交不同时，清单票的「候选与发布差异审计」必须写清差异为什么可以接受。验完之后如果必须再改代码，只补验受影响的那几条场景，不必重验全清单——但下一批仍然要从新的 HEAD 重新冻结。
+Before a release it is advisable to do one more manual reconciliation: compare the "corresponding commit" entries in the CHANGELOG against the commits merged since the previous release, ticket by ticket, and confirm that every ticket affecting users has a scenario block. Code freeze is part of the rules, not "advice on scheduling batches": every batch must re-freeze its candidate from the current HEAD (that is what `dsh-verify freeze` + `batch open` do), and an old candidate frozen earlier must not be passed off as a new batch; after a batch ends, finish with `dsh-verify batch status`, and if HEAD or the local baseline has advanced, mark that batch stale — its evidence is valid only for its own candidate commit and cannot be used to close a release. The manual reconciliation before a release accepts only the record of the last clean batch (`validity=release`) whose candidate commit is an ancestor of the release commit (the machine check looks only at the ticket-face comments and the candidate manifest, see section 5); when the candidate commit and the release commit differ, the checklist ticket's "candidate and release difference audit" must state why the difference is acceptable. If the code has to change again after verification, verify only the affected scenarios again, not the whole checklist — but the next batch must still be frozen again from the new HEAD.
 
-## 六、发布之后
+## 6. After the release
 
-- **版本真正发布后**，在清单票补最后一条评论：发布版本与时间、通过/失败/豁免计数、证据位置、对应的 CHANGELOG 提交。清单票保持关闭。
-- **发布后记录由脚本做**：`scripts/release-postflight.mts` 在发布成功后给本版清单票补一条「发布记录」评论（评论里写实际发布包的逐文件清单摘要——文件数、字节数、清单指纹，由 `scripts/release-integrity.mts` 做字节对账——与各 dist-tag 的最终指向，读记录的人不用再去翻发布日志），并创建下一版的占位清单票 `[真机验证] 下一版（自 <刚发布版本> 之后）`；如果已经存在同名的占位票就跳过。下一版开发期间，由关闭第一张来源票的人把占位票改名成实际版本号并开始登记场景。
-- **版本取消或并入下一版**：清单票关闭，最后一条评论写「并入下一版清单票 #N」，把已登记的场景转录过去，不丢。
-- **紧急发布**：在清单票里把场景标成「紧急发布」类别的豁免，写清拍板人和补验期限；发布后按期限补验，结果补在该票评论里。
-- **已经发布过、代码没再改的改动**不进下一版的清单；版本号跳过不发的版本不开清单票。
+- **Once the version is really released**, add the last comment to the checklist ticket: the released version and time, the passed/failed/exempt counts, where the evidence is, and the corresponding CHANGELOG commit. The checklist ticket stays closed.
+- **The post-release record is made by a script**: after a successful release, `scripts/release-postflight.mts` adds a "release record" comment to this version's checklist ticket (the comment states the per-file manifest digest of the package actually released — the number of files, the number of bytes, the manifest fingerprint, reconciled byte by byte by `scripts/release-integrity.mts` — and where each dist-tag finally points, so that whoever reads the record does not have to dig through the release log), and creates the next version's placeholder checklist ticket, whose title is the checklist prefix plus the wording for the next version, mentioning the version just released（the shipped title is Chinese: the prefix `[真机验证]`, the placeholder word `下一版`, and the previous version inside full-width parentheses）; if a placeholder ticket with the same name already exists it is skipped. During the next version's development, whoever closes the first source ticket renames the placeholder to the actual version number and starts registering scenarios.
+- **A version that is cancelled or folded into the next one**: close the checklist ticket, and let the last comment say "folded into the next version's checklist ticket #N", copying the registered scenarios over so nothing is lost.
+- **Urgent release**: mark the scenarios in the checklist ticket with the "urgent release" exemption category, and state the decision maker and the deadline for the follow-up verification; verify within the deadline after the release and add the results to that ticket's comments.
+- **A change that has already been released and whose code has not changed again** does not go into the next version's checklist; a version whose number is skipped and which is not released does not get a checklist ticket.
 
-## 七、常见问题
+## 7. Frequently asked questions
 
-- **谁负责验**：发布准备时指定验证主持人，可以是发布人，也可以是 AI。没指定也没关系，发布前检查照样会拦。
-- **验哪个产物**：必须验候选发布产物，并记下它的 sha256；在开发机上随手构建一个版本跑一遍不算数。
-- **清单票什么时候存在**：开发早期就要有，占位标题也行，否则来源票关闭时无处登记。本规则落地之前的版本，按 CHANGELOG 一次性把场景回填到该版本的清单票。
-- **检查本身坏了怎么办**：发布前检查失败就中止发布，先修环境（例如 gh 没登录）；没有「跳过检查」的开关。检查是发布路径的一部分，坏了和发布不了是一回事。
-- **规则从什么时候生效**：从这份文档落地开始的新动作；之前的版本一次性回填，不追认历史过程。
+- **Who is responsible for verifying**: designate the verification facilitator at release preparation; it can be the person releasing or an AI. It does not matter if nobody is designated, the pre-release check still blocks.
+- **Which artifact to verify**: you must verify the candidate release artifact and note its sha256; building a version casually on the development machine and running it once does not count.
+- **When the checklist ticket must exist**: from early in development, a placeholder title is fine, otherwise there is nowhere to register when the source ticket closes. For versions from before this rule took effect, backfill the scenarios into that version's checklist ticket in one go from the CHANGELOG.
+- **What if the check itself is broken**: if the pre-release check fails, the release is aborted and the environment is fixed first (for example, `gh` is not signed in); there is no "skip the check" switch. The check is part of the release path, so broken and cannot-release are the same thing.
+- **When the rules take effect**: for new actions from the moment this document lands; earlier versions are backfilled in one go, and past processes are not retroactively endorsed.
 
-## 相关文件
+## Related files
 
-- 清单票模板：[checklist-issue-template.md](checklist-issue-template.md)
-- 发布流程：[docs/releases/RELEASE-RUNBOOK.md](../releases/RELEASE-RUNBOOK.md)
-- 票的读写规则：[docs/agents/issue-tracker.md](issue-tracker.md)
-- 检查脚本：`scripts/release-preflight.mts`（薄命令行）、`scripts/lib/release-preflight-gate.mts`（组合根）、`scripts/release-postflight.mts`
-- 真机验证接入与工具：[verify/README.md](../../verify/README.md)
+- Checklist ticket template: [checklist-issue-template.md](checklist-issue-template.md)
+- Release process: [docs/releases/RELEASE-RUNBOOK.md](../releases/RELEASE-RUNBOOK.md)
+- Read and write rules for tickets: [docs/agents/issue-tracker.md](issue-tracker.md)
+- Check scripts: `scripts/release-preflight.mts` (thin command line), `scripts/lib/release-preflight-gate.mts` (composition root), `scripts/release-postflight.mts`
+- Real-machine verification integration and tools: [verify/README.md](../../verify/README.md)

@@ -228,8 +228,8 @@ async function testMain(): Promise<void> {
       { file: 'scripts/build.mts', phrase: '这条路不拿锁' },
       { file: 'scripts/lib/build-lock.mts', phrase: '缓存命中直接退出的那条路不碰锁' },
       { file: 'docs/design/1323-build-mutex.md', phrase: '缓存命中的路径不拿锁' },
-      { file: 'docs/agents/verification.md', phrase: '缓存命中直接退出的那条路不碰锁' },
-      { file: 'docs/agents/parallel-sessions.md', phrase: '缓存命中的构建不拿锁' },
+      { file: 'docs/agents/verification.md', phrase: 'the path that exits at once on a cache hit never touches it' },
+      { file: 'docs/agents/parallel-sessions.md', phrase: 'A build that hits the cache takes no lock' },
     ]
     for (const site of sites) {
       const text: string = fs.readFileSync(path.join(ROOT, site.file), 'utf8')

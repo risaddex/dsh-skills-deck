@@ -1,538 +1,538 @@
-# Tracker Deck · 术语表
+# Tracker Deck · Glossary
 
-> 术语表只收录词条定义，不含实现细节；用于统一票名、正文与文档用语。票名范式与「地图/总图不加阶段词」见下节。
+> The glossary records term definitions only, with no implementation details; it exists to keep ticket names, ticket bodies and document wording consistent. The ticket-name pattern, and the rule that maps and overview maps take no stage word, are in the next section.
 
-## 版本与效力（2026-08-28 生效）
+## Version and authority (effective 2026-08-28)
 
-- **规则**：本仓库所有已落地的方案/讨论/契约，凡与本条目标注日期之后定版的内容冲突，**以更新日期者为准**（当前基线 = 2026-08-28 的定版内容）。
-- **未来变更**：未来任何讨论或方案若改动当前定版内容，**以未来版本为准**——今天的内容不是不可变的，只是当前生效的基线。
-- **读写约定**：每次落盘方案/契约文档时，必须写明生效日期与上述两条规则；后续 AI 读到旧规则时，不得误认为旧内容比新内容新，也不得把今日内容当作永久不可变。
+- **Rule（规则）**: for every plan, discussion or contract already landed in this repository, wherever it conflicts with content settled after the date marked on this entry, **the more recently dated one wins** (current baseline = the content settled on 2026-08-28).
+- **Future change（未来变更）**: if any future discussion or plan changes the content settled today, **the future version wins** — today’s content is not immutable, it is only the baseline in force now.
+- **Read and write convention（读写约定）**: every time a plan or contract document is written to disk it must state its effective date and the two rules above; an AI that later reads an old rule must not take the old content for newer than the new content, and must not treat today’s content as permanently immutable.
 
 ## Linear terms (2026-11-13 · fork `dsh-skills-deck`)
 
-- **Linear backend**: the tracker that keeps a workspace's maps, specs and tickets as issues in one Linear team. _Avoid_: Linear integration, Linear plugin
+- **Linear backend**: the tracker that keeps a workspace’s maps, specs and tickets as issues in one Linear team. _Avoid_: Linear integration, Linear plugin
 - **Account alias**: the short, unique name a user gives one configured Linear workspace (organization); every Linear reference outside a bound workspace is qualified by it. _Avoid_: account id, org name
 - **Binding**: the declaration that ties a repository workspace to one account alias and one team, optionally narrowed to one Linear project. _Avoid_: link, connection
 - **Qualified ref**: `alias:ENG-123`, an issue identifier prefixed with its account alias; the only form that is unique across accounts. _Avoid_: bare identifier (outside a bound workspace)
 - **Linear inbox**: the cross-account view of the issues assigned to me and the issues waiting in review states. _Avoid_: overview, sidebar
 
-## 工程阶段词（票名范式）
-
-- **讨论**：方案论证阶段（选项 + 推荐 + 边界场景，HITL 拍板前）；票名 `讨论：X`。
-- **定版**：方案/契约经维护者拍板、结论落定；票名 `<领域>：定版`（契约层票用 `契约定版`，一般方案用 `方案定版`）。"定稿"一词**弃用**（它指文本终稿，非决策落定）。
-- **落地**：按定版方案写代码/产出；票名 `落地：X` 或 `实现：X`。
-- **验收**：契约测试/门禁/判据通过；票名 `验收：X`。
-- **组合**：一张票覆盖多阶段 → `<领域>：定版与落地`；纯讨论未拍板 → `讨论：X`。
-- **领域词**：**契约** = 后端↔宿主/UI 的接口合同（如契约层、契约定版）；**方案** = 某一领域的设计决策（一般名词）；不要把"契约"当"方案"混用。
-
-### 附注
-
-票名范式 = `<阶段词>：<对象（保留原有括号说明）>`；地图/总图不加阶段词。
-
-## 后端感知架构词条（2026-08-28 修订 · #219/#245 定版，承接 #217；2026-10-14 增补“能力上限”· #1051；2026-10-23 能力上限改 26 条 · 规格 #1439）
-
-- **操作能力（capability）**: 数据路径的能力 = **运行时调用结果**（G5：无能力表、无能力分支、调用即知；做不到返回 unsupported 桩诚实失败）。 _Avoid_: 能力清单、能力声明（数据侧）
-- **能力上限（capability ceiling）**: 契约层定义的后端可被要求的全部能力（本轮 26 条：23 条操作 + 3 条定位口）；后端对每条只能回答“我实现”或“我不支持”，不许有契约之外的对外方法；缺的操作由注册表补 `unsupported` 桩，缺的定位口按空值处理。 _Avoid_: 房内扩展、私有旁路、能力清单
-- **界面检查项（check item）**: 声明式 UI 语言的一等公民：`{check, onPass:{show,actions}, onFail:{show,actions}}`；只驱动 UI 展示与动作入口，**永不进入数据路径**。 _Avoid_: 状态提示、检测项（与"检查"混用时）
-- **检查链条（chain）**: 有序检查项序列；前步通过才进入下一步；**推进只来自重求值**（重新问谓词、探测真实状态），不来自动作回调。 _Avoid_: 引导流程、状态机（实现细节化时）
-- **动作词汇表（action vocabulary）**: 跨层协议——形状定义与类型枚举在契约层（shared），执行器 dispatcher 在 UI 层（client kernel），动作声明在后端模块/通用目录；v1 类型：inject-prompt / open-url / rpc / form / refresh。 _Avoid_: 按钮行为、操作集合
-- **动作不承诺修复，检查才判定状态**: 检查链的推进原则；open-url 等为信息性动作，不宣称修复、不推进链。
-- **开门链 / 仓库就绪链 / 环境链**: 编排链的三段式定版——开门链（选后端 → 已初始化，通用）通过后，仓库就绪链（backend-scoped preflight，各后端按需挂载）与环境链（通用+后端分区并行）并行求值、互不阻塞；空链以 mounted 区分未挂载。
-- **通用脱离后端**: 通用检查的真值不随 backendId 改变，可在 OS 平台抽象层直接检测（如技能探测），准入通用目录的必要条件。
-- **后端物理隔离**: 不同后端的检测链按后端独立，Markdown 卷子上不出现 GitHub 行，跨后端误导靠行不存在根治，无需 NA 标记。
-- **房间（room）**: 内置后端各自的目录（今天三座：`src/tracker/rooms/github/`、`gitlab/`、`markdown/`），是后端物理隔离的物理落点；正文沿用 #313 的「房间」比喻，规范术语以「后端物理隔离」为准。
-- **房间纪律（room discipline）**: 两条纪律——禁止跨房引用与一次会话只改一房，分别由 verify-dependency-rules.ts（判据是依赖图，规则写在根目录 .dependency-cruiser.ts）与 verify-no-mixed-session 门禁在 CI 硬卡。房间能引哪些房外目录，唯一真源是 `tests/tracker-room-imports.json`（每条带理由与票号），房间说明 `src/tracker/rooms/README.md` 只指路；来龙去脉见 `docs/adr/20261014-tracker-room-boundary.md`。
-- **共享内核（kernel）**: `src/tracker/kernel/` 里的那几份判定件——房间与宿主都要用、又不属于「类型与数据」的那一类（判档入口 `preflight.ts`、判档规则表 `error-rules.ts`、票身份 `identity-keys.ts`、工作区属主 `workspace-ownership.ts`）。房间可以引它（登记表里一条目录级放行），宿主也可以引；deck 不许直接引它，要后端能力先加到契约层的公开面上。与契约层的分界是仓里原有的那条：契约层只有类型与数据、没有运行时实现。见 `src/tracker/kernel/README.md` 与 `docs/adr/20261014-tracker-room-boundary.md`。 _Avoid_: 把它叫成「公共层」「工具目录」「共享代码随便放」
-- **N 动态**: 检查总数不再固定，`N = 通用链题数 + 当前后端链题数` 动态求和，分开计数、分开渲染。
-- **五方职责**: UI 层（只消费契约产物渲染）/ 契约层（定义接口与求值）/ 后端层（声明检查目录与动作、实现操作）/ 平台抽象层（封装 OS 能力原语）/ OS 底座层（各 OS 具体实现）。
-## 内部 UI 端口词条（2026-08-27 定版 · #221）
-
-- **内部端口（internal seat）**: 面板内 5 个私有渲染落点的单体（banner-seat / dock-seat / statusbar-seat / modal-seat / toast-seat）。 _Avoid_: 内部槽位、内部座位（与官方槽位混用时）
-- **私有总线（internal bus）**: 5 个内部端口的集合；UI 层内核的私有渲染总线，非壳层能力，非契约层。 _Avoid_: 总线能力、槽位总线
-- **父槽复用**: 内部端口不自创顶级 root 子，必须寄生于已占据的官方父槽 `children` 中声明，随父坍缩自动回收。已占据 3 父槽：`shell.overlay` 托 banner/modal/toast、`details` 托 dock、`conversation.input.dock` 托 statusbar。
-- **治理同构**: 内部端口的声明/排序/注入/回收语义与官方 slots 完全同构；排序为 `priority→order` 双层（`lowest wins`，层表 `SYSTEM_SHADOW:-1/DEFAULT:0/FALLBACK:1`，插件段 `[100,1000]`，内部定死 `10/20/30`）。
-- **scope 三态**: 内部端口的作用域三态 —— `root`（常驻，随插件生命周期；内容可随活跃会话派生，如 banner）/ `session`（随会话）/ `session-maybe`（有会话按会话、无会话占位不崩，如 dock）。
-- **后端可插拔（UI 侧）**: 本插件内多后端经 `checkCatalog` 新增后端目录项，UI 自动经 5 端口呈现；不开放跨插件直接注册端口（扩展服务句柄仅为本插件内后端模块间的 `registerTab` 样板，非跨插件公共 API；未来对外需另起 ADR + allowlist）。
-
-## 向导词条（2026-08-28 定版 · #308 wizard 扩展，承接 #221）
-
-- **向导（wizard）**: `modal-seat` 内按序完成的多步表单旅程，单弹窗内分页呈现；每步为 `FieldSchema[]` 的字段集合，按步校验（`required/pattern`），最后一步才合并全步值一次性提交（`submitAction`），可返回改前一步、取消即丢弃整向导（不落盘）。 _Avoid_: 多弹窗队列（向导占队列 1 位，不拆步排队）、分步提交（向导内不按步发 `rpc`）
-- **步骤（wizard step）**: 向导的一页，形状 `{title?, schema}`，`title` 无则回落“步骤 n/总数”；步进条以数字圆点 + 标题呈现 `1 选目录 · 2 填信息 · 3 确认`，当前步高亮、已完成打 `✓`。 _Avoid_: 把步骤当独立 `form` 动作
-- **顺序队列（wizard queue）**: `modal-seat` 的单例排队语义扩展——`form` 与 `wizard` 同在 `st._formModalQueue` 中各占 1 位，当前弹窗 `open` 时新来者排队，关闭后 80ms 自动弹出下一个；向导的每步不占位，保证原子性。 _Avoid_: 层级叠加（向导内不盖新弹窗）
-
-## 会话命名治理词条（2026-08-27 定版 · #260/#261）
-
-- **占位（placeholder）**: 插件自建会话创建瞬间的初始标题态 `[New] 新建需求 / [New] 新建 Bug / New Requirement / New Bug`，等待首次有意义改名。 _Avoid_: 草稿（与草稿档混用时）
-- **草稿档（[草稿]/[Draft]）**: 未获得 issue 编号的会话的有意义命名档位 `[草稿] <语义段>`；编号到手前的一等公民名字，语义段来源按可用性降级（命名守护线索 → 裸档）。
-- **编号档（[#n]）**: 拿到 issue 编号后的命名档位 `[#n] <issue 标题>`（承接 #204/#205 格式契约）；编号是可点击定位 issue 的锚，任何改名不得破坏该前缀。
-- **精修档（P3 位）**: 条件成熟时由 LLM 依对话内容对语义段的一次性升级；契约预留位，实现分期（二期立票）。
-- **建号感知（issue-number sensing）**: 发现某会话已完成建号这一事件的机制统称；历史实现（#211 host watcher）在 e98f636 重构中整块丢失且无测试守卫，恢复义务在 #263 并强制附防回归断言。
-- **手改锁定（rename lock）**: 用户手动改名后机器永不覆盖的保护；判据 = 值比对（当前标题 ≠ 机器最后写入值 ⇒ 判手改 ⇒ 该会话永久免机器改名）。 _Avoid_: 引用 userRenamed 死代码语义。
-- **命名守护（naming guardian）**: 分工形态总称——host 常驻任务持跟踪状态（落盘缓存目录、重启可续），Web 渲染钩子发现待办并代执行 face.rename。
-- **回填（backfill）**: 对存量占位会话的一次性批量改名迁移；2026-08-27 经 #261 裁决**移出范围**（存量保持现状），重访既定口径见该票决议。 _Avoid_: 把「回填」当作现行能力描述。
-
-## 面板共享语义词条（2026-08-28 定版 · #301；2026-10-30 修订「面板快照」并增补数据层词条 · 本轮讨论 Q1–Q9；2026-10-31 补「通知中心」「通知事件」与「按需细节」淘汰例外 · #1683；2026-11-05 按需细节改为不设上限、不淘汰 · #1922）
-
-- **工作区键（workspace key）**: 判定"两个会话是否处于同一文件夹"的唯一规整键；客户端与宿主共用同一套字符串归一规则（Windows 折叠大小写并统一斜杠，Mac/Linux 保留大小写只做斜杠归一），客户端只做字符串整理，宿主可再经文件系统解析相对路径。 _Avoid_: cwd 原始串、各层各写一份的归一函数
-- **工作区共享数据（workspace-shared data）**: 来自宿主、按工作区键求值、同一工作区所有会话共用一份的面板数据——面板快照、后端选择集、仓库信息、后端模块与链快照。 _Avoid_: 面板数据（与数据泛称混用时）
-- **会话私有状态（session-private state）**: 只在单个会话内有效的阅读/交互/草稿行为态——面板内当前打开的地图或 issue、标签筛选与展开、issue 详情与评论草稿、面板几何等；不参与跨会话共享。 _Avoid_: 会话状态（与工作区共享数据混用时）
-- **面板快照（panel snapshot）**：**旧词，2026-11-05 起退场**（#1885）。它当年指「宿主里那一份唯一的面板数据」；库成为唯一真相之后，那份对象已经不存在了——存东西的地方说「快照库」，查出来的结果说「投影」，界面手上的那份说「视图状态」。只在读旧文档时还会遇到这个说法。 _Avoid_: 拿它指现在的东西（会让人以为还存在第二份对象）
-- **链快照（chain snapshot）**: 工作区共享数据之一：环境检查链的结果（全链 + 后端链），按"工作区键 + 后端 id"共享。 _Avoid_: 链数据、检查结果（与面板快照混用时）
-- **后端选择集（backend selection）**: 工作区共享数据之一：该工作区绑定哪个后端（GitHub / GitLab / Markdown / Other）；跨会话下次水合生效，不即时跳变。 _Avoid_: selection（与列表勾选混用时）
-- **完整来源（complete source）**: 一次把所问范围完整答全的取数结果或写操作回执（例如列表查询真正跑到尾页、REST 完整翻完、写操作确认成功）。只有完整来源能证明「某条数据不存在」或清空一个字段；被截断、降级、部分失败的来源只能补空缺，不能删改。 _Avoid_: 可信来源（降级来源的行级字段本身可信，只是不完整）、全量请求
-- **未知 ≠ 空（unknown is not empty）**: 面板快照的合并口径：来源没有表达某个字段（不知道）与来源明确表达该字段为空（已知为空）是两件事；前者保留上次已知，后者才清空。 _Avoid_: 缺省为空、拿不到就当没有
-- **按需细节（on-demand detail）**: 只有人打开某张票或某张地图时才需要取的大块内容——票正文、评论、PR 评审、地图子票清单；取到即写进快照库，刷新不主动重拉，人再打开或过期时再补。2026-11-05 起不设上限、不淘汰（#1922）：不设条数上限，也不设字节上限，更不按最近使用丢内容。原因是本地快照库按行存、按需查，容量淘汰与「库是唯一真相」冲突——维护者的原话：「我们就不限制上限了，也不要淘汰了。数据库里面存的数据，除非源头被删除，否则不会再消失。」库里已有的内容不会因为太久没打开而消失；不淘汰也要看得见增长，环境检查页的诊断读数显示库文件字节数与票行数。行、父子边、依赖边与子票计数照旧不受任何清理影响。 _Avoid_: 全量详情、首屏数据、把「未取」画成「确认没有」
-- **通知中心（notification center）**: 面板里集中展示降级与失败事件的地方。事件先写进事件库再呈现；事件库只做历史，当前是否处于降级永远从面板快照的降级标记与时刻重新判断。事件类型有四种：降级开始、降级恢复、刷新失败、写失败；事件身份是「仓库、类型、开始时刻」三元组，恢复只与「尚未闭合、开始时刻最晚」的那一条配对，同一原因窗口内去重。未读、历史是否展开、是否清除已读都按会话各存一份，不进事件库。呈现入口是面板头部的未读徽标，历史展开成不占列表高度的覆盖层，toast 只回放最新一条。 _Avoid_: 通知列表（暗示可以另存一份事件）、消息中心
-- **通知事件（notification event）**: 通知中心里的一条历史记录，只记「发生过什么」，不表示「现在是否还降级」；后者读的是面板快照的降级标记与时刻。 _Avoid_: 状态事件（把历史记录当成当前状态）
-- **上次已知（last known）**: 某个字段最后一次由完整来源给出的值，连同来源与时间一起记在面板快照里；之后来源不表达该字段时，界面继续显示上次已知。 _Avoid_: 旧数据、缓存值（与新鲜度判断混用时）
-- **读渠道（read channel）**: 后端读数据的物理通道，今天两条：GraphQL 与 REST；两份协议的文档与请求形状各自住在 GitHub 房间的 channels/graphql/ 与 channels/rest/，读操作只经统一的路由层选渠道。 _Avoid_: 主备通道（暗示固定的强弱关系，实际按操作与完整度选）、双通道（与双写混用时）
-- **读结果（read result）**: 一次读操作的返回值，除数据外必带来源渠道、完整度（完整 / 截断 / 降级 / 部分失败）、缺失字段与耗时；下游靠这些标记决定能否删除或清空已知数据。 _Avoid_: 裸数据（丢掉来源与完整度）、fallback 标记（只表达有没有降级，不表达完整度）
-## 本地优先快照库词条（2026-11-05 定版 · 规格 #1885，承接 #1861）
-
-- **快照库（snapshot library）**: 本机那个 SQLite 文件，工作区数据的唯一真相：工单的行、关系边、按需细节、墓碑、版本号与同步簿记都在里面。所有后端读结果与写回执先写进它，界面看到的一切由它投影出来。 _Avoid_: 缓存文件、本地缓存（暗示可以随时丢弃或另存一份）
-- **投影（projection）**: 从快照库查一次、按领域规则拼成界面要的形状的那份结果。纯函数：同样的行与同样的版本一定得到同样的结果；不缓存、不问后端、不读时钟。 _Avoid_: 快照对象（与「面板快照」混用时）、视图数据（与视图私有的阅读态混用时）
-- **视图状态（view state）**: 界面手上那份投影，加上会话私有的阅读态（当前打开哪张票、筛选、草稿）。它可以随时被丢弃并从快照库重建，不是真相。 _Avoid_: 客户端缓存、第二份快照
-- **变化集（change set）**: 从一个版本到另一个版本之间，被写过与被判为不存在的那几行。界面拿它做增量更新，不必重取整棵。 _Avoid_: 增量包（与网络分页混用时）、diff（与文本差异混用时）
-- **版本（library version）**: 快照库的单调递增整数，每次提交加一；它是「新旧」的唯一判据——回包带它，界面比它，任何按时间判断新鲜度的做法都作废。库被重建时版本从头开始，界面据此整份重取。 _Avoid_: 时间戳（把时钟当判据）、内容散列（那是旧做法）
-- **墓碑（tombstone）**: 一条「某张票在某个版本被确认不存在」的记录。行数据不物理删；墓碑只表达「这一版里它不在集合里」，票重新出现时由普通写入清掉。 _Avoid_: 删除标记（暗示字段级的「确认没有」也是它）
-- **同步簿记（sync bookkeeping）**: 同步水印、世代号、待办三样，住在快照库里，与数据同生共死。 _Avoid_: 进程状态、内存簿记（暗示重启会丢）
-- **读快照（snapshot read）**: 界面或读路径从快照库取得的、属于某一个版本的一致视图；读不阻塞写、写不阻塞读，读本身不持锁。 _Avoid_: 读锁（读没有锁）、只读（那是连接模式，不是读的行为）
-- **写事务锁（write transaction lock）**: 一次写事务提交期间，写者之间排队用的那把短锁；提交或回滚即释放，空闲进程不持有。 _Avoid_: 写锁（含糊，容易与旧的进程级写权限混）、写者租约
-- **写回执（write receipt）**: 写操作成功后后端交回来的那张票，按组写进快照库的权威结果；界面在它提交之后才更新。 _Avoid_: 写缓存、乐观更新
-- **进程级写权限（process-level write permission，2026-11-06 删除）**: 旧机制：一个进程打开快照库时长期独占写权，别的进程只能只读；它把并发读退化成按进程的独占，已被读写锁语义取代。 _Avoid_: 写者租约、写锁
-- **写模型（write model）**: 这个窗口能不能写、按什么方式写。本地磁盘是多写者：所有窗口都能写，写者按 SQLite 写事务锁排队；网络盘 / UNC 是单写者回退：抢不到写权就只读。设置页能力诊断按这个口径说一句话。 _Avoid_: 写锁模式、只读模式（会把内部锁与用户看到的状态混在一起）
-- **本机库落后（local library behind）**: 写回执没能落进本机快照库时的一种用户级状态：后端已经改了，本机库还没跟上。列表状态行只说「本机数据落后，正在重新同步」，任何一次写进库的成功或重同步成功后清除；内部原因只在设置页与日志里。 _Avoid_: 只读、写失败（它们说的是别的事）
-- **整库重建锁（rebuild lock）**: 整库重建期间放在库文件旁边的短时互斥锁；原子获取、带 owner / 过期时间 / fencing token，只在重建期间持有，完成或失败立刻释放。 _Avoid_: 写锁、写者租约（那是旧的进程级写权限）
-
-## 新建会话三要素与门禁词条（2026-09-01 定版 · #362）
-
-- **幽灵空壳（ghost blank）**: `blank===true` 且落盘预设为当前不可解析标识（现为 `code`）的历史空白会话。 _Avoid_: 空白会话（与泛指空白混用时）
-- **门禁（gate）**: `tests/verify-*.js` 中对不变式的自动判定脚本，`npm run verify` 非 0 即阻塞发布。 _Avoid_: 人工验收清单（与门禁混用时）
-- **新建必为 PTC（new-session-must-be-ptc）**: 任何入口新建会话，其落盘预设必须为 `ptc` 的不变式；可判定证明为三判据合取（入参显式 `agentPreset:'ptc'` + 落盘可观测为 `ptc` 且非 `broken` + 同次创建内原子化）。 _Avoid_: 默认预设（依赖外部可变状态时）
-
-## 复用闸门词条（2026-09-01 定版 · #361，承接 #362）
-
-- **空白会话（blank session）**: 尚未产生 `turn/start` 事件的持久会话，以会话列表快照的 `blank` 标志为准。 _Avoid_: 占位标题（以标题文字判空时）
-- **复用闸门（reuse gate）**: 创建管线中决定“复用空白 vs 必须新建”的同步谓词，两级复用（当前会话空白与全量最久者）共用同一判据。 _Avoid_: 复用链（与闸门判据本身混用时）
-- **预设健康（preset health）**: 投影预设是否可解析为现存四预设之一；首版仅以字面 `code` 判不健康，二期扩展 `broken`。 _Avoid_: 字面比对（与健康语义混用时）
-- **空工作区隔离（empty-cwd isolation）**: 空 `cwd` 的空白一律不可被任何目标复用，空者永不跨区污染的隔离语义。 _Avoid_: 空即匹配（与隔离语义混用时）
-
-## 日志体系词条（2026-09-05 定版 · #332，承接 #329/#330/#331）
+## Engineering stage words (ticket-name pattern)
+
+- **Discussion（讨论）**: the stage where a plan is argued out (options + recommendation + edge cases, before HITL signs off); ticket name `Discussion: X`（source `讨论：X`）.
+- **settled（定版）**: a plan or contract has been signed off by the maintainer and its conclusion is fixed; ticket name `<domain>: settled`（source `<领域>：定版`）, with `contract settled` for contract-layer tickets and `plan settled` for ordinary plans（source `契约定版` and `方案定版`）. The word "final draft"（定稿）is **retired**（it means a final text, not a settled decision）.
+- **landing（落地）**: carrying out a settled plan by writing the code or producing the artefacts; ticket name `Landing: X` or `Implementation: X`（source `落地：X` and `实现：X`）.
+- **acceptance（验收）**: the contract tests, gates and criteria pass; ticket name `Acceptance: X`（source `验收：X`）.
+- **combination（组合）**: one ticket covering several stages → `<domain>: settled and landing`（source `<领域>：定版与落地`）; a pure discussion with no sign-off → `Discussion: X`（source `讨论：X`）.
+- **Domain words（领域词）**: **contract**（契约） = the interface agreement between the backend and the host/UI (such as contract layer, contract settled); **plan**（方案） = a design decision in one domain (an ordinary noun); do not mix "contract" and "plan" up.
+
+### Notes
+
+Ticket-name pattern = `<stage word>: <object>`（source `<阶段词>：<对象>`）, where the object keeps whatever parenthetical note it already carried（保留原有括号说明）; maps and overview maps carry no stage word.
+
+## Backend-aware architecture vocabulary (revised 2026-08-28 · settled by #219/#245, following #217; 2026-10-14 added capability ceiling · #1051; 2026-10-23 capability ceiling changed to 26 entries · spec #1439)
+
+- **capability（操作能力）**: the ability of a data path = **the result of a runtime call**（G5: no capability table, no capability branch, you know by calling; when it cannot be done it returns an `unsupported` stub and fails honestly）. _Avoid_: capability list（能力清单）, capability declaration（能力声明）(data side)
+- **capability ceiling（能力上限）**: all the capabilities the contract layer defines that a backend may be asked for (26 entries this round: 23 operations + 3 locating points); to each one a backend may answer only "I implement it" or "I do not support it", and no outward method outside the contract is allowed; a missing operation is filled in by the registry with an `unsupported` stub, and a missing locating point is treated as an empty value. _Avoid_: in-room extension（房内扩展）, private bypass（私有旁路）, capability list（能力清单）
+- **check item（界面检查项）**: a first-class citizen of the declarative UI language: `{check, onPass:{show,actions}, onFail:{show,actions}}`; it drives only what the UI shows and which actions are offered, and **never enters the data path**. _Avoid_: status hint（状态提示）, check entry（检测项）(when mixed up with "check")
+- **chain（检查链条）**: an ordered sequence of check items; only when the previous step passes do you enter the next one; **advancing comes only from re-evaluation**（asking the predicate again, probing the real state）, never from an action callback. _Avoid_: guided flow（引导流程）, state machine（状态机）(when it turns into an implementation detail)
+- **action vocabulary（动作词汇表）**: a cross-layer protocol — the shape definitions and type enum live in the contract layer (shared), the executor dispatcher lives in the UI layer (client kernel), and the action declarations live in backend modules and the common directory; v1 types: inject-prompt / open-url / rpc / form / refresh. _Avoid_: button behaviour（按钮行为）, operation set（操作集合）
+- **Actions do not promise a fix, only checks decide state（动作不承诺修复，检查才判定状态）**: the advancing principle of the check chain; open-url and the like are informational actions, they do not claim a fix and do not advance the chain.
+- **opening chain / repo-ready chain / environment chain（开门链 / 仓库就绪链 / 环境链）**: the three-part settled shape of the orchestration chain — once the opening chain (pick the backend → initialised, common) passes, the repo-ready chain (backend-scoped preflight, mounted by each backend as needed) and the environment chain (common and backend sections evaluated in parallel) are evaluated in parallel and do not block each other; an empty chain uses `mounted` to tell it apart from an unmounted one.
+- **common detaches from backend（通用脱离后端）**: the truth of a common check does not change with backendId and can be detected directly at the OS platform abstraction layer (such as skill probing); it is the necessary condition for entering the common directory.
+- **backend physical isolation（后端物理隔离）**: the detection chains of different backends are independent per backend; no GitHub row appears on the Markdown sheet, cross-backend misleading is cured at the root by the row simply not existing, and no NA marker is needed.
+- **room（房间）**: the directory each built-in backend owns (three today: `src/tracker/rooms/github/`, `gitlab/`, `markdown/`); it is the physical landing point of backend physical isolation; the body follows the "room"（房间）metaphor from #313, and the canonical term is backend physical isolation（后端物理隔离）.
+- **room discipline（房间纪律）**: two rules — no cross-room imports, and one session changes only one room — enforced hard in CI by verify-dependency-rules.ts (the criterion is the dependency graph, the rules are written in .dependency-cruiser.ts at the repo root) and by the verify-no-mixed-session gate respectively. Which directories outside a room it may import has exactly one source of truth, `tests/tracker-room-imports.json` (every entry carries a reason and a ticket number); the room notes in `src/tracker/rooms/README.md` only point the way; the background is in `docs/adr/20261014-tracker-room-boundary.md`.
+- **kernel（共享内核）**: those few judging pieces in `src/tracker/kernel/` — the kind both rooms and the host need, which are not "types and data" (the tier-check entry `preflight.ts`, the tier-rule table `error-rules.ts`, ticket identity `identity-keys.ts`, workspace ownership `workspace-ownership.ts`). A room may import it (one directory-level allowance in the register) and the host may import it too; deck may not import it directly — to get a backend capability, first add it to the public surface of the contract layer. The boundary with the contract layer is the one the repo already had: the contract layer holds only types and data, with no runtime implementation. See `src/tracker/kernel/README.md` and `docs/adr/20261014-tracker-room-boundary.md`. _Avoid_: calling it "public layer"（公共层）, "tool directory"（工具目录）, or "shared code, put it anywhere"（共享代码随便放）
+- **dynamic N（N 动态）**: the total number of checks is no longer fixed; `N = common-chain item count + current backend-chain item count`（source `N = 通用链题数 + 当前后端链题数`）is summed dynamically, counted separately and rendered separately.
+- **five-party responsibilities（五方职责）**: UI layer (only consumes contract products to render) / contract layer (defines interfaces and evaluation) / backend layer (declares the check catalogue and actions, implements operations) / platform abstraction layer (wraps OS capability primitives) / OS base layer (the concrete implementation per OS).
+## Internal UI seat vocabulary (settled 2026-08-27 · #221)
+
+- **internal seat（内部端口）**: the single unit of the panel’s 5 private render landing points (banner-seat / dock-seat / statusbar-seat / modal-seat / toast-seat). _Avoid_: internal slot（内部槽位）, internal seating（内部座位）(when mixed up with official slots)
+- **internal bus（私有总线）**: the set of the 5 internal seats; the private render bus of the UI-layer kernel, not a shell capability and not the contract layer. _Avoid_: bus capability（总线能力）, slot bus（槽位总线）
+- **parent-slot reuse（父槽复用）**: an internal seat does not invent a top-level root child of its own; it must be declared parasitically inside the `children` of an official parent slot it has taken, and it is reclaimed automatically when the parent collapses. Three parent slots are taken: `shell.overlay` carries banner/modal/toast, `details` carries dock, `conversation.input.dock` carries statusbar.
+- **governance isomorphism（治理同构）**: the declare / order / inject / reclaim semantics of internal seats are fully isomorphic to official slots; ordering is the two-layer `priority→order` (`lowest wins`, layer table `SYSTEM_SHADOW:-1/DEFAULT:0/FALLBACK:1`, plugin band `[100,1000]`, fixed inside at `10/20/30`).
+- **scope tri-state（scope 三态）**: the three scope states of an internal seat — `root` (always resident, bound to the plugin lifecycle; its content may be derived from the active session, like banner) / `session` (follows the session) / `session-maybe` (follows the session when there is one, holds a placeholder without crashing when there is none, like dock).
+- **pluggable backend（后端可插拔，UI 侧）**: inside this plugin several backends are added as catalogue entries through `checkCatalog`, and the UI presents them automatically through the 5 seats; registering a seat across plugins is not opened up (the extension service handle is only the `registerTab` template between backend modules inside this plugin, not a cross-plugin public API; going public later needs a fresh ADR + allowlist).
+
+## Wizard vocabulary (settled 2026-08-28 · #308 wizard extension, following #221)
+
+- **wizard（向导）**: a multi-step form journey completed in order inside `modal-seat`, paged within one dialog; each step is a field set of `FieldSchema[]`, validated per step (`required/pattern`), and only the last step merges the values of all steps and submits them in one go (`submitAction`); you can go back and change an earlier step, and cancelling throws the whole wizard away (nothing is written to disk). _Avoid_: multi-dialog queue（多弹窗队列）(a wizard takes 1 queue position and its steps are not queued), per-step submit（分步提交）(a wizard does not send `rpc` per step)
+- **wizard step（步骤）**: one page of a wizard, shape `{title?, schema}`; when `title` is missing it falls back to "step n of total"; the stepper shows numbered dots plus titles as `1 pick directory · 2 fill in details · 3 confirm`（source `1 选目录 · 2 填信息 · 3 确认`）, with the current step highlighted and finished ones ticked `✓`. _Avoid_: treating a step as a standalone `form` action（把步骤当独立 `form` 动作）
+- **wizard queue（顺序队列）**: an extension of the singleton queue semantics of `modal-seat` — `form` and `wizard` each take 1 position in `st._formModalQueue`, a newcomer queues while the current dialog is `open`, and the next one pops up automatically 80ms after a close; a wizard’s steps take no position, which keeps it atomic. _Avoid_: layering（层级叠加）(no new dialog is stacked inside a wizard)
+
+## Session naming governance vocabulary (settled 2026-08-27 · #260/#261)
+
+- **placeholder（占位）**: the initial title state at the instant a session created by the plugin comes into being, `[New] New Requirement / [New] New Bug / New Requirement / New Bug`（the shipped labels read `[New] 新建需求 / [New] 新建 Bug`）, waiting for its first meaningful rename. _Avoid_: draft（草稿）(when mixed up with the draft tier)
+- **draft tier（草稿档，`[草稿]`/`[Draft]`）**: the meaningful naming tier for a session that has not got an issue number yet, `[Draft] <semantic segment>`（source `[草稿] <语义段>`）; it is the first-class name before the number arrives, and the source of the semantic segment degrades by availability (naming guardian hint → bare tier).
+- **number tier（编号档，`[#n]`）**: the naming tier after the issue number has been obtained, `[#n] <issue title>`（following the #204/#205 format contract）; the number is the clickable anchor that locates the issue, and no rename may break that prefix.
+- **polish tier（精修档，P3 位）**: a one-off upgrade of the semantic segment by the LLM from the conversation content once the conditions are mature; a place reserved by the contract, implemented in phases (a ticket goes up in phase two).
+- **issue-number sensing（建号感知）**: the umbrella name for the mechanism that notices the event of a session having completed issue creation; the historical implementation (#211 host watcher) was lost wholesale in the e98f636 refactor and had no test guarding it, the duty to restore it sits with #263, and anti-regression assertions are mandatory there.
+- **rename lock（手改锁定）**: the protection that keeps the machine from ever overwriting a rename the user made by hand; the criterion = comparing values (current title ≠ the last value the machine wrote ⇒ judged hand-changed ⇒ that session is permanently exempt from machine renames). _Avoid_: leaning on the dead-code semantics of userRenamed.
+- **naming guardian（命名守护）**: the umbrella name for the division of labour — a resident host task holds the tracking state (cached to disk in a directory, resumable after a restart), and a web render hook finds the pending work and performs face.rename on its behalf.
+- **backfill（回填）**: a one-off bulk rename migration for sessions that are still placeholders; on 2026-08-27 #261 ruled it **out of scope**（existing ones stay as they are）, and a revisit would follow the decision recorded on that ticket. _Avoid_: describing "backfill"（回填）as a current capability.
+
+## Panel shared-semantics vocabulary (settled 2026-08-28 · #301; 2026-10-30 revised panel snapshot and added data-layer entries · this round’s discussion Q1–Q9; 2026-10-31 added notification center, notification event and the eviction exception for on-demand detail · #1683; 2026-11-05 on-demand detail changed to no upper bound and no eviction · #1922)
+
+- **workspace key（工作区键）**: the single normalised key that decides whether two sessions are in the same folder; the client and the host share one set of string normalisation rules (Windows folds case and unifies slashes, Mac/Linux keeps case and only normalises slashes), the client only tidies the string, and the host may further resolve relative paths through the filesystem. _Avoid_: the raw `cwd` string（cwd 原始串）, a normalisation function written once per layer（各层各写一份的归一函数）
+- **workspace-shared data（工作区共享数据）**: panel data that comes from the host, is evaluated by workspace key, and is shared by every session in one workspace — panel snapshot, backend selection, repository info, backend modules and chain snapshot. _Avoid_: panel data（面板数据）(when mixed up with the general word for data)
+- **session-private state（会话私有状态）**: reading, interaction and draft behaviour state that is valid only inside a single session — the map or issue currently open in the panel, label filters and expansion, issue detail and comment drafts, panel geometry and so on; it takes no part in cross-session sharing. _Avoid_: session state（会话状态）(when mixed up with workspace-shared data)
+- **panel snapshot（面板快照）**: **an old word, retired from 2026-11-05**（#1885）. It used to mean "that one panel-data object in the host"; once the library became the single source of truth that object no longer existed — the place things are stored is called the snapshot library, the result of a query is called the projection, and the copy the UI holds is called view state. You only meet this word when reading old documents. _Avoid_: using it for today’s things（拿它指现在的东西）(it makes people think a second object still exists)
+- **chain snapshot（链快照）**: one of the workspace-shared data: the result of the environment check chain (full chain + backend chain), shared by "workspace key + backend id". _Avoid_: chain data（链数据）, check result（检查结果）(when mixed up with panel snapshot)
+- **backend selection（后端选择集）**: one of the workspace-shared data: which backend this workspace is bound to (GitHub / GitLab / Markdown / Other); it takes effect at the next hydration across sessions and does not jump instantly. _Avoid_: selection on its own（与列表勾选混用时）(it collides with ticking items in a list)
+- **complete source（完整来源）**: a fetch result or write receipt that answers the whole requested range completely (for example a list query that really reaches the last page, a REST walk that finishes every page, a write that confirms success). Only a complete source can prove that a piece of data does not exist or clear a field; a source that was truncated, degraded or partly failed can only fill gaps, and cannot delete or change. _Avoid_: trustworthy source（可信来源）(the row-level fields of a degraded source are themselves trustworthy, it is just incomplete), full request（全量请求）
+- **unknown is not empty（未知 ≠ 空）**: the merge rule of the panel snapshot: a source that did not express a field (unknown) and a source that explicitly expressed the field as empty (known empty) are two different things; the former keeps the last known value, only the latter clears it. _Avoid_: defaulting to empty（缺省为空）, treating what you cannot fetch as absent（拿不到就当没有）
+- **on-demand detail（按需细节）**: large content that is only needed when a person opens a particular ticket or a particular map — ticket body, comments, PR reviews, the map’s child-ticket list; once fetched it is written into the snapshot library, a refresh does not re-fetch it on its own, and it is topped up when the person opens it again or when it expires. From 2026-11-05 there is no upper bound and no eviction (#1922): no cap on the number of entries, no cap on bytes, and content is not dropped for not being used recently. The reason is that the local snapshot library stores by row and queries on demand, so capacity eviction conflicts with "the library is the single source of truth" — the maintainer’s own words: "We will not set an upper limit, and we will not evict either. Data stored in the database will not disappear again unless the source deletes it." Content already in the library does not vanish because it was not opened for a long time; with no eviction the growth still has to be visible, so the diagnostic readout on the environment check page shows the library file’s byte count and the ticket row count. Rows, parent-child edges, dependency edges and child-ticket counts are as before and are untouched by any cleanup. _Avoid_: full detail（全量详情）, first-screen data（首屏数据）, drawing "not fetched" as "confirmed absent"（把「未取」画成「确认没有」）
+- **notification center（通知中心）**: the place in the panel that shows degraded and failed events together. An event is written into the event library first and presented after that; the event library holds history only, and whether something is degraded right now is always judged afresh from the degraded flag and timestamp in the panel snapshot. There are four event types: degradation started, degradation recovered, refresh failed, write failed; an event’s identity is the triple (repository, type, start time), a recovery is paired only with the entry that is not yet closed and has the latest start time, and duplicates inside one cause window are collapsed. Unread state, whether history is expanded and whether read events were cleared are each stored per session and do not go into the event library. The entry point is the unread badge in the panel header, history expands into an overlay that takes no height from the list, and a toast replays only the newest one. _Avoid_: notification list（通知列表）(it suggests events can be stored in a second place), message center（消息中心）
+- **notification event（通知事件）**: one history record in the notification center; it records only what happened and does not say whether something is still degraded now — that is read from the degraded flag and timestamp in the panel snapshot. _Avoid_: state event（状态事件）(treating a history record as the current state)
+- **last known（上次已知）**: the value a field was last given by a complete source, recorded in the panel snapshot together with its source and time; when a later source does not express that field, the UI keeps showing the last known value. _Avoid_: old data（旧数据）, cached value（缓存值）(when mixed up with judging freshness)
+- **read channel（读渠道）**: the physical channel a backend reads data through, two today: GraphQL and REST; each protocol’s documents and request shapes live in the GitHub room’s channels/graphql/ and channels/rest/, and read operations pick a channel only through the unified routing layer. _Avoid_: primary and standby channel（主备通道）(it suggests a fixed stronger/weaker relation, whereas the channel is actually chosen by operation and completeness), dual channel（双通道）(when mixed up with dual writes)
+- **read result（读结果）**: the return value of one read operation; besides the data it always carries the source channel, completeness (complete / truncated / degraded / partly failed), missing fields and elapsed time; downstream uses these marks to decide whether it may delete or clear known data. _Avoid_: raw data（裸数据）(source and completeness thrown away), fallback flag（fallback 标记）(it expresses only whether there is degradation, not completeness)
+## Local-first snapshot library vocabulary (settled 2026-11-05 · spec #1885, following #1861)
+
+- **snapshot library（快照库）**: that SQLite file on this machine, the single source of truth for workspace data: the rows of tickets, relation edges, on-demand detail, tombstones, version number and sync bookkeeping all live inside it. Every backend read result and write receipt is written into it first, and everything the UI sees is projected out of it. _Avoid_: cache file（缓存文件）, local cache（本地缓存）(they suggest it can be dropped at any time or stored in a second place)
+- **projection（投影）**: the result of querying the snapshot library once and assembling it by the domain rules into the shape the UI wants. A pure function: the same rows and the same version always give the same result; it does not cache, does not ask the backend and does not read the clock. _Avoid_: snapshot object（快照对象）(when mixed up with panel snapshot), view data（视图数据）(when mixed up with the reading state a view keeps privately)
+- **view state（视图状态）**: the projection the UI holds, plus the session-private reading state (which ticket is open, the filters, the drafts). It can be thrown away at any time and rebuilt from the snapshot library; it is not the truth. _Avoid_: client cache（客户端缓存）, second snapshot（第二份快照）
+- **change set（变化集）**: the rows that were written and the rows that were judged non-existent between one version and another. The UI uses it for incremental updates and does not have to re-fetch the whole tree. _Avoid_: incremental package（增量包）(when mixed up with network paging), diff (when mixed up with textual difference)（与文本差异混用时）
+- **library version（版本）**: the monotonically increasing integer of the snapshot library, plus one on every commit; it is the single criterion for "new or old" — responses carry it, the UI compares it, and any practice of judging freshness by time is void. When the library is rebuilt the version starts over, and the UI re-fetches everything on that basis. _Avoid_: timestamp（时间戳）(using the clock as the criterion), content hash（内容散列）(that was the old way)
+- **tombstone（墓碑）**: a record that "a certain ticket was confirmed non-existent at a certain version". Row data is not physically deleted; a tombstone only says that in this version it is not in the set, and an ordinary write clears it when the ticket appears again. _Avoid_: deletion marker（删除标记）(it suggests that a field-level "confirmed not there" is also this)
+- **sync bookkeeping（同步簿记）**: three things — the sync watermark, the generation number and the pending list — living in the snapshot library and living and dying with the data. _Avoid_: process state（进程状态）, in-memory bookkeeping（内存簿记）(they suggest a restart loses it)
+- **snapshot read（读快照）**: a consistent view belonging to one version that the UI or a read path obtains from the snapshot library; a read does not block a write and a write does not block a read, and the read itself holds no lock. _Avoid_: read lock（读锁）(reads have no lock), read-only（只读）(that is a connection mode, not the behaviour of a read)
+- **write transaction lock（写事务锁）**: the short lock writers queue on among themselves while one write transaction is committing; it is released on commit or rollback, and an idle process does not hold it. _Avoid_: write lock（写锁）(vague, easily confused with the old process-level write permission), writer lease（写者租约）
+- **write receipt（写回执）**: the ticket the backend hands back after a write succeeds, the authoritative result written into the snapshot library group by group; the UI updates only after it is committed. _Avoid_: write cache（写缓存）, optimistic update（乐观更新）
+- **process-level write permission（进程级写权限，deleted 2026-11-06）**: an old mechanism: a process that opened the snapshot library held the write right exclusively for a long time and other processes could only read; it degraded concurrent reads into per-process exclusivity and has been replaced by the read-write lock semantics. _Avoid_: writer lease（写者租约）, write lock（写锁）
+- **write model（写模型）**: whether this window can write, and in what manner. A local disk is multi-writer: every window can write, and writers queue on the SQLite write transaction lock; a network disk / UNC is a single-writer fallback: if it cannot win the write right it goes read-only. The capability diagnostic on the settings page says it in one sentence. _Avoid_: write lock mode（写锁模式）, read-only mode（只读模式）(it mixes the internal lock with the state the user sees)
+- **local library behind（本机库落后）**: a user-level state for when a write receipt did not make it into the local snapshot library: the backend has already changed and the local library has not caught up. The list status line only says "local data is behind, resynchronising"（source 「本机数据落后，正在重新同步」）, and it is cleared by any successful write into the library or by a successful resync; the internal cause appears only on the settings page and in the logs. _Avoid_: read-only（只读）, write failed（写失败）(they talk about something else)
+- **rebuild lock（整库重建锁）**: a short-lived mutex placed beside the library file while the whole library is rebuilt; acquired atomically, carrying an owner / expiry time / fencing token, held only during the rebuild and released at once when it completes or fails. _Avoid_: write lock（写锁）, writer lease（写者租约）(that is the old process-level write permission)
+
+## Three essentials of a new session and gate vocabulary (settled 2026-09-01 · #362)
+
+- **ghost blank（幽灵空壳）**: a historical blank session whose `blank===true` and whose persisted preset is an identifier that cannot be resolved at the moment (now `code`). _Avoid_: blank session（空白会话；when the two are mixed up with a blank in the generic sense）
+- **gate（门禁）**: an automatic check script in `tests/verify-*.js` that decides an invariant; a non-zero `npm run verify` blocks the release. _Avoid_: manual acceptance checklist（人工验收清单；when it is mixed up with a gate）
+- **new-session-must-be-ptc（新建必为 PTC）**: the invariant that a session created through any entry point must have `ptc` as its persisted preset; the decidable proof is the conjunction of three criteria (the input explicitly carries `agentPreset:'ptc'` + the persisted value is observable as `ptc` and not `broken` + it is made atomic within the same creation). _Avoid_: default preset（默认预设；when it relies on external mutable state）
+
+## Reuse gate vocabulary (settled 2026-09-01 · #361, following #362)
+
+- **blank session（空白会话）**: a persisted session that has not yet produced a `turn/start` event, judged by the `blank` flag of the session-list snapshot. _Avoid_: placeholder title（占位标题；when blankness is judged from the title text）
+- **reuse gate（复用闸门）**: the synchronous predicate in the creation pipeline that decides "reuse a blank one versus must create a new one"; the two reuse levels (the current session when it is blank, and the oldest of all) share the same criterion. _Avoid_: reuse chain（复用链；when it is mixed up with the gate criterion itself）
+- **preset health（预设健康）**: whether the projected preset can be resolved to one of the four existing presets; the first version judged only the literal `code` as unhealthy, and the second phase extended it to `broken`. _Avoid_: literal comparison（字面比对；when it is mixed up with the meaning of health）
+- **empty-cwd isolation（空工作区隔离）**: the isolation rule that a blank with an empty `cwd` can never be reused by any target, and an empty one never contaminates across areas. _Avoid_: empty means match（空即匹配；when it is mixed up with the isolation rule）
+
+## Logging vocabulary (settled 2026-09-05 · #332, following #329/#330/#331)
 
-- **日志**: 插件运行时记下的运行轨迹，分错误（error）、告警（warn）、信息（info）、调试（debug）四个级别；错误与告警始终落盘，信息中研究票 #331 清单里标为首轮必补的那批（纠偏后：原表 26 去 #45 privacy.scrub，加 #9 issues.fallback、#35 settings.save、#38 statusbar.fallback、#41 chain.derive.error；#35 已于 2026-09-21 退役）轻量轨迹常驻落盘，P1 那批按需，其余信息与调试只在调试开关打开时落盘。词条里不写死条数——**现行条数以 `research/489-appendix.md` 第 1 章的对照表为准**（截至 2026-09-21：常驻 31 条、按需 26 条、自监控 5 条、总数 62 条）。 _Avoid_: 把只打到控制台的输出当已落盘、把高频调试细节当常驻轨迹
-- **调试开关**: 控制详尽日志是否产生、一台电脑只用一个值的全局整机开关，默认关闭；设置页的主开关为主，状态栏小入口只做导出与跳转，不做显眼开关；开发自用与用户现场共用同一套语义，不另设开发者模式；开关值在客户端本地存储与宿主持久化文件各存一份，启动与变更时双端同步，对账以宿主为准，重启后保持。 _Avoid_: 按工作区分开关、只放内存不持久化、双端各记各的
-- **落盘**: 由宿主统一把日志写到本地文件的动作；落点是缓存目录下面独立的日志子目录，不按工作区分桶，每个自然天一个文件；调用处只把日志行放进内存队列就返回，不等写盘，队列中所有写入排成一队由宿主一次只写一份；客户端自己不写盘，只把日志批量转发给宿主。 _Avoid_: 客户端直接写盘、单个文件一直追加、按工作区分目录
-- **导出**: 把已落盘日志交给用户转交维护者的一组面向用户的操作：一键打包日志文件、跳转到日志目录、复制日志文件绝对路径、一键清空；只做纯本地落盘加手动导出，不自动上报，不做自动轮转与自动清理。 _Avoid_: 自动上报、自动轮转清理、把导出当日志查看器
-- **脱敏**: 写盘与导出前过滤敏感信息的做法，以只记已知安全字段的白名单为主、以掩盖已知高危形状的正则掩码为辅；令牌与登录态原文永不落盘，工作区原始路径与仓库地址不记原文，标题与错误文本截断后才记。 _Avoid_: 原文记令牌、全量记路径地址、只靠正则掩码
-- **性能守卫**: 保证调试开关关闭时不为日志付出代价的写法，以调用处外层的是否开启判断为主、日志函数体内的拦截为兜底；关闭时直接返回，不分配行对象，不拼接字符串，不做对象转文本，不进队列，不排定时器，不写盘。 _Avoid_: 先拼接再判断、高频路径逐次全量记录、渲染时直接转文本
-
-## effort 维度词条（2026-09-09 定版）
-
-- **工作单元（effort）**: 本地 Markdown 后端里一个自成一套地图与票的工作单元，物理落点是 `.scratch/<effort>/` 目录；一个仓库可以有多个工作单元，每个工作单元里的票各自从 01 编号。 _Avoid_: 把 effort 当仓库（仓库是工作区本身）、把 effort 当地图（地图是 effort 里的 map.md）
-- **工作单元标识（effortId）**: 一张票属于哪个工作单元的标识，取值就是工作单元目录名；它是票的**核心字段**，永远存在，只有一个隐含工作单元的后端（GitHub/GitLab）填空串。 _Avoid_: 用编号代替（编号只在工作单元内唯一）、当成能力字段（它是身份的一部分，不是有没有这个能力）
-- **票身份（ticket identity）**: 一张票在仓库里的唯一身份，等于「仓库 + 工作单元 + 编号」三元组；编号只在工作单元内唯一，因此任何按编号找票、给票做键、记住「当前打开哪张票」的地方都必须带上工作单元标识。 _Avoid_: 只按编号认票（多个工作单元会撞成一张）、把身份编进编号字符串
-- **寻址范围（address scope）**: 读或写时指定「只在这一个工作单元里找」的范围，放在仓库引用上（省略 = 全仓库，给出 = 只针对该工作单元）。 _Avoid_: 给每个操作单独加参数（会挤掉调用上下文的参数位、破坏既有后端）
-- **诚实冲突（honest conflict）**: 没给寻址范围、而同一个编号在多个工作单元里都存在时的处理方式——读按目录顺序回落，写返回冲突错误、绝不猜目标文件。 _Avoid_: 写操作取「第一个命中」（会写错文件）、静默失败
-- **md目录签**: 本地 Markdown 后端主列表顶部按工作单元过滤的那排可点选项，一次只看一个工作单元。 _Avoid_: 工单标签（那是票上的色块）、顶部页签（那是列表、技能、检查三个页签）
-
-## 布局零抖动词条（2026-09-11 定版 · #602）
-
-- **布局零抖动（zero layout jitter）**: 一条渲染纪律——同一次同步执行里，布局只允许被重算一次。来历：浏览器的规矩是「布局被改脏后，任何一次读取尺寸都会当场重算布局」，所以写样式与读尺寸交替进行时，一次渲染会变成几千次强制重排（真机实测 4.9 秒）。 _Avoid_: 当成「快一点」的形容词（它是有明确判据的纪律）、当成万能性能优化（只对「循环次数随数据量放大」的地方才要动手）
-- **测量相与变更相（measure phase / mutate phase）**: 守这条纪律的两个相位。测量相只读尺寸、不写任何样式；变更相只写样式、不再回头读；需要先把元素摆成「可量状态」的写操作单独成一段，放在测量相之前。 _Avoid_: 在测量相里改样式（相位就白分了）、把两个相位写进同一个循环
-- **量改交替（interleaved measure-and-mutate）**: 违规写法的名字——写一次样式、读一次尺寸、再写、再读，每读一次浏览器就把布局重算一遍。表现叫**重排风暴**（几十次以内还看不出来，几千次就是几秒白等）。 _Avoid_: 用它描述现象之外的东西（它是写法不是症状）、把它与「宿主侧同步阻塞」混为一类（后者是另一类毛病）
-
-## 标签配色词条（2026-09-13 定版 · #627，承接 #610 与 #615）
-
-- **标签配色（label colors）**: 工作区一层「哪个标签显示成什么颜色」这件事的总称。颜色的最终值由后端算好交给界面：GitHub 那边是仓库标签自己的颜色，本地 Markdown 那边是工作区里那个用户可以自己手改的配色文件；界面只跟下面两条操作打交道，不自己查表算色，也不需要知道底下是哪一处。 _Avoid_: 调色盘（那指的是后端自报的默认色表 labelPalette，是一份描述数据，不是算出来的结果）
-- **列出标签（listLabels）**: tracker 契约层的一条操作，给出「这个后端能改色的全部标签」以及各自的颜色与可选描述（界面经宿主方法 `wf.listLabels` 调到它）。颜色统一写成不带井号的六位小写十六进制；空串表示这个标签还没配颜色（界面按灰显示）；描述省略表示这个后端给不了。清单里不带「有多少张票在用这个标签」这类计数。 _Avoid_: 拿面板快照里那份标签表当权威（那是从各票标签收集来的派生数据，本来就不保证拿全）
-- **批量改色（setLabelColors）**: tracker 契约层的另一条操作，接受一批「标签 → 新颜色」（只放真正变了的那些，比色前两边都转小写），**逐条记账**返回成功的那几条与没成功的那几条及各自原因（只有一部分成功是合法结果，界面据此如实展示）。保存成功后界面必须重新调一次「列出标签」拿真值刷新，不许乐观地把界面刷成用户填的那份（界面经宿主方法 `wf.setLabelColors` 调到它）。 _Avoid_: 与既有的「改某张票的标签名（setLabels）」混用（后者只动一张票的标签；名字里带 Colors 的这条才是改颜色）
-- **标签配色文件**: 本地 Markdown 工作区里那个用户可以自己手改的配色文件（位置见地图 #610：工作区的 `docs/agents/` 下，文件名 `label-colors.json`）；插件改颜色只写它，读不出来时绝不推平重写。文件形状是一个 JSON 对象，键是标签名原样（可以有冒号、空格），值是不带井号的六位十六进制颜色（空串表示这个标签还没配颜色，界面按灰显示）；想给某个标签写一句含义说明时，把值写成 `{"color": "8b5cf6", "description": "地图票"}` 也可以，读的时候两种写法都认。文件由插件在「用户为工作区选定后端」这一步或首次打开改色弹窗时放置一份（两条路都幂等：文件已存在时一个字都不改），默认内容按内置那 11 个标签预填。 _Avoid_: 旧的调色盘表格（`docs/agents/triage-labels.md`，已按干净切断的口径不再读，也不做迁移与回填）
-- **内置默认色（builtin colors）**: 本地 Markdown 后端自己声明的那份默认调色盘（`defaultLabelPalette`，11 个标签：canonical 的十枚加 `wontfix`），也就是契约层 `labelPalette` 自报数据的来源。它在配色机制里管三件事：列标签的并集里补上这些标签、首建配色文件时按它预填、票面标签既不在配色文件里也不在这份表里才回灰。全仓只有这一份默认色表（与 `src/shared/labels.js` 里同名标签的颜色一致，比较时忽略大小写）。 _Avoid_: 把它叫成「调色盘表」（那指的是旧的 `triage-labels.md` 表格，已不读）
-- **宿主方法回包与后端操作返回（两层形状）**: 宿主那两条方法的回包是**扁平信封**——`wf.listLabels` 成功回 `{ok:true, backendId, labels:[...]}`，`wf.setLabelColors` 成功回 `{ok:true, backendId, applied, failed}`（`labels`/`applied`/`failed` 都在顶层）。后端那两条操作的返回是另一层：`{ok:true, data:[...]}` 与 `{ok:true, data:{applied, failed}}`，由宿主摊平进信封。改哪一层就看清是哪一层：界面看到的是扁平信封。 _Avoid_: 说「宿主回包里的 data」（宿主信封里没有 data 这一层）
-
-## 子工作区词条（2026-09-18 定版 · #649，承接 #301/#324）
-
-- **所选目录**: 会话创建时选定的那个目录（会话的 cwd），先经工作区键的规整（Windows 折大小写、统一斜杠、去尾斜杠）。 _Avoid_: 把它当成工作区（子目录会话里两者同名的场合很多，但身份不是它）
-- **工作区根**: 从所选目录逐层向上（先看自己这一层，再看父目录、祖父目录……），第一个自带 `docs/agents/workspace.yaml` 的目录就是工作区根；一路到盘符根、POSIX 根或 UNC 共享根都没有，就用所选目录本身。判定只看那份文件在不在、不读内容（2026-11-03 定版）。`.git` 与 `docs/agents/issue-tracker.md` 都不参与认根；`workspace-root.yaml` / `workspace-member.yaml` 两份旧记录已删除，机器上残留的也不参与判定。 _Avoid_: 把 `.git` 当工作区根标记（那是版本库边界，不是插件工作区：本地 Markdown 工作区可以没有 git，GitLab 的多份本地克隆会各自成根）；把「子目录里有一份 `docs/agents/issue-tracker.md`」当成独立工作区的凭据（它只回答这一层用哪个后端）；存「父工作区」字段（父与子的关系在每次打开目录时现算）
-- **工作区记录**: 唯一一份 `docs/agents/workspace.yaml`，回答两件事——这一层是工作区（往上找它来认根）、这个工作区用哪个后端。插件在用户为工作区选后端时写下；认根只看它在不在、不读内容：空文件、写坏了、那个位置是个目录，都照样算。2026-11-03 起不再有身份记录与从属记录（`workspace-root.yaml`、`workspace-member.yaml` 已删除）。 _Avoid_: 把 `docs/agents/issue-tracker.md` 或旧版 `workspace.json` 当记录（前者是人写的后端说明，后者是旧版本写在会话所选目录上的遗留）；把「选了后端」当「初始化完成」（初始化完成看 `issue-tracker.md` 在不在）
-- **子工作区**: 所选目录 ≠ 工作区根 的那些会话所处的处境；面板数据、后端选择、检查链快照与写路径一律以工作区根为准，子目录只是这次会话的起点。 _Avoid_: 把子目录当独立工作区（那会要求重复初始化，并在同一仓库里长出第二套配置与票仓）
-- **共享范围（修订 #301/#324）**: 原口径「同一文件夹的会话共享一份数据」自 2026-09-18 起改为「同一**工作区根**的会话共享一份数据」；「不同工作区永不合并」不变。 _Avoid_: 继续用「同一文件夹」这个旧说法
-- **用户可见之处的措辞**: 上面这些词是内部用词表里的词，只在票名、文档与代码注释里用；界面上与注入给会话的文案里一律说大白话（例如「当前目录属于工作区 D:\ilife」）。 _Avoid_: 把内部术语搬进界面或提示词
-
-## 刷新机制与 AI 工具链词条（2026-09-23 定版 · 地图 #704，子票 #705–#720）
-
-- **视野模型（attention model）**: 调度层里记录「此刻有人在看哪些工作区」的那件东西。界面只在切换会话、打开面板、窗口获得焦点时上报一次「我在看哪个工作区根」，视野模型据此维护一个活跃集合：最多两个——正在看的那个，加上刚离开 30 秒以内的那个；其余工作区一律算后台档。活跃档每 5 秒探测一次变化，探到变化只补变的那几条（不再整池重建）；后台档一次都不发，切回来时先用磁盘或内存里的快照把界面铺满，再探测一次。90 秒收不到任何上报（前端崩了、窗口被藏起来了）时，全部工作区自动降为后台档——兜底方向永远是更省，不是更快。 _Avoid_: 把「当前窗口」「当前会话」当成它的输入（它只认工作区根，同一工作区根下的多个会话算同一个工作区，只花一份钱）、把活跃集合的上限当成可以商量的数字（硬上限是 2，多个窗口同时上报时取最近上报过的那两个）
-- **闸（gate）**: 所有去 GitHub 的调用唯一要走的那个出口，做四件事——定类、记账、裁决、推迟；除此之外没有任何一条路可以出去（这条由静态扫描门禁强制）。每一笔请求先归入三类之一：用户动作（点刷新、点开票、翻页、发评论、改标签）永远放行；生命周期（切进某个工作区那一次）在预算内放行，预算不足时降级成「只出缓存、只探测不重建」；后台（定时探测、检查链、命名守护）在预算内放行，超出即推迟。推迟不等于失败：同一个工作区在队列里只留最后一次请求（多次合并成一次），并带 5 分钟过期时间，过期直接丢，不排队、不堆积、不重试。 _Avoid_: 与既有的「门禁」（`tests/verify-*.js` 里判定不变式、不通过就阻塞发布的脚本）混用——那个是提交时判红的脚本，这个是运行时拦住调用的出口；也别把它当成重试与退避的地方（它裁决的是「能不能花、花多少」）
-  _2026-10-23 修订_：这条定义描述的是旧运行路径。规格 #1439 起，闸搬进了操作管线，不再是调用方各自去打的那个出口；新口径见下文「闸（gate，2026-10-23 修订）」，依据见 `docs/adr/20261023-tracker-single-entry.md`。
-- **账本（ledger）**: 闸手上那两个桶的用量记录（REST 调用次数与 GraphQL 点数），以及它每分钟同步回来的服务端剩余额度——同步走 `gh api rate_limit`，这个接口不扣配额。账本按剩余额度自动定档：用掉不足六成是绿档，六成到八成五是黄档（活跃探测放慢到 120 秒、重建最快 300 秒一次、后台刷新全停），八成五以上或已经撞过一次限流是红档（自动刷新全停，只留用户动作，界面明说「配额紧张，自动刷新已暂停」）；档位由闸自己算，不需要人干预，也不需要重启。每一笔花费、每一次推迟、每一次降档都留痕（按仓库日志纪律记成「打开调试开关才记」那一档，不占常驻名额），并且作为验收时的对账依据。 _Avoid_: 把界面上露出的三件事（这份数据什么时候取的、上次刷新成功没有、现在是不是降级状态）当成账本本身（那只是它露出来的那部分）、把账本当成给用户看的报表（它首先是闸判断档位的依据）
-  _2026-10-23 修订_：这条定义里的「两个桶」已被「后端编号加桶名」取代（例如 `github/rest`、`gitlab/requests`）；新口径见下文「账本（ledger，2026-10-23 修订）」，依据见 `docs/adr/20261023-tracker-single-entry.md`。
-- **处理链（processing chain，历史名）**: 2026-10-18 起由「工作路线」替代，不再新增使用。旧口径（每会话留 20 张、落盘只存散列与票键、读操作不进链）已被推翻；原因、新形状与新落盘位置见地图 #1080、讨论 #1081 与规格 #1259。旧文档、旧票与旧注释里出现这个词时，按当年的意思理解，不要把它搬进新的代码、票面或注释。 _Avoid_: 在新的代码、票面或注释里使用「处理链」、把它与「工作路线」并列当成两个东西
-- **不变量（invariant）**: 刷新机制这份设计里六条必须始终成立的性质，任何实现、任何新功能、任何一次改代码违背其中一条就判红，所以它是这份设计的宪法。六条是：I1 唯一出口（对 GitHub 的每一次调用都必须经过闸，没有任何一条路可以绕过，由静态扫描门禁强制）；I2 后台零定时器（正在看的那个工作区之外，没有任何工作区持有长期定时器——刚离开的那个只保留最多 30 秒的收尾节拍，更早离开的一次都不发，切回来时补一次）；I3 首屏只付行数据的钱（正文、评论、评审、地图子票全部只在人点开时取）；I4 用量与工作区数量无关（开 3 个和开 30 个，花费同阶）；I5 失败必可见、必退避（取数失败不许悄悄吞掉：界面要说明、重试要拉开间隔、连续失败要熔断，失败永远不放大成请求风暴）；I6 花费可归因、可对账（每一笔花费都记在账上：谁发起、属于哪一档、花了多少、当时剩多少）。 _Avoid_: 把它当成性能目标或优化建议（它是有明确判据的纪律，违背就判红）、把六条当成可以按开发成本裁剪的清单（这份设计的口径是一次做到位，不按成本裁剪）
-  _2026-10-23 修订_：I1「唯一出口」今天的落点是操作管线（见下文「操作管线」「闸（2026-10-23 修订）」）；这句话作为刷新机制六条不变量的记录保留，新的后端调用准入依据见 `docs/adr/20261023-tracker-single-entry.md`。
-
-## 版本管理词条（2026-10-02 定版 · #812，承接地图 #810）
-
-- **工作树**: git 意义上的 worktree，也就是一个独立的工作副本目录。本项目里「工作树」一律指它。 _Avoid_: 拿代码里会话头字段 `worktree`（记的是别的东西）当 git worktree 说、拿「工作区」代替它
-- **工作树显示名**: 界面上代表一个工作树的那段字，取的是该工作树完整路径的**最短唯一后缀**——在同一个 git 仓库的全部工作树里，从路径最后一段起往左数，取到足以互相区分的最少段数。 _Avoid_: 直接拿目录名（重名时会撞成一模一样的两行）、把完整路径当显示名（面板放不下）
-- **git 仓库根**: 某一层目录里带着 `.git`，它就是这一层。它和**工作区根**可能不是同一层：工作区根是「往上第一个带 `docs/agents/workspace.yaml` 的目录」，`.git` 不参与认根，所以两者可以错开（例如 git 仓库根在外层、内层目录有自己的工作区记录）。版本管理页签描述的是 git 仓库根。 _Avoid_: 认定「工作区根就是 git 根」、在界面上说「工作区根」这种内部词
-- **依据时间**: 某个本地读数所依据的那份快照，是什么时候被刷新进本地的。例如「领先 3」依据的是本地记录的远端状态，依据时间就是远端跟踪引用最后一次被刷新的时刻。 _Avoid_: 拿「现在几点了」代替依据时间（那是显示约定，不是依据）
-
-## 收录门禁词条（2026-10-08 定版 · 地图 #824）
-
-- **两道门（收录扫描门禁）**: 对方收录清单的集中扫描门禁是两道，缺一不可——**高危清零**（二值门：还剩 1 条高危就红灯，不管分数多高）与**分数过 80**（累积门：得分除以满分乘 100）。 _Avoid_: 把两道门当一道计划（只改代码不清误报，分数上去了门还是红的）
-
-## deck 重构词条（2026-10-12 定版 · 地图 #1010）
-
-- **随重构收口**: 一张旧故障票描述的问题，在本次重构负责的那段代码里不再存在；关闭这张票时，在票面写明「由哪一次改写解决」。它取代口语里的「吞掉」。 _Avoid_: 拿它当「重构会把所有旧票一次清空」（不归本次的票照旧归各自的主人）、拿「已修」代替它（修了但没验收的票不算收口）
-- **改写单元**: 本次重构里由一个 issue 负责的一段源码，通常是新树里的一个目录或一个房间（例如 `src/deck/shell/`、`src/tracker/rooms/github/`）。一个改写单元对应一次「旧 JavaScript 变成 TypeScript」的落地，也对应一次面向维护者的讲解：哪几个旧文件变成了哪些新文件、各自负责什么、哪些约定不许改。 _Avoid_: 把它当「一个目录就一定一个 issue」（房间文件多时会拆成两三个单元）、当「一次提交」（一个单元可能分多次提交）
-- **讲解三看**: 每个改写单元交付时写给维护者的三个重点看的位置——方法封装是否合理、参数形状是否合理、边界与失败路径是否讲清。维护者对这三处表态（同意或改），是改写单元完成的必要条件之一。 _Avoid_: 拿它当代码评审清单（它服务的是「维护者读懂并贡献意见」，不是找 bug）
-
-## 后端判定来源词条（2026-10-12 定版 · #1003，承接 #669 与 #683）
-
-- **人选（user choice）**: 人在界面上点确认选定的那个后端（面板的「切换后端」弹窗、蓝条那颗「选择后端」的门控窗都算）。它只有一份记录：工作区配置文件 `docs/agents/workspace.yaml`（跨重启、跨机器都在），**写进这份文件才算这次选择生效**。本机还存着一份按工作区记的选择（#683 的宿主侧记录），2026-10-12 起不再参与后端判定，只用来把工作区文件生成一次。 _Avoid_: 说「进程内绑定」也是一份记录（2026-10-14 #1138 起那份副本已整段删除）、把本机那份记忆当成还有话语权的来源
-- **程序自己认（auto detection）**: 程序按规则判定这个工作区用哪个后端，规则有两条：读工作区里的声明文件，以及各后端自己的 matches 命中（看 `.git/config`、看目录里有没有 `.scratch/map.md` 之类）。两条都不是人选，所以今天一律不给写权限——要写先请人去界面选定。 _Avoid_: 把它与声明文件对立起来（声明文件就是它的规则之一）
-- **声明文件（declaration file）**: 工作区里那份写明「这里的票存在哪儿、怎么读写」的 Markdown，位置 `docs/agents/issue-tracker.md`，由初始化那一步的 AI 写下（插件自己不写）。它是后端 matches 的输入之一，也是初始化提示词要对照的现状产物；工作区根判定不看它（认根只看 `docs/agents/workspace.yaml`），「工作区是否已初始化」看它在不在（2026-11-03 起回到这个判据），所以它属于「程序自己认」，不属于人选。 _Avoid_: 把它当成人选（人选是界面上点的那一下，落盘在工作区配置文件里）、把它与 `docs/agents/workspace.yaml` 混为一谈（后者是人选的唯一真源）
-
-## 判据口径词条（2026-10-14 定版 · 地图 #1042，决策见 `docs/adr/20261014-error-classification-single-source.md`）
-
-- **零变化（zero change）**: 一次改写或补齐做完的判据口径——同一个输入下，对外可观察的预期结果与改写前**逐例一致**，不看实现怎么写。2026-10-14 维护者补定：功能的本意算 100%，实测只有 80% 的地方就是缺口，把缺口补到本意**不算**「改行为」；只有在本意之外另加一套做法才算改行为（那要走自己的票与判据）。 _Avoid_: 把补缺口记成「有意改行为的例外」、用「基本一致」「差不多」代替逐例比对
-- **判据一源（single source of judgement）**: 同一个判断（今天指「失败归哪一档」）只有一处有序规则表是真源，各家只许写自己的**前置扩展**（本家专有的错误码名与句式），不许复制通用项。 _Avoid_: 各处各写一份判据再要求「保持一致」（两份就会漂移，实测已经给过相反的建议）
-- **原文段（raw）**: 失败结果里**必填**的那段后端或命令吐出的原文，与「给人看的一句话」（`message`）分开存放；分类是启发式、可能猜错，原文是人自己判断的兜底。 _Avoid_: 把它叫「错误详情」（那是 `message` 的位置）、当成可选字段省略掉
-
-## 宿主方法与 RPC 端点词条（2026-10-17 定版）
-
-- **宿主方法（host method）**: 宿主对外提供、界面按名字调用的方法——宿主侧登记自己那份实现，界面侧按同一个名字调它，两侧靠同一个前缀拼出完整名字。面向人写的说明、票名、注释一律用这个词。 _Avoid_: 电话（依赖包文档与报错文案里的旧叫法，本仓不再使用；引用依赖自己导出的名字或报错原文时原样照抄，不改写成我们的词）、命令（本仓「命令」专指后端操作与技能出口那些入口，不是这一层）
-- **RPC 端点（endpoint）**: 同一个东西在传输与通道语境下的叫法——一次调用就是一条打到宿主通道的请求，宿主按去掉前缀后的名字查端点表现取现派。只在讲通道、前缀、端点表、往返包形状这类更技术的场合用它，日常行文用「宿主方法」。 _Avoid_: 拿「端点」去指后端操作（后端那边叫「操作」）、在给人看的说明里只丢一个「RPC」不给一句解释
-- **方法名（method name）**: 宿主方法的完整名字，形如 `<前缀>.<名字>`（本仓前缀是 `wf`，例如 `wf.listLabels`）。登记与调用两侧必须同名；前缀只许有一处来源，两侧都不得手抄。 _Avoid_: 对外行文只用不带前缀的短名、在界面代码里把前缀再写一遍
-
-## 工作路线词条（2026-10-18 定版 · 地图 #1080，讨论 #1081，规格 #1259）
-
-- **工作路线（work route）**: 「哪些会话在处理哪些票」的记录，一个工作区记一份。每次成功的 deck 工具写操作记一条工作条目；读操作不记。落盘位置是 `<用户主目录>/.dsh/mattskillsdeck/work-path/<工作区根散列>.json`。写入先读后合并，再写临时文件并改名，最后读回确认。不设每会话条数上限；保留 30 天；单文件超过 2MB 时从旧到新裁掉。释放（见「释放」）只撤销本会话的一条误报，不新增动作，也不影响别的会话。旧词「处理链」从 2026-10-18 起只作历史名。 _Avoid_: 把它当会话活动日志（它只记写与明确的处理动作）、把「最近看过哪几张票」混进来（读操作不进工作路线）、用「处理链」写新内容
-- **工作条目（work entry）**: 工作路线里的一条记录，等于一个会话对一张票的最近一次动作。字段是票号、票标题快照、会话标识、动作、动作时间、来源（上报或自动）。同一会话对同一张票只留最近一次，所以它回答「在处理哪几张票」，不是流水账。 _Avoid_: 把它当每票一条流水（键是会话加票号，不是票号）、把票标题快照当权威（快照会过期）
-- **进度条目（progress entry，旧名「进度自评」已退役）**: 票面「## 进度」区里的一条记录：百分比、工具盖的时间、一句说明。最新的一条写在最上面，第一条就是当前值；它由 `deck_issue_patch` 的 `progress` 参数（`{ percent, note }`）写入，`deck_issue_get` 回执里的 `data.ticket.progress` 与面板进度环读的都是这一条。`deck_issue_report` 以前可选带的那一格进度自评（0 到 100 的整数，写进工作条目、只作展示）已随 #1352 退役，不再存在；旧存档里已经记下的值原样保留，不回溯删除。规格、地图与票面里的「## 进度」是 deck 的增强段，不属于随包技能原文模板；按 ADR 20261025「决定三之一」保留可见正文（#1501 拍板选 A）。 _Avoid_: 把工作条目里的进度自评（已退役）与这条混为一谈、拿它当完成判据或认领凭据（认领是后端 assignee，处理是会话在工作路线上留下的动作）
-- **会话标识（session label）**: 给人看的会话名字，取会话标题快照。取不到时显示「会话 <会话散列前 6 位>」。工具回执里只出现会话标识与「是否本会话」布尔值，绝不出现会话 id 原文。 _Avoid_: 拿会话 id 原文当展示名、拿会话标识当人（认领人是另一件事）
-- **在办与陈旧（active / stale）**: 在办是 24 小时内动过的工作条目；陈旧是超过 24 小时、未满 30 天的工作条目；超过 30 天就清掉，30 天叫保留期。 _Avoid_: 把「在办」当「认领」（认领人是后端 assignee，处理是会话）、把「陈旧」当故障
-- **在跑（running）**: `deck_work_route` 回执里会话组上的 `running: true`，意思是宿主的 agent 注册表此刻报这个会话真有一轮开着（等审批、等回答的回合也算），只覆盖当前宿主进程里活着的会话。它只说「那一轮开着」，不表示正在改某张票；发起这次调用的会话自己不算（它调工具时必然在跑）。不标只表示问不到，不能读成「没有别的会话在跑」。 _Avoid_: 把「在跑」当「在办」（在办看 24 小时内动过的存档、是在跑是即时状态）、把不标读成没人、拿它当「正在改这张票」的凭据
-- **释放（release）**: `deck_issue_report` 可选带 `release: true` 时的一次特殊调用：不打「上报」这个动作，只撤销本会话对这张票的一条误报 —— 只有从没实际处理过这张票（没建过、改过、关过、建过计划、挂过边）时才删得掉；处理过的票不能释放，路径保留。票本身的状态与认领人一概不动。找不到这一条也算成功，回执说明本来就没有。释放之后重新上报会重新记上，同一会话同一票仍然只留一条。 _Avoid_: 拿它清收尾资料、删处理过的路径（#1349 起只撤销误报）、把它当改票（`deck_issue_patch` 才动票面）、当认领（认领人没变）、当取消（票没被关）
-- **工作路线摘要（work route summary）**: 这一段已经退役：#1561 起写工具的成功回执里不再带摘要，`notes` 里也不再出现；要看在办全貌就调 `deck_work_route`。退役前它是回执里的一段中文短句，写本工作区在办几条、最近几张是哪几张（最多列 3 条）；#1303 起默认只带核心字段，末尾会指路 `workRouteDetail: standard`；进度自评与 `full` 档随 #1352 退役。 _Avoid_: 在新回执里找这段话（已经没有了）、还传 `workRouteDetail` 去要细节（这个键也随 #1561 退役了）
-- **在办表（work route table）**: 跨会话的在办全貌，由 `deck_work_route` 专门查：按会话分组，默认只列 24 小时内在办的条目（票号、标题、动作、时间、是否本会话），陈旧的只给计数；传 `includeStale: true` 拉 30 天全量，`limit` 缺省 100、上限 200，截断时带 `total` / `omitted`。#1561 之前它由九个 deck 工具的成功回执带出（`data.workRoute`，档位键 `workRouteDetail`），现在写回执里不再带表，撞车提醒也由读工具返回。数据源头不变：同一份工作路线存档，表里只出现会话标识与「是否本会话」，绝不出现会话 id 原文；组上可带 `running: true`（含义见「在跑」）。 _Avoid_: 把它当成某个界面的一部分（展示归 #1082）、以为写回执里还带表（要看就调读工具）、把「陈旧」当故障
-- **在办胶囊**: 状态栏里看当前会话在办哪张票的那一颗，只画最新一条。 _Avoid_: 胶囊入口（状态栏上胶囊太多，不知道是哪一颗）、把它当在办表
-- **在办单子**: 状态栏上那颗在办胶囊悬停后展开的一张浮层，列出当前会话的全部在办记录。 _Avoid_: 在办弹窗、把它当在办表
-- **在办单子表头**: 在办单子顶部那一行说明，左边是本会话有几条加更新时间，右边是别的会话还有几条。 _Avoid_: 单子表头、表头、单子标题
-- **在办单子列表**: 在办单子里装所有行的那一块，行多了在里面滚，不把整张单子撑高。 _Avoid_: 单子列表、列表、滚条
-- **在办单子行**: 在办单子列表里的一行，一行就是一条在办记录，由编号胶囊、标题、动作、时间四件组成。 _Avoid_: 单子行、行、item
-- **在办单子行编号胶囊**: 在办单子行最左边那个胶囊描边，里面写票号，如 #1636。 _Avoid_: 行编号、票号徽标
-- **在办单子行标题**: 在办单子行中间那段话，如 GitHub 工作区的地图详情取不到子票：wf.ma…，太长放不下时结尾带省略号。 _Avoid_: 行标题、单子标题
-- **在办单子动作**: 在办单子行里说明这条在干什么的那一枚，写建票或改内容一类。 _Avoid_: 行动作、状态标签
-- **在办单子行时间**: 在办单子行最右边那个时间，说明这条什么时候动的，如 09:16。 _Avoid_: 行时刻、更新时间
-- **在办单子末行**: 在办单子列表最底下那一行，也就是最新那一条。 _Avoid_: 末行、最后一项
-- **在办单子沉底**: 在办单子列表第一次打开就滚到底，让末行直接可见。 _Avoid_: 沉底、滚到底部
-- **LOGO**: 状态栏最左边那个标记，写着 MattSkills。 _Avoid_: 工作区段、工作区名字
-- **可接胶囊**: 状态栏里绿色那颗，写着可接几条，如可接 2。 _Avoid_: 可接段、可接数
-- **故障胶囊**: 状态栏里红色三角那颗，写着故障几条，如故障 0。 _Avoid_: 故障段、报错数
-- **诊断胶囊**: 状态栏里黄色放大镜那颗，写着诊断几条，如诊断 2。 _Avoid_: 诊断段、诊断数
-- **沉淀胶囊**: 状态栏中部紫色那颗，写着沉淀。 _Avoid_: 沉淀段、沉淀按钮
-- **交接胶囊**: 状态栏中部蓝色那颗，写着交接。 _Avoid_: 交接段、交接按钮
-- **交接出去按钮**: 交接胶囊右边那个无字小图标，点一下把交接内容拿出去。 _Avoid_: 复制图标、灰文档图标
-- **环境胶囊**: 状态栏里绿色打勾那颗，写着环境几比几，如环境 9/9。 _Avoid_: 环境段、环境数
-- **更新胶囊**: 状态栏里写上次更新日期与时间的那颗，如更新 10-29 12:13。 _Avoid_: 更新段、更新时间
-- **更新胶囊日期**: 更新胶囊里写日期的那半，如 10-29。 _Avoid_: 日期、更新日期
-- **更新胶囊时间**: 更新胶囊里写时刻的那半，如 12:13。 _Avoid_: 时刻、更新时间
-- **技能胶囊**: 状态栏最右边那组里格子样的那颗，点开看技能。 _Avoid_: 格子图标、技能按钮
-- **debug胶囊**: 状态栏最右边那个绿点，亮着表示正常。 _Avoid_: 绿点、状态灯
-- **折叠胶囊**: 状态栏最右边向下箭头那颗，点一下把状态栏收起。 _Avoid_: 下箭头、收起按钮
-- **关闭胶囊**: 状态栏最右边红色叉那颗，点一下关掉状态栏。 _Avoid_: 叉、关闭按钮
-- **认领与处理**: 认领是人对票负责（后端 assignee）；处理是会话在工作路线上留下动作。两件事并列，不合成一个状态。 _Avoid_: 用认领人代替会话、用会话代替认领人
-
-## 交互反馈词条
-
-- **悬停态**: 鼠标停在按钮上时按钮变的样子，如变色、加边，表示这里能点。 _Avoid_: hover、悬浮特效
-- **悬停提示**: 鼠标停在按钮上时冒出来的那句说明文字，鼠标移开就没。 _Avoid_: tooltip、提示框、气泡
-- **悬停提示方位**: 悬停提示相对触发控件所处的方向，只有上方、下方、左侧、右侧四种；落在哪一边由统一规则按“先上方、放不下改下方、再取左右、都不行取空间最大一侧”定，调用方不得指定。 _Avoid_: 落点、位置、方向（太宽，仓库里「落点」另有含义）
-- **按下态**: 点下按钮那一瞬间按钮变的样子，如下沉、变深，表示已经点到了，松开回原样。 _Avoid_: 点击特效、click效果、动画
-
-## 面板顶栏词条
-
-- **面板**: 右侧边栏那一整块，装着仓库行、页签行和下面的票清单。 _Avoid_: 容器（容器是票，不是这整块）、右侧面板英文直写
-- **面板顶栏**: 面板最上面那两排，上面说看的是哪个仓库加新不新，下面是换视角的页签加新建和报 bug。 _Avoid_: 面板头部、顶栏
-- **面板仓库行**: 面板顶栏上面那一排，左边是仓库名加两个小图标，右边是刷新加更新时间。 _Avoid_: 仓库条、第一排
-- **面板仓库名**: 面板仓库行左边那块蓝框，写着仓库全名，如 FeatherHunter/dsh-mattpocock-skills-deck。 _Avoid_: 仓库标题、分支名
-- **面板切换按钮**: 面板仓库名右边那个双向箭头小图标，点开换看的东西。 _Avoid_: 切换图标、分支按钮
-- **面板调色盘按钮**: 面板仓库行中间那个金色小图标，点开看调色盘。 _Avoid_: 面板金币按钮、金币图标
-- **面板刷新按钮**: 面板仓库行右边那个写着刷新的按钮，点一下让面板显示最新内容。 _Avoid_: 刷新、重载按钮
-- **面板更新时间**: 面板仓库行最右边那句时间，如 29 分钟前，说的是上次刷新成功到现在过了多久。 _Avoid_: 更新时间、刷新时间
-- **面板页签行**: 面板顶栏下面那一排，左边是一排页签，右边是新建需求加报 bug。 _Avoid_: 页签条、第二排
-- **面板页签**: 面板页签行里的一个选项，一页就是一种视角，当前在看的那页高亮。 _Avoid_: 页签按钮、tab
-- **面板列表页签**: 面板页签里写着列表的那一页，看的是票的清单。 _Avoid_: 列表页、列表 tab
-- **面板技能页签**: 面板页签里写着技能的那一页，看的是技能。 _Avoid_: 技能页、技能 tab
-- **面板版本管理页签**: 面板页签里写着版本管理的那一页，看的是版本管理。 _Avoid_: 版本管理页、版本页签
-- **面板拉取请求页签**: 面板页签里写着拉取请求的那一页，看的是拉取请求。 _Avoid_: 拉取请求页、PR 页签
-- **面板环境检查页签**: 面板页签里写着环境检查的那一页，看的是环境检查。 _Avoid_: 环境检查页、检查页签
-- **面板新建需求按钮**: 面板页签行右边紫色那个写着新建需求的按钮，右边小箭头点开还有更多选项。 _Avoid_: 新建需求、新建按钮
-- **面板报 Bug 按钮**: 面板页签行右边红色那个写着加 bug 的按钮，点开报 bug。 _Avoid_: bug 按钮、加 bug
-- **面板收起按钮**: 面板页签行最右边那个无字小方框，点一下收起或展开面板。 _Avoid_: 方框图标、网格按钮
-
-## 列表页面词条
-
-- **列表页面**: 点列表页签进去的那一整页，装着计数、过滤和票。 _Avoid_: 列表页、面板主体区
-- **列表页面计数行**: 列表页面最上面那一行，左边说可接几条阻塞几条已关闭几条，右边说体检几条。 _Avoid_: 面板计数行、计数条
-- **列表页面可接计数**: 计数行左边绿点那段，说现在能接的有几条。 _Avoid_: 面板可接计数、可接
-- **列表页面阻塞计数**: 计数行中间锁形那段，说被卡住的有几条。 _Avoid_: 面板阻塞计数、阻塞
-- **列表页面已关闭计数**: 计数行左边灰圈那段，说已关闭一共有几条。 _Avoid_: 面板已关闭计数、已关闭
-- **列表页面体检按钮**: 计数行最右边那个独立小框，写着体检加数字，点开看体检结果。 _Avoid_: 面板体检按钮、体检
-- **列表页面视图过滤**: 计数行下面那排切视角的，点哪个看哪拨。 _Avoid_: 面板视图过滤、过滤
-- **列表页面视图全部**: 视图过滤里那个看全部在办的选项。 _Avoid_: 面板视图全部、全部
-- **列表页面视图 Open**: 视图过滤里那个英文原样的选项，看没关的。 _Avoid_: Open 过滤
-- **列表页面视图已关闭**: 视图过滤里那个只看已关闭的选项。 _Avoid_: 已关闭过滤
-- **列表页面视图阻塞**: 视图过滤里那个只看被卡住的选项，和卡上的被阻塞不是同一个，前者是过滤器，后者是单张的状态。 _Avoid_: 阻塞过滤
-- **列表页面视图可接**: 视图过滤里那个只看能接的选项。 _Avoid_: 可接过滤
-- **列表页面排序**: 视图过滤旁边那排定顺序的，说按更新还是按编号还是按标题。 _Avoid_: 面板排序、排序条
-- **列表页面排序全部**: 排序里那个不限范围的选项，和视图全部不是同一个。 _Avoid_: 全部
-- **列表页面排序更新**: 排序里按更新排的选项。 _Avoid_: 更新排序
-- **列表页面排序创建**: 排序里按创建排的选项。 _Avoid_: 创建排序
-- **列表页面排序编号**: 排序里按编号排的选项，带倒序箭头时是倒序。 _Avoid_: 编号排序、编号↓
-- **列表页面排序标题**: 排序里按标题排的选项。 _Avoid_: 标题排序
-- **列表页面标签过滤**: 排序后面那排按标签切的，点中才看这类，标签是用户自定的，不逐个收词。 _Avoid_: 面板标签过滤、标签条
-- **列表页面标签溢出**: 标签过滤最后那个加数字，如 +7、+11，说明还有几个标签没展开，点开看剩下的。 _Avoid_: 加号、更多标签
-- **列表页面票过滤**: 列表页面中间那片换行排的长胶囊区，点一个只看这类票。 _Avoid_: 列表页面条目墙、过滤墙
-- **列表页面票过滤胶囊**: 票过滤里的一个长胶囊，里面是一类票的名字，点进去只看这类。 _Avoid_: 列表页面条目胶囊、标题胶囊
-- **列表页面票过滤全部**: 票过滤左上那个小的全部，看全部票，区别于视图过滤的那个全部。 _Avoid_: 列表页面条目全部、全部
-- **列表页面提示条**: 列表页面最上面那条黄边框的提示，左边是警告图标，中间是一句话，右边是关闭叉。 _Avoid_: 面板提示条、黄条
-- **列表页面提示关闭**: 提示条最右边那个叉，点一下关掉这条提示。 _Avoid_: 关闭叉
-- **列表页面卡竖条**: 票卡最左边那条竖线，紫色表示类型，蓝色表示这张正被选中。 _Avoid_: 竖条、侧条
-- **列表页面卡类型**: 票卡标题前面那枚带图标的，如地图、规格，没有也正常。 _Avoid_: 类型徽标
-- **列表页面卡编号**: 票卡最左边那块，写着票号。 _Avoid_: 编号
-- **列表页面卡标题**: 票卡中间那段话，太长放不下时结尾带省略号。 _Avoid_: 标题
-- **列表页面卡标签**: 票卡标题下面那排小枚，说明这张票是哪类，标签是用户自定的，不逐个收词。 _Avoid_: 标签
-- **列表页面阻塞标**: 票卡标题下面那枚红框，写着被阻塞，说明这张现在动不了。 _Avoid_: 阻塞标、阻塞
-- **列表页面进度**: 高亮卡右上角那个几比几，说明容器里子票办完几张，没有也正常。 _Avoid_: 进度圈
-- **列表页面主动作**: 票卡右下角左边那个干活的按钮，五种之一：执行、拆票、实施、诊断、讨论。 _Avoid_: 主动作、操作按钮
-- **列表页面新会话按钮**: 票卡右下角右边那个固定写着新会话的按钮，点开为这张票开新会话。 _Avoid_: 新会话
-- **列表页面复制按钮**: 票卡右下角那个剪贴板小图标，点一下复制这张票的信息。 _Avoid_: 复制图标
-- **列表页面链接按钮**: 票卡右下角那个链条小图标，点一下拿这张票的链接。 _Avoid_: 链接图标
-- **列表页面已关闭尾**: 清单最底下那行，说已关闭一共几条、这次拿下来几条。 _Avoid_: 底部行
-
-## 环境检查页面词条
-
-- **环境检查页面**: 点环境检查页签进去的那一整页，装着页头、十条检查和底部能力诊断。 _Avoid_: 环境检查页、检查页
-- **环境检查页头**: 页面最上面那一行，左边是标题加分数加后端徽标，右边是重新检查按钮。 _Avoid_: 页头、头部
-- **环境检查分数**: 页头左边那个几比几，如 10/10，说十条过了几条。 _Avoid_: 分数、通过数
-- **环境检查后端徽标**: 分数右边那个小框，如 github，说这页查的是哪个后端。 _Avoid_: 后端徽标
-- **环境检查重新检查按钮**: 页头右边那个按钮，点一下把十条重查一遍。 _Avoid_: 重新检查、刷新按钮
-- **环境检查行**: 中间十条里的一条，左边一个对勾图标，右边上下两行字。 _Avoid_: 检查卡、检查条
-- **环境检查行图标**: 每条左边那个绿色对勾，有它才算过。 _Avoid_: 对勾
-- **环境检查行标题**: 每条右上那句加粗的话，说这条查的是啥。 _Avoid_: 标题
-- **环境检查行明细**: 每条右下那句灰字，说查到的值是啥，路径太长放不下时结尾带省略号。 _Avoid_: 明细
-- **环境检查能力诊断行**: 十条下面那单行，左边写着能力诊断折叠默认收起，右边是三个数。 _Avoid_: 能力诊断、诊断行
-- **环境检查诊断统计**: 能力诊断行右边那三个数，如 present 899 / empty 1131 / missing 580，说能力的三类计数。 _Avoid_: 统计、数字
-
-## 拉取请求页面词条
-
-- **拉取请求页面**: 点拉取请求页签进去的那一整页，装着一行行 PR。 _Avoid_: PR 页面、PR 页
-- **拉取请求行**: 页面里的一行 PR，左边是编号加标题加作者行，右边是一个状态。 _Avoid_: PR 行、请求行
-- **拉取请求编号**: 行最左边那块，写着 PR 号。 _Avoid_: 编号
-- **拉取请求标题**: 行中间那句加粗的话，太长放不下时结尾带省略号。 _Avoid_: 标题
-- **拉取请求作者行**: 标题下面那行，开头是 @谁，中间是标签，结尾是日期。 _Avoid_: 作者行
-- **拉取请求行标签**: 作者行中间那几枚小的，如 dependencies、bug，说明这 PR 牵到哪类，标签是远端自带的，不逐个收词。 _Avoid_: 标签
-- **拉取请求日期**: 作者行结尾那个日期，说这 PR 啥时候的。 _Avoid_: 日期
-- **拉取请求状态**: 行最右边那枚，三种之一：已合并、Open、已关闭。 _Avoid_: 状态徽标
-
-## 技能页面词条
-
-- **技能页面**: 点技能页签进去的那一整页，装着通用建议和一行行技能。 _Avoid_: 技能页
-- **技能通用建议**: 页面最上面那块横条，标题写着通用建议，里面只有一个技能。 _Avoid_: 通用建议区
-- **技能行**: 技能区里的一行，左边是色块加名称加描述，右边是注入对话加详情两个按钮。 _Avoid_: 技能条、技能卡
-- **技能色块**: 行最左边那个小方块，颜色与实心/空心表示这行技能的重要程度：核心是橙色实心、常用是绿色实心、备用是空心。 _Avoid_: 状态色块
-- **技能重要程度**: 色点三档的分法：核心是默认工作流里的一段、或者开工前收尾时要用的；常用是多数任务里顺手用的支撑技能；备用是只在特定场合才用的专项技能。 _Avoid_: 优先级、状态、能不能用
-- **技能图例**: 技能列表标题「■ 技能」右侧那一排小方块、星标与文字，逐个说明三档色点和星标各代表什么。 _Avoid_: 图例说明、颜色说明
-- **技能名称**: 色块右边那段等宽字，如 /ask-matt，说这是哪个技能。 _Avoid_: 技能名、命令名
-- **技能星标**: 名称后面那颗 ★，表示通用建议里推荐的那个技能；标题行图例最右边那颗 ★ 说明的就是它。 _Avoid_: 星星、收藏
-- **技能描述**: 名称右边那句人话，说这技能是干啥的。 _Avoid_: 描述、简介
-- **技能注入按钮**: 行右边左边那个按钮，点一下把 /技能名 写进对话输入框，不自动发送。 _Avoid_: 加载、装上
-- **技能详情按钮**: 行右边右边那个按钮，点一下盖出这技能的详情浮层。 _Avoid_: 详情
-
-## 技能详情浮层词条
-
-- **技能详情浮层**: 点详情盖出来的那一整块，关掉回技能页面。 _Avoid_: 技能详情页面、详情页
-- **技能详情标题**: 浮层最上面左边那个技能名，如 /ask-matt说看的是哪个。 _Avoid_: 标题
-- **技能详情语言按钮**: 标题右边那个紫色小框，点一下切中文。 _Avoid_: 技能详情中文按钮、中文按钮
-- **技能详情关闭按钮**: 右上角那个写着关闭叉的，点一下关掉浮层回列表。 _Avoid_: 关闭、叉
-- **技能详情目录**: 标题下面那块深色框，标题写着本篇目录，下面列着 01 到 08。 _Avoid_: 目录、本篇目录
-- **技能详情正文**: 目录下面那一大块，标题加段落加步骤，步骤里带行内小框。 _Avoid_: 正文、内容区
-- **技能详情底栏**: 浮层最下面那一行，左边复制路径，右边回到顶部。 _Avoid_: 底栏
-- **技能详情复制路径按钮**: 底栏左边那个按钮，点一下拿这篇的路径。 _Avoid_: 复制路径
-- **技能详情回到顶部按钮**: 底栏右边那个按钮，点一下回到正文开头。 _Avoid_: 顶部
-
-## 地图详情页面词条
-
-- **地图详情页面**: 点地图进去的那一整页，上面是档案加计数加进度，下面是一排子票卡。 _Avoid_: Map 详情页、地图页
-- **地图详情返回行**: 页面最上面那一行，左边三件，右边四件，中间空白隔开。 _Avoid_: 返回行
-- **地图详情返回按钮**: 返回行最左边那个，写着向左箭头加返回列表，点一下回列表页面。 _Avoid_: 返回列表、返回按钮
-- **地图详情位置**: 返回按钮右边那段，说现在在列表下面哪张图，如列表 / #1638。 _Avoid_: 面包屑、面包屑导航
-- **地图详情地图胶囊**: 位置右边那个紫色小框，写着地图，说现在就是地图视角。 _Avoid_: 地图详情地图按钮、地图按钮
-- **地图详情执行按钮**: 返回行右边紫色那个，点一下干这张图当前该干的活。 _Avoid_: 执行
-- **地图详情新会话按钮**: 执行右边那个，点开为这张图开新会话。 _Avoid_: 新会话
-- **地图详情复制按钮**: 新会话右边那个剪贴板小图标，点一下复制这张图的信息。 _Avoid_: 复制图标
-- **地图详情链接按钮**: 最右边那个链条小图标，点一下拿这张图的链接。 _Avoid_: 链接图标
-- **地图详情档案头**: 返回行下面那块深色框，装着身份标记、标题、档案标签、未填行、四计数、进度条。 _Avoid_: 档案头、头部
-- **地图详情标题**: 档案头里那句加粗的话，说这张图是干啥的；标题左边紧挨着身份标记。 _Avoid_: 标题
-- **地图详情身份标记**: 档案头标题行最左边那一小块，由地图图标、容器词与编号徽标组成；与标题同一行、在左侧，标题折行时从它下方走过（半包围）。 _Avoid_: 身份行、身份条、标题前置标记
-- **地图详情容器词**: 身份标记里写「地图」或「规格」的那一小段，按容器种类取容器角标词，与列表页角标同一个词。 _Avoid_: 角标文字、类型字、徽章文字
-- **地图详情编号徽标**: 身份标记里那颗描边的编号，写法与列表行、票详情页头的编号徽标相同（复用共享徽标契约，带目录时写「#目录/编号」）。 _Avoid_: 票号徽标、编号胶囊、编号标签
-- **地图详情档案标签**: 标题右边那个写着档案加箭头的，点进去看档案。 _Avoid_: 档案
-- **地图详情未填行**: 标题下面那行括号说哪个字段还没填，如未填写 Destination。 _Avoid_: 未填行、空字段
-- **地图详情计数**: 档案头里那四个：可接、已认领、被阻塞、已关闭，只说这张图里几张，不逐个收词。 _Avoid_: 计数
-- **地图详情进度条**: 档案头最下面那条，左边写着地图进度，右边说本图几张子票关了几张。 _Avoid_: 进度条
-- **地图详情卡**: 下面一排里的一张，上面是图钉加编号，中间是标题加认领或阻塞横幅，下面是四个动作加更新时间加状态。 _Avoid_: 子票卡、卡片
-- **地图详情卡编号**: 卡左上那个绿框，写着子票号。 _Avoid_: 编号
-- **地图详情卡标题**: 编号下面那句加粗的话说这张卡是干啥的。 _Avoid_: 标题
-- **地图详情卡认领**: 标题下面那行 @谁加认领状态。 _Avoid_: 认领、认领行
-- **地图详情卡更新时间**: 卡左下那个日期说这张啥时候动的。 _Avoid_: 更新时间
-- **地图详情卡状态**: 卡右下那个说在办还是被挡。 _Avoid_: 状态
-- **地图详情卡图钉**: 卡顶部中间那个红色小方块，有它才是在这图里。 _Avoid_: 图钉、红块
-- **地图详情卡在手角标**: 首张卡右上角那个蓝色斜角说这张正在手上。 _Avoid_: 在手、角标
-- **地图详情卡阻塞横幅**: 后两张卡中间那条红色斜横幅，写着被谁阻塞加一句话。 _Avoid_: 阻塞条、红条
-- **地图详情卡动作**: 卡下面那四个小框：执行、编辑、文档、链接，不逐个收词。 _Avoid_: 动作按钮
-
-## 票详情页面词条
-
-- **票详情页面**: 点一张票进去的那一整页，上面是标题加标签，中间是正文，下面是阻塞加评论。 _Avoid_: ISSUE 详情页、票详情页、详情页
-- **票详情返回行**: 页面最上面那一行，左边两件，右边四件，中间空白隔开。 _Avoid_: 返回行
-- **票详情返回按钮**: 返回行最左边那个，点一下回列表页面。 _Avoid_: 返回列表、返回按钮
-- **票详情位置**: 返回按钮右边那段，只写票号，如 #1648说现在在看哪张票。 _Avoid_: 面包屑
-- **票详情执行按钮**: 返回行右边第一个，点一下干这张票当前该干的活。 _Avoid_: 执行
-- **票详情新会话按钮**: 执行右边那个，点开为这张票开新会话。 _Avoid_: 新会话
-- **票详情复制按钮**: 新会话右边那个剪贴板小图标，点一下复制这张票的信息。 _Avoid_: 复制图标
-- **票详情链接按钮**: 最右边那个链条小图标，点一下拿这张票的链接。 _Avoid_: 链接图标
-- **票详情标题行**: 返回行下面那行，装着编号、标题、状态三个。 _Avoid_: 标题行
-- **票详情编号**: 标题行最左边那个框，写着票号。 _Avoid_: 编号
-- **票详情标题**: 编号右边那句加粗的话说这张票是干啥的。 _Avoid_: 标题
-- **票详情状态**: 标题行最右边那枚，三种之一：Open、已合并、已关闭。 _Avoid_: 状态徽标
-- **票详情标签行**: 标题行下面那行，装着标签、时间、作者三个。 _Avoid_: 标签行
-- **票详情标签**: 标签行最左边那枚，如 ready-for-agent标签是远端自带的，不逐个收词。 _Avoid_: 标签
-- **票详情时间**: 标签行中间那段更新哪天加创建哪天。 _Avoid_: 时间、更新时间
-- **票详情作者**: 标签行右边那个 @谁加头像说谁建的。 _Avoid_: 作者、作者行
-- **票详情正文**: 中间那几块的总称，说这张票要干啥、不干啥、干完算啥。 _Avoid_: 正文、描述区
-- **票详情阻塞计数**: 正文下面那行说被阻塞几条，如被阻塞·3。 _Avoid_: 阻塞计数
-- **票详情阻塞票**: 计数下面的一条，一行一张，写着票号加一句话。 _Avoid_: 阻塞票、阻塞行
-- **票详情评论区**: 页面最下面那块，装着计数、空态、输入框、发送四个。 _Avoid_: 评论区
-- **票详情评论计数**: 评论区标题说评论几条，如评论（0）。 _Avoid_: 评论数
-- **票详情评论空态**: 计数下面那条灰框，写着无评论。 _Avoid_: 空态、无评论
-- **票详情评论输入框**: 评论区中间那个大框，写着写下评论支持 Markdown快捷键发送。 _Avoid_: 输入框、评论框
-- **票详情发送按钮**: 输入框右下那个按钮，点一下发出评论。 _Avoid_: 发送
-
-## 设置页面词条
-
-- **设置页面**: 宿主设置里点开 MattSkills 进去的那一整页，装着总览、日志和作者插件。 _Avoid_: 设置面板、配置面板、配置页
-- **设置入口**: 宿主设置里点开 MattSkills 的那一下，进设置页面。 _Avoid_: 设置按钮、配置入口
-- **设置顶栏**: 设置页面最上面那一行，左边是标题加配置版本号，右边是更新按钮加两个图标。 _Avoid_: 顶栏
-- **设置欢迎横幅**: 顶栏下面那行，说欢迎交 PR 的那句话。 _Avoid_: 横幅、欢迎语
-- **设置标题徽标**: 顶栏左边 MattSkills 加对勾那段，说这是谁的设置页。 _Avoid_: 标题、logo
-- **设置版本标注**: 顶栏中间那段圆点加配置加版本号，如配置 1.9.0-beta.31。 _Avoid_: 配置、版本号
-- **设置更新按钮**: 顶栏那个带框的已是最新加版本号，点一下查有没有新版。 _Avoid_: 设置最新徽标、最新徽标
-- **设置顶栏图标**: 顶栏右边那两个小图标，星星和气泡，不逐个收词。 _Avoid_: 图标
-- **设置后端总览卡**: 第一块卡，标题写着工作区后端总览，收起时说共几个工作区已绑定几个，点展开看一行行工作区。 _Avoid_: 总览卡、后端卡
-- **设置总览副标题**: 标题下面那行小字说只读，显式覆盖在右侧面板完成。 _Avoid_: 副标题、说明
-- **设置总览计数**: 汇总行左边那段共几个工作区已绑定几个，数字是值不单立。 _Avoid_: 计数
-- **设置总览刷新按钮**: 汇总行右边那个，点一下重数工作区。 _Avoid_: 刷新
-- **设置总览展开按钮**: 刷新右边那个蓝字，点一下展开或收起下面那片行。 _Avoid_: 展开、收起
-- **设置后端行**: 展开后的一行，一个工作区一行，左边是工作区名，右边是提供方加显式加胶囊加工具箱。 _Avoid_: 工作区行
-- **设置后端行工作区名**: 行最左边那段等宽字，如 deck-github。 _Avoid_: 工作区名
-- **设置后端行提供方**: 名字右边那个圆点加字，蓝点 GitHub 绿点 Markdown。 _Avoid_: 提供方徽标
-- **设置后端行显式按钮**: 中间那个小框，写着显式。 _Avoid_: 显式
-- **设置后端行胶囊按钮**: 显式右边那个，写着胶囊状态栏。 _Avoid_: 胶囊状态栏
-- **设置后端行工具箱按钮**: 最右边那个，写着 deck 工具箱。 _Avoid_: 工具箱
-- **设置日志卡**: 第二块卡，标题写着调试诊断日志，里面是开关加四个按钮。 _Avoid_: 日志卡、诊断卡
-- **设置日志说明**: 标题下面那段说默认关闭，关了也能导出。 _Avoid_: 说明
-- **设置日志开关**: 日志卡里那个开关，写着调试日志开还是关。 _Avoid_: 开关、调试开关
-- **设置日志导出按钮**: 四个按钮第一个，点一下把当天日志加系统摘要打成附件。 _Avoid_: 导出今日日志
-- **设置日志目录按钮**: 四个按钮第二个，点一下打开日志放哪。 _Avoid_: 打开日志目录
-- **设置日志路径按钮**: 四个按钮第三个，点一下复制日志路径。 _Avoid_: 复制日志路径
-- **设置日志清空按钮**: 四个按钮第四个，点一下清当天日志，先弹窗确认。 _Avoid_: 清空今日日志
-- **设置日志备注**: 按钮下面两行小字说附件回退和清空确认。 _Avoid_: 备注、小字
-- **设置插件推荐**: 第三块卡，标题写着作者其他插件，一行一个插件，右边是外链图标。 _Avoid_: 设置插件卡、插件卡、推荐卡
-- **设置插件推荐行**: 推荐里的一行，一个插件一行，左边是名加描述，右边是外链。 _Avoid_: 设置插件行、插件行
-- **设置插件推荐名**: 行最左边那段加粗字，如 dsh-prompt。 _Avoid_: 设置插件名、插件名
-- **设置插件推荐外链按钮**: 行最右边那个外链小图标，点一下去看这插件。 _Avoid_: 外链、外链图标
-
-## 调色盘弹窗词条
-
-- **调色盘弹窗**: 点面板调色盘按钮盖出来的那张，一行一个标签，改颜色。 _Avoid_: 标签配色弹窗、配色页
-- **调色盘行**: 弹窗里的一行，左边是色块加标签名，右边是颜色值。 _Avoid_: 标签行
-- **调色盘颜色值**: 行右边那个框，写着 #开头的六位，如 #f143ab。 _Avoid_: 颜色值、色号
-- **调色盘底栏**: 弹窗最下面那一行，左边是状态句，右边是三个按钮。 _Avoid_: 底栏
-- **调色盘状态句**: 底栏左边那句，如没有可保存的改动，说现在能不能存。 _Avoid_: 状态、提示
-- **调色盘退出按钮**: 底栏右边第一个，点一下关掉弹窗不存。 _Avoid_: 退出、取消
-- **调色盘复制提示词按钮**: 底栏中间那个，点一下拿配色提示词。 _Avoid_: 复制提示词
-- **调色盘保存按钮**: 底栏右边紫色那个，点一下存下改的颜色。 _Avoid_: 保存
-
-## 新建需求弹窗词条
-
-- **新建需求弹窗**: 点新建需求按钮盖出来的那张，先问你这需求清楚到什么程度，二选一。 _Avoid_: 新建需求页、分流页
-- **新建需求探索卡**: 左边紫框那张，写着目标大而模糊，选它走 /wayfinder 那一路。 _Avoid_: 探索地图卡
-- **新建需求实施卡**: 右边蓝框那张，写着目标明确清晰，选它走 /grill-with-docs 那一路。 _Avoid_: 实施地图卡
-
-## debug胶囊菜单词条
-
-- **debug胶囊菜单**: 点 debug 胶囊冒出来的那张小单子，装着四个日志动作。 _Avoid_: 日志菜单
-- **debug胶囊菜单导出项**: 菜单第一行，点一下把当天日志打成附件。 _Avoid_: 导出今日日志
-- **debug胶囊菜单打开目录项**: 菜单第二行，点一下打开日志放哪。 _Avoid_: 打开日志目录
-- **debug胶囊菜单复制路径项**: 菜单第三行，点一下复制日志路径。 _Avoid_: 复制日志路径
-- **debug胶囊菜单清空项**: 菜单最下面红色那行，点一下清当天日志，先弹窗确认。 _Avoid_: 清空今日日志
-
-## 折叠关闭词条
-
-- **折叠后展开条**: 状态栏收起后整条只剩的那一句小灰字，写着展开MattSkillsDeck，点一下回来。 _Avoid_: 展开按钮
-- **关闭确认框**: 点红色叉后弹出来的确认，标题是重新打开，点了三处一起恢复。 _Avoid_: 关闭弹窗
-
-## 对象类型词条（2026-10-20 定版 · 地图 #1274，讨论 #1275）
-
-- **对象类型（objectKind）**: 一张票是什么对象，取值九个：地图、规格、实施票、调研票、原型票、讨论票、任务票、缺陷票、普通票。判定顺序是：正文文件头（第一个可见标题之前）的隐藏标记 → 表达对象类型的标签（wayfinder:map、wayfinder:research、wayfinder:prototype、wayfinder:grilling、wayfinder:task、bug 六枚）→ 正文形状（地图五节、规格七节、实施票模板；形状是最后兜底）。判定结果永远是九个取值之一，没有「没认出来」这一档；第三方提交的无标签、无章节 issue 就是普通票，界面与流程与今天完全一样（继续走 triage 诊断）。 _Avoid_: 把它单独叫 kind（建票工具 deck_issue_create 的 kind 是另一套六个「位置值」，见「建票位置值」词条；仓里另有几处同名的 kind 与 type，各指别的东西：界面的 rowActionKind、契约层的 BACKEND_KIND 与 ERROR_KIND、角色 ActorKind、错误 ErrorKind；契约层那张票的类型叫 ISSUE_TYPE，取值 issue、map、spec（规格），是 type 不是 kind）、把它与「动作类型」混用
-- **对象类型标记（object kind marker）**: 写在票面文件头（第一个可见标题之前）的隐藏注释 `<!-- DSH-ISSUE-KIND: <kind> -->`，是对象类型的唯一真源；本地 Markdown 房票面上那行 `Type:` 由它派生显示。标记里只放类型名这种短词。它允许丢失——丢了退回标签与正文形状，不因此判错。整份替换正文时以盘上那一份为准保住它，建票时剥掉传入正文里已有的它。#1486 起新写出的本地 Markdown 文件不再写它；旧工作区里写过它的文件仍按它认，整份替换正文时以盘上那一份为准保住它。地图子票靠类型标签，缺陷票与普通票不写。 _Avoid_: 把它当正文内容（渲染时看不见）、把票面那行 `Type:` 当成第二个真源
-- **建票位置值（create kind）**: `deck_issue_create` 与 `deck_map_plan_create` 子票用的那套「这张票长在层级里的哪一格」，六个值：map（探索地图，顶层容器）、map-ticket（地图下的工单，必须挂地图并给 label）、spec（规格，顶层容器）、spec-ticket（规格下的实施票，必须挂规格）、bug（缺陷票）、issue（普通票，万能兜底）。它回答「长在哪」，不回答「是什么」：读侧对象类型是另一套九个取值，两者由 `src/deck/rules/object-kind.ts` 的位置表一次映射。旧值 task / ticket 直接拒绝并给迁移路径。 _Avoid_: 把它当成对象类型（objectKind）的缩写、把它与契约类型 ISSUE_TYPE 混用
-- **类型标签（type label）**: 表达对象身份的那六枚标签：wayfinder:map、wayfinder:research、wayfinder:prototype、wayfinder:grilling、wayfinder:task、bug。唯一来源是建票位置表：map 补 wayfinder:map，map-ticket 补 label 指定的那一枚，bug 补 bug 与 needs-triage，spec 与 spec-ticket 不补，issue 原样透传。除 issue 外，调用方把类型标签塞进 labels 会被拒绝。 _Avoid_: 把它与 triage 角色标签（needs-triage、ready-for-agent 等）混用、手工再补一枚造成双标签
-- **规格（spec）**: 一份说清「要做什么」的文档对象，由 to-spec 产出，正文七节：问题陈述、解决方案、用户故事、实现决策、测试决策、不在范围内、补充说明（英文版节名为 Problem Statement 等七节，两套都认）。在实施地图里它充当容器，实施票挂在它下面：本地 Markdown 房的规格落在 `.scratch/<feature-slug>/spec.md`，实施票落在同一目录的 `issues/<NN>-<slug>.md`，父子关系用文件头 `<!-- parentKey: -->` 注释与「同一个目录」表达；GitHub 房用原生父子关系。不靠标记里写引用。 _Avoid_: 把它当普通票（它有专属形状与专属对象类型）
-- **实施票（ticket）**: 一张说清「要建哪一段行为」的票，由 to-tickets 从规格拆出，正文四节：父议题、要构建什么、验收判据、被谁阻塞（英文版为 Parent、What to build、Acceptance criteria、Blocked by，两套都认）。另外认本地文件模板那种写法：一级标题 + 三条加粗行（中文 **要构建什么：** / **被谁阻塞：** / **状态：**，英文 **What to build:** / **Blocked by:** / **Status:**）+ 验收复选框；本地文件落在同一规格目录的 `issues/<NN>-<slug>.md`；三条字段行之外，插件自己的格式版本、幂等键、创建时间、父票、标签、认领人写在文件头（第一个可见标题之前）的隐藏 HTML 注释里（`<!-- DSH-... -->`）；triage 状态不写隐藏注释，而是写在那条可见的「状态：」行（#1790 缺陷 A 起），隐藏的 `DSH-LABELS` 只留非 triage 标签。它不带 wayfinder 类型标签；按地图 #1274 已定的口径，to-tickets 产出的实施票带 ready-for-agent。 _Avoid_: 把它与任务票混用（任务票是 wayfinder 技能产出的一张决策票，带 wayfinder:task 标签）
-- **本地 Markdown 文件布局（markdown file layout）**: 本地 Markdown 后端写出的文件长什么样、放在哪里，唯一真源是随包 Matt 技能原文 `package/bundled-skills/setup-matt-pocock-skills/issue-tracker-local.md`（pin v1.3.2，逐字哈希由 `tests/verify-bundled-skills-upstream.ts` 守着）：规格是 `.scratch/<feature-slug>/spec.md`；探索地图是 `.scratch/<effort>/map.md`；实施票、地图子票与普通票都是 `.scratch/<effort>/issues/<NN>-<slug>.md`，一个票一个文件、NN 从 01 起两位补零。deck 只是执行层：插件自己的信息一律写在文件头（第一个可见标题之前）的隐藏 HTML 注释里，不加可见字段；规格与探索地图的原文模板没有标题行，所以这两类文件没有可见一级标题，标题存在文件头的 `<!-- DSH-TITLE: ... -->` 注释里，读标题的顺序是先认可见一级标题（兼容旧 deck 文件与手写文件），没有就认 `DSH-TITLE`，再没有就按目录名降级（规格与地图用 `effortId`，其余票用文件名去扩展名），不拿 `##` 段名当标题、也不因为缺标题报错；00 号的读取与写入用同一套寻址顺序，不给范围时先找规格、找不到再找地图，不带 feature 参数读到的规格也能改能关；空工作区不带 feature 建普通票会如实失败，不再回落到工作区根 `issues/` 或 `.scratch/issues/`；按原文手写的文件也能读、能改、能完成，缺插件信息时降级不报错；#1486 之前落在工作区根 `issues/` 或 `.scratch/` 根下的旧文件只读兼容（列表、读取、快照照常，写入路径如实失败并说明只读），不再新写。 _Avoid_: 把规格做成 `issues/` 里的票（#1277 的旧方向，已被 #1480 纠正）、把插件信息写成可见字段或 frontmatter、按自造格式另起一套布局、把旧根 `issues/` 当新写入落点
-- **动作类型（action kind）**: 这张票现在该做什么动作，取值诊断、接手、补充、修复、讨论、研究、原型、执行。只看标签，按「状态优先于类型」的阶梯算：没有标签或带 needs-triage → 诊断；ready-for-human → 接手；needs-info → 补充；bug → 修复；wayfinder:grilling → 讨论；wayfinder:research → 研究；wayfinder:prototype → 原型；其余 → 执行。它回答「现在做什么」，不回答「这是什么」；本地 Markdown 读侧会把票文件里可见的 `Status:` 行合成 triage 标签，所以只看标签的算法对它仍成立（#1790）。 _Avoid_: 把它与对象类型混用、以为它会读正文
-- **正文形状（body shape）**: 一张票正文里的章节结构，用它判断这张票是地图、规格还是实施票。判据取严：专属章节全齐才算，允许有附加章节，不看先后顺序，只认二级标题。 _Avoid_: 用「只有某节」这种单节判据、把章节顺序当判据、拿它当唯一判据（它只是最后兜底）
-- **置信度（confidence）**: 这个对象类型是票面明写的还是推断出来的，只有两档：直说（票面文件头的隐藏标记或表达对象类型的标签明写）与推断（靠正文形状认出来的，界面上加一枚「推断」小标）。靠类型标签认出来的算直说。 _Avoid_: 把它当百分制分数、给它加第三档
-- **契约类型（contract type）**: 契约层那张票的类型，取值 issue、map、spec（规格）三种，是后端原生的能力，与对象类型不是一回事：spec 是 #1286 给实施地图加的容器类型；对象类型里的「规格」是插件按识别口径认出来的结果，两者名字像一个、住在不同层。建票位置值到契约类型的映射固定为：map→map、spec→spec、其余→issue（#1403）。 _Avoid_: 把它当对象类型的上位概念、以为对象类型的九个取值都是契约类型
-- **容器（container）**: 能装子票的票的统称，现在有两种：探索地图（契约类型是 map，或带 wayfinder:map 标签）与规格（契约类型是 spec）。列表页与详情页对两者用同一套行渲染与详情页骨架，按契约类型分辨，不另开一个数组（快照里的 maps 数组是历史名，现在装的是容器）。三态（有没有子票 / 子票是否全关）、身份颜色、角标文案与点按钮注入什么，统一由 src/client/kernel/container-view.ts 算，各处不再各写一份。两种身份色也在这份文件里定：探索地图用紫 `#c084fc`、规格用蓝 `#1D4ED8`（#1286 设计文档把后者叫「实施贵族蓝」，是同一个颜色）；别处只许从中央色表取色，不许再写这两个色值。它本身不是对象类型的取值：对象类型那九个里属于容器的是「地图」与「规格」。 _Avoid_: 把它当成一种新的对象类型、当成界面面板（面板是右侧边栏那一整块，容器是票）
-
-## 本地 Markdown 状态词条（2026-11-02 定版 · #1790 缺陷 A）
-
-- **可见状态行（visible Status line）**: 本地 Markdown 票（实施票、缺陷票、普通票）文件头里那条人一眼能看见的 `Status:` 行（中文票面写「状态：」），是 triage 状态在这类票上的唯一真源；隐藏的 `DSH-LABELS` 注释只放非 triage 标签。规格与探索地图容器不走这条，它们的状态仍写在隐藏的 `DSH-STATUS` 注释里。 _Avoid_: 把隐藏标签当成状态的第二处真源、以为改可见行之外还要双写一份
-- **状态冲突（status conflict）**: 本地 Markdown 票上，可见状态行写了一个状态、隐藏 `DSH-LABELS` 里的 triage 标签写了另一个，且两边都不是旧文件的默认值 `ready-for-agent` 时，读侧不替调用方挑一个，而是把两边原样带出来（`statusConflict`）；写侧遇到它整次拒绝、一个字都不写，并给出可重试的参数。 _Avoid_: 把它当普通校验错误（它是两处各说各话、要人来定）、当成读侧已经替人选了一边就可以照写
-- **归一（status normalization）**: 遇到状态冲突时按调用方显式选的一侧把两处写回一致：可见状态行写成选中的值、隐藏 `DSH-LABELS` 里那枚 triage 去掉、落选的那个值记进 `DSH-STATUS-HISTORY` 隐藏注释（留下为什么改的口子）。没有显式选择时不做归一。 _Avoid_: 把归一当成静默改状态（必须先有调用方的选择）、归一后还留着两边不一致
-
-## 界面文案与语言词条（2026-10-20 定版 · 地图 #1274，讨论 #1284；#1294 已落地）
-
-- **界面词表**: 面板上所有界面文案的中英对照表。键名是词条的名字，值是那一句文案，中文与英文各一份。2026-10-20（#1294）起真源是 `config/copy/` 下的十份词族 YAML，生成器再把它们写成生成物 `src/client/kernel/locale-data.ts`（不入库，构建时拼进客户端）；运行时词表从生成物里读，界面仍按 `tr('键名')` 取当前语言那一份。今天每门语言 1030 个键。 _Avoid_: 把它与「语言清单」混用（清单管支持哪些语言，词表管文案）、把某一门语言的那一份单独叫词表
-- **界面文案数据化（口头简称「变数据」）**: 把界面词表从 TypeScript 源码搬进独立的纯文本数据文件，由生成器产出客户端能用的数据模块，手写源码里不再有文案字面量。目的只有一个：加一门语言时只改数据、不改代码。2026-10-20（#1290 定方案、#1294 落地）已经做成：真源是 `config/copy/` 下的词族 YAML，生成物是 `src/client/kernel/locale-data.ts`（不入库，构建期现场生成），生成器的 `--check` 挂在 `npm run typecheck` 第一条，改了 YAML 忘了重算会当场判红。界面这一半边与提示词那一半边共用同一份语言清单、同一套做法。 _Avoid_: 把它说成「翻译」或「多语言化」（那说的是结果不是做法）、当成还能改主意选的方案（已落地走这条）
-- **语言清单**: 客户端支持哪些语言、每种语言的回退链与缺省语言的那份数据（`config/languages.yaml`）。它是客户端级事实：提示词与界面共用一份，客户端注册界面词表时也按它逐门语言调用宿主的 addLanguage 与 register，代码里不写死有哪些语言，这样「加一门语言」才真的只是改数据。语言快照读不到（或快照里的语言清单里没有）时按清单的 default 定，不会掉进写死的某一门。 _Avoid_: 把它与界面词表混用（词表是文案，清单是语言名单与回退规则）
-- **回退链（fallback chain）**: 一门语言查不到某条文案时依次去问的语言顺序；宿主契约要求这条链最终走到英文，查到最后仍没有就把键名显示出来。今天每门最多写一条退路（运行时只认 `fallback` 的第一项，多写的项不生效、校验层会直接判红），所以链是一条直路；要给一门语言留多级退路，得先把运行时改成沿列表逐项尝试。注册到宿主的每门语言都必须有一条能走到终点的链，否则宿主 register 会抛错。 _Avoid_: 把它与「缺省语言」混用（缺省语言是首选，回退链是依次退的顺序）
-- **词族（copy family）**: 界面词表按用途分成的若干组，一组一份 YAML，住在 `config/copy/` 下，文件名就是族名（今天十族：panel、flow、word、vcwrite、pages、labels、cards、skilldesc、skilldetail、spec）。生成物里每一族对应一个键名联合类型与一个族常量（`L_PANEL`、`L_FLOW` 等），全族键名合起来才是完整的 `LocaleKey`。加一族 = 在 `config/copy/` 下放一份新 YAML，生成器按目录自动发现，不读手写清单。 _Avoid_: 把它与语言混用（族是按用途分，语言是按语种分，两者交叉）、把它叫「模块」或「文件组」（它是一份数据文件，不是代码模块）
-- **界面词表生成物（locale-data.ts）**: 生成器按 `config/copy/` 的十份 YAML 与 `config/languages.yaml` 现场写出的源码 `src/client/kernel/locale-data.ts`：里面是每门语言的语言清单（`LANG_CONFIG`）、语言 id 列表（`LOCALE_LANGS`）、完整的词表对象（`LOCALE_COPY`）与十族常量，并且带键名联合类型 —— 漏译一条在 typecheck 当场红，而不是等运行时界面显示键名。它不进版本库，构建时拼进客户端闭包，且必须排在 `kernel:locale` 那一拼片之前。 _Avoid_: 把它当手写源文件去改（下一次生成会覆盖、`--check` 会判红）、把它提交进库
-- **键名联合类型（LocaleKey）**: 生成物里把所有词条键名写成的 TypeScript 联合类型：每族一个 `LocaleKey<族名>`，十族合起来一个 `LocaleKey`。它让漏译在编译期就红 —— 代码里按某个键取词、生成的词表缺了那门语言的这条键，类型对不上，`typecheck` 直接报错，不用等运行时界面把键名露出来。它只活在生成物里供 typecheck 与门禁使用，构建时整段剥掉、不进客户端产物。 _Avoid_: 把它与词表对象 `LOCALE_COPY` 混用（前者是键名的类型，后者是键到文案的数据）、手写维护它（它由生成器按 YAML 生成）
-
-## Tracker 会话与预算模型词条（2026-10-23 定版 · 规格 #1439）
-
-- **Tracker 会话（tracker session）**: 一次「在这个工作区、用这个后端干活」的会话对象，由 `openTracker` 开出来。开会话只做本地判定、不花额度：先认出用哪个后端（认出唯一一个、认出多个、还没选、工作区没准备好，四种结局各自可区分，且永不抛错），再取这个后端自己声明的预算模型，之后所有后端操作都从这个会话走。会话上带着后端编号、预算模型、能不能写以及不能写的原因。不经过会话，任何调用方都不许自己去选后端、自己过闸、自己拿后端编号写分支——这是 #1435 事故之后定下的唯一入口。 _Avoid_: 把「会话」当成界面上的聊天会话（那是另一件事）、开会话时就去问服务端要额度（选后端不花额度）
-- **操作管线（operation pipeline）**: 会话里每个后端操作都走的固定四步：取额度读数、交给闸裁决、转发给后端房间、把真实用量记进账本。读额度这件事本身（能力名 `readBudget`）是例外：它直达，不裁决也不记账。管线的意义是调用方只说「我要做什么」，花不花得起、算谁的账都由管线统一决定，换后端时调用方一行不用改。 _Avoid_: 把管线当可插拔的中间件（它只有一条固定顺序）、在调用方自己判额度（那就回到了事故前的老路）
-- **预算模型（budget model）**: 每个后端在注册时**必填**的一份声明，说清它的额度长什么样：种类四选一——两个独立桶（请求数与点数各算）、只计请求数、离网（不需要额度）、未知；再由「是否计请求数」「是否计点数」「两个桶是否各自独立」三格补充。闸与账本只读这份声明算账，不许读后端编号写等值分支；第三方后端不补这份声明就注册失败，报错会点名缺的是哪一格。 _Avoid_: 把它当成「这个后端现在还剩多少」的读数（那是额度读数）、在代码里写「如果是 GitHub 就按两个桶算」（声明已经说了，写死就绕过了声明）
-- **额度读数（budget reading，能力名 `readBudget`）**: 第 26 条后端能力，回答「这个后端现在还剩多少」，有三种诚实的结果：读到了（已知，带请求数额度或两个桶的剩余）、读不到（未知，附原因：还没测到、暂时取不到、这个后端不支持）、离网（这个后端不需要额度）。读数只回答事实，不裁决也不记账；界面与回执只说已知的读数，未知与离网不许拿 0 冒充。 _Avoid_: 把「未知」当成 0（那正是 #1435 事故的根）、把读数当成一次要过闸的调用
-- **闸（gate，2026-10-23 修订）**: 上文「刷新机制与 AI 工具链词条」里那条定义仍然成立的部分是「定类、裁决、推迟」。规格 #1439 起它不再是调用方各自去打的那个出口，而是**操作管线里的一个拦截器**：管线把「这是什么操作、额度读数是多少、能不能写」交给它，它回答放行还是推迟（未知与离网一律放行、硬顶恒有效、只有真见底才推迟）。记账挪到管线的下一步。 _Avoid_: 还在调用方代码里找闸（调用方已经不再自己过闸）、把「未知读数」判成耗尽
-- **账本（ledger，2026-10-23 修订）**: 上文那条定义里「按剩余额度自动定档」的部分仍然成立。规格 #1439 起键从「两个桶」改成「后端编号加桶名」——例如 `github/rest`、`github/graphql`、`gitlab/requests`；离网后端不建桶也不记额度，未知模型只记发出去的请求数。每一笔用量由管线在操作成功后按预算模型换算后记入，算式只读声明、不读后端编号；同一份额度跨来源共享时不拆账。 _Avoid_: 把两个桶当成全世界（Markdown 没有桶、GitLab 只有一个请求桶）、把「还没同步过读数」当成「已经用掉这么多」（没读数是空账，不是零用量）
-
-## 真机验证词条（2026-11-03 定版）
-
-- **真机验证**: 用 base 库（`dsh-featherhunter-plugin-base`）提供的那套真机验证脚本与能力，把一个待验安装包装进真实的 DSH 实例，由 AI 自动或半自动化地验证，并留下证据证明确实通过。 _Avoid_: 把人工手点一遍、只跑单元测试或只在开发机上跑一遍脚本叫真机验证（那都不是「装进真实 DSH 实例」的那套验证）
-- **自动化验证**: AI 一直跑各种脚本，跑完为止，中途不用换成人工判断。 _Avoid_: 把「脚本跑一半、剩下靠人判断」叫自动化验证
-- **半自动化验证**: AI 跑一部分脚本后，自己判断当前情况、处理剩下的事；脚本能力覆盖不到的特殊情况走这条。 _Avoid_: 把「AI 跑脚本、人做判断」叫半自动化验证（这里的判断仍由 AI 做）
-- **待验安装包**: 本次要验的那个安装包——一个具体版本号，带文件摘要；验的就是它，发布也发它。 _Avoid_: 把 base 库文档里的「候选包」「候选」当同义词搬用（本词表统一叫待验安装包）
-- **证据**: 真机验证留下的、别人能自己复核的原始材料（命令输出、截图、导出文件、环境快照、文件摘要）；只报结论、不给证据，不算通过。 _Avoid_: 只用一句「跑过了」当证据、把报告或日志路径当证据本身
-- **真机验证检查（check）**: 真机验证里的一条可证伪断言。一个版本算「通过」，要相关真机验证检查全部 pass；有 fail 不算通过，skip / blocked 也不算通过。 _Avoid_: 把它简称为「检查」，或与界面上的「界面检查项」「环境检查」混用（那些是界面展示与诊断，不是真机验证的断言）
-- **真机验证场景（scenario）**: 插件自己写的端到端验证脚本，用 `dsh-verify run` 跑一次就走完一条真实使用路径；真机验证检查是场景里的断言。本仓的场景脚本在 `verify/scenarios/` 下。 _Avoid_: 把它简称为「场景」，或与清单票里登记的「场景块」混用（那是登记进票、要人执行的验证条目，不是脚本）
-- **报告（report）**: 一次验证运行留下的记录（`run.json` 和摘要文件），列出每条真机验证检查的结果、退出码和证据位置。 _Avoid_: 把报告当证据本身（报告说跑了什么、结果如何，证据是能自己复核的原始材料）
-- **隔离（isolation）**: 真机验证用的实例与真实环境分开——复制 profile 起实例，真实 home 只读不写。 _Avoid_: 与「后端物理隔离」「空工作区隔离」混用（那两个说的是别的领域）
+- **logs（日志）**: the run trace the plugin records while it runs, in four levels: error, warn, info and debug; errors and warnings are always written to disk, the batch of info traces that the research ticket #331 list marked as a must-add for the first round (after the correction: the original table's 26 minus #45 privacy.scrub, plus #9 issues.fallback, #35 settings.save, #38 statusbar.fallback, #41 chain.derive.error; #35 was retired on 2026-09-21) is written to disk as a permanent lightweight trace, the P1 batch on demand, and the remaining info and debug traces only when the debug switch is on. The entry does not pin a count — **the current count is whatever the comparison table in chapter 1 of `research/489-appendix.md` says** (as of 2026-09-21: 31 permanent, 26 on demand, 5 self-monitoring, 62 in total). _Avoid_: treating output that only goes to the console as already written to disk（把只打到控制台的输出当已落盘）, treating high-frequency debug detail as a permanent trace（把高频调试细节当常驻轨迹）
+- **debug switch（调试开关）**: the machine-wide global switch that controls whether detailed logs are produced, holding one value per computer, off by default; the main switch on the settings page is the authority, the small entry in the status bar only exports and jumps and is not a prominent switch; development use and a user's live installation share the same semantics, with no separate developer mode; the switch value is stored both in the client's local storage and in the host's persisted file, synchronised on both ends at startup and on change, reconciled with the host as the authority, and kept across a restart. _Avoid_: a switch per workspace（按工作区分开关）, keeping it only in memory without persisting（只放内存不持久化）, both ends each recording their own（双端各记各的）
+- **write to disk（落盘）**: the act of the host writing logs into local files in one centralised way; the destination is a separate log subdirectory under the cache directory, not bucketed by workspace, one file per calendar day; the call site only puts the log line into an in-memory queue and returns without waiting for the write, every write in the queue lines up in one queue and the host writes one copy at a time; the client never writes to disk itself, it only forwards logs to the host in batches. _Avoid_: the client writing to disk directly（客户端直接写盘）, appending to a single file forever（单个文件一直追加）, a directory per workspace（按工作区分目录）
+- **export（导出）**: a set of user-facing operations that hand the logs already written to disk to the user to pass on to the maintainer: one-click packaging of the log files, a jump to the log directory, copying the absolute path of a log file, and one-click clearing; it does only purely local writing to disk plus manual export, never reports automatically, and does no automatic rotation or automatic cleanup. _Avoid_: automatic reporting（自动上报）, automatic rotation and cleanup（自动轮转清理）, treating export as a log viewer（把导出当日志查看器）
+- **redaction（脱敏）**: the practice of filtering sensitive information before it is written to disk or exported, mainly a whitelist that records only known-safe fields, with a regular-expression mask that covers up known high-risk shapes as a secondary measure; tokens and the raw text of login state never reach disk, the original path of a workspace and the repository address are never recorded raw, and titles and error text are recorded only after truncation. _Avoid_: recording a token raw（原文记令牌）, recording paths and addresses in full（全量记路径地址）, relying on the regular-expression mask alone（只靠正则掩码）
+- **performance guard（性能守卫）**: the way of writing code that guarantees no cost is paid for logs while the debug switch is off, mainly an outer is-it-on check at the call site, with a check inside the logging function as the safety net; when it is off it returns immediately: no line object is allocated, no string is concatenated, no object is turned into text, nothing enters the queue, no timer is scheduled, nothing is written to disk. _Avoid_: concatenating first and checking afterwards（先拼接再判断）, recording the full payload on every pass of a high-frequency path（高频路径逐次全量记录）, turning objects into text during render（渲染时直接转文本）
+
+## The effort dimension vocabulary (settled 2026-09-09)
+
+- **effort（工作单元）**: in the local Markdown backend, a unit of work that carries its own set of maps and tickets, physically located in the `.scratch/<effort>/` directory; a repository can have several efforts, and the tickets inside each effort are numbered from 01 independently. _Avoid_: treating an effort as a repository（把 effort 当仓库；the repository is the workspace itself）, treating an effort as a map（把 effort 当地图；the map is the map.md inside the effort）
+- **effortId（工作单元标识）**: the identifier of which effort a ticket belongs to, whose value is the effort directory name; it is a **core field** of a ticket and always exists, and only a backend with a single implicit effort (GitHub/GitLab) fills in an empty string. _Avoid_: using the number instead（用编号代替；a number is unique only inside one effort）, treating it as a capability field（当成能力字段；it is part of the identity, not whether the capability is available）
+- **ticket identity（票身份）**: the unique identity of a ticket in a repository, equal to the triple "repository + effort + number"; a number is unique only inside one effort, so every place that finds a ticket by number, keys a ticket, or remembers "which ticket is currently open" must carry the effortId. _Avoid_: recognising a ticket by number alone（只按编号认票；several efforts would collide into one）, encoding the identity into the number string（把身份编进编号字符串）
+- **address scope（寻址范围）**: the scope given when reading or writing that says "look only inside this one effort", carried on the repository reference (omitted = the whole repository, given = only that effort). _Avoid_: adding a separate parameter to every operation（给每个操作单独加参数；it would crowd out the parameter slots of the calling context and break existing backends）
+- **honest conflict（诚实冲突）**: the way the case is handled when no address scope was given and the same number exists in several efforts — a read falls back in directory order, a write returns a conflict error and never guesses the target file. _Avoid_: a write taking "the first hit"（写操作取第一个命中；it would write the wrong file）, failing silently（静默失败）
+- **md directory chips（md目录签）**: the row of clickable options at the top of the main list in the local Markdown backend that filters by effort, looking at one effort at a time. _Avoid_: work-order label（工单标签；that is the colored block on a ticket）, top-level tab（顶部页签；those are the three tabs for the list, the skills and the checks）
+
+## Zero layout jitter vocabulary (settled 2026-09-11 · #602)
+
+- **zero layout jitter（布局零抖动）**: a rendering discipline — within one synchronous execution, layout may be recomputed only once. Origin: the browser's rule is that "once layout has been marked dirty, any single read of a size recomputes layout on the spot", so when style writes and size reads alternate, a single render turns into thousands of forced reflows (4.9 seconds measured on real hardware). _Avoid_: using it as an adjective meaning "a bit faster"（当成快一点的形容词；it is a discipline with a precise criterion）, treating it as a universal performance fix（当成万能性能优化；it is only worth doing where the loop count grows with the amount of data）
+- **measure phase / mutate phase（测量相与变更相）**: the two phases that keep this discipline. The measure phase only reads sizes and writes no style at all; the mutate phase only writes styles and never reads back; write operations that first have to put elements into a "measurable state" form a separate stretch of their own, placed before the measure phase. _Avoid_: changing styles inside the measure phase（在测量相里改样式；then splitting the phases was pointless）, writing both phases into the same loop（把两个相位写进同一个循环）
+- **interleaved measure-and-mutate（量改交替）**: the name of the violating practice — write a style, read a size, write again, read again, and the browser recomputes layout on every read. The symptom is called a **reflow storm**（重排风暴）(within a few dozen times it is not visible yet, a few thousand times is seconds of waiting for nothing). _Avoid_: using it to describe anything other than the practice（用它描述现象之外的东西；it is a way of writing code, not a symptom）, lumping it together with "a synchronous block on the host side"（把它与宿主侧同步阻塞混为一类；the latter is a different kind of fault）
+
+## Label colors vocabulary (settled 2026-09-13 · #627, following #610 and #615)
+
+- **label colors（标签配色）**: the collective name, at the level of a workspace, for "which label is shown in which color". The final color value is computed by the backend and handed to the interface: on the GitHub side it is the repository label's own color, on the local Markdown side it is the colors file in the workspace that the user can edit by hand; the interface only deals with the two operations below, does not look colors up or compute them itself, and does not need to know which of the two it is talking to. _Avoid_: palette（调色盘；that refers to the default color table labelPalette the backend reports itself, which is descriptive data, not a computed result）
+- **listLabels（列出标签）**: an operation on the tracker contract layer that gives "every label this backend can recolor" together with each one's color and optional description (the interface reaches it through the host method `wf.listLabels`). Colors are written uniformly as six lowercase hexadecimal digits without a hash sign; an empty string means this label has no color configured yet (the interface shows it in grey); an omitted description means this backend cannot supply one. The list carries no counts such as "how many tickets use this label". _Avoid_: taking the label table in the panel snapshot as the authority（拿面板快照里那份标签表当权威；that is derived data collected from the labels of the individual tickets, and it never promised to be complete）
+- **setLabelColors（批量改色）**: the other operation on the tracker contract layer; it accepts a batch of "label → new color" pairs (only the ones that really changed, with both sides lowercased before comparing), and returns **a per-item account** of the ones that succeeded and the ones that did not, each with its own reason (a partial success is a legitimate result, and the interface shows it faithfully). After a successful save the interface must call "list labels" once more to refresh with the real values, and must not optimistically repaint the screen with the version the user typed (the interface reaches it through the host method `wf.setLabelColors`). _Avoid_: mixing it up with the existing "rename the labels of one ticket" setLabels（与既有的改某张票的标签名 setLabels 混用；the latter only touches the labels of one ticket, and only the one whose name carries Colors changes colors）
+- **label colors file（标签配色文件）**: the colors file in a local Markdown workspace that the user can edit by hand (its location is recorded in map #610: under `docs/agents/` in the workspace, file name `label-colors.json`); when the plugin changes a color it writes only this file, and when it cannot read it, it never flattens and rewrites it. The file's shape is a JSON object whose keys are label names as they are (they may contain colons and spaces) and whose values are six hexadecimal digits without a hash sign (an empty string means this label has no color configured yet, and the interface shows it in grey); when you want to give a label a one-line explanation, you can also write the value as `{"color": "8b5cf6", "description": "map ticket"}`, and reading accepts both forms. The file is placed by the plugin at the step "the user picks a backend for the workspace" or the first time the recolor dialog is opened (both paths are idempotent: when the file already exists not one character is changed), with its default content pre-filled from the 11 built-in labels. _Avoid_: the old palette table（旧的调色盘表格；`docs/agents/triage-labels.md`, no longer read under the clean-cut wording, and with no migration and no backfill）
+- **builtin colors（内置默认色）**: the default palette that the local Markdown backend declares itself (`defaultLabelPalette`, 11 labels: the ten canonical ones plus `wontfix`), which is also the source of the data the contract layer reports as `labelPalette`. Inside the color mechanism it handles three things: it adds these labels to the union of labels when listing, it pre-fills the colors file when that file is first created, and a ticket label falls back to grey only when it is neither in the colors file nor in this table. The repository has exactly one default color table (its colors match the same-named labels in `src/shared/labels.js`, compared case-insensitively). _Avoid_: calling it the "palette table"（把它叫成调色盘表；that refers to the table in the old `triage-labels.md`, which is no longer read）
+- **host method reply and backend operation return（宿主方法回包与后端操作返回）**: the two-layer shape — the reply of those two host methods is a **flat envelope**, with `wf.listLabels` returning `{ok:true, backendId, labels:[...]}` on success and `wf.setLabelColors` returning `{ok:true, backendId, applied, failed}` on success (`labels`/`applied`/`failed` all sit at the top level). The return of those two backend operations is another layer: `{ok:true, data:[...]}` and `{ok:true, data:{applied, failed}}`, which the host flattens into the envelope. When you change one layer, be clear which layer it is: what the interface sees is the flat envelope. _Avoid_: saying "the data in the host reply"（说宿主回包里的 data；the host envelope has no data layer）
+
+## Sub-workspace vocabulary (settled 2026-09-18 · #649, following #301/#324)
+
+- **selected directory（所选目录）**: the directory selected when the session was created (the session's cwd), first passed through the normalisation of the workspace key (on Windows fold the case, unify the slashes, drop the trailing slash). _Avoid_: treating it as the workspace（把它当成工作区；in a subdirectory session the two often carry the same name, but the identity is not it）
+- **workspace root（工作区根）**: walking up layer by layer from the selected directory (its own layer first, then the parent directory, the grandparent directory and so on), the first directory that itself carries `docs/agents/workspace.yaml` is the workspace root; if nothing turns up all the way to the drive root, the POSIX root or the UNC share root, the selected directory itself is used. The decision looks only at whether that file is there and does not read its contents (settled 2026-11-03). Neither `.git` nor `docs/agents/issue-tracker.md` takes part in recognising a root; the two old records `workspace-root.yaml` / `workspace-member.yaml` have been deleted, and leftovers on a machine do not take part in the decision either. _Avoid_: treating `.git` as a workspace root marker（把 .git 当工作区根标记；that is a version-control boundary, not a plugin workspace: a local Markdown workspace can have no git at all, and several local clones of GitLab each become their own root）, treating "a `docs/agents/issue-tracker.md` in a subdirectory" as the credential of an independent workspace（把子目录里有一份 issue-tracker.md 当成独立工作区的凭据；it only answers which backend this layer uses）, storing a "parent workspace" field（存父工作区字段；the relation between parent and child is computed on the spot every time a directory is opened）
+- **workspace record（工作区记录）**: the single `docs/agents/workspace.yaml`, which answers two things — that this layer is a workspace (the upward search for it is what recognises a root), and which backend this workspace uses. The plugin writes it when the user picks a backend for the workspace; recognising a root looks only at whether it is there and does not read its contents: an empty file, a broken one, or a directory in that place all still count. Since 2026-11-03 there is no identity record and no membership record any more (`workspace-root.yaml` and `workspace-member.yaml` are deleted). _Avoid_: treating `docs/agents/issue-tracker.md` or the old `workspace.json` as the record（把 issue-tracker.md 或旧版 workspace.json 当记录；the former is the hand-written backend description, the latter is a leftover that an older version wrote into the directory the session selected）, treating "a backend has been picked" as "initialisation is complete"（把选了后端当初始化完成；initialisation is complete when `issue-tracker.md` is there）
+- **sub-workspace（子工作区）**: the situation of those sessions where the selected directory ≠ the workspace root; the panel data, the backend selection, the check-chain snapshot and the write path all follow the workspace root, and the subdirectory is only the starting point of this session. _Avoid_: treating a subdirectory as an independent workspace（把子目录当独立工作区；that would demand initialisation all over again and grow a second set of configuration and ticket store inside the same repository）
+- **sharing scope（共享范围）(revised #301/#324)**: the earlier rule "sessions of the same folder share one set of data" changed, from 2026-09-18, to "sessions of the same **workspace root** share one set of data"; "different workspaces are never merged" is unchanged. _Avoid_: carrying on with the old wording "same folder"（继续用同一文件夹这个旧说法）
+- **wording in user-visible places（用户可见之处的措辞）**: the words above come from the internal word list and are used only in ticket names, documents and code comments; in the interface and in the wording injected into a session, plain language is always used (for example "the current directory belongs to workspace D:\ilife"). _Avoid_: moving internal terms into the interface or into a prompt（把内部术语搬进界面或提示词）
+
+## Refresh mechanism and AI toolchain vocabulary (settled 2026-09-23 · map #704, child tickets #705–#720)
+
+- **Attention model（视野模型）**: the thing in the scheduling layer that records "which workspaces someone is looking at right now". The UI reports "which workspace root I am looking at" once only, when the session switches, the panel opens, or the window gains focus, and the attention model keeps an active set from those reports: at most two — the one being looked at, plus the one left less than 30 seconds ago; every other workspace counts as the background tier. The active tier probes for changes every 5 seconds and, having found a change, fills in only the rows that changed (no more rebuilding the whole pool); the background tier sends nothing at all, and when the window switches back the UI first fills itself from the on-disk or in-memory snapshot and then probes once. When no report arrives for 90 seconds (the front end crashed, the window was hidden), every workspace drops to the background tier automatically — the fallback direction is always the cheaper one, never the faster one. _Avoid_: taking "the current window" or "the current session" as its input (it only recognises workspace roots; several sessions under the same workspace root count as one workspace and cost a single share), treating the cap on the active set as a negotiable number (the hard cap is 2; when several windows report at the same time it takes the two that reported most recently)
+- **refresh gate（闸）**: the single exit every call heading for GitHub must pass through, doing four things — classify, bookkeep, adjudicate, defer; no other path can get out (a static-scan gate enforces this). Each request is first put into one of three classes: user actions (clicking refresh, opening a ticket, paging, posting a comment, changing labels) always pass; lifecycle (the one time a workspace is switched into) passes within budget, and when the budget is short it degrades to "serve cache only, probe without rebuilding"; background (scheduled probing, the check chain, the naming guardian) passes within budget and is deferred beyond it. Deferral is not failure: only the last request for a given workspace stays in the queue (repeated requests merge into one), it carries a 5-minute expiry, and on expiry it is simply dropped — no queueing, no pile-up, no retry. _Avoid_: mixing it up with the existing gate（门禁）, the scripts under `tests/verify-*.js` that judge invariants and block a release when they fail — that one is the script that turns red at commit time, this one is the exit that stops a call at runtime; and do not treat it as the place for retries and backoff (what it adjudicates is whether you may spend and how much)
+  _2026-10-23 revision_: this definition describes the old run path. From spec #1439 on, the gate has moved into the operation pipeline and is no longer an exit each caller hits on its own; for the new stance see "refresh gate（闸, 2026-10-23 revision）" below, and `docs/adr/20261023-tracker-single-entry.md` for the basis.
+- **ledger（账本）**: the usage record of the two buckets the gate holds (REST call count and GraphQL points), plus the server-side remaining quota it syncs back every minute — the sync goes through `gh api rate_limit`, an endpoint that costs no quota. The ledger picks its tier automatically from the remaining quota: under six tenths used is the green tier; six tenths to eighty-five percent is the yellow tier (active probing slows to 120 seconds, a rebuild at most once every 300 seconds, background refresh stopped altogether); above eighty-five percent, or after having hit a rate limit once, is the red tier (automatic refresh stopped altogether, user actions only, and the UI says plainly "quota is tight, automatic refresh is paused"); the gate computes the tier itself, needing no human intervention and no restart. Every charge, every deferral and every downgrade leaves a trace (logged per the repository's logging discipline at the "only when the debug switch is on" level, taking no resident slot) and serves as the reconciliation basis at acceptance. _Avoid_: treating the three things the UI exposes (when this data was fetched, whether the last refresh succeeded, whether it is currently degraded) as the ledger itself (that is only the part it exposes), treating the ledger as a report for users (first of all it is the gate's basis for deciding the tier)
+  _2026-10-23 revision_: the "two buckets" in this definition have been replaced by "backend id plus bucket name" (for example `github/rest`, `gitlab/requests`); for the new stance see "ledger（账本, 2026-10-23 revision）" below, and `docs/adr/20261023-tracker-single-entry.md` for the basis.
+- **Processing chain（处理链, historical name）**: replaced from 2026-10-18 by the work route（工作路线）, and no longer used in anything new. The old stance (20 tickets kept per session, only hashes and ticket keys written to disk, read operations never entering the chain) has been overturned; the reasons, the new shape and the new on-disk location are in map #1080, discussion #1081 and spec #1259. Where this word appears in old documents, old tickets and old comments, read it as it meant back then, and do not carry it into new code, ticket bodies or comments. _Avoid_: using "processing chain（处理链）" in new code, ticket bodies or comments, and listing it beside "work route（工作路线）" as though they were two different things
+- **Invariant（不变量）**: the six properties that must always hold in this refresh-mechanism design; any implementation, any new feature, any single code change that breaks one of them turns red, so it is the constitution of this design. The six are: I1 single exit (every call to GitHub must pass the gate, no path may bypass it, enforced by a static-scan gate); I2 no background timers (outside the workspace being looked at, no workspace holds a long-lived timer — the one just left keeps a wind-down tick of at most 30 seconds, anything left earlier sends nothing at all, and switching back catches up once); I3 the first screen pays only for row data (bodies, comments, reviews and map child tickets are all fetched only when a person opens them); I4 usage does not depend on the number of workspaces (3 open and 30 open cost the same order); I5 failures must be visible and must back off (a failed fetch may not be quietly swallowed: the UI has to say so, retries have to be spread out, repeated failures have to trip a circuit breaker, and a failure never escalates into a request storm); I6 charges are attributable and reconcilable (every charge is on the books: who started it, which tier it belongs to, how much it cost, and how much was left at the time). _Avoid_: treating it as a performance target or an optimisation suggestion (it is a discipline with explicit criteria — break it and you turn red), treating the six as a list you may trim by development cost (this design's stance is to do it right in one go, not to trim by cost)
+  _2026-10-23 revision_: I1 "single exit" lands today in the operation pipeline（操作管线） (see "Operation pipeline（操作管线）" and "refresh gate（闸, 2026-10-23 revision）" below); this sentence is kept as a record of the six invariants of the refresh mechanism, and the new basis for admitting backend calls is `docs/adr/20261023-tracker-single-entry.md`.
+
+## Version management vocabulary (settled 2026-10-02 · #812, following map #810)
+
+- **Worktree（工作树）**: a worktree in the git sense, that is, a separate working-copy directory. In this project the word worktree always means it. _Avoid_: using the session-header field `worktree` in the code (which records something else) to talk about a git worktree, using "workspace（工作区）" in its place
+- **Worktree display name（工作树显示名）**: the text on the UI that stands for one worktree, taken as the **shortest unique suffix** of that worktree's full path — among all worktrees of the same git repository, count leftwards from the last segment of the path and take the fewest segments that tell them apart. _Avoid_: simply taking the directory name (duplicate names collide into two identical lines), using the full path as the display name (it does not fit in the panel)
+- **Git repository root（git 仓库根）**: the directory layer that carries `.git` is that layer. It and the **workspace root（工作区根）** may not be the same layer: the workspace root is "the first directory going up that carries `docs/agents/workspace.yaml`", and `.git` takes no part in root recognition, so the two can be offset (for example the git repository root sits on an outer layer while an inner directory has its own workspace record). The version management tab describes the git repository root. _Avoid_: assuming "the workspace root is the git root", saying "workspace root（工作区根）", an internal word, on the UI
+- **As-of time（依据时间）**: when the snapshot that a given local reading is based on was refreshed into the local machine. For example, "ahead 3" is based on the locally recorded state of the remote, so the as-of time is the moment the remote-tracking ref was last refreshed. _Avoid_: substituting "what time is it now" for the as-of time (that is a display convention, not the basis)
+
+## Inclusion gate vocabulary (settled 2026-10-08 · map #824)
+
+- **Two gates（两道门, inclusion scan gate）**: the central scan gate over the other side's inclusion list is two gates, and both are required — **high-severity cleared（高危清零）**（binary gate: one high-severity finding left means a red light, no matter how high the score） and **score above 80（分数过 80）**（cumulative gate: score divided by full marks times 100）. _Avoid_: treating the two gates as one plan (only changing code without clearing false positives — the score goes up and the gate is still red)
+
+## deck refactor vocabulary (settled 2026-10-12 · map #1010)
+
+- **Settled by the refactor（随重构收口）**: the problem an old bug ticket describes no longer exists in the stretch of code this refactor is responsible for; when closing that ticket, write on its face which rewrite resolved it. It replaces the colloquial "swallowed". _Avoid_: taking it to mean "the refactor will empty every old ticket in one go" (tickets that are not this refactor's stay with their own owners), using "fixed（已修）" in its place (a ticket that was fixed but not accepted does not count as settled)
+- **Rewrite unit（改写单元）**: the stretch of source code one issue is responsible for in this refactor, usually one directory or one room in the new tree (for example `src/deck/shell/`, `src/tracker/rooms/github/`). One rewrite unit corresponds to one landing of "old JavaScript becomes TypeScript", and also to one walkthrough for maintainers: which old files became which new files, what each is responsible for, and which conventions may not change. _Avoid_: assuming "one directory always means one issue" (a room with many files gets split into two or three units), assuming "one commit" (a unit may be committed over several commits)
+- **Three things to look at（讲解三看）**: the three places a maintainer should focus on, written when each rewrite unit is delivered — whether the method encapsulation is reasonable, whether the argument shape is reasonable, and whether the boundaries and failure paths are explained clearly. The maintainer taking a position on these three (agreeing or asking for changes) is one of the necessary conditions for a rewrite unit to be complete. _Avoid_: treating it as a code review checklist (what it serves is "the maintainer understands and contributes an opinion", not finding bugs)
+
+## Backend determination source vocabulary (settled 2026-10-12 · #1003, following #669 and #683)
+
+- **User choice（人选）**: the backend a person settles on by clicking confirm on the UI (both the panel's "switch backend" dialog and the gating dialog behind the blue bar's "choose backend" count). It has exactly one record: the workspace config file `docs/agents/workspace.yaml` (it survives restarts and machine changes), and **the choice takes effect only once it is written into that file**. This machine also keeps a per-workspace copy of the choice (the host-side record from #683); from 2026-10-12 it takes no further part in determining the backend and serves only to generate the workspace file once. _Avoid_: saying "the in-process binding" is another record (that copy was deleted wholesale from 2026-10-14, #1138), treating the memory on this machine as a source that still has a say
+- **Auto detection（程序自己认）**: the program deciding by rule which backend this workspace uses; there are two rules: read the declaration file in the workspace, and each backend's own matches hitting (looking at `.git/config`, looking for `.scratch/map.md` or the like in the directory). Neither is a user choice, so today neither is ever given write permission — to write, first ask a person to choose on the UI. _Avoid_: setting it against the declaration file (the declaration file is one of its own rules)
+- **Declaration file（声明文件）**: the Markdown in the workspace stating where the tickets here live and how they are read and written, at `docs/agents/issue-tracker.md`, written by the AI during the initialisation step (the plugin does not write it itself). It is one of the inputs to the backend's matches, and also the current-state artefact the initialisation prompt checks against; the workspace root determination does not look at it (root recognition looks only at `docs/agents/workspace.yaml`), while "whether the workspace is initialised" looks at whether it exists (back to this criterion from 2026-11-03), so it belongs to auto detection, not to user choice. _Avoid_: treating it as a user choice (a user choice is the click on the UI, recorded in the workspace config file), confusing it with `docs/agents/workspace.yaml` (the latter is the single source of truth for user choice)
+
+## Judgement-criteria vocabulary (settled 2026-10-14 · map #1042, decision in `docs/adr/20261014-error-classification-single-source.md`)
+
+- **Zero change（零变化）**: the criterion for finishing a rewrite or a fill-in — under the same input the externally observable expected result is **identical case by case** with what it was before the rewrite, regardless of how the implementation is written. Ruling added by the maintainer on 2026-10-14: the feature's intent counts as 100%, and where measurement gives only 80% that is the gap; filling the gap up to the intent **does not** count as "changing behaviour"; only adding a further approach outside the intent counts as changing behaviour (that needs its own ticket and criteria). _Avoid_: recording a gap fill as "a deliberate exception where behaviour changes", substituting "basically identical" or "about the same" for a case-by-case comparison
+- **Single source of judgement（判据一源）**: one judgement (today, "which tier a failure falls into") has exactly one ordered rule table as its source of truth; each party may write only its own **preceding extension** (the error-code names and sentence shapes specific to that party) and may not copy the common entries. _Avoid_: each place writing its own copy of the criteria and then demanding "keep them consistent" (two copies will drift, and measurement has already produced the opposite advice)
+- **Raw（原文段）**: the **required** stretch of raw text that a backend or a command emits in a failure result, stored separately from the one sentence for humans (`message`); the classification is a heuristic and may guess wrong, so the raw text is the fallback for a person to judge for themselves. _Avoid_: calling it "error details" (that is where `message` sits), omitting it as an optional field
+
+## Host method and RPC endpoint vocabulary (settled 2026-10-17)
+
+- **Host method（宿主方法）**: a method the host offers to the outside and the UI calls by name — the host side registers its own implementation, the UI side calls it under the same name, and the two sides assemble the full name from the same prefix. Documentation written for people, ticket titles and comments always use this word. _Avoid_: telephone（电话）, the old name in dependency package docs and error text, no longer used in this repo (when quoting a name the dependency itself exports or the original error text, copy it verbatim, do not rewrite it into our word), command（命令）, which in this repo means only the entrances such as backend operations and skill exits, not this layer
+- **RPC endpoint（端点）**: the name for the same thing in the transport and channel context — one call is one request hitting the host channel, and the host looks up the endpoint table by the name with the prefix stripped and dispatches it on the spot. Use it only where the subject is more technical, such as channels, prefixes, the endpoint table or the shape of the round-trip packet; in everyday prose use "host method". _Avoid_: using "endpoint（端点）" to mean a backend operation (on the backend side that is called an "operation（操作）"), dropping only the word "RPC" in documentation for people without one sentence of explanation
+- **Method name（方法名）**: the full name of a host method, shaped `<prefix>.<name>` (this repo's prefix is `wf`, for example `wf.listLabels`). The registering and calling sides must use the same name; the prefix may have exactly one source, and neither side may copy it by hand. _Avoid_: using only the short name without the prefix in outward-facing prose, writing the prefix out again in the UI code
+
+## Work route vocabulary (settled 2026-10-18 · map #1080, discussion #1081, spec #1259)
+
+- **work route（工作路线）**: the record of “which sessions are working on which tickets”, one per workspace. Every successful deck tool write operation records one work entry; read operations record nothing. It is stored at `<user home>/.dsh/mattskillsdeck/work-path/<workspace root hash>.json`. A write reads first and then merges, then writes a temporary file and renames it, and finally reads it back to confirm. There is no per-session cap on entries; entries are kept for 30 days; when a single file exceeds 2MB, the oldest entries are trimmed first. Release (see “release”) only retracts one mis-reported entry of this session: it adds no action and does not affect other sessions. The old word “processing chain” has been a historical name only since 2026-10-18. _Avoid_: treating it as a session activity log（把它当会话活动日志；it records only writes and explicit processing actions）, mixing in “which tickets were looked at recently”（把「最近看过哪几张票」混进来；read operations do not enter the work route）, using “processing chain” in new content（用「处理链」写新内容）
+- **work entry（工作条目）**: one record in the work route, equal to the most recent action a session took on a ticket. Its fields are the ticket number, a snapshot of the ticket title, the session label, the action, the action time, and the source (reported or automatic). Only the most recent one is kept for the same session and the same ticket, so it answers “which few tickets are being worked on”, not a running log. _Avoid_: treating it as one ledger line per ticket（把它当每票一条流水；the key is session plus ticket number, not the ticket number）, treating the ticket title snapshot as authoritative（把票标题快照当权威；the snapshot goes stale）
+- **progress entry（进度条目）**: the old name “progress self-assessment”（进度自评）is retired. One record in the `## Progress`（`## 进度`）section of a ticket: a percentage, the time the tool stamped, and one sentence of explanation. The newest record is written at the top, so the first one is the current value; it is written through the `progress` argument of `deck_issue_patch`（`{ percent, note }`）, and both `data.ticket.progress` in the `deck_issue_get` receipt and the panel's progress ring read this one. The optional single field of progress self-assessment that `deck_issue_report` used to accept (an integer from 0 to 100, written into the work entry, for display only) was retired with #1352 and no longer exists; values already recorded in old archives are kept as they are and are not deleted retroactively. The `## Progress`（`## 进度`）section in specs, maps and tickets is a deck-added section and is not part of the original template the bundled skill ships; it stays in the visible body under ADR 20261025 “decision three, item one”（决定三之一） (#1501 settled on option A). _Avoid_: confusing the progress self-assessment in a work entry with this entry（把工作条目里的进度自评与这条混为一谈；that one is retired）, using it as a completion criterion or as a claim credential（拿它当完成判据或认领凭据；a claim is the backend assignee, and processing is the action a session leaves on the work route）
+- **session label（会话标识）**: the session name shown to people, taken from a snapshot of the session title. When it cannot be obtained it shows “session <first 6 digits of the session hash>”. A tool receipt only ever carries the session label and an “is this session” boolean; the raw session id never appears. _Avoid_: using the raw session id as a display name（拿会话 id 原文当展示名）, using the session label as a person（拿会话标识当人；the claimant is another matter）
+- **active / stale（在办与陈旧）**: active is a work entry touched within the last 24 hours; stale is a work entry more than 24 hours old but under 30 days old; anything past 30 days is cleared, and 30 days is called the retention period. _Avoid_: taking “active” as “claimed”（把「在办」当「认领」；a claim is the backend assignee, while processing is a session）, taking “stale” as a fault（把「陈旧」当故障）
+- **running（在跑）**: `running: true` on a session group in the `deck_work_route` receipt, meaning the host's agent registry reports right now that this session really has a turn open (a turn waiting for approval or for an answer counts too); it covers only sessions alive in the current host process. It only says “that turn is open” and does not mean the session is changing some ticket; the session that made this call does not count itself (it is necessarily running while it calls a tool). A missing mark only means the answer could not be obtained and must not be read as “no other session is running”. _Avoid_: taking “running” as “active”（把「在跑」当「在办」；active looks at archives touched within 24 hours, running is an instantaneous state）, reading a missing mark as nobody being there（把不标读成没人）, using it as proof that this ticket is being changed right now（拿它当「正在改这张票」的凭据）
+- **release（释放）**: the special call made when `deck_issue_report` is given `release: true`: it does not record the “report” action, it only retracts one mis-reported entry this session made for this ticket — it can only be deleted when the session never actually processed the ticket (never created it, edited it, closed it, wrote a plan for it, or linked an edge to it); a ticket that has been processed cannot be released, and the path stays. The ticket's own state and assignee are not touched at all. Not finding the entry also counts as success, and the receipt says there was none. After a release, reporting again records it again, and the same session and the same ticket still keep only one entry. _Avoid_: using it to tidy up closing materials（拿它清收尾资料）, deleting a path that has been processed（删处理过的路径；from #1349 it only retracts a mis-report）, treating it as editing the ticket（把它当改票；only `deck_issue_patch` changes the ticket）, treating it as a claim（当认领；the assignee does not change）, treating it as a cancel（当取消；the ticket is not closed）
+- **work route summary（工作路线摘要）**: this paragraph is retired: from #1561 the success receipts of the write tools no longer carry a summary, and it no longer appears in `notes` either; to see the whole active picture, call `deck_work_route`. Before it was retired it was a short Chinese sentence in the receipt, saying how many entries were active in this workspace and which were the most recent few (at most 3 listed); from #1303 it carried only the core fields by default and pointed to `workRouteDetail: standard` at the end; the progress self-assessment and the `full` level were retired with #1352. _Avoid_: looking for this sentence in new receipts（在新回执里找这段话；it is gone）, still passing `workRouteDetail` to ask for detail（还传 workRouteDetail 去要细节；that key was retired with #1561 as well）
+- **work route table（在办表）**: the cross-session active picture, queried specifically through `deck_work_route`: grouped by session, by default listing only the entries active within 24 hours (ticket number, title, action, time, whether it is this session), while stale ones are given only as a count; passing `includeStale: true` pulls the full 30 days, `limit` defaults to 100 with an upper bound of 200, and when truncated it carries `total` / `omitted`. Before #1561 it was brought out by the success receipts of nine deck tools (`data.workRoute`, with the level key `workRouteDetail`); now the write receipts no longer carry the table, and the collision reminder is returned by the read tool instead. The data source is unchanged: the same work route archive, and the table only ever shows session labels and “is this session”, never the raw session id; a group may carry `running: true` (meaning see “running”). _Avoid_: treating it as part of some interface（把它当成某个界面的一部分；presentation is #1082）, assuming the write receipt still carries the table（以为写回执里还带表；call the read tool to see it）, taking “stale” as a fault（把「陈旧」当故障）
+- **active capsule（在办胶囊）**: the one in the status bar that shows which ticket the current session is working on, drawing only the newest entry. _Avoid_: capsule entry（胶囊入口；there are too many capsules in the status bar to know which one it is）, treating it as the work route table（把它当在办表）
+- **active sheet（在办单子）**: the floating layer that opens after the active capsule in the status bar is hovered, listing every active record of the current session. _Avoid_: active popup（在办弹窗）, treating it as the work route table（把它当在办表）
+- **active sheet header（在办单子表头）**: the explanatory row at the top of the active sheet, with this session's entry count plus the update time on the left and how many entries other sessions still have on the right. _Avoid_: sheet header（单子表头）, header（表头）, sheet title（单子标题）
+- **active sheet list（在办单子列表）**: the block inside the active sheet that holds every row; when there are many rows it scrolls inside, without making the whole sheet taller. _Avoid_: sheet list（单子列表）, list（列表）, scrollbar（滚条）
+- **active sheet row（在办单子行）**: a row in the active sheet list; one row is one active record, made of four things: the number capsule, the title, the action and the time. _Avoid_: sheet row（单子行）, row（行）, item
+- **active sheet row number capsule（在办单子行编号胶囊）**: the outline capsule at the far left of an active sheet row, holding the ticket number, such as #1636. _Avoid_: row number（行编号）, ticket number badge（票号徽标）
+- **active sheet row title（在办单子行标题）**: the middle piece of text in an active sheet row, e.g. “the map detail of a GitHub workspace cannot read the sub-tickets: wf.ma…”, with an ellipsis at the end when it is too long to fit. _Avoid_: row title（行标题）, sheet title（单子标题）
+- **active sheet action（在办单子动作）**: the one in an active sheet row that says what this entry is doing, written like opened a ticket or edited the content. _Avoid_: row action（行动作）, status label（状态标签）
+- **active sheet row time（在办单子行时间）**: the time at the far right of an active sheet row, saying when this entry moved, such as 09:16. _Avoid_: row moment（行时刻）, update time（更新时间）
+- **active sheet last row（在办单子末行）**: the row at the very bottom of the active sheet list, which is the newest entry. _Avoid_: last row（末行）, last item（最后一项）
+- **active sheet bottom anchor（在办单子沉底）**: the active sheet list scrolls to the bottom the first time it opens, so that the last row is directly visible. _Avoid_: sink to the bottom（沉底）, scroll to the bottom（滚到底部）
+- **LOGO**: the mark at the far left of the status bar, reading MattSkills. _Avoid_: workspace segment（工作区段）, workspace name（工作区名字）
+- **ready capsule（可接胶囊）**: the green one in the status bar, saying how many are ready, such as Ready 2. _Avoid_: ready segment（可接段）, ready count（可接数）
+- **BUG capsule（故障胶囊）**: the red triangle one in the status bar, saying how many are broken, such as BUG 0. _Avoid_: failure segment（故障段）, error count（报错数）
+- **triage capsule（诊断胶囊）**: the yellow magnifier one in the status bar, saying how many need triage, such as Triage 2. _Avoid_: triage segment（诊断段）, triage count（诊断数）
+- **consolidate capsule（沉淀胶囊）**: the purple one in the middle of the status bar, reading Consolidate. _Avoid_: consolidate segment（沉淀段）, consolidate button（沉淀按钮）
+- **handoff capsule（交接胶囊）**: the blue one in the middle of the status bar, reading Handoff. _Avoid_: handoff segment（交接段）, handoff button（交接按钮）
+- **handoff export button（交接出去按钮）**: the wordless small icon to the right of the handoff capsule; one click takes the handoff content out. _Avoid_: copy icon（复制图标）, grey document icon（灰文档图标）
+- **environment capsule（环境胶囊）**: the green check-marked one in the status bar, saying how many checks pass out of how many, such as Env 9/9. _Avoid_: environment segment（环境段）, environment count（环境数）
+- **update capsule（更新胶囊）**: the one in the status bar that writes the date and time of the last update, such as update 10-29 12:13. _Avoid_: update segment（更新段）, update time（更新时间）
+- **update capsule date（更新胶囊日期）**: the half of the update capsule that writes the date, such as 10-29. _Avoid_: date（日期）, update date（更新日期）
+- **update capsule time（更新胶囊时间）**: the half of the update capsule that writes the time of day, such as 12:13. _Avoid_: time of day（时刻）, update time（更新时间）
+- **skills capsule（技能胶囊）**: the grid-like one in the group at the far right of the status bar; click it to look at the skills. _Avoid_: grid icon（格子图标）, skills button（技能按钮）
+- **debug capsule（debug胶囊）**: the green dot at the far right of the status bar; lit means normal. _Avoid_: green dot（绿点）, status light（状态灯）
+- **fold capsule（折叠胶囊）**: the down-arrow one at the far right of the status bar; one click folds the status bar away. _Avoid_: down arrow（下箭头）, collapse button（收起按钮）
+- **close capsule（关闭胶囊）**: the red cross one at the far right of the status bar; one click closes the status bar. _Avoid_: cross（叉）, close button（关闭按钮）
+- **claim and processing（认领与处理）**: a claim means a person is responsible for a ticket (the backend assignee); processing means a session left an action on the work route. The two things stand side by side and are never merged into one state. _Avoid_: using the claimant instead of the session（用认领人代替会话）, using the session instead of the claimant（用会话代替认领人）
+
+## Interaction feedback vocabulary
+
+- **hover state（悬停态）**: how a button looks while the mouse rests on it, such as changing colour or gaining a border, saying that this is clickable. _Avoid_: hover, hover effect（悬浮特效）
+- **hover tip（悬停提示）**: the line of explanatory text that pops up while the mouse rests on a button; it is gone once the mouse moves away. _Avoid_: tooltip, tip box（提示框）, bubble（气泡）
+- **hover tip side（悬停提示方位）**: the direction of the hover tip relative to the control that triggers it; there are only four, above, below, left and right; which side it lands on is decided by one shared rule — above first, below when it does not fit, then left or right, and the side with the most space when neither works — and the caller may not specify it. _Avoid_: landing point（落点）, position（位置）, direction（方向；too broad, and “landing point” already means something else in this repository）
+- **pressed state（按下态）**: how a button looks the instant it is pressed down, such as sinking or darkening, saying that the click has landed; it returns to normal when released. _Avoid_: click effect（点击特效）, click effect written half in English（click效果）, animation（动画）
+
+## Panel top bar vocabulary
+
+- **panel（面板）**: the whole block in the right-hand sidebar, holding the repository row, the tab row and the ticket list below. _Avoid_: container（容器；a container is a ticket, not this whole block）, writing it out in English as “right-hand panel” instead（右侧面板英文直写）
+- **panel top bar（面板顶栏）**: the top two rows of the panel: the upper one says which repository you are looking at and whether there is anything new, the lower one holds the tabs that change the view plus new requirement and report BUG. _Avoid_: panel header（面板头部）, top bar（顶栏）
+- **panel repository row（面板仓库行）**: the upper row of the panel top bar; on the left the repository name plus two small icons, on the right refresh plus the update time. _Avoid_: repository strip（仓库条）, first row（第一排）
+- **panel repository name（面板仓库名）**: the blue-framed block on the left of the panel repository row, writing the repository's full name, such as FeatherHunter/dsh-mattpocock-skills-deck. _Avoid_: repository title（仓库标题）, branch name（分支名）
+- **panel switch button（面板切换按钮）**: the small two-facing-arrows icon to the right of the panel repository name; click it to switch what you are looking at. _Avoid_: switch icon（切换图标）, branch button（分支按钮）
+- **panel palette button（面板调色盘按钮）**: the gold small icon in the middle of the panel repository row; click it to look at the palette. _Avoid_: panel coin button（面板金币按钮）, coin icon（金币图标）
+- **panel refresh button（面板刷新按钮）**: the button on the right of the panel repository row that reads Refresh; one click makes the panel show the newest content. _Avoid_: refresh（刷新）, reload button（重载按钮）
+- **panel update time（面板更新时间）**: the time phrase at the far right of the panel repository row, such as 29 minutes ago, saying how long has passed since the last successful refresh. _Avoid_: update time（更新时间）, refresh time（刷新时间）
+- **panel tab row（面板页签行）**: the row below the panel top bar: a row of tabs on the left, new requirement plus report BUG on the right. _Avoid_: tab strip（页签条）, second row（第二排）
+- **panel tab（面板页签）**: one option in the panel tab row; one page is one way of looking at things, and the page currently being looked at is highlighted. _Avoid_: tab button（页签按钮）, tab
+- **panel list tab（面板列表页签）**: the page in the panel tabs that reads List, showing the list of tickets. _Avoid_: list page（列表页）, list tab（列表 tab）
+- **panel skills tab（面板技能页签）**: the page in the panel tabs that reads Skills, showing the skills. _Avoid_: skills page（技能页）, skills tab（技能 tab）
+- **panel version control tab（面板版本管理页签）**: the page in the panel tabs that reads Version control, showing version control. _Avoid_: version control page（版本管理页）, version page tab（版本页签）
+- **panel pull requests tab（面板拉取请求页签）**: the page in the panel tabs that reads Pull requests, showing pull requests. _Avoid_: pull request page（拉取请求页）, PR tab（PR 页签）
+- **panel checks tab（面板环境检查页签）**: the page in the panel tabs that reads Checks, showing the environment checks. _Avoid_: checks page（环境检查页）, checks tab（检查页签）
+- **panel new requirement button（面板新建需求按钮）**: the purple button on the right of the panel tab row that reads New Requirement; clicking the small arrow beside it opens more options. _Avoid_: new requirement（新建需求）, new button（新建按钮）
+- **panel report BUG button（面板报 Bug 按钮）**: the red button on the right of the panel tab row that reads + BUG; click it to report a BUG. _Avoid_: bug button（bug 按钮）, add bug（加 bug）
+- **panel collapse button（面板收起按钮）**: the wordless small square at the far right of the panel tab row; one click collapses or expands the panel. _Avoid_: square icon（方框图标）, grid button（网格按钮）
+
+## List page vocabulary
+
+- **List page（列表页面）**: the whole page you reach by clicking the list tab; it holds the counts, the filters and the tickets. _Avoid_: list page（列表页）, panel main area（面板主体区）
+- **List page count row（列表页面计数行）**: the topmost row of the list page, saying on the left how many are available, how many are blocked and how many are closed, and on the right how many health checks there are. _Avoid_: panel count row（面板计数行）, count bar（计数条）
+- **List page available count（列表页面可接计数）**: the green-dot segment on the left of the count row, saying how many tickets can be picked up now. _Avoid_: panel available count（面板可接计数）, available（可接）
+- **List page blocked count（列表页面阻塞计数）**: the lock-shaped segment in the middle of the count row, saying how many are stuck. _Avoid_: panel blocked count（面板阻塞计数）, blocked（阻塞）
+- **List page closed count（列表页面已关闭计数）**: the grey-circle segment on the left of the count row, saying how many are closed in total. _Avoid_: panel closed count（面板已关闭计数）, closed（已关闭）
+- **List page health check button（列表页面体检按钮）**: the standalone small box at the far right of the count row, reading health check plus a number; click it to see the health check result. _Avoid_: panel health check button（面板体检按钮）, health check（体检）
+- **List page view filter（列表页面视图过滤）**: the row of view switches below the count row; whichever one you click is the group you see. _Avoid_: panel view filter（面板视图过滤）, filter（过滤）
+- **List page view all（列表页面视图全部）**: the option in the view filter that shows everything in progress. _Avoid_: panel view all（面板视图全部）, all（全部）
+- **List page view Open（列表页面视图 Open）**: the option in the view filter that keeps its English word as it is, showing the ones that are not closed. _Avoid_: Open filter（Open 过滤）
+- **List page view closed（列表页面视图已关闭）**: the option in the view filter that shows only the closed ones. _Avoid_: closed filter（已关闭过滤）
+- **List page view blocked（列表页面视图阻塞）**: the option in the view filter that shows only the blocked ones; it is not the same as blocked on a card, because the former is a filter and the latter is the state of one ticket. _Avoid_: blocked filter（阻塞过滤）
+- **List page view available（列表页面视图可接）**: the option in the view filter that shows only the ones you can pick up. _Avoid_: available filter（可接过滤）
+- **List page sort（列表页面排序）**: the row next to the view filter that sets the order, saying whether to sort by update, by number or by title. _Avoid_: panel sort（面板排序）, sort bar（排序条）
+- **List page sort all（列表页面排序全部）**: the option in the sort that sets no range; it is not the same as view all. _Avoid_: all（全部）
+- **List page sort by update（列表页面排序更新）**: the option in the sort that orders by update. _Avoid_: update sort（更新排序）
+- **List page sort by creation（列表页面排序创建）**: the option in the sort that orders by creation. _Avoid_: creation sort（创建排序）
+- **List page sort by number（列表页面排序编号）**: the option in the sort that orders by number; when it carries the reverse arrow, the order is descending. _Avoid_: number sort（编号排序）, number↓（编号↓）
+- **List page sort by title（列表页面排序标题）**: the option in the sort that orders by title. _Avoid_: title sort（标题排序）
+- **List page label filter（列表页面标签过滤）**: the row after the sort that filters by label; only a clicked label is shown, and the labels are user-defined, so they are not collected word by word. _Avoid_: panel label filter（面板标签过滤）, label bar（标签条）
+- **List page label overflow（列表页面标签溢出）**: the plus and number at the end of the label filter, such as +7 or +11, saying how many labels are not expanded; click it to see the rest. _Avoid_: plus sign（加号）, more labels（更多标签）
+- **List page ticket filter（列表页面票过滤）**: the long capsule area in the middle of the list page, laid out in wrapped rows; click one to see only that kind of ticket. _Avoid_: list page item wall（列表页面条目墙）, filter wall（过滤墙）
+- **List page ticket filter capsule（列表页面票过滤胶囊）**: one long capsule in the ticket filter, holding the name of one kind of ticket; click into it to see only that kind. _Avoid_: list page item capsule（列表页面条目胶囊）, title capsule（标题胶囊）
+- **List page ticket filter all（列表页面票过滤全部）**: the small all at the top left of the ticket filter, showing every ticket; it is different from the all in the view filter. _Avoid_: list page item all（列表页面条目全部）, all（全部）
+- **List page notice bar（列表页面提示条）**: the yellow-bordered notice at the top of the list page: a warning icon on the left, one sentence in the middle, a close cross on the right. _Avoid_: panel notice bar（面板提示条）, yellow bar（黄条）
+- **List page notice close（列表页面提示关闭）**: the cross at the far right of the notice bar; click it once to dismiss this notice. _Avoid_: close cross（关闭叉）
+- **List page card stripe（列表页面卡竖条）**: the vertical line at the far left of a ticket card; purple means the type, blue means this card is selected. _Avoid_: stripe（竖条）, side strip（侧条）
+- **List page card type（列表页面卡类型）**: the icon-bearing item before the ticket card's title, such as map or spec; having none is normal. _Avoid_: type badge（类型徽标）
+- **List page card number（列表页面卡编号）**: the block at the far left of the ticket card, holding the ticket number. _Avoid_: number（编号）
+- **List page card title（列表页面卡标题）**: the sentence in the middle of the ticket card; when it is too long to fit, it ends with an ellipsis. _Avoid_: title（标题）
+- **List page card labels（列表页面卡标签）**: the row of small items under the ticket card's title, saying which kind this ticket is; the labels are user-defined, so they are not collected word by word. _Avoid_: labels（标签）
+- **List page blocked marker（列表页面阻塞标）**: the red-bordered item under the ticket card's title, reading blocked, saying this ticket cannot move right now. _Avoid_: blocked marker（阻塞标）, blocked（阻塞）
+- **List page progress（列表页面进度）**: the N of M figure at the top right of the highlighted card, saying how many child tickets in the container are done; having none is normal. _Avoid_: progress ring（进度圈）
+- **List page primary action（列表页面主动作）**: the working button at the lower right of the ticket card, on the left; one of five: execute, split ticket, implement, diagnose, discuss. _Avoid_: main action（主动作）, action button（操作按钮）
+- **List page new session button（列表页面新会话按钮）**: the button at the lower right of the ticket card, on the right, always reading new session; click it to open a new session for this ticket. _Avoid_: new session（新会话）
+- **List page copy button（列表页面复制按钮）**: the small clipboard icon at the lower right of the ticket card; click it once to copy this ticket's information. _Avoid_: copy icon（复制图标）
+- **List page link button（列表页面链接按钮）**: the small chain icon at the lower right of the ticket card; click it once to get the link to this ticket. _Avoid_: link icon（链接图标）
+- **List page closed tail（列表页面已关闭尾）**: the row at the very bottom of the list, saying how many are closed in total and how many were brought down this time. _Avoid_: bottom row（底部行）
+
+## Environment check page vocabulary
+
+- **Environment check page（环境检查页面）**: the whole page you reach by clicking the environment check tab; it holds the page header, the ten checks and the capability diagnostics at the bottom. _Avoid_: environment check page（环境检查页）, check page（检查页）
+- **Environment check page header（环境检查页头）**: the topmost row of the page: title plus score plus backend badge on the left, the re-check button on the right. _Avoid_: page header（页头）, header（头部）
+- **Environment check score（环境检查分数）**: the N of M figure on the left of the page header, such as 10/10, saying how many of the ten checks passed. _Avoid_: score（分数）, pass count（通过数）
+- **Environment check backend badge（环境检查后端徽标）**: the small box to the right of the score, such as github, saying which backend this page is checking. _Avoid_: backend badge（后端徽标）
+- **Environment check re-check button（环境检查重新检查按钮）**: the button on the right of the page header; click it once to check all ten again. _Avoid_: re-check（重新检查）, refresh button（刷新按钮）
+- **Environment check row（环境检查行）**: one of the ten checks in the middle: a tick icon on the left, two lines of text on the right. _Avoid_: check card（检查卡）, check bar（检查条）
+- **Environment check row icon（环境检查行图标）**: the green tick on the left of each check; only with it does the check count as passed. _Avoid_: tick（对勾）
+- **Environment check row title（环境检查行标题）**: the bold sentence at the top right of each check, saying what this check looks at. _Avoid_: title（标题）
+- **Environment check row detail（环境检查行明细）**: the grey sentence at the bottom right of each check, saying what value was found; when a path is too long to fit, it ends with an ellipsis. _Avoid_: detail（明细）
+- **Environment check capability diagnostics row（环境检查能力诊断行）**: the single row under the ten checks: on the left it says capability diagnostics and that the fold starts collapsed, and on the right are three numbers. _Avoid_: capability diagnostics（能力诊断）, diagnostics row（诊断行）
+- **Environment check diagnostics counts（环境检查诊断统计）**: the three numbers on the right of the capability diagnostics row, such as present 899 / empty 1131 / missing 580, saying the counts of the three classes of capability. _Avoid_: statistics（统计）, numbers（数字）
+
+## Pull request page vocabulary
+
+- **Pull request page（拉取请求页面）**: the whole page you reach by clicking the pull request tab; it holds one row per PR. _Avoid_: PR page（PR 页面）, PR view（PR 页）
+- **Pull request row（拉取请求行）**: one PR row in the page: number plus title plus the author line on the left, one status on the right. _Avoid_: PR row（PR 行）, request row（请求行）
+- **Pull request number（拉取请求编号）**: the block at the far left of the row, holding the PR number. _Avoid_: number（编号）
+- **Pull request title（拉取请求标题）**: the bold sentence in the middle of the row; when it is too long to fit, it ends with an ellipsis. _Avoid_: title（标题）
+- **Pull request author line（拉取请求作者行）**: the line under the title, starting with @who, with the labels in the middle and the date at the end. _Avoid_: author line（作者行）
+- **Pull request row labels（拉取请求行标签）**: the few small items in the middle of the author line, such as dependencies or bug, saying which kind of thing this PR touches; the labels come with the remote, so they are not collected word by word. _Avoid_: labels（标签）
+- **Pull request date（拉取请求日期）**: the date at the end of the author line, saying when this PR is from. _Avoid_: date（日期）
+- **Pull request status（拉取请求状态）**: the item at the far right of the row; one of three: merged, Open, closed. _Avoid_: status badge（状态徽标）
+
+## Skills page vocabulary
+
+- **Skills page（技能页面）**: the whole page you reach by clicking the skills tab; it holds the general advice and one row per skill. _Avoid_: skills page（技能页）
+- **Skills page general advice（技能通用建议）**: the horizontal strip at the top of the page, titled general advice, holding only one skill. _Avoid_: general advice area（通用建议区）
+- **Skill row（技能行）**: one row in the skills area: a swatch plus name plus description on the left, the inject-into-conversation and details buttons on the right. _Avoid_: skill bar（技能条）, skill card（技能卡）
+- **Skill swatch（技能色块）**: the small square at the far left of the row; its colour and whether it is filled or hollow show how important this row's skill is: core is orange filled, common is green filled, spare is hollow. _Avoid_: status swatch（状态色块）
+- **Skill importance（技能重要程度）**: the three-tier division of the coloured dot: core is a piece of the default workflow, or something used when starting work and when wrapping up; common is a supporting skill used along the way in most tasks; spare is a specialised skill used only on particular occasions. _Avoid_: priority（优先级）, status（状态）, whether it works（能不能用）
+- **Skill legend（技能图例）**: the row of small squares, stars and text to the right of the skills list title（「■ 技能」）, explaining one by one what each of the three colour dots and the star means. _Avoid_: legend notes（图例说明）, colour notes（颜色说明）
+- **Skill name（技能名称）**: the monospace text to the right of the swatch, such as /ask-matt, saying which skill this is. _Avoid_: skill name（技能名）, command name（命令名）
+- **Skill star（技能星标）**: the ★ after the name, marking the skill that the general advice recommends; the ★ at the far right of the legend in the title row is what explains it. _Avoid_: star（星星）, favourite（收藏）
+- **Skill description（技能描述）**: the human sentence to the right of the name, saying what this skill does. _Avoid_: description（描述）, summary（简介）
+- **Skill inject button（技能注入按钮）**: the button on the left of the row's right side; click it once to write /skillname into the conversation input box, without sending on its own. _Avoid_: load（加载）, install（装上）
+- **Skill details button（技能详情按钮）**: the button on the right of the row's right side; click it once to overlay this skill's details. _Avoid_: details（详情）
+
+## Skill detail overlay vocabulary
+
+- **Skill detail overlay（技能详情浮层）**: the whole block that appears when you click details; close it to go back to the skills page. _Avoid_: skill detail page（技能详情页面）, detail page（详情页）
+- **Skill detail title（技能详情标题）**: the skill name at the top left of the overlay, such as /ask-matt, saying which one you are looking at. _Avoid_: title（标题）
+- **Skill detail language button（技能详情语言按钮）**: the purple small box to the right of the title; click it once to switch to Chinese. _Avoid_: skill detail Chinese button（技能详情中文按钮）, Chinese button（中文按钮）
+- **Skill detail close button（技能详情关闭按钮）**: the one at the top right reading close cross; click it once to close the overlay and go back to the list. _Avoid_: close（关闭）, cross（叉）
+- **Skill detail contents（技能详情目录）**: the dark box under the title, titled this article's contents, listing 01 to 08 below. _Avoid_: contents（目录）, this article's contents（本篇目录）
+- **Skill detail body（技能详情正文）**: the large block under the contents: headings plus paragraphs plus steps, with small inline boxes inside the steps. _Avoid_: body（正文）, content area（内容区）
+- **Skill detail bottom bar（技能详情底栏）**: the bottommost row of the overlay: copy path on the left, back to top on the right. _Avoid_: bottom bar（底栏）
+- **Skill detail copy path button（技能详情复制路径按钮）**: the button on the left of the bottom bar; click it once to get this article's path. _Avoid_: copy path（复制路径）
+- **Skill detail back to top button（技能详情回到顶部按钮）**: the button on the right of the bottom bar; click it once to return to the start of the body. _Avoid_: top（顶部）
+
+## Map detail page vocabulary
+
+- **map detail page（地图详情页面）**: the whole page you get by clicking a map — the archive plus the counts plus progress at the top, and a row of sub-issue cards below. _Avoid_: Map detail page（Map 详情页）, map page（地图页）
+- **map detail back row（地图详情返回行）**: the topmost line of the page — three things on the left, four on the right, with blank space between them. _Avoid_: back row（返回行）
+- **map detail back button（地图详情返回按钮）**: the leftmost item in the back row; it shows a left arrow plus `Back to list`, and one click takes you back to the list page. _Avoid_: back to list（返回列表）, back button（返回按钮）
+- **map detail position（地图详情位置）**: the stretch to the right of the back button that says which map under the list you are in, e.g. `List / #1638`. _Avoid_: breadcrumb（面包屑）, breadcrumb navigation（面包屑导航）
+- **map detail map capsule（地图详情地图胶囊）**: the small purple box to the right of the position; it reads `Map` and says this is the map view. _Avoid_: map detail map button（地图详情地图按钮）, map button（地图按钮）
+- **map detail execute button（地图详情执行按钮）**: the purple one on the right of the back row; one click does the work this map currently needs. _Avoid_: execute（执行）
+- **map detail new session button（地图详情新会话按钮）**: the one to the right of execute; click to open a new session for this map. _Avoid_: new session（新会话）
+- **map detail copy button（地图详情复制按钮）**: the small clipboard icon to the right of new session; one click copies this map's information. _Avoid_: copy icon（复制图标）
+- **map detail link button（地图详情链接按钮）**: the small chain icon at the far right; one click gets the link for this map. _Avoid_: link icon（链接图标）
+- **map detail archive header（地图详情档案头）**: the dark box below the back row, holding the identity marker, the title, the archive label, the unfilled row, the four counts and the progress bar. _Avoid_: archive header（档案头）, header（头部）
+- **map detail title（地图详情标题）**: the bold sentence inside the archive header saying what this map is for; the identity marker sits right next to it on the left. _Avoid_: title（标题）
+- **map detail identity marker（地图详情身份标记）**: the small block at the far left of the archive header's title line, made of the map icon, the container word and the number badge; it sits on the same line as the title, on the left, and when the title wraps the continuation flows under it (a partial wrap). _Avoid_: identity row（身份行）, identity bar（身份条）, title prefix marker（标题前置标记）
+- **map detail container word（地图详情容器词）**: the short piece inside the identity marker that reads `Map` or `Spec`; it takes the container chip word for the container kind, the same word as the chip on the list page. _Avoid_: chip text（角标文字）, type word（类型字）, badge text（徽章文字）
+- **map detail number badge（地图详情编号徽标）**: the outlined number inside the identity marker, written the same way as the number badge in a list row and in the issue detail page header (it reuses the shared badge contract, and writes `#<directory>/<number>` when there is a directory). _Avoid_: issue number badge（票号徽标）, number capsule（编号胶囊）, number label（编号标签）
+- **map detail archive label（地图详情档案标签）**: the one to the right of the title that reads `Archive` plus an arrow; click it to read the archive. _Avoid_: archive（档案）
+- **map detail unfilled row（地图详情未填行）**: the parenthesised row under the title saying which field is still empty, e.g. `(no Destination)` — the Chinese literal is `（未填写 Destination）`. _Avoid_: unfilled row（未填行）, empty field（空字段）
+- **map detail counts（地图详情计数）**: the four inside the archive header — Ready, Claimed, Blocked, Closed; they only say how many of each this map holds, and they are not given one entry each. _Avoid_: counts（计数）
+- **map detail progress bar（地图详情进度条）**: the bottom line of the archive header; it reads `Map progress` on the left and says how many of this map's sub-issues are closed on the right. _Avoid_: progress bar（进度条）
+- **map detail card（地图详情卡）**: one card in the row below — a pin plus number at the top, the title plus a claim or blocked banner in the middle, and four actions plus the updated time plus the status at the bottom. _Avoid_: sub-issue card（子票卡）, card（卡片）
+- **map detail card number（地图详情卡编号）**: the green box at the card's top left, showing the sub-issue number. _Avoid_: number（编号）
+- **map detail card title（地图详情卡标题）**: the bold sentence under the number saying what this card is for. _Avoid_: title（标题）
+- **map detail card claim（地图详情卡认领）**: the row under the title — @someone plus the claim status. _Avoid_: claim（认领）, claim row（认领行）
+- **map detail card updated time（地图详情卡更新时间）**: the date at the card's bottom left saying when this card last changed. _Avoid_: updated time（更新时间）
+- **map detail card status（地图详情卡状态）**: the one at the card's bottom right saying whether the card is in progress or blocked. _Avoid_: status（状态）
+- **map detail card pin（地图详情卡图钉）**: the small red square at the top middle of the card; a card carries it only when it belongs to this map. _Avoid_: pin（图钉）, red square（红块）
+- **map detail card in-hand corner badge（地图详情卡在手角标）**: the blue diagonal corner on the top right of the first card, saying this card is in hand right now. _Avoid_: in hand（在手）, corner badge（角标）
+- **map detail card blocked banner（地图详情卡阻塞横幅）**: the diagonal red banner between the later two cards, reading who blocks this card plus one sentence. _Avoid_: blocked strip（阻塞条）, red strip（红条）
+- **map detail card actions（地图详情卡动作）**: the four small boxes under the card — Execute, Edit, Docs, Link; they are not given one entry each. _Avoid_: action buttons（动作按钮）
+
+## Issue detail page vocabulary
+
+- **issue detail page（票详情页面）**: the whole page you get by clicking a ticket — the title plus labels at the top, the body in the middle, and the blocked list plus comments at the bottom. _Avoid_: ISSUE detail page（ISSUE 详情页）, ticket detail page（票详情页）, detail page（详情页）
+- **issue detail back row（票详情返回行）**: the topmost line of the page — two things on the left, four on the right, with blank space between them. _Avoid_: back row（返回行）
+- **issue detail back button（票详情返回按钮）**: the leftmost item in the back row; one click takes you back to the list page. _Avoid_: back to list（返回列表）, back button（返回按钮）
+- **issue detail position（票详情位置）**: the stretch to the right of the back button; it writes only the ticket number, e.g. `#1648`, saying which ticket you are looking at. _Avoid_: breadcrumb（面包屑）
+- **issue detail execute button（票详情执行按钮）**: the first item on the right of the back row; one click does the work this ticket currently needs. _Avoid_: execute（执行）
+- **issue detail new session button（票详情新会话按钮）**: the one to the right of execute; click to open a new session for this ticket. _Avoid_: new session（新会话）
+- **issue detail copy button（票详情复制按钮）**: the small clipboard icon to the right of new session; one click copies this ticket's information. _Avoid_: copy icon（复制图标）
+- **issue detail link button（票详情链接按钮）**: the small chain icon at the far right; one click gets the link for this ticket. _Avoid_: link icon（链接图标）
+- **issue detail title row（票详情标题行）**: the line under the back row, holding three things — the number, the title and the status. _Avoid_: title row（标题行）
+- **issue detail number（票详情编号）**: the leftmost box of the title row, showing the ticket number. _Avoid_: number（编号）
+- **issue detail title（票详情标题）**: the bold sentence to the right of the number saying what this ticket is for. _Avoid_: title（标题）
+- **issue detail status（票详情状态）**: the one at the far right of the title row, one of three: Open, Merged, Closed. _Avoid_: status badge（状态徽标）
+- **issue detail label row（票详情标签行）**: the line under the title row, holding three things — the label, the time and the author. _Avoid_: label row（标签行）
+- **issue detail label（票详情标签）**: the leftmost one in the label row, e.g. `ready-for-agent`; labels come from the remote backend, so they are not given one entry each. _Avoid_: label（标签）
+- **issue detail time（票详情时间）**: the middle stretch of the label row — the day it was updated plus the day it was created. _Avoid_: time（时间）, updated time（更新时间）
+- **issue detail author（票详情作者）**: the @someone plus avatar on the right of the label row, saying who created it. _Avoid_: author（作者）, author row（作者行）
+- **issue detail body（票详情正文）**: the collective name for the blocks in the middle, saying what this ticket should do, what it should not do, and what counts as done. _Avoid_: body（正文）, description area（描述区）
+- **issue detail blocked count（票详情阻塞计数）**: the line under the body saying how many tickets block this one, e.g. `Blocked · 3`（in the Chinese UI `被阻塞 · 3`）. _Avoid_: blocked count（阻塞计数）
+- **issue detail blocking ticket（票详情阻塞票）**: one entry under the count, one per line, written as the ticket number plus one sentence. _Avoid_: blocking ticket（阻塞票）, blocked row（阻塞行）
+- **issue detail comment area（票详情评论区）**: the block at the very bottom of the page, holding four things — the count, the empty state, the input box and send. _Avoid_: comment area（评论区）
+- **issue detail comment count（票详情评论计数）**: the comment area title saying how many comments there are, e.g. `Comments (0)`. _Avoid_: comment count（评论数）
+- **issue detail comment empty state（票详情评论空态）**: the grey box under the count, reading `No comments`. _Avoid_: empty state（空态）, no comments（无评论）
+- **issue detail comment input（票详情评论输入框）**: the large box in the middle of the comment area, reading `Write a comment — Markdown supported (Cmd/Ctrl+Enter to send)`. _Avoid_: input box（输入框）, comment box（评论框）
+- **issue detail send button（票详情发送按钮）**: the button at the bottom right of the input box; one click posts the comment. _Avoid_: send（发送）
+
+## Settings page vocabulary
+
+- **settings page（设置页面）**: the whole page you get by opening MattSkills in the host settings; it holds the overview, the log and the author's other plugins. _Avoid_: settings panel（设置面板）, config panel（配置面板）, config page（配置页）
+- **settings entry（设置入口）**: that click on MattSkills inside the host settings, which opens the settings page. _Avoid_: settings button（设置按钮）, config entry（配置入口）
+- **settings top bar（设置顶栏）**: the topmost line of the settings page — the title plus the config version on the left, and the update button plus two icons on the right. _Avoid_: top bar（顶栏）
+- **settings welcome banner（设置欢迎横幅）**: the line under the top bar, the one saying pull requests are welcome. _Avoid_: banner（横幅）, welcome text（欢迎语）
+- **settings title badge（设置标题徽标）**: the MattSkills plus tick in the left of the top bar, saying whose settings page this is. _Avoid_: title（标题）, logo
+- **settings version label（设置版本标注）**: the dot plus config plus version number in the middle of the top bar, e.g. `Config 1.9.0-beta.31`. _Avoid_: config（配置）, version number（版本号）
+- **settings update button（设置更新按钮）**: the framed up-to-date plus version number in the top bar; one click checks for a new version. _Avoid_: settings up-to-date badge（设置最新徽标）, up-to-date badge（最新徽标）
+- **settings top bar icons（设置顶栏图标）**: the two small icons on the right of the top bar, a star and a bubble; they are not given one entry each. _Avoid_: icons（图标）
+- **settings backend overview card（设置后端总览卡）**: the first card; its title reads `Workspace backend overview`, while collapsed it says how many workspaces there are and how many are bound, and one click expands one line per workspace. _Avoid_: overview card（总览卡）, backend card（后端卡）
+- **settings overview subtitle（设置总览副标题）**: the small line under the title saying it is read-only and explicit overrides are done in the right panel. _Avoid_: subtitle（副标题）, note（说明）
+- **settings overview counts（设置总览计数）**: the left stretch of the summary line — how many workspaces there are and how many are bound; the numbers are values and do not get entries of their own. _Avoid_: counts（计数）
+- **settings overview refresh button（设置总览刷新按钮）**: the one on the right of the summary line; one click counts the workspaces again. _Avoid_: refresh（刷新）
+- **settings overview expand button（设置总览展开按钮）**: the blue text to the right of refresh; one click expands or collapses the lines below. _Avoid_: expand（展开）, collapse（收起）
+- **settings backend row（设置后端行）**: one line once expanded, one workspace per line — the workspace name on the left, and the provider plus explicit plus capsule plus toolbox on the right. _Avoid_: workspace row（工作区行）
+- **settings backend row workspace name（设置后端行工作区名）**: the monospaced text at the far left of the row, e.g. `deck-github`. _Avoid_: workspace name（工作区名）
+- **settings backend row provider（设置后端行提供方）**: the dot plus word to the right of the name — a blue dot for GitHub, a green dot for Markdown. _Avoid_: provider badge（提供方徽标）
+- **settings backend row explicit button（设置后端行显式按钮）**: the small box in the middle, reading `Explicit`. _Avoid_: explicit（显式）
+- **settings backend row capsule button（设置后端行胶囊按钮）**: the one to the right of explicit, reading `Capsule status bar`. _Avoid_: capsule status bar（胶囊状态栏）
+- **settings backend row toolbox button（设置后端行工具箱按钮）**: the one at the far right, reading `Deck tools`. _Avoid_: toolbox（工具箱）
+- **settings log card（设置日志卡）**: the second card; its title reads `Debug / diagnostics log`, and inside are one switch and four buttons. _Avoid_: log card（日志卡）, diagnostics card（诊断卡）
+- **settings log note（设置日志说明）**: the paragraph under the title saying it is off by default, and that exporting still works while it is off. _Avoid_: note（说明）
+- **settings log switch（设置日志开关）**: the switch inside the log card, reading `Debug log: on` or `Debug log: off (default)`. _Avoid_: switch（开关）, debug switch（调试开关）
+- **settings log export button（设置日志导出按钮）**: the first of the four buttons; one click packs today's log plus a system summary into an attachment. _Avoid_: export today's log（导出今日日志）
+- **settings log directory button（设置日志目录按钮）**: the second of the four buttons; one click opens where the logs are kept. _Avoid_: open log directory（打开日志目录）
+- **settings log path button（设置日志路径按钮）**: the third of the four buttons; one click copies the log path. _Avoid_: copy log path（复制日志路径）
+- **settings log clear button（设置日志清空按钮）**: the fourth of the four buttons; one click clears today's log, after a confirmation dialog. _Avoid_: clear today's log（清空今日日志）
+- **settings log footnote（设置日志备注）**: the two small lines under the buttons, about the attachment fallback and the clear confirmation. _Avoid_: note（备注）, small text（小字）
+- **settings plugin recommendations（设置插件推荐）**: the third card; its title reads `More plugins by the author`, one plugin per line, with an external-link icon on the right. _Avoid_: settings plugin card（设置插件卡）, plugin card（插件卡）, recommendation card（推荐卡）
+- **settings plugin recommendation row（设置插件推荐行）**: one line inside the recommendations, one plugin per line — the name plus description on the left, the external link on the right. _Avoid_: settings plugin row（设置插件行）, plugin row（插件行）
+- **settings plugin recommendation name（设置插件推荐名）**: the bold text at the far left of the row, e.g. `dsh-prompt`. _Avoid_: settings plugin name（设置插件名）, plugin name（插件名）
+- **settings plugin recommendation link button（设置插件推荐外链按钮）**: the small external-link icon at the far right of the row; one click takes you to look at that plugin. _Avoid_: external link（外链）, external-link icon（外链图标）
+
+## Palette dialog vocabulary
+
+- **palette dialog（调色盘弹窗）**: the sheet that covers the screen when you click the palette button in the panel; one label per line, to change colors. _Avoid_: label colors dialog（标签配色弹窗）, color page（配色页）
+- **palette row（调色盘行）**: one line inside the dialog — the swatch plus the label name on the left, the color value on the right. _Avoid_: label row（标签行）
+- **palette color value（调色盘颜色值）**: the box on the right of a row, holding six digits starting with #, e.g. `#f143ab`. _Avoid_: color value（颜色值）, color code（色号）
+- **palette footer（调色盘底栏）**: the bottom line of the dialog — the status sentence on the left, three buttons on the right. _Avoid_: footer（底栏）
+- **palette status sentence（调色盘状态句）**: the sentence on the left of the footer, e.g. `No changes to save.`; it says whether the changes can be saved now. _Avoid_: status（状态）, hint（提示）
+- **palette exit button（调色盘退出按钮）**: the first one on the right of the footer; one click closes the dialog without saving. _Avoid_: exit（退出）, cancel（取消）
+- **palette copy prompt button（调色盘复制提示词按钮）**: the middle one in the footer; one click gets the color-scheme prompt. _Avoid_: copy prompt（复制提示词）
+- **palette save button（调色盘保存按钮）**: the purple one on the right of the footer; one click saves the changed colors. _Avoid_: save（保存）
+
+## New requirement dialog vocabulary
+
+- **new requirement dialog（新建需求弹窗）**: the sheet that covers the screen when you click the New Requirement button; it first asks how clear this requirement already is, and you pick one of two. _Avoid_: new requirement page（新建需求页）, routing page（分流页）
+- **new requirement exploration card（新建需求探索卡）**: the purple-framed one on the left, reading `Big, fuzzy goal`; pick it to go down the /wayfinder route. _Avoid_: exploration map card（探索地图卡）
+- **new requirement implementation card（新建需求实施卡）**: the blue-framed one on the right, reading `Goal is clear`; pick it to go down the /grill-with-docs route. _Avoid_: implementation map card（实施地图卡）
+
+## debug capsule menu vocabulary
+
+- **debug capsule menu（debug胶囊菜单）**: the small list that pops out when you click the debug capsule; it holds four log actions. _Avoid_: log menu（日志菜单）
+- **debug capsule menu export item（debug胶囊菜单导出项）**: the first line of the menu; one click packs today's log into an attachment. _Avoid_: export today's log（导出今日日志）
+- **debug capsule menu open directory item（debug胶囊菜单打开目录项）**: the second line of the menu; one click opens where the logs are kept. _Avoid_: open log directory（打开日志目录）
+- **debug capsule menu copy path item（debug胶囊菜单复制路径项）**: the third line of the menu; one click copies the log path. _Avoid_: copy log path（复制日志路径）
+- **debug capsule menu clear item（debug胶囊菜单清空项）**: the red line at the bottom of the menu; one click clears today's log, after a confirmation dialog. _Avoid_: clear today's log（清空今日日志）
+
+## Collapse and close vocabulary
+
+- **collapsed expand strip（折叠后展开条）**: the one slim grey line the status bar keeps once it is collapsed, reading `Expand MattSkillsDeck`; one click brings it back. _Avoid_: expand button（展开按钮）
+- **close confirmation box（关闭确认框）**: the confirmation that pops up after you click the red cross; its title is `Reopen MattSkillsDeck`, and clicking it brings all three places back together. _Avoid_: close dialog（关闭弹窗）
+
+## Object type vocabulary (settled 2026-10-20 · map #1274, discussion #1275)
+
+- **objectKind（对象类型）**: which object a ticket is, with nine values: map, spec, implementation ticket, research ticket, prototype ticket, discussion ticket, task ticket, bug ticket and plain ticket. The order of the decision is: the hidden marker in the body file header (before the first visible heading) → the label that expresses the object kind (six of them: wayfinder:map, wayfinder:research, wayfinder:prototype, wayfinder:grilling, wayfinder:task, bug) → the body shape (five sections for a map, seven for a spec, the implementation ticket template; the shape is the last resort). The result is always one of the nine values, and there is no "not recognised" tier; an issue submitted by a third party with no label and no sections is a plain ticket, and its interface and flow are exactly the same as today (it keeps going through triage diagnosis). _Avoid_: calling it just kind on its own（把它单独叫 kind；the kind of the creation tool deck_issue_create is another set of six "position values", see the "create kind" entry; the repository has several other kind and type names that each point at something else: the interface's rowActionKind, the contract layer's BACKEND_KIND and ERROR_KIND, the role ActorKind, the error ErrorKind; the type of a ticket in the contract layer is called ISSUE_TYPE, with the values issue, map and spec, and it is a type, not a kind）, mixing it up with "action kind"（把它与「动作类型」混用）
+- **object kind marker（对象类型标记）**: a hidden comment written in the ticket's file header (before the first visible heading), `<!-- DSH-ISSUE-KIND: <kind> -->`, and it is the single source of truth for the object kind; the `Type:` line on the face of a local Markdown room ticket is derived from it and displayed. The marker holds only a short word such as the type name. It is allowed to go missing — once it is gone the decision falls back to the labels and the body shape, and that is not judged wrong. When the whole body is replaced, the copy on disk wins so that the marker is preserved; when a ticket is created, any marker already present in the passed-in body is stripped. Since #1486 newly written local Markdown files no longer write it; a file in an old workspace that did write it is still recognised by it, and when the whole body is replaced the copy on disk wins and it is preserved. Map child tickets rely on type labels, and bug tickets and plain tickets write none. _Avoid_: treating it as body content（把它当正文内容；it is invisible when rendered）, treating the `Type:` line on the ticket face as a second source of truth（把票面那行 Type: 当成第二个真源）
+- **create kind（建票位置值）**: the set of "which slot of the hierarchy this ticket grows in" that `deck_issue_create` and the child tickets of `deck_map_plan_create` use, with six values: map (exploration map, a top-level container), map-ticket (a ticket under a map, which must be attached to a map and given a label), spec (spec, a top-level container), spec-ticket (the implementation ticket under a spec, which must be attached to a spec), bug (bug ticket), issue (plain ticket, the universal fallback). It answers "where it grows", not "what it is": the read-side object kind is the other set of nine values, and the position table in `src/deck/rules/object-kind.ts` maps one to the other in a single step. The old values task / ticket are rejected outright, with a migration path given. _Avoid_: taking it as shorthand for objectKind（把它当成对象类型 objectKind 的缩写）, mixing it up with the contract type ISSUE_TYPE（把它与契约类型 ISSUE_TYPE 混用）
+- **type label（类型标签）**: the six labels that express an object's identity: wayfinder:map, wayfinder:research, wayfinder:prototype, wayfinder:grilling, wayfinder:task, bug. Their only source is the creation position table: map gets wayfinder:map, map-ticket gets the one that label names, bug gets bug and needs-triage, spec and spec-ticket get none, and issue passes through unchanged. Except for issue, a caller that stuffs a type label into labels is rejected. _Avoid_: mixing it up with the triage role labels（把它与 triage 角色标签混用；needs-triage, ready-for-agent and so on）, adding one more by hand so that the ticket ends up with two（手工再补一枚造成双标签）
+- **spec（规格）**: a document object that states what has to be done, produced by to-spec, with seven sections in the body: problem statement, solution, user stories, implementation decisions, testing decisions, out of scope and further notes (the English version names the sections Problem Statement and so on, seven of them, and both sets are recognised). Inside an implementation map it acts as a container, with implementation tickets hanging below it: in the local Markdown room the spec lands at `.scratch/<feature-slug>/spec.md` and the implementation tickets land at `issues/<NN>-<slug>.md` in the same directory, with the parent-child relation expressed by the file-header comment `<!-- parentKey: -->` together with "the same directory"; the GitHub room uses its native parent-child relation. It does not rely on a reference written into the marker. _Avoid_: treating it as a plain ticket（把它当普通票；it has its own shape and its own object kind）
+- **implementation ticket（实施票）**: a ticket that states which piece of behaviour has to be built, split out of a spec by to-tickets, with four sections in the body: parent issue, what to build, acceptance criteria, blocked by (the English version uses Parent, What to build, Acceptance criteria, Blocked by, and both sets are recognised). It also recognises the local file template style: a level-1 heading plus three bold lines（Chinese 要构建什么： / 被谁阻塞： / 状态：, English **What to build:** / **Blocked by:** / **Status:**）+ the acceptance checkboxes; the local file lands at `issues/<NN>-<slug>.md` in the same spec directory; beyond those three field lines, the plugin's own format version, idempotency key, creation time, parent ticket, labels and assignees are written in hidden HTML comments in the file header (before the first visible heading) (`<!-- DSH-... -->`); the triage state is not written into a hidden comment but on that visible `Status:` line (since #1790 defect A), and the hidden `DSH-LABELS` keeps only the non-triage labels. It carries no wayfinder type label; per the line already settled on map #1274, the implementation tickets that to-tickets produces carry ready-for-agent. _Avoid_: mixing it up with a task ticket（把它与任务票混用；a task ticket is a decision ticket produced by a wayfinder skill and carries the wayfinder:task label）
+- **markdown file layout（本地 Markdown 文件布局）**: what the files the local Markdown backend writes look like and where they sit, whose single source of truth is the original text of the bundled Matt skill `package/bundled-skills/setup-matt-pocock-skills/issue-tracker-local.md` (pinned at v1.3.2, with the verbatim hash guarded by `tests/verify-bundled-skills-upstream.ts`): a spec is `.scratch/<feature-slug>/spec.md`; an exploration map is `.scratch/<effort>/map.md`; an implementation ticket, a map child ticket and a plain ticket are all `.scratch/<effort>/issues/<NN>-<slug>.md`, one ticket per file, with NN starting at 01 and zero-padded to two digits. The deck is only the execution layer: all of the plugin's own information is written in hidden HTML comments in the file header (before the first visible heading), and no visible field is added; the original templates of the spec and the exploration map have no title line, so those two kinds of file have no visible level-1 heading, and the title lives in the `<!-- DSH-TITLE: ... -->` comment in the file header — the order for reading the title is to recognise the visible level-1 heading first (compatible with old deck files and hand-written files), then `DSH-TITLE`, and then to fall back to the directory name (`effortId` for a spec and a map, the file name minus its extension for the remaining tickets), never taking a `##` section name as the title and never reporting an error because a title is missing; reading and writing number 00 use the same lookup order, and when no scope is given the spec is looked for first and the map only after that, and a spec read without a feature parameter can still be edited and closed; creating a plain ticket in an empty workspace without a feature fails honestly instead of falling back to the workspace-root `issues/` or `.scratch/issues/`; a file hand-written to the original text can also be read, edited and completed, degrading without an error when plugin information is missing; old files that landed at the workspace-root `issues/` or under the `.scratch/` root before #1486 are compatible read-only (listing, reading and snapshots work as usual, and the write path fails honestly and says it is read-only), and nothing new is written there. _Avoid_: making a spec into a ticket inside `issues/`（把规格做成 issues/ 里的票；the old direction of #1277, which #1480 corrected）, writing plugin information as a visible field or as frontmatter（把插件信息写成可见字段或 frontmatter）, starting another layout of your own invention（按自造格式另起一套布局）, treating the old root `issues/` as the place for new writes（把旧根 issues/ 当新写入落点）
+- **action kind（动作类型）**: which action this ticket needs now, one of diagnose, take over, complete the information, fix, discuss, research, prototype, execute. It looks at labels only, computed on a ladder where state beats type: no label or needs-triage → diagnose; ready-for-human → take over; needs-info → complete the information; bug → fix; wayfinder:grilling → discuss; wayfinder:research → research; wayfinder:prototype → prototype; everything else → execute. It answers "what to do now", not "what this is"; the local Markdown read side folds the visible `Status:` line of the ticket file into a triage label, so the label-only algorithm still holds for it (#1790). _Avoid_: mixing it up with the object kind（把它与对象类型混用）, assuming it reads the body（以为它会读正文）
+- **body shape（正文形状）**: the section structure inside a ticket's body, used to decide whether this ticket is a map, a spec or an implementation ticket. The criterion is strict: it counts only when all the dedicated sections are present, extra sections are allowed, order does not matter, and only level-2 headings count. _Avoid_: using a single-section criterion such as "has just this one section"（用「只有某节」这种单节判据）, taking section order as the criterion（把章节顺序当判据）, taking it as the only criterion（拿它当唯一判据；it is only the last resort）
+- **confidence（置信度）**: whether this object kind is written plainly on the ticket face or inferred, with only two tiers: stated（直说；written plainly by the hidden marker in the file header or by the label that expresses the object kind）and inferred（推断；recognised from the body shape, marked on the interface with a small "inferred" badge）. One recognised from a type label counts as stated. _Avoid_: treating it as a score out of a hundred（把它当百分制分数）, giving it a third tier（给它加第三档）
+- **contract type（契约类型）**: the type of a ticket in the contract layer, one of issue, map and spec, a capability native to the backend, and not the same thing as the object kind: spec is the container type #1286 added for implementation maps; the "spec" in the object kind is the result the plugin recognises by its own criterion — the two have similar names and live in different layers. The mapping from the create kind to the contract type is fixed: map→map, spec→spec, everything else→issue (#1403). _Avoid_: treating it as a superordinate concept of the object kind（把它当对象类型的上位概念）, assuming the nine values of the object kind are all contract types（以为对象类型的九个取值都是契约类型）
+- **container（容器）**: the collective name for a ticket that can hold child tickets, and there are two kinds now: an exploration map (contract type map, or carrying the wayfinder:map label) and a spec (contract type spec). The list page and the detail page use one and the same row rendering and detail-page skeleton for both, telling them apart by the contract type, without opening a second array (the maps array in the snapshot is a historical name and now holds containers). The three states (whether there are child tickets / whether the child tickets are all closed), the identity colour, the badge text and what the click button injects are all computed in one place by src/client/kernel/container-view.ts, and the sites no longer write a copy each. The two identity colours are fixed in that file as well: purple `#c084fc` for an exploration map and blue `#1D4ED8` for a spec (the #1286 design document calls the latter "implementation noble blue", and it is the same colour); elsewhere colours may only be taken from the central colour table, and these two values may not be written again. It is not itself a value of the object kind: of those nine values, the ones that are containers are "map" and "spec". _Avoid_: treating it as a new kind of object kind（把它当成一种新的对象类型）, taking it for an interface panel（当成界面面板；the panel is that whole block in the right sidebar, the container is a ticket）
+
+## Local Markdown status vocabulary (settled 2026-11-02 · #1790 defect A)
+
+- **visible Status line（可见状态行）**: the `Status:` line a person sees at a glance in the file header of a local Markdown ticket（an implementation ticket, a bug ticket or a plain ticket; on a Chinese ticket the line reads 状态：）, and it is the single source of truth for the triage state on those tickets; the hidden `DSH-LABELS` comment holds only the non-triage labels. A spec and an exploration map container do not go through this line: their state is still written in the hidden `DSH-STATUS` comment. _Avoid_: treating the hidden labels as a second source of truth for the state（把隐藏标签当成状态的第二处真源）, assuming that besides changing the visible line you also have to write a second copy（以为改可见行之外还要双写一份）
+- **status conflict（状态冲突）**: on a local Markdown ticket, when the visible status line writes one state and the triage label inside the hidden `DSH-LABELS` writes another, and neither side is the old file's default `ready-for-agent`, the read side does not pick one for the caller but brings both sides out as they are (`statusConflict`); the write side rejects the whole call on meeting it, writes not a single character, and gives back parameters that can be retried. _Avoid_: treating it as an ordinary validation error（把它当普通校验错误；it is two places each saying its own thing, and a person has to decide）, assuming that because the read side already picked a side you may write as you like（当成读侧已经替人选了一边就可以照写）
+- **status normalization（归一）**: when a status conflict is met, writing both places back into agreement according to the side the caller chose explicitly: the visible status line is written with the chosen value, the triage label in the hidden `DSH-LABELS` is removed, and the losing value is recorded in the hidden `DSH-STATUS-HISTORY` comment (leaving a slot for why it changed). Without an explicit choice no normalization is done. _Avoid_: taking normalization for silently changing the state（把归一当成静默改状态；the caller's choice must come first）, leaving the two sides inconsistent after normalizing（归一后还留着两边不一致）
+
+## Interface copy and language vocabulary (settled 2026-10-20 · map #1274, discussion #1284; #1294 landed)
+
+- **interface copy table（界面词表）**: the Chinese-English table of all the interface copy on the panel. The key is the entry's name and the value is that one sentence of copy, one copy in Chinese and one in English. Since 2026-10-20 (#1294) the source of truth is the ten copy-family YAML files under `config/copy/`, and the generator writes them into the generated `src/client/kernel/locale-data.ts` (not committed, spliced into the client at build time); at runtime the copy table is read from the generated file, and the interface still fetches the copy for the current language through `tr('key name')`. Today there are 1030 keys per language. _Avoid_: mixing it up with the "language list"（把它与「语言清单」混用；the list governs which languages are supported, the copy table governs the copy）, calling the copy of one single language the copy table（把某一门语言的那一份单独叫词表）
+- **making interface copy data（界面文案数据化；spoken shorthand 变数据）**: moving the interface copy table out of the TypeScript source into separate plain-text data files, from which a generator produces the data module the client can use, so that the hand-written source no longer holds copy literals. There is only one purpose: adding a language changes data only, never code. It was done on 2026-10-20 (#1290 decided the approach, #1294 landed it): the source of truth is the copy-family YAML under `config/copy/`, the generated file is `src/client/kernel/locale-data.ts` (not committed, generated on the spot at build time), and the generator's `--check` sits first in `npm run typecheck`, so changing a YAML and forgetting to recompute is judged red on the spot. The interface half and the prompt half share the same language list and the same way of doing things. _Avoid_: calling it "translation" or "multilingualisation"（把它说成「翻译」或「多语言化」；those name the result, not the way）, treating it as an option that could still be changed（当成还能改主意选的方案；it has landed and this is the way）
+- **language list（语言清单）**: the piece of data saying which languages the client supports, each language's fallback chain and the default language (`config/languages.yaml`). It is a client-level fact: prompts and the interface share one copy, and when the client registers the interface copy table it also uses it to call the host's addLanguage and register for each language in turn, so the code does not hard-code which languages exist, and only then is "add a language" really just a data change. When the language snapshot cannot be read (or the language is not in the snapshot's language list), the list's default decides, and it never falls into some hard-coded language. _Avoid_: mixing it up with the interface copy table（把它与界面词表混用；the copy table is the copy, the list is the language roster and the fallback rules）
+- **fallback chain（回退链）**: the order in which languages are asked one after another when a piece of copy cannot be found for a language; the host contract requires that the chain finally reach English, and when it is still not there at the end the key name is displayed. Today each language writes at most one fallback (the runtime honours only the first item of `fallback`; extra items have no effect and the validation layer judges red outright), so a chain is a straight line; to leave a language several levels of fallback, the runtime has to be changed first to try the list item by item. Every language registered with the host must have a chain that can reach its end, otherwise the host's register throws. _Avoid_: mixing it up with the "default language"（把它与「缺省语言」混用；the default language is what is tried first, the fallback chain is the order of retreat）
+- **copy family（词族）**: one of the several groups the interface copy table is split into by purpose, one YAML per group, living under `config/copy/`, with the file name being the family name (ten families today: panel, flow, word, vcwrite, pages, labels, cards, skilldesc, skilldetail, spec). In the generated file each family corresponds to one key-name union type and one family constant (`L_PANEL`, `L_FLOW` and so on), and only the key names of all the families together make the complete `LocaleKey`. Adding a family = dropping a new YAML under `config/copy/`; the generator discovers it by directory and does not read a hand-written list. _Avoid_: mixing it up with a language（把它与语言混用；families are split by purpose and languages by speech community, and the two cross）, calling it a "module" or a "file group"（把它叫「模块」或「文件组」；it is one data file, not a code module）
+- **locale-data.ts（界面词表生成物）**: the source file `src/client/kernel/locale-data.ts` that the generator writes on the spot from the ten YAML files under `config/copy/` and from `config/languages.yaml`: inside are the language list for each language (`LANG_CONFIG`), the list of language ids (`LOCALE_LANGS`), the complete copy object (`LOCALE_COPY`) and the ten family constants, along with the key-name union type — a missed translation is red on the spot at typecheck instead of waiting for the runtime interface to display a key name. It does not enter version control, it is spliced into the client bundle at build time, and it must come before the `kernel:locale` chunk. _Avoid_: editing it as if it were a hand-written source file（把它当手写源文件去改；the next generation overwrites it and `--check` judges it red）, committing it into the repository（把它提交进库）
+- **LocaleKey（键名联合类型）**: the TypeScript union type in the generated file that writes out every entry key name: one `LocaleKey<family name>` per family, and one `LocaleKey` for all ten families together. It makes a missed translation red at compile time — when the code takes copy by some key and the generated copy table lacks that key for that language, the types do not line up and `typecheck` reports an error straight away, without waiting for the runtime interface to expose the key name. It lives only in the generated file, for typecheck and the gates, and the whole block is stripped at build time, so it does not enter the client output. _Avoid_: mixing it up with the copy object `LOCALE_COPY`（把它与词表对象 LOCALE_COPY 混用；the former is the type of the key names, the latter is the data from key to copy）, maintaining it by hand（手写维护它；it is generated from the YAML by the generator）
+
+## Tracker session and budget model vocabulary (settled 2026-10-23 · spec #1439)
+
+- **tracker session（Tracker 会话）**: the session object for one instance of "doing work in this workspace, with this backend", opened by `openTracker`. Opening a session makes only local decisions and spends no budget: first it works out which backend is in use (exactly one recognised, several recognised, not chosen yet, workspace not ready — the four outcomes are each distinguishable, and it never throws), then it takes the budget model that backend declares for itself, and from then on every backend operation goes through this session. The session carries the backend id, the budget model, whether it can write and the reason it cannot. Without going through the session, no caller may choose a backend for itself, pass the gate for itself, or take the backend id and write branches of its own — this is the single entry point settled after the #1435 incident. _Avoid_: taking "session"（会话）for the chat session in the interface (that is a different thing), asking the server for budget while opening a session (choosing a backend spends no budget)
+- **operation pipeline（操作管线）**: the fixed four steps that every backend operation in a session goes through: take a budget reading, hand it to the gate for a decision, forward it to the backend room, and record the real usage in the ledger. Reading the budget itself (the capability name is `readBudget`) is the exception: it goes straight through, with no decision and no accounting. What the pipeline is for is that the caller says only "what I want to do", and whether it can be afforded and whose account it is charged to are all decided by the pipeline in one place, so a caller does not change a single line when the backend changes. _Avoid_: treating the pipeline as pluggable middleware (it has only one fixed order), judging the budget in the caller itself (that goes back to the old way from before the incident)
+- **budget model（预算模型）**: a declaration every backend **must** supply when it registers, saying what shape its budget has: the kind is one of four — two independent buckets (requests and points counted separately), requests only, offline (no budget needed), unknown; three more cells then fill it in: "whether requests are counted", "whether points are counted", "whether the two buckets are independent of each other". The gate and the ledger do the arithmetic by reading only this declaration, and must not read the backend id and write equality branches; a third-party backend that does not supply this declaration fails to register, and the error names which cell is missing. _Avoid_: taking it for a reading of "how much this backend has left right now" (that is the budget reading), writing "if it is GitHub, count two buckets" into the code (the declaration already says so, and hard-coding it bypasses the declaration)
+- **budget reading（额度读数，capability name `readBudget`）**: the 26th backend capability, answering "how much this backend has left right now", with three honest outcomes: read (known, carrying the request budget or what is left in the two buckets), unreadable (unknown, with the reason attached: not measured yet, cannot be fetched for now, this backend does not support it), offline (this backend needs no budget). A reading answers only facts; it neither decides nor records accounts; the interface and the receipts state only the known reading, and unknown and offline must never be passed off as 0. _Avoid_: treating "unknown"（未知）as 0 (that is exactly the root of the #1435 incident), taking a reading for a call that has to pass the gate)
+- **refresh gate（闸, revised 2026-10-23）**: the part of the definition in the "refresh mechanism and AI toolchain entries" section above（刷新机制与 AI 工具链词条）that still holds is "classify, decide, defer". Since spec #1439 it is no longer the exit that each caller goes to by itself, but **an interceptor inside the operation pipeline**: the pipeline hands it "what this operation is, what the budget reading is, whether writing is possible", and it answers allow or defer (unknown and offline are always allowed, a hard ceiling always holds, and it defers only when the budget has really run out). Accounting has moved to the next step of the pipeline. _Avoid_: still looking for the gate in the caller's code (the caller no longer passes the gate itself), judging an "unknown reading" as exhausted
+- **ledger（账本, revised 2026-10-23）**: the part of the definition above about "grading itself automatically by the remaining budget" still holds. Since spec #1439 the key has changed from "the two buckets" to "the backend id plus the bucket name" — for example `github/rest`, `github/graphql`, `gitlab/requests`; an offline backend creates no bucket and records no budget, and an unknown model records only the number of requests sent out. Each usage entry is written in by the pipeline after the operation succeeds, converted through the budget model; the arithmetic reads only the declaration, not the backend id; when one share of budget is shared across sources it is not split into separate accounts. _Avoid_: taking the two buckets for the whole world (Markdown has no bucket, GitLab has only one request bucket), taking "the reading has not been synchronised yet" for "this much has already been used up" (no reading is an empty account, not zero usage)
+
+## Real-machine verification vocabulary (settled 2026-11-03)
+
+- **real-machine verification（真机验证）**: installing a package under verification into a real DSH instance with the set of real-machine verification scripts and capabilities that the base repository (`dsh-featherhunter-plugin-base`) provides, having an AI verify it automatically or semi-automatically, and leaving behind evidence proving that it really passed. _Avoid_: calling it real-machine verification when a person has clicked through it by hand, when only the unit tests were run, or when the script was run only once on the development machine (none of those is that set of verification, which means installing into a real DSH instance)
+- **automated verification（自动化验证）**: the AI keeps running the various scripts until they are all done, without switching to human judgement partway through. _Avoid_: calling "run half the scripts, leave the rest to human judgement" automated verification
+- **semi-automated verification（半自动化验证）**: after the AI has run part of the scripts, it judges the current situation itself and handles what is left; special cases the scripts cannot cover go this way. _Avoid_: calling "the AI runs the scripts and a person makes the judgement" semi-automated verification (the judgement here is still made by the AI)
+- **package under verification（待验安装包）**: the install package to be verified this time — one concrete version number, with file digests; it is what gets verified, and it is also what gets published. _Avoid_: borrowing "candidate package"（候选包）or "candidate"（候选）from the base repository's documents as a synonym (this vocabulary calls it a package under verification throughout)
+- **evidence（证据）**: the raw material that real-machine verification leaves behind and that somebody else can check for themselves (command output, screenshots, exported files, environment snapshots, file digests); reporting only a conclusion without giving evidence does not count as passing. _Avoid_: using a single sentence "it ran" as the evidence, taking a report or a log path for the evidence itself
+- **check（真机验证检查）**: one falsifiable assertion inside real-machine verification. For a version to count as "passed", every related real-machine verification check must pass; one fail means it is not passed, and neither skip nor blocked counts as passed. _Avoid_: shortening it to "check"（检查）, or mixing it up with the panel's "check item"（界面检查项）or "environment check"（环境检查）(those are interface display and diagnosis, not real-machine verification assertions)
+- **scenario（真机验证场景）**: an end-to-end verification script the plugin writes itself, which walks one real usage path from end to end when it is run once with `dsh-verify run`; the real-machine verification checks are the assertions inside a scenario. This repository's scenario scripts live under `verify/scenarios/`. _Avoid_: shortening it to "scenario"（场景）, or mixing it up with the "scenario block"（场景块）registered in a checklist ticket (that is a verification item registered in a ticket and carried out by a person, not a script)
+- **report（报告）**: the record one verification run leaves behind (`run.json` plus a summary file), listing the result, the exit code and the evidence location of each real-machine verification check. _Avoid_: taking the report for the evidence itself (the report says what was run and how it came out; the evidence is the raw material somebody else can check for themselves)
+- **isolation（隔离）**: the instance used for real-machine verification is kept apart from the real environment — the profile is copied and the instance is started from the copy, and the real home is read but never written. _Avoid_: mixing it up with "backend physical isolation"（后端物理隔离）or "empty-workspace isolation"（空工作区隔离）(those two are about a different domain)

@@ -172,10 +172,11 @@ function main(): void {
   check(!!lastErr && hasAll(lastErr, ['DSH 启动时继承的 PATH 中未解析到 gh 可执行文件', '不代表未安装', 'DSH_GH_PATH']),
     '宿主 gh 执行器的失败原因说清「不代表未安装」并给出 PATH 与 DSH_GH_PATH（实得「' + String(lastErr) + '」）')
   check(!!lastErr && lastErr.indexOf('PATH 无 gh') < 0, '不再只说「PATH 无 gh」（那听起来就是没装）')
+  // issue-tracker.md 在 #1561 之后是英文，判据认英文原句（中文原句只在提交历史里）。
   const docs = read('docs/agents/issue-tracker.md')
-  check(docs.indexOf('报 `gh not found` 但 `gh --version` 有输出') >= 0,
+  check(docs.indexOf('It reports `gh not found` but `gh --version` prints output') >= 0,
     'issue-tracker 的「工具故障」一节写了「报 gh not found 但 gh --version 有输出」怎么处理')
-  check(hasAll(docs, ['从开始菜单、桌面或资源管理器启动', 'DSH_GH_PATH', '不要直接建议重装']),
+  check(hasAll(docs, ['starting it from the Start menu, the desktop or File Explorer', 'DSH_GH_PATH', 'Do not simply suggest reinstalling gh']),
     '文档给的是「重启 DSH / 改 PATH / 设 DSH_GH_PATH」，不是重装')
 
   console.log(failed ? 'FAIL ' + total + ' 项检查里有未过的' : 'PASS 全部 ' + total + ' 项检查通过')

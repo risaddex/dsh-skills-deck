@@ -1,92 +1,92 @@
-# 同一个工作区里多个会话并行开发时怎么做（#1321）
+# How to work when several sessions develop in the same workspace in parallel (#1321)
 
-> 生效日期：2026-10-22；2026-10-31 按现状核对过一遍，删掉了过时与互相冲突的说法。状态：可用。
-> 版本与效力按 `GLOSSARY.md` 的规则：与本文件标注日期之后定版的内容冲突时，以更新者为准；今天写下的内容不是不可变基线，未来变更以未来版本为准。
-> 关联：地图 #1319 · 设计 `docs/design/1323-build-mutex.md`（#1323 定版、#1365 实施）· 实测 `research/1322-worktree-link-probe.md`（#1322）· 冲突面清单 `research/1313-parallel-session-resources.md`（#1313）· 门禁分档与挑选用 `docs/agents/verification.md` · 提交写法用 `docs/agents/commit-convention.md`。
-> 本文件只写并行时多出来的规矩。验证链怎么挑档、提交信息怎么写，原来在哪还在哪，本文件只指路，不重复。
+> Effective date: 2026-10-22; checked once against the current state on 2026-10-31, with outdated and mutually contradictory statements deleted. Status: usable.
+> Versioning and authority follow the rules in `GLOSSARY.md`: when this conflicts with content settled after the date marked in this file, the newer one wins; what is written today is not an immutable baseline, and future changes follow future versions.
+> Related: map #1319 · design `docs/design/1323-build-mutex.md` (settled in #1323, implemented in #1365) · measurements `research/1322-worktree-link-probe.md` (#1322) · the list of surfaces where parallel sessions collide `research/1313-parallel-session-resources.md` (#1313) · choosing a tier and picking which gates to run is in `docs/agents/verification.md` · how to write a commit message is in `docs/agents/commit-convention.md`.
+> This file writes only the extra rules that parallel work adds. How to pick a tier for the verification chain and how to write a commit message stay where they were; this file only points at them and does not repeat them.
 
-## 一句话原则
+## The principle in one sentence
 
-每个并行会话去自己的工作树里干活，各自装一份依赖、各自构建，产物和构建缓存各归各，不同树之间不用排队。仓库本身是共享的：分支、`refs/stash`、面板看哪棵树只有一份；界面入口同一时刻也只指向一棵树——这三样按下面的规矩用。
+Each parallel session does its work in its own worktree, installs its own copy of the dependencies, builds on its own, and keeps its own build output and build cache, so different worktrees never queue behind each other. The repository itself is shared: the branches, `refs/stash`, and which tree the panel looks at exist only once; the interface entry point also points at exactly one tree at any moment — use these three according to the rules below.
 
-## 什么情况用工作树
+## When to use a worktree
 
-| 情况 | 去哪里做 |
+| Situation | Where to do it |
 | --- | --- |
-| 写代码、跑门禁、跑完整验证链、不需要看界面 | 自己的工作树 |
-| 要在正在运行的界面里看到这次改动（界面加载的是安装目录里的一份拷贝，任何一棵树里的构建它都看不到；要看哪棵树就按下面「要在界面里看某棵工作树的效果」那节把安装目录临时指过去） | 哪棵树都行（通常就用自己那棵）；同一时刻只指一棵 |
-| 只是读代码、查问题、不构建 | 哪里都行，不占构建名额 |
+| Writing code, running gates, running the full verification chain, with no need to look at the interface | Your own worktree |
+| You need to see this change in the running interface (the interface loads a copy inside the installation directory, so it cannot see a build from any tree; to look at a particular tree, point the installation directory at it temporarily, as described in the "Looking at a worktree's result in the interface" section below) | Any tree will do (usually your own); only one tree at a time |
+| Only reading code and investigating problems, with no build | Anywhere; it takes no build slot |
 
-## 在自己的工作树里干活（首选）
+## Working in your own worktree (preferred)
 
-1. 从干净的基线开一棵工作树，用票分支装它，不要用 detached HEAD——本仓每个模块做完就要提交推送，detached 的提交没有分支收着：`git worktree add -b ticket/<票号>-<用途> .worktrees/<票号>-<用途> <基线提交>`。票已经有分支时（远端拉下来或别处建好的），去掉 `-b`，最后一格换成那个分支名。同一分支只能被一棵树检出，这条 git 自己会拦。
-2. 在这棵树里独立装一份依赖，不要复用主工作区的依赖目录：在工作树里跑 `pnpm install --offline --ignore-scripts --frozen-lockfile`。实测一次约 1.42 秒，逻辑体积约 124.5 MB（靠硬盘内容仓库做硬链接，实际多占很少；离线包仓库里没有这些包时会去下载，时间另算）。
-3. 只在这棵树里跑构建和验证链，不要回主工作区跑。独立依赖装好后，第二次构建约 0.23 秒命中缓存，一个产物文件都不写，产物与主工作区逐字节相同。
-4. 为什么不能复用主工作区的依赖目录：全仓只有一份构建缓存（`node_modules/.cache/dsh-build.json`），两棵树复用同一份依赖时，输入不同就每轮互相作废、各自完整重建（实测单棵约 10.6 秒，两路并发各约 18.9 秒）；输入完全相同时，产物里仍有 192 字节差别（构建工具注释里的依赖相对路径不同），缓存还是来回改写。省 124.5 MB 的代价是每次都多花一次完整构建。
-5. 构建入口很多（构建脚本、测试、装包后的自动准备、验证链预构建、几扇门禁自己起的构建、人手敲的命令），都是独立进程，管不住“记得别同时构建”。工作树把产物目录、构建缓存、索引文件都隔开了，才不需要靠人记住。
+1. Start a worktree from a clean baseline and put a ticket branch in it rather than a detached HEAD — in this repository every module is committed and pushed as soon as it is done, and commits on a detached HEAD are not held by any branch: `git worktree add -b ticket/<ticket-number>-<purpose> .worktrees/<ticket-number>-<purpose> <baseline commit>`. When the ticket already has a branch (pulled from the remote or created elsewhere), drop `-b` and put that branch name in the last slot. A branch can be checked out by one tree only, and git enforces this itself.
+2. Install a separate copy of the dependencies inside this tree; do not reuse the main workspace's dependency directory: run `pnpm install --offline --ignore-scripts --frozen-lockfile` in the worktree. A measured run takes about 1.42 seconds and has a logical size of about 124.5 MB (the files are hard-linked through the disk's content store, so the real extra space is small; when the offline package store does not have these packages they are downloaded, and that time is additional).
+3. Run builds and the verification chain only in this tree, never back in the main workspace. Once the separate dependencies are installed, the next build hits the cache in about 0.23 seconds and writes no output file at all, and the output is byte-for-byte identical to the main workspace's.
+4. Why the main workspace's dependency directory cannot be reused: the whole repository has only one build cache (`node_modules/.cache/dsh-build.json`), so when two trees share one copy of the dependencies with different inputs, each round invalidates the other's cache and both do a full rebuild (measured: about 10.6 seconds for one tree, about 18.9 seconds each with two running at once); when the inputs are exactly the same, the output still differs by 192 bytes (the relative dependency paths in a build-tool comment differ), and the cache is still rewritten back and forth. Saving 124.5 MB costs one extra full build every time.
+5. There are many build entry points (build scripts, tests, the automatic preparation after the package is installed, the verification chain's pre-build, the builds a few gates start for themselves, commands typed by hand), and they are all separate processes, so nothing can enforce "remember not to build at the same time". Worktrees keep the output directory, the build cache and the index files apart, which is why people no longer have to remember it.
 
-## 构建排队（锁跟着依赖目录走）
+## Build queueing (the lock follows the dependency directory)
 
-1. 真构建（缓存没命中）会拿一把跨进程文件锁，锁放在依赖目录下的缓存目录里，跟着依赖目录走。独立装依赖的每棵树各有一把锁、互不排队；只有同一棵树里出现第二个构建写者时才需要等。抢不到锁就等，等到上限还拿不到就报错退出，错误里写清持锁进程与锁文件；上限在 `config/timeouts.yaml` 的 `buildLockWaitMs`。等到了之后先复核一次缓存，命中就直接退出（约 0.2 秒），不重复构建。拿锁、等锁、接管、释放、超时都会进日志，只看日志就能说清谁先拿锁、谁等了多久。
-2. 缓存命中的构建不拿锁、不写任何产物文件；验证链最前面的预构建只是提速手段，它失败不算链红；验证链里跑红的步骤会自动串行重跑一次，重跑才红的是真红（这一条见 `docs/agents/verification.md`）。
-3. 删依赖目录之前先确认没有别的进程正在用它。锁文件和构建缓存都住在依赖目录里，删掉依赖目录等于把别人正在等的锁一起带走。
+1. A real build (one that misses the cache) takes a cross-process file lock, and the lock sits in the cache directory under the dependency directory, so it follows the dependency directory. Every tree with its own dependencies has its own lock and never queues behind another; waiting is needed only when a second build writer appears in the same tree. If the lock cannot be taken, wait; if it still cannot be taken when the limit is reached, exit with an error that names the process holding the lock and the lock file; the limit is `buildLockWaitMs` in `config/timeouts.yaml`. After the wait succeeds, re-check the cache once, and on a hit exit right away (about 0.2 seconds) instead of building again. Taking the lock, waiting for it, taking it over, releasing it and timing out all go into the log, so the log alone shows who took the lock first and who waited how long.
+2. A build that hits the cache takes no lock and writes no output file; the pre-build at the front of the verification chain is only a speed-up, and its failure does not make the chain red; a step that goes red in the verification chain is automatically re-run once, one at a time, and only a step that goes red again is truly red (this rule is in `docs/agents/verification.md`).
+3. Before deleting a dependency directory, first confirm that no other process is using it. The lock file and the build cache both live inside the dependency directory, so deleting the dependency directory also carries away the lock somebody else is waiting for.
 
-## 提交与推送（并行时多出来的四条）
+## Committing and pushing (the four extra rules for parallel work)
 
-提交信息怎么写、一次只交一件事、只交自己动过的路径，这些都在 `AGENTS.md` 与 `docs/agents/commit-convention.md`，照做。并行时再加四条：
+How to write a commit message, committing one thing at a time, and committing only the paths you touched are all in `AGENTS.md` and `docs/agents/commit-convention.md`; follow them. Parallel work adds four more:
 
-1. 在自己的树里用命令行提交。每棵树有自己的索引（`.git/worktrees/<名字>/index`），在树里 `git add` 只动这棵树的暂存区；提交前先看 `git status --porcelain=v1 --branch`，确认哪些是自己改的，只暂存自己确认过的路径，一次写一个文件或一个目录。
-2. 面板画的是这个会话 cwd 那棵树，不跟着你换到别的树去；会话 cwd 留在主工作区时，别用面板提交工作树里的改动。暂存与提交是写操作，会抢 `.git/index.lock`，读操作不抢；提交失败先看是不是同一棵树里有别的进程正在写索引。
-3. 同一个分支的提交窗口一次只归一个会话：分支 refs 是仓库级共享的，两棵树不能同时检出同一分支。推之前先拉（只用不会丢文件的拉），推不上去就停下来问人，不要强推、不要改历史。
-4. `refs/stash` 也是仓库级共享的：在一棵树里 `git stash`，别的树看到的是同一条。要用 stash 先确认没有别的会话在用；改动能提交到自己分支就别 stash。
+1. Commit from the command line inside your own tree. Every tree has its own index (`.git/worktrees/<name>/index`), and `git add` inside a tree touches only that tree's staging area; before committing, look at `git status --porcelain=v1 --branch`, confirm which changes are yours, stage only the paths you have confirmed, and write one file or one directory at a time.
+2. The panel draws the tree at this session's cwd and does not move with you to another tree; while the session cwd stays in the main workspace, do not use the panel to commit changes that live in a worktree. Staging and committing are write operations and contend for `.git/index.lock`, while read operations do not; when a commit fails, first check whether another process in the same tree is writing the index.
+3. The commit window for one branch belongs to one session at a time: branch refs are shared at repository level, and two trees cannot check out the same branch at the same time. Pull before pushing (using only pulls that cannot lose files), and if the push does not go through, stop and ask a person; do not force-push and do not rewrite history.
+4. `refs/stash` is shared at repository level as well: when you run `git stash` in one tree, the other trees see the same entry. Before using the stash, confirm that no other session is using it; if the change can be committed to your own branch, do not stash it.
 
-## 收尾：把不再用的工作树删掉
+## Cleaning up: delete worktrees you no longer use
 
-1. 活交付（合入或推送）后删掉那棵树：先 `git -C .worktrees/<名字> status --porcelain` 确认没有未提交的改动，再 `git worktree remove .worktrees/<名字>`。有未提交改动时它会拒绝；确认那些改动不要了再加 `--force`，加之前问人。
-2. 手工删过目录之后跑 `git worktree prune` 清掉登记；先 `git worktree prune --dry-run -v` 看会清哪些。
-3. `.worktrees/` 只放工作树。临时文件（提交信息片段、探针脚本、日志）放 `.scratch/<票号>/`，那个目录不进版本库，不要留在 `.worktrees/` 根下。
+1. After the work is delivered (merged or pushed), delete that tree: first run `git -C .worktrees/<name> status --porcelain` to confirm there are no uncommitted changes, then run `git worktree remove .worktrees/<name>`. It refuses while there are uncommitted changes; once you have confirmed those changes are not wanted, add `--force`, and ask a person before you do.
+2. After deleting a directory by hand, run `git worktree prune` to clear the registration; first run `git worktree prune --dry-run -v` to see what would be cleared.
+3. `.worktrees/` holds worktrees only. Temporary files (commit-message fragments, probe scripts, logs) go in `.scratch/<ticket-number>/`; that directory is not in the version control repository, and these files must not be left at the root of `.worktrees/`.
 
-## 集成分支（`integ/*`）为什么能跨房间改动
+## Why integration branches (`integ/*`) may change more than one room
 
-`tests/verify-no-mixed-session.ts`（#326）守的是一条朴素规矩：一次会话只动一个后端房间。它读的是「对比基准到 HEAD 的改动清单」，所以在一张**规格**的集成分支上必然报红——规格 #1439 这类改动会同时给 github、gitlab、markdown 三个后端补预算声明，这是设计好的，不是越界。
+`tests/verify-no-mixed-session.ts` (#326) enforces one plain rule: a single session changes only one backend room. It reads "the list of changes from the comparison baseline to HEAD", so on a **spec**'s integration branch it is bound to go red — a change like spec #1439 adds budget declarations to the github, gitlab and markdown backends at the same time, which is by design, not a crossing of the boundary.
 
-从 2026-10-24 起，这条门禁对 `integ/` 开头的分支改成打印房间命中清单后 SKIP，理由写在门禁输出的 SKIP 行里：集成分支上的「一次会话」指的是整条票链，票与票串行、每票只动自己那几间房，单房间假设只约束单票会话。新建票级工作分支（不是 `integ/`）时门禁照旧判红，别拿这条豁免当挡箭牌。
+Since 2026-10-24, for branches that start with `integ/` this gate prints the list of room hits and then SKIPs, with the reason written on the SKIP line of the gate's output: "one session" on an integration branch means the whole chain of tickets, the tickets run one after another and each ticket touches only its own rooms, so the single-room assumption binds single-ticket sessions only. When you create a ticket-level work branch (not `integ/`), the gate goes red as before, so do not use this exemption as a shield.
 
-## 要在界面里看某棵工作树的效果
+## Looking at a worktree's result in the interface
 
-界面加载的是 profile 安装目录里的一份真实拷贝，不是任何一棵树的产物目录，所以工作树里的构建对界面不可见是正常现象，不是构建没跑成；两棵工作树同时构建也不会互相覆盖。
+The interface loads a real copy inside the profile's installation directory, not the output directory of any tree, so a build in a worktree being invisible to the interface is normal and does not mean the build did not run; two worktrees building at the same time do not overwrite each other either.
 
-安装目录是 `<DSH profile 目录>\node_modules\dsh-mattpocock-skills-deck`，本机是 `C:\Users\辰辰洋洋\.dsh\profiles\desktop\node_modules\dsh-mattpocock-skills-deck`（用 `$env:USERPROFILE\.dsh\profiles\desktop\` 拼；本机装的是哪个版本，见 `docs/agents/issue-tracker.md` 的「版本三查」）。2026-10-22 与 2026-10-30 两次实测它都是真实拷贝、不是目录联接；换机器或换安装方式后先看一眼是拷贝还是联接——是联接就直接改指向，不用下面的改名备份。
+The installation directory is `<DSH profile directory>\node_modules\dsh-mattpocock-skills-deck`, which on this machine is `C:\Users\辰辰洋洋\.dsh\profiles\desktop\node_modules\dsh-mattpocock-skills-deck` (assembled from `$env:USERPROFILE\.dsh\profiles\desktop\`; which version is installed on this machine is answered by the "three-way version check" section of `docs/agents/issue-tracker.md`). Two measurements, on 2026-10-22 and on 2026-10-30, both found it to be a real copy rather than a directory junction; after changing machine or changing the way it was installed, look once at whether it is a copy or a junction — if it is a junction, just change where it points, and the rename-and-back-up step below is not needed.
 
-界面事件流（`/plugins/events`）里，`graph` 帧给每个插件带一个 `rev`，`rebuilt` 帧表示某个插件的产物重新加载。`rev` 由插件产物文件的修改时间、创建时间与字节数算出来，拿这三个数与候选文件对得上，就能确认界面当前加载的是哪一份产物。
+In the interface's event stream (`/plugins/events`), a `graph` frame carries a `rev` for each plugin, and a `rebuilt` frame means that a plugin's output was loaded again. The `rev` is computed from the modification time, creation time and byte count of the plugin's output files, so if those three numbers match a candidate file, you have confirmed which copy of the output the interface is loading right now.
 
-要在界面里看某棵工作树，2026-10-22 按下面的步骤实测过一次（全程不碰主工作区的产物）：
+To look at a worktree in the interface, the steps below were measured once on 2026-10-22 (the main workspace's output was never touched along the way):
 
-1. 在独立工作树里构建一次：`pnpm install --offline --ignore-scripts --frozen-lockfile`，再 `node scripts/build.mts`。
-2. 把 profile 安装目录改名备份，在原路径建一个目录联接指向那棵工作树的 `package` 目录。
-3. 观测界面事件流：实测约 0.3 秒后收到一条 `rebuilt` 帧（带这棵树的产物 `rev`）和一条新的 `graph` 帧，界面据此重挂载一次。
-4. 用新的 `rev` 请求插件产物，返回内容与那棵工作树里的 `package/lib/client.js` 逐字节相同（只在末尾多一行 83 字节的 sourceMappingURL 注释）；用旧的 `rev` 请求会得到 404。
-5. 看完还原：删掉目录联接、把备份目录改回原名。实测约 0.4 秒后再收到一条 `rebuilt` 与一条恢复原 `rev` 的 `graph` 帧，插件产物回到切换前那一份。
+1. Build once in the separate worktree: `pnpm install --offline --ignore-scripts --frozen-lockfile`, then `node scripts/build.mts`.
+2. Rename the profile installation directory as a backup, and at the original path create a directory junction that points at that worktree's `package` directory.
+3. Watch the interface's event stream: in the measurement, about 0.3 seconds later one `rebuilt` frame (carrying the `rev` of this tree's output) and one new `graph` frame arrived, and the interface remounted once on that basis.
+4. Requesting the plugin output with the new `rev` returns content byte-for-byte identical to `package/lib/client.js` in that worktree (only one extra 83-byte sourceMappingURL comment line at the end); requesting it with the old `rev` returns 404.
+5. Restore after looking: delete the directory junction and rename the backup directory back to its original name. In the measurement, about 0.4 seconds later another `rebuilt` frame and a `graph` frame carrying the restored original `rev` arrived, and the plugin output went back to the copy it had before the switch.
 
-实测结论：切换入口会触发且只触发一次重挂载，界面拿到的确实是那棵树的产物；切回后界面恢复原状。切换那一轮观测了 100 秒，只有切换前基线 1 条 `graph` 帧、切换后新增 1 条 `rebuilt` 与 1 条 `graph`；还原那一轮观测了 60 秒，同样只有原状基线 1 条 `graph` 帧、还原后新增 1 条 `rebuilt` 与 1 条 `graph`，没有别的重载信号。
+What the measurement concluded: switching the entry point triggers one remount and only one, and the interface really does get that tree's output; after switching back the interface returns to its previous state. The switching round was observed for 100 seconds and showed only the one baseline `graph` frame from before the switch, plus one new `rebuilt` and one new `graph` after it; the restoring round was observed for 60 seconds and likewise showed only the one `graph` frame of the original baseline, plus one new `rebuilt` and one new `graph` after restoring, with no other reload signal.
 
-实测时确认过的事与限制：
+What the measurement confirmed, and its limits:
 
-- 切换期间主工作区的产物一个字节都没变：切换前后主工作区四个产物文件、`package/lib` 整树、git 索引、构建缓存、profile 安装目录整树的元数据指纹逐项相等。
-- 「重挂载几次」是从事件流看到的信号数；浏览器里的界面是否一次刷完，靠人看一眼确认。
-- 只测了一个窗口、一次来回。换机器、换安装方式（例如从市场升级插件）后界面加载的产物会变，用之前先按上面第 2 段的对账办法确认一遍。
+- Not one byte of the main workspace's output changed during the switch: before and after the switch, the metadata fingerprints of the main workspace's four output files, of the whole `package/lib` tree, of the git index, of the build cache and of the whole profile installation directory tree were equal item by item.
+- "How many times it remounted" is the number of signals seen in the event stream; whether the interface in the browser finished its refresh in one go is confirmed by a person looking at it.
+- Only one window and one round trip were measured. After changing machine or changing the way the plugin was installed (for example upgrading it from the marketplace), the output the interface loads changes, so confirm it once with the reconciliation method of the second paragraph above before relying on it.
 
-## 看日志与定位（并行时注意一条）
+## Reading logs and locating a problem (one thing to watch when running in parallel)
 
-日志按天落在宿主进程当前目录下的 `.dsh-mattskillsdeck-cache/logs/`（文件名 `YYYY-MM-DD.log`），分级与字段见 `docs/design/335-logging-contract.md`。写盘的程序假设同一时刻只有一个写者，两个进程同时写时以后写的为准、另一批行可能少掉；同一个宿主进程里的会话共用一个写者。所以定位时以自己这趟运行的时间戳与上下文为准，不要假设“日志里没有就是没发生”。
+Logs are written to disk one file per day under `.dsh-mattskillsdeck-cache/logs/` in the host process's current directory (the file name is `YYYY-MM-DD.log`); levels and fields are in `docs/design/335-logging-contract.md`. The program that writes to disk assumes there is only one writer at a time, so when two processes write at the same time the later write wins and the other batch of lines may be lost; sessions inside one host process share one writer. So when locating a problem, go by the timestamps and context of your own run, and do not assume that "it is not in the log, so it did not happen".
 
-## 本规范不解决什么、还有什么没验证
+## What this convention does not solve, and what is still unverified
 
-- 读到一半的产物：锁只排写者，不排读者。另一个进程正在重写产物时去读，仍可能读到旧的一代或混合的一代。真要看不见混合代，需要把产物整体切换的写法，不塞进本规范。
-- 跨机器调度、改多会话模型：地图里本来就排除在外，本规范也不管。
+- Output read while it is being rewritten: the lock only queues writers, not readers. Reading while another process is rewriting the output can still return an old generation or a mixed generation. To really never see a mixed generation you would need a way of switching the whole output at once, and that is not stuffed into this convention.
+- Scheduling across machines and changing the multi-session model: these were already outside the map, and this convention does not deal with them either.
 
-## 关联笔记（只指路，不抄全文）
+## Related notes (pointers only, no full text copied)
 
-- `research/1313-parallel-session-resources.md`：五个共享面（构建缓存、产物目录、索引、日志、临时片段）的事实清单与修法优先级。
-- `research/1322-worktree-link-probe.md`：两棵工作树并行的完整实测、数字、复现命令与未覆盖项。
-- `docs/design/1323-build-mutex.md`：锁的范围、三个时间参数的去向、失败模式与验收；第七节「主工作区仍然唯一」的结论已被本文「要在界面里看某棵工作树的效果」一节取代。
+- `research/1313-parallel-session-resources.md`: the list of facts about the five shared surfaces (build cache, output directory, index, logs, temporary fragments) and the priority order for fixing them.
+- `research/1322-worktree-link-probe.md`: the full measurement of two worktrees running in parallel, the numbers, the commands that reproduce it, and what it does not cover.
+- `docs/design/1323-build-mutex.md`: the scope of the lock, where the three time parameters went, the failure modes and the acceptance criteria; the conclusion of section seven, "the main workspace is still the only one", has been replaced by this document's "Looking at a worktree's result in the interface" section.

@@ -175,8 +175,10 @@ async function main(): Promise<void> {
     return Object.keys(dict).filter(function (k: string): boolean { return k.indexOf('sd.imp.') === 0 }).sort().join(',')
   }
   check(impKey(zh) === impKey(en), '中文与英文的 sd.imp.* 键集一致')
+  // 术语表 #1561 起是英文：正名是英文、中文名在 （） 里当别名，所以按「英文正名（中文别名）」整条认。
   const glossary = read('GLOSSARY.md')
-  check(has(glossary, '**技能重要程度**') && has(glossary, '**技能图例**'), '词典里补了「技能重要程度」与「技能图例」两条词条')
+  check(has(glossary, '**Skill importance（技能重要程度）**') && has(glossary, '**Skill legend（技能图例）**'),
+    '词典里补了「Skill importance（技能重要程度）」与「Skill legend（技能图例）」两条词条')
 
   // ---------------- E. 判据自检 ----------------
   const fake = skills.map(function (s: any): any { return { name: s.name, importance: s.name === 'ask-matt' ? 'rare' : s.importance } })
