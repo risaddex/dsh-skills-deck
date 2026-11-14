@@ -301,7 +301,7 @@ async function main() {
     check(H2.table.names.length === DECK_TOOL_NAMES.length && H2.table.missing.length === 0, '⑤ 真入口装出全部 ' + DECK_TOOL_NAMES.length + ' 个工具（缺 ' + H2.table.missing.length + ' 个）：' + JSON.stringify(H2.table.names))
     check(r2 && r2.ok === false && r2.status === 'unsupported', '⑤ 真被拒绝：回 ok:false / unsupported（实得 ' + (r2 && r2.status) + '）')
     check(r2 && r2.reason === 'ai-tool-refused', '⑤ 真被拒绝：reason 是那个机器可读的拒绝代号（实得 ' + (r2 && r2.reason) + '）')
-    check(r2 && typeof r2.text === 'string' && r2.text.indexOf('硬顶') >= 0, '⑤ 真被拒绝：给出了给 AI 看的那句原话（' + String(r2 && r2.text).slice(0, 90) + '…）')
+    check(r2 && typeof r2.text === 'string' && r2.text.indexOf('hard cap') >= 0, '⑤ 真被拒绝：给出了给 AI 看的那句原话（' + String(r2 && r2.text).slice(0, 90) + '…）')
     // 被拒的这一批一条都没发（选后端那一次探测不算：那是**选后端**，它自己会过一次闸并记账；
     // 被拒的是「真正读写」那一步）。
     check(H2.gate.stats().accounted.requests - b2.accounted.requests <= 1, '⑤ 真被拒绝：被拒的那一批一条都没发出去（账上只多了选后端那一次探测：' + (H2.gate.stats().accounted.requests - b2.accounted.requests) + ' 条）')

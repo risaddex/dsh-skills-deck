@@ -80,7 +80,7 @@ export function createPageBook(deps?: PageBookDeps): {
   /** 记下这一次整池重建在一个仓库里实际翻了几页。observed: { issuePages, prPages?, at? }。 */
   function notePages(repoKey: string, observed?: ObservedPages) {
     const k = String(repoKey || '')
-    if (!k) throw new Error('记实测页数要带仓库标识：页数是按仓库分别记的，没有标识就分不出是谁的')
+    if (!k) throw new Error('recording measured page counts requires a repository identifier: counts are stored per repository and cannot be attributed without one')
     const o = observed || {}
     const issuePages = Math.max(1, Math.floor(num(o.issuePages)))
     const prPages = Math.max(0, Math.floor(num(o.prPages)))

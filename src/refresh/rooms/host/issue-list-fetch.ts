@@ -52,8 +52,8 @@ function fail(kind: string, message: any): any {
 
 /** 会话失败统一收成 env（与旧路的失败形状一致，上层照旧降级回缓存）。 */
 function sessionFail(reason: string, detail?: any): any {
-  const tail = detail == null || detail === '' ? '' : ('：' + String(detail))
-  return fail('env', '只读会话不可用（' + reason + '）' + tail)
+  const tail = detail == null || detail === '' ? '' : (': ' + String(detail))
+  return fail('env', 'read-only session unavailable (' + reason + ')' + tail)
 }
 
 /**
@@ -108,12 +108,12 @@ export function createIssueList(deps: any): any {
    * 两处拼法只留这一份，列表、地图、索引三条路就不会各拼一个不一样的 refId。
    */
   async function withReadSession(cwd: any, fn: (session: TrackerSession, repo: RepositoryRef, ctx: OpContext) => Promise<any>): Promise<any> {
-    if (typeof deps.openSession !== 'function') return sessionFail('没有注入 openSession')
+    if (typeof deps.openSession !== 'function') return sessionFail('openSession was not injected')
     let opened: any = null
-    try { opened = await Promise.resolve(deps.openSession(cwd)) } catch (e: any) { return sessionFail('开会话时抛错', (e && e.message) || e) }
+    try { opened = await Promise.resolve(deps.openSession(cwd)) } catch (e: any) { return sessionFail('opening the session threw an error', (e && e.message) || e) }
     if (!opened || opened.ok !== true || typeof opened.call !== 'function') return sessionFail(String((opened && opened.reason) || 'open-failed'), opened && opened.detail)
     let repo: RepoKey | null = null
-    try { repo = await Promise.resolve(getRepoKey(cwd)) } catch (e: any) { return sessionFail('解析仓库坐标失败', (e && e.message) || e) }
+    try { repo = await Promise.resolve(getRepoKey(cwd)) } catch (e: any) { return sessionFail('failed to resolve repository coordinates', (e && e.message) || e) }
     const backendId: string = String(opened.backendId || '')
     let ref = repoRefOf(repo, backendId)
     // 会话是仓库身份的真源（GitLab 的宿主 getRepoKey 只认 GitHub 远端，会回 null）：同一个 refId
@@ -121,13 +121,13 @@ export function createIssueList(deps: any): any {
     const sessionRef: RepositoryRef | null = (opened.repoRef && opened.repoRef.refId) ? opened.repoRef : null
     if (ref && sessionRef && String(sessionRef.refId) === ref.refId) ref = sessionRef
     if (!ref && sessionRef && backendId !== 'github') ref = sessionRef
-    if (!ref) return fail('env', '无法解析 owner/repo')
+    if (!ref) return fail('env', 'cannot resolve owner/repo')
     try {
       return await opened.call(async function (session: TrackerSession, ctx: OpContext): Promise<any> {
         return fn(session, ref, ctx)
       })
     } catch (e: any) {
-      return sessionFail('取数时抛错', (e && e.message) || e)
+      return sessionFail('fetching data threw an error', (e && e.message) || e)
     }
   }
 
@@ -196,7 +196,7 @@ export function createIssueList(deps: any): any {
       const r: any = await session.list(ref, { labels: ['wayfinder:map'], state: 'open' }, ctx)
       if (!r || r.ok !== true) {
         const err = (r && r.error) || {}
-        return fail(String(err.kind || 'network'), err.message || '地图票读取失败')
+        return fail(String(err.kind || 'network'), err.message || 'failed to read the map ticket')
       }
       await recordRows(cwd, ref, r.data || [])
       // 与列表同一条口径：拉取请求不算地图（旧 gh issue list 本来就不返回 PR）。
@@ -219,7 +219,7 @@ export function createIssueList(deps: any): any {
       const r: any = await session.list(ref, undefined, ctx)
       if (!r || r.ok !== true) {
         const err = (r && r.error) || {}
-        return fail(String(err.kind || 'network'), err.message || '列表读取失败')
+        return fail(String(err.kind || 'network'), err.message || 'failed to read the list')
       }
       await recordRows(cwd, ref, r.data || [])
       // 列表视图不收拉取请求（#1870 起口径是这样：PR 有自己的页签，读的是快照里的 PR 行）。
@@ -243,21 +243,21 @@ export function createIssueList(deps: any): any {
     const useSince = Number.isFinite(sinceMs)
     const round: FallbackRoundBudget = useSince && injectedBudget ? injectedBudget : createFallbackRoundBudget({ kind: useSince ? 'increment' : 'enumerate', limits: FALLBACK_FETCH_LIMITS })
     return withReadSession(cwd, async function (session: TrackerSession, ref: RepositoryRef, ctx: OpContext): Promise<any> {
-      if (typeof session.listPage !== 'function') return fail('unsupported', '该后端的会话不支持 listPage，索引无法翻页取全量')
+      if (typeof session.listPage !== 'function') return fail('unsupported', 'this backend session does not support listPage; the full index cannot be fetched through pagination')
       const index: Record<string, string> = {}
       let persisted: boolean = true
       let cursor: string | undefined = undefined
       let pages = 0
       while (true) {
         pages += 1
-        if (pages > INDEX_MAX_PAGES) return fail('truncated', '索引翻页超过 ' + INDEX_MAX_PAGES + ' 页，拒绝用不完整的索引推进水印')
+        if (pages > INDEX_MAX_PAGES) return fail('truncated', 'index pagination exceeded ' + INDEX_MAX_PAGES + ' pages; refusing to advance the watermark with an incomplete index')
         // 发出前先记账：这一页的小票拿不到（本轮请求已达上限）就停手，绝不再发第 N+1 条请求。
         const ticket = round.reserve({ bucket: 'read', cost: 1, classLabel: 'index-page' })
         if (!ticket) {
           const view = round.view()
           const gotPages = pages - 1
-          const where = gotPages === 0 ? '第一页尚未发出' : ('已取 ' + gotPages + ' 页，第 ' + pages + ' 页未发出')
-          return Object.assign(fail('truncated', '索引翻页被本轮请求预算拦住：' + where + '，本轮上限 ' + view.limit + ' 个请求，拒绝用被截断的索引推进水印'), { pages: gotPages, budget: view })
+          const where = gotPages === 0 ? 'the first page has not been requested' : ('fetched ' + gotPages + ' pages; page ' + pages + ' has not been requested')
+          return Object.assign(fail('truncated', 'index pagination was blocked by this round\'s request budget: ' + where + '; this round allows ' + view.limit + ' requests; refusing to advance the watermark with a truncated index'), { pages: gotPages, budget: view })
         }
         const opts: any = { limit: INDEX_PAGE_LIMIT }
         if (cursor) opts.cursor = cursor
@@ -269,7 +269,7 @@ export function createIssueList(deps: any): any {
         if (!page || page.ok !== true) {
           const err = (page && page.error) || {}
           round.backfill(ticket, 1)
-          return Object.assign(fail(String(err.kind || 'network'), err.message || '索引读取失败'), { pages: pages - 1, budget: round.view() })
+          return Object.assign(fail(String(err.kind || 'network'), err.message || 'failed to read the index'), { pages: pages - 1, budget: round.view() })
         }
         // 收到了就按实际条数校正：预扣的 1 条换成真发出去的 1 条。
         round.correct(ticket, 1)
@@ -293,7 +293,7 @@ export function createIssueList(deps: any): any {
         }
         const next = data.nextCursor || null
         if (!next) break
-        if (next === cursor) return Object.assign(fail('parse', '索引翻页游标没有前进，拒绝死循环'), { pages: pages, budget: round.view() })
+        if (next === cursor) return Object.assign(fail('parse', 'the index pagination cursor did not advance; refusing an infinite loop'), { pages: pages, budget: round.view() })
         cursor = next
       }
       return {

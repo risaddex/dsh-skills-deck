@@ -113,7 +113,7 @@ export function createSessionRefresh(deps: RefreshDeps) {
   async function refreshOf(args: Args) {
       // #1003 空目录闸：同快照，不拿进程目录冒充去重建，诚实失败等就绪。
       const _rawRefCwd = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-      if (!_rawRefCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+      if (!_rawRefCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
       // #652 与快照同钥匙（规整键+工作区根）；#696 起宿主内存按根分表，强制刷新只重写自己根那条。
       const cwd = await canonicalKey(_rawRefCwd)
       const refT0 = Date.now()
@@ -169,7 +169,7 @@ export function createSessionRefresh(deps: RefreshDeps) {
         // 而提示里没有任何一句说得出「重启窗口」这件事。
         if (reason === 'readonly' || reason === 'unavailable' || reason === 'legacy-writer') return
         // 真写失败则整趟刷新失败：宁可让用户看到失败，也不能让界面显示一份重启后会消失的数据。
-        throw new Error('这轮刷新没写进本地快照库（' + reason + '），为避免重启后回到旧数据，这次刷新按失败处理。')
+        throw new Error('this refresh was not written to the local snapshot library (' + reason + '); to avoid reverting to old data after a restart, this refresh is treated as failed.')
       }
       /**
        * #1774 / #1870：强制刷新也要把上一趟快照传给编排层，来源不完整时它才能补回上次已知的容器与子票。

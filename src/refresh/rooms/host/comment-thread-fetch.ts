@@ -125,7 +125,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
   // #1444：读路径只认只读会话（deps.openSession）。会话由宿主按目录选好后端，本文件不再自己分发、
   // 也不再直调 gh；开不成时如实失败，让上层照旧降级用缓存。
   async function openReadSession(cwd: any): Promise<any> {
-    if (typeof deps.openSession !== 'function') return { ok: false, reason: 'not-wired', detail: '宿主没有注入只读会话装配口' }
+    if (typeof deps.openSession !== 'function') return { ok: false, reason: 'not-wired', detail: 'the host did not inject the read-only session opener' }
     return await deps.openSession(cwd)
   }
   // 会话开不成时的失败形状：沿用本文件读路径原来的 {ok:false,error}。kind 归到 env ——
@@ -134,23 +134,23 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
   // 在面板里选定这个工作区使用的后端，不是干等重试；pending 是还没定下来，等会话可用再试；
   // 其余（没认出工作区、没接上、开的时候抛了）保留原来的重试口径。文案只在这一处拼，读写共用。
   function sessionFailureAdvice(reason: string): string {
-    if (reason === 'multi-match') return '。同时有多个后端认领这个工作区，请在面板里选定这个工作区使用的后端，再重试。'
-    if (reason === 'no-backend') return '。这个工作区还没有选定后端，请在面板里选定这个工作区使用的后端，再重试。'
-    if (reason === 'pending') return '。后端还在确认中，等会话可用后再试。'
-    return '，等会话可用后再试。'
+    if (reason === 'multi-match') return '. Several backends claim this workspace; choose this workspace\'s backend in the panel, then retry.'
+    if (reason === 'no-backend') return '. This workspace has no backend selected yet; choose this workspace\'s backend in the panel, then retry.'
+    if (reason === 'pending') return '. The backend is still being confirmed; retry when the session is available.'
+    return '; retry when the session is available.'
   }
-  function sessionFailure(opened: any, sessionKind: '只读' | '写'): any {
+  function sessionFailure(opened: any, sessionKind: 'read-only' | 'write'): any {
     const reason: string = opened && opened.reason ? String(opened.reason) : 'unknown'
-    const detail: string = opened && opened.detail ? '：' + String(opened.detail) : ''
-    return { ok: false, error: { kind: 'env', message: '这个工作区的' + sessionKind + '会话没开成（' + reason + '）' + detail + sessionFailureAdvice(reason) } }
+    const detail: string = opened && opened.detail ? ': ' + String(opened.detail) : ''
+    return { ok: false, error: { kind: 'env', message: 'This workspace\'s ' + sessionKind + ' session did not open (' + reason + ')' + detail + sessionFailureAdvice(reason) } }
   }
   function readSessionFailure(opened: any): any {
-    return sessionFailure(opened, '只读')
+    return sessionFailure(opened, 'read-only')
   }
   // 会话回包可能缺 data：缺了也按失败交回去，不让调用点读到 undefined 再炸。
   function getFailure(r: any): any {
     if (r && r.ok === false) return r
-    return { ok: false, error: { kind: 'network', message: '只读会话没有交回单票数据' } }
+    return { ok: false, error: { kind: 'network', message: 'the read-only session returned no ticket data' } }
   }
   // #1465：读路径的仓库引用直接用只读会话回包（opened.repoRef），不再调注册表 describe。
   // 为什么：describe 是房间的同步定位口，对 GitHub 工作区只给目录时交回空 refId（丢 owner），
@@ -163,7 +163,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
   // 记账与解析仓库引用全由会话负责；本文件不再自己拼 opCtx、不再调注册表 select/describe，也不直调房间。
   // 为什么不能自己拼：写操作的额度与「这个工作区让不让写」只有会话那一层算得出来，自己拼等于绕过硬顶。
   async function openWriteSession(cwd: any, exec: any): Promise<any> {
-    if (typeof deps.openSession !== 'function') return { ok: false, reason: 'not-wired', detail: '宿主没有注入写会话装配口' }
+    if (typeof deps.openSession !== 'function') return { ok: false, reason: 'not-wired', detail: 'the host did not inject the write session opener' }
     // 执行口随会话一起交进去：会话默认那份是探测档（读），评论写入要按写档 'comment-write' 等得起一次真实往返。
     // canWrite:true —— 迁移前这条写路径不看判定出口的写权限（人在面板上点了评论，意图本身就是授权），
     // 仓库不可写时由房间把失败如实报回（auth/permission 档照旧）。收紧成「必须显式选过后端」会让老仓库今天能评论、迁移后不能。
@@ -187,7 +187,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
   // 写会话开不成时的失败形状：与读路径同一个形状（{ok:false,error}）。kind 归 env ——
   // 没认出工作区、没有后端认领、认领未决、多家同时认领，都是环境还没就绪，不是这张票不存在。
   function writeSessionFailure(opened: any): any {
-    return sessionFailure(opened, '写')
+    return sessionFailure(opened, 'write')
   }
   /**
    * 把刚发出去的那条评论并进本地快照库（#1866）。
@@ -224,17 +224,17 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     const n: any = args && args.number
     // #1003 空目录闸：不拿进程目录冒充去读票，诚实失败等就绪。
     const _rawDetailCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawDetailCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!_rawDetailCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
     const cwd: any = await normCwd(_rawDetailCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: '缺少 number' } }
+    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
     try {
       // 读路径只认会话（#1444）：会话开成之后，后端选择、读额度与记账都由它兜住，本文件不再自己分发。
       const opened: any = await openReadSession(cwd)
       if (!opened || opened.ok !== true) return readSessionFailure(opened)
       // #1465：仓库引用直接用只读会话回包（与写路径同一份），不再调 describe。
       const repoRef: any = readRepoRefOf(opened)
-      if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: '无法解析目标仓库（refId missing）' } }
+      if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: 'cannot resolve the target repository (refId missing)' } }
       // effort 维度：effort 是寻址范围，客户端带上来就放进 ref（不带 = 全仓库，单 effort 后端行为不变）
       if (args && args.effortId !== undefined && args.effortId !== null) repoRef.effortId = String(args.effortId)
       const key: string = String(n).padStart(2, '0')
@@ -257,7 +257,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       // #1931：详情写库要带「读开始那一刻」的库版本，不能等写的时候才读；这一读在发后端请求之前。
       const startMergeVersion: number | null = await libraryVersionOf(lib, libKey)
       const r: any = await opened.call(function (session: any, opCtx: any) {
-        if (!session || typeof session.get !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' 未实现 get" } }
+        if (!session || typeof session.get !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' does not implement get" } }
         // 详情也要首屏这一页评论正文（#1783：#1784 之前这里不带 comments 选项，房间只能按默认一页 20 条取，
         // 页面于是把「详情里没带够」误当成「这张票只有 20 条评论」；带上 first 后房间会按需翻页并把总数带回来）。
         return session.get(repoRef, key, { comments: { first: COMMENTS_PAGE } }, opCtx)
@@ -371,10 +371,10 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     const after: any = args && args.after
     // #1003 空目录闸：同上。
     const _rawCommentsCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawCommentsCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!_rawCommentsCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
     const cwd: any = await normCwd(_rawCommentsCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: '缺少 number' } }
+    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
     try {
       // 同详情：读评论也只经只读会话；会话开不成时诚实失败，让上层照旧用缓存。
       const opened: any = await openReadSession(cwd)
@@ -387,7 +387,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       const want: number = Math.min(loaded + COMMENTS_PAGE, COMMENTS_MAX)
       // #1465：同详情，评论读路径也用只读会话回包（与写路径同一份）。
       const repoRef: any = readRepoRefOf(opened)
-      if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: '无法解析目标仓库（refId missing）' } }
+      if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: 'cannot resolve the target repository (refId missing)' } }
       // effort 维度：评论也按 effort 寻址（不带 = 全仓库；多 effort 同号时后端会诚实报 conflict）
       if (args && args.effortId !== undefined && args.effortId !== null) repoRef.effortId = String(args.effortId)
       const key: string = String(n).padStart(2, '0')
@@ -412,7 +412,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       // #1931：评论页写库同样带读开始那一刻的库版本（在发后端请求之前读）。
       const startMergeVersion: number | null = await libraryVersionOf(lib, libKey)
       const r: any = await opened.call(function (session: any, opCtx: any) {
-        if (!session || typeof session.get !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' 未实现 get" } }
+        if (!session || typeof session.get !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' does not implement get" } }
         return session.get(repoRef, key, { comments: { first: want } }, opCtx)
       })
       if (!r || r.ok !== true) return getFailure(r)
@@ -448,11 +448,11 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     const body: any = args && args.body
     // #1003 空目录闸：写操作更不许冒充（会写到错的仓库），直接拒绝等就绪。
     const _rawCommentCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawCommentCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!_rawCommentCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
     const cwd: any = await normCwd(_rawCommentCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: '缺少 number' } }
-    if (typeof body !== 'string' || !body.trim()) return { ok: false, error: { kind: 'parse', message: '评论内容为空' } }
+    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
+    if (typeof body !== 'string' || !body.trim()) return { ok: false, error: { kind: 'parse', message: 'the comment body is empty' } }
     try {
       // #1445：写入只经写会话。上一版在这里自己选后端、拼 opCtx、补 refId、直调房间 comment，
       // 绕开了写权限裁决与写额度；现在这些一律交给会话，本文件只负责把参数交准、把失败说清楚。
@@ -461,11 +461,11 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       // 仓库引用直接用会话回包（它已按「判定出口 → 房间 describe → git 三级解析」补齐）。
       // 复制一份再挂 effortId：会话回包里的 ref 与判定结论是同一个对象，就地改会把范围带到别的调用上。
       const repoRef: any = opened.repoRef ? Object.assign({}, opened.repoRef) : null
-      if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: '无法解析目标仓库（refId missing）' } }
+      if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: 'cannot resolve the target repository (refId missing)' } }
       // effort 维度：effort 是寻址范围；客户端从行数据带上来，放进 ref（不带 = 全仓库）
       if (args && args.effortId !== undefined && args.effortId !== null) repoRef.effortId = String(args.effortId)
       const r: any = await opened.call(function (session: any, opCtx: any) {
-        if (!session || typeof session.comment !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' 未实现 comment" } }
+        if (!session || typeof session.comment !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' does not implement comment" } }
         return session.comment(repoRef, String(Number(n)), String(body), opCtx)
       })
       if (r && r.ok) {

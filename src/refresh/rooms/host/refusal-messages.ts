@@ -55,7 +55,7 @@ export function refusalTextRef(a: RefusalArgs, hour: RefusalHourSpend, plan: Ref
   // 三格派生：缺的是哪一族、按什么单位计价、还有几分钟恢复。放在这里而不是闸里，闸才能少写几行。
   const named: RefusalArgs = Object.assign({}, a, {
     familyLabel: familyLabelOf(str(a.bucket)),
-    unit: a.bucket === 'graphql' ? '点' : '条',
+    unit: a.bucket === 'graphql' ? 'points' : 'requests',
     resetAt: resetAt,
     resetInMinutes: resetAt > 0 ? Math.max(0, Math.floor((resetAt - numOf(a.now, 0)) / 60000)) : 0,
   })
@@ -71,19 +71,19 @@ export function refusalTextRef(a: RefusalArgs, hour: RefusalHourSpend, plan: Ref
  */
 function callCapText(a: RefusalArgs, plan: RefusalPlan, limits: RefusalLimits): string {
   const over: string[] = []
-  if (a.points > limits.aiToolMaxPointsPerCall) over.push('点数超了 ' + (a.points - limits.aiToolMaxPointsPerCall) + ' 点')
-  if (a.requests > limits.aiToolMaxRequestsPerCall) over.push('条数超了 ' + (a.requests - limits.aiToolMaxRequestsPerCall) + ' 条')
+  if (a.points > limits.aiToolMaxPointsPerCall) over.push('points exceed the cap by ' + (a.points - limits.aiToolMaxPointsPerCall) + ' points')
+  if (a.requests > limits.aiToolMaxRequestsPerCall) over.push('requests exceed the cap by ' + (a.requests - limits.aiToolMaxRequestsPerCall) + ' requests')
   const split = plan.shards > 1
-    ? '这次要建 ' + plan.shards * plan.perShard + ' 张以内的票，建议分 ' + plan.shards + ' 次调用，每片不超过 ' + plan.perShard + ' 张票。'
-    : '把这一笔拆小再试（例如分批建票、或改完一处再改下一处）。'
+    ? 'This call creates up to ' + plan.shards * plan.perShard + ' tickets; split into ' + plan.shards + ' calls, each with at most ' + plan.perShard + ' tickets.'
+    : 'Split this call and retry (for example, create tickets in batches, or finish one change before starting the next).'
   // #1527 决定三：单次硬顶的拒绝也要报服务端还剩多少——人要知道「不是没额度了」，
   //   AI 才知道该等额度恢复还是该把这一笔拆小。读数未知时不报，不拿占位的数字冒充读数（#1435）。
   const rest = (a.known !== false && typeof a.serverRemaining === 'number' && isFinite(a.serverRemaining))
-    ? '服务端这一桶还剩 ' + a.serverRemaining + ' ' + (a.unit === '条' ? '条' : '点') + '。'
+    ? 'Remaining in this server bucket: ' + a.serverRemaining + ' ' + (a.unit === 'requests' ? 'requests' : 'points') + '. '
     : ''
-  return '这次调用超过了插件给自己设的单次硬顶：这一笔预计花 ' + a.points + ' 点、' + a.requests +
-    ' 条出站请求，单次上限是 ' + limits.aiToolMaxPointsPerCall + ' 点 / ' + limits.aiToolMaxRequestsPerCall + ' 条' +
-    (over.length ? '（' + over.join('、') + '）' : '') + '。额度没被别人用掉，是这一笔太大。' + rest + split
+  return 'This call exceeds the per-call hard cap the plugin sets for itself: estimated cost is ' + a.points + ' points and ' + a.requests +
+    ' outbound requests, against a per-call cap of ' + limits.aiToolMaxPointsPerCall + ' points / ' + limits.aiToolMaxRequestsPerCall + ' requests' +
+    (over.length ? ' (' + over.join(', ') + ')' : '') + '. The quota was not used up by others; this call is too large. ' + rest + split
 }
 
 /**
@@ -93,19 +93,19 @@ function callCapText(a: RefusalArgs, plan: RefusalPlan, limits: RefusalLimits): 
  * 结果把「服务端还剩 3669 点」误当成「插件额度不够」（#1527 的原始现场）。
  */
 function floorText(a: RefusalArgs, hour: RefusalHourSpend): string {
-  const unit = a.unit === '条' ? '条' : '点'
+  const unit = a.unit === 'requests' ? 'requests' : 'points'
   const remaining = numOf(a.serverRemaining, 0)
   const floor = numOf(a.floor, 0)
   const limit = numOf(a.limit, 0)
-  const cost = unit === '点' ? a.points : a.requests
+  const cost = unit === 'points' ? a.points : a.requests
   const parts: string[] = []
-  if (a.familyLabel) parts.push('这次要花的' + a.familyLabel + '额度不够用')
-  parts.push('服务端还剩 ' + remaining + ' ' + unit + '（上限 ' + limit + '，保底 ' + floor + '）')
-  if (cost > 0) parts.push('这一笔预计花 ' + cost + ' ' + unit + '，花完只剩 ' + Math.max(0, remaining - cost) + ' ' + unit)
+  if (a.familyLabel) parts.push('insufficient quota for ' + a.familyLabel)
+  parts.push('server remaining: ' + remaining + ' ' + unit + ' (limit ' + limit + ', floor ' + floor + ')')
+  if (cost > 0) parts.push('estimated cost: ' + cost + ' ' + unit + ', remaining afterwards: ' + Math.max(0, remaining - cost) + ' ' + unit)
   const wait = resetWaitText(a.resetAt, a.resetInMinutes)
   if (wait) parts.push(wait)
-  return '剩余额度已经不够了，额度是被别人用掉的（会话里别的 GitHub 调用先花了）：' + parts.join('；') +
-    '。本小时 AI 工具已用 ' + hour.points + ' 点、' + hour.requests + ' 条；先把这一笔拆小，或等额度恢复再试。'
+  return 'The remaining quota is insufficient because other GitHub calls in this session used it first: ' + parts.join('; ') +
+    '. AI tools have used ' + hour.points + ' points and ' + hour.requests + ' requests this hour; split this call, or wait for quota recovery before retrying.'
 }
 
 /** 「还有约 N 分钟，约 HH:MM 恢复」；算不出分钟就只写钟点；两个都没有就回空串，绝不编。 */
@@ -113,7 +113,7 @@ function resetWaitText(at: unknown, minutes?: number): string {
   const clock = resetClockText(at)
   if (!clock) return ''
   const m = numOf(minutes, 0)
-  return m > 0 ? '还有约 ' + m + ' 分钟，' + clock : clock
+  return m > 0 ? 'about ' + m + ' minutes left; ' + clock : clock
 }
 
 /** 报来的数不是有限数就用兜底值（与闸的 num 同口径）。 */

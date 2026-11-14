@@ -221,7 +221,7 @@ async function main() {
     const v = (r && (r.value || r)) || {}
     check(!threw, '超支调用不抛异常')
     const items = v.items || []
-    check(items.some((i) => i && i.status === 'failed' && /超时|核对|verify/i.test(String((i && i.reason) || ''))), '失败项说清超时与核对指引')
+    check(items.some((i) => i && i.status === 'failed' && /超时|核对|verify|time limit|check the current state/i.test(String((i && i.reason) || ''))), '失败项说清超时与核对指引')
   }
 
   // ── ③ 记忆：同票两读底层只打一次；写后失效 ──

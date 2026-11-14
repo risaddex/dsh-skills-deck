@@ -95,7 +95,7 @@ export function createIssueIndexWindowState(deps: IssueIndexWindowDeps | null | 
   async function scan(cwd: string, opts?: { commit?: boolean; budget?: any; backendId?: string }): Promise<any> {
     const o = opts || {}
     const hit = await repoKeyOf(cwd)
-    if (!hit) return { ok: false, error: { kind: 'env', error: '无法解析 owner/repo' } }
+    if (!hit) return { ok: false, error: { kind: 'env', error: 'cannot resolve owner/repo' } }
     const rk = hit.rk
     const startedMs = now()
     // 这一份工作区在本进程里还没扫过：先问库要起点（重启后就靠这一步不整仓枚举）。
@@ -104,7 +104,7 @@ export function createIssueIndexWindowState(deps: IssueIndexWindowDeps | null | 
     if (lastIndexWatermarkByRepo[rk] === undefined) await seedFromLibrary(cwd, hit.repo, String(o.backendId || ''), startedMs)
     const w = (indexWindow as any).scanWindow(lastIndexWatermarkByRepo[rk], startedMs)
     const remote = await d.fetchIssueIndex!(cwd, w.sinceIso, o.budget)
-    if (!remote || remote.ok !== true) return remote || { ok: false, error: { kind: 'env', error: '索引扫描没有回包' } }
+    if (!remote || remote.ok !== true) return remote || { ok: false, error: { kind: 'env', error: 'index scan returned no response' } }
     const before = lastIndexBaselineByRepo[rk] || null
     const merged = (indexWindow as any).mergeDelta(before, remote.index)
     const changed = (indexWindow as any).indexDiffers(before, merged)

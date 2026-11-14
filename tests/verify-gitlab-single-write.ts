@@ -211,11 +211,11 @@ async function main() {
     }
     if (e.kind) check(res.error && res.error.kind === e.kind, '场景「' + s.name + '」：失败档位是 ' + e.kind, JSON.stringify(res.error))
     if (e.uncertain) {
-      check(/可能已经建出来|有可能已经把票建出来/.test(String(res.error && res.error.message)) && /只发了 1 次建票写请求/.test(String(res.error && res.error.message)),
+      check(/may already have been created|有可能已经把票建出来/.test(String(res.error && res.error.message)) && /只发了 1 次建票写请求/.test(String(res.error && res.error.message)),
         '场景「' + s.name + '」：如实说「票可能已经建出来、这次只发了一次写、不会再发第二次」', String(res.error && res.error.message).slice(0, 200))
     }
-    if (e.certainNoTicket) check(/确定没有建出票/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「确定没有建出票」', String(res.error && res.error.message).slice(0, 200))
-    if (e.neverSent) check(/没能跑起来|没发出去/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「请求一个字节都没发出去」', String(res.error && res.error.message).slice(0, 200))
+    if (e.certainNoTicket) check(/definitely created no ticket/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「确定没有建出票」', String(res.error && res.error.message).slice(0, 200))
+    if (e.neverSent) check(/could not start|not a single byte/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「请求一个字节都没发出去」', String(res.error && res.error.message).slice(0, 200))
   }
 
   console.log('\n— 断言二 · 写请求的 URL 与参数形状（不是随便哪条 glab 命令都算）—')

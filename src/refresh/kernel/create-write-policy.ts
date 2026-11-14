@@ -67,7 +67,7 @@ const ENDPOINT_ABSENT_RE = /\b40[45]\b|method not allowed|404 not found/i
 /** 一句话里的空白压成一个空格，太长只留前 200 个字（给读日志与读界面的人看，不进白名单日志）。 */
 function firstLine(text: string): string {
   const s = String(text || '').replace(/\s+/g, ' ').trim()
-  return s.length > 200 ? s.slice(0, 200) + '（已截断）' : s
+  return s.length > 200 ? s.slice(0, 200) + ' (truncated)' : s
 }
 
 /** 回包里那张票：必须是一个对象、且带着 iid；除此之外一律当成「不是一个票面」。 */
@@ -96,19 +96,19 @@ export function classifyCreateWriteAttempt(res: CreateWriteResponse): CreateWrit
   const stderr = res && typeof res.stderr === 'string' ? res.stderr : ''
   const issue = issueOf(stdout)
   if (code === 0 && issue) {
-    return { verdict: 'created', issue, reason: '回包里带着这张票的 iid，票确实建出来了' }
+    return { verdict: 'created', issue, reason: 'the response carries this ticket\'s iid; the ticket was created' }
   }
   // 退出码 127 是本插件客户端在「平台不可用 / 执行器不可用 / 找不到 glab」三种情况下自己写的，
   // 与「命令找不到」同义；其余情况一律看输出里有没有直接指向「程序没启动起来」的原话。
   const text = firstLine((stdout ? stdout + ' ' : '') + stderr)
   if (code === 127 || NEVER_STARTED_RE.test(text)) {
-    return { verdict: 'never-sent', issue: null, reason: '这台机器上 glab 没能跑起来（' + text + '），这一次请求一个字节都没发出去' }
+    return { verdict: 'never-sent', issue: null, reason: 'glab could not start on this machine (' + text + '); not a single byte of the request was sent' }
   }
   if (ENDPOINT_ABSENT_RE.test(text)) {
-    return { verdict: 'endpoint-absent', issue: null, reason: '远端回的是「这个端点不存在」（' + text + '），这一次确定没有建出票' }
+    return { verdict: 'endpoint-absent', issue: null, reason: 'the remote says this endpoint does not exist (' + text + '); this attempt definitely created no ticket' }
   }
-  const head = code === 0 ? '回包不是一个带 iid 的票面（' : '这一次没有拿到确定的回答（'
-  return { verdict: 'maybe-written', issue: null, reason: head + text + '），票有可能已经建出来了' }
+  const head = code === 0 ? 'the response is not a ticket with an iid (' : 'this attempt got no definite answer ('
+  return { verdict: 'maybe-written', issue: null, reason: head + text + '); the ticket may already have been created' }
 }
 
 /**
@@ -124,10 +124,10 @@ export function classifyCreateWriteAttempt(res: CreateWriteResponse): CreateWrit
 export function decideCreateWriteRetry(verdict: CreateWriteVerdict, writeAttemptsMade: number): CreateWriteRetryDecision {
   const made = typeof writeAttemptsMade === 'number' && isFinite(writeAttemptsMade) ? writeAttemptsMade : 0
   if (verdict === 'never-sent') {
-    if (made <= 1) return { retry: true, reason: '上一次请求确定一个字节都没发出去（glab 没跑起来），远端不可能有这张票，再发一次是同一条请求的第一次真正出站' }
-    return { retry: false, reason: '这个调用已经重发过一次了，不论再试几次都不会有第三次' }
+    if (made <= 1) return { retry: true, reason: 'the previous request definitely sent no bytes (glab did not start), so the remote cannot have this ticket; resending is the first actual outbound attempt' }
+    return { retry: false, reason: 'this call was already retried once; there will be no third attempt' }
   }
-  if (verdict === 'maybe-written') return { retry: false, reason: '这一次写有可能已经落到远端了：再发一次就可能多出一张重复的票，所以不发' }
-  if (verdict === 'endpoint-absent') return { retry: false, reason: '远端明确说这个端点不存在：同一条请求再发一次也是同样的回答，把这个信号原样交给调用方' }
-  return { retry: false, reason: '票已经建出来了，没有要重发的东西' }
+  if (verdict === 'maybe-written') return { retry: false, reason: 'this write may already have reached the remote: resending could create a duplicate ticket, so it will not be sent' }
+  if (verdict === 'endpoint-absent') return { retry: false, reason: 'the remote explicitly says this endpoint does not exist: resending would get the same answer; pass this signal unchanged to the caller' }
+  return { retry: false, reason: 'the ticket was created; nothing needs resending' }
 }

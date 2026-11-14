@@ -47,7 +47,7 @@ export const makeStore = (): any => ({
   // #1428：typeof 守卫理由同 refresh-timer.ts（闭包里值不变，闭包外不抛）。
   pos: null, size: { w: 460, h: (typeof DEFAULT_PANEL_H !== 'undefined' ? DEFAULT_PANEL_H : 0) }, 
   // 外观定死（用户拍板：图标/动作词不可配置）
-  ui: { icon: 'compass', word: '沉淀' },
+  ui: { icon: 'compass', word: 'Consolidate' },
   snapshot: null,
   selection: null,
   repository: null,
@@ -255,7 +255,7 @@ export const hydrateFromCache = function (st: any): boolean {
   // 链快照共享水合（#324 · 键 = 工作区键 + 后端 id + 语言；#529 加语言维，与 loadChain 同口径）
   try {
     const backendId: any = (st.selection && st.selection.backendId) || (c && c.selection && c.selection.backendId) || ''
-    const chainLang: any = (typeof promptLang === 'function' ? promptLang() : 'zh')
+    const chainLang: any = (typeof promptLang === 'function' ? promptLang() : 'en')
     const cachedChain: any = getCachedChain(st.cwd, backendId, chainLang)
     if (cachedChain && !st.chainSnapshot) {
       st.chainSnapshot = cachedChain

@@ -196,11 +196,11 @@ export function createSessionOpener(deps: SessionOpenerDeps): (cwd: unknown, opt
   }
   return async function openSession(cwd: unknown, opts?: OpenSessionOptions): Promise<OpenSessionResult> {
     const cwdStr = (typeof cwd === 'string') ? cwd : String(cwd == null ? '' : cwd)
-    if (!cwdStr.trim()) return openFail('workspace-not-ready', '调用方没给工作区目录，选后端无从选起')
+    if (!cwdStr.trim()) return openFail('workspace-not-ready', 'the caller provided no workspace directory, so no backend can be selected')
     let registry: any = null
     try { registry = await deps.getTrackerRegistry() } catch (eR: any) { registry = null }
     if (!registry || typeof registry.select !== 'function' || typeof registry.get !== 'function' || typeof registry.modules !== 'function') {
-      return openFail('no-registry', '后端注册表还没就绪：这一趟拿不到会话（不直连 gh，等降级）')
+      return openFail('no-registry', 'the backend registry is not ready: no session is available for this call (no direct gh connection; await fallback)')
     }
     // 选后端的匹配上下文要带上后端上下文：openTracker 自带的那一份只给 cwd，后端 matches 读不到 .git/config、
     // 也拼不出 .scratch/map.md 的路径，GitHub 与 Markdown 两家都会判「不认识这个工作区」，会话永远开不起来
@@ -235,8 +235,8 @@ export function createSessionOpener(deps: SessionOpenerDeps): (cwd: unknown, opt
         accountPort: accountPort as any,
         canWrite: !!(opts && opts.canWrite === true),
         ...(write
-          ? { canWriteFromSelection: true, canWriteReason: '写会话的写权限由判定出口回答（取不到就是没就绪，不默认放开）' }
-          : { canWriteReason: '读会话只读：读路径今天从不因额度推迟，所以裁决一律放行' }),
+          ? { canWriteFromSelection: true, canWriteReason: 'write-session permission comes from the decision entry (unavailable means not ready, never allowed by default)' }
+          : { canWriteReason: 'read sessions are read-only: reads are never delayed by quota, so the decision always allows them' }),
         // 调用方显式给了选择就尊重它那份（快照复用判定结论、面板按已核验的后端取数）；
         // 没给则先按统一判定（判定层不可用时退回裸问注册表，见上面 resolveSelection 的那段）。
         ...(resolveSelection ? { resolveSelection: resolveSelection } : { matchContext: matchCtx }),

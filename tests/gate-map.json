@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-06T14:05:45.934Z",
+  "generatedAt": "2026-11-14T11:41:22.135Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 600,
-  "gateCount": 600,
-  "attributedGates": 544,
+  "chainLength": 601,
+  "gateCount": 601,
+  "attributedGates": 545,
   "unattributedGates": 56,
   "buildOutputOnlyGates": 21,
   "completionRecordedGates": 143,
@@ -10543,6 +10543,21 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 5 条"
     },
     {
+      "step": "node tests/verify-english-surface.ts",
+      "file": "tests/verify-english-surface.ts",
+      "guards": [
+        "src/refresh"
+      ],
+      "dirs": [
+        "src/refresh"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：源码里的路径字面量 1 条"
+    },
+    {
       "step": "node tests/verify-error-normalize-log.ts",
       "file": "tests/verify-error-normalize-log.ts",
       "guards": [
@@ -15311,6 +15326,7 @@
       "node tests/verify-contract-vocabulary.ts",
       "node tests/verify-dependency-rules.ts",
       "node tests/verify-1443-static-gate.ts",
+      "node tests/verify-english-surface.ts",
       "node tests/verify-log-count.ts",
       "node tests/verify-log-fields.ts"
     ],

@@ -169,9 +169,9 @@ function main(): void {
   console.log('== 6. 宿主 gh 执行器与 issue-tracker 文档：排查步骤也换新说法 ==')
   const ghExecSrc = read('src/refresh/rooms/host/gh-execution.ts')
   const lastErr = literalAfter(ghExecSrc, /setGhLastError\('((?:[^'\\]|\\.)*)'\)/)
-  check(!!lastErr && hasAll(lastErr, ['DSH 启动时继承的 PATH 中未解析到 gh 可执行文件', '不代表未安装', 'DSH_GH_PATH']),
+  check(!!lastErr && hasAll(lastErr, ['the gh executable was not found on the PATH DSH inherited at startup', 'this does not mean it is not installed', 'DSH_GH_PATH']),
     '宿主 gh 执行器的失败原因说清「不代表未安装」并给出 PATH 与 DSH_GH_PATH（实得「' + String(lastErr) + '」）')
-  check(!!lastErr && lastErr.indexOf('PATH 无 gh') < 0, '不再只说「PATH 无 gh」（那听起来就是没装）')
+  check(!!lastErr && lastErr.indexOf('no gh on PATH') < 0, '不再只说「PATH 无 gh」（那听起来就是没装）')
   // issue-tracker.md 在 #1561 之后是英文，判据认英文原句（中文原句只在提交历史里）。
   const docs = read('docs/agents/issue-tracker.md')
   check(docs.indexOf('It reports `gh not found` but `gh --version` prints output') >= 0,

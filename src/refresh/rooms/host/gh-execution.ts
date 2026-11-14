@@ -103,17 +103,17 @@ export function classifyGitFailure(exitCode: any, text: any): string {
 
 /** 每一档给一句能照做的话；界面直接显示它，不自己编词。 */
 export function hintFor(kind: any): string {
-  if (kind === 'need-credentials') return '这台机器上 git 拿不到凭据，而我们已经把「问用户」关掉了。请你在命令行里手动跑一次同样的操作（例如 git fetch）把登录做完，再回来重试。'
-  if (kind === 'auth-rejected') return '远端不认这台机器上的凭据（多半过期或被撤销）。请在命令行里重新登录一次再回来。'
-  if (kind === 'no-permission') return '凭据是有效的，但这个账号对目标仓库没有权限。请换一个有权限的账号，或让仓库管理员开权限。'
-  if (kind === 'network') return '连不上远端（网络或代理问题），与凭据无关；检查网络或代理之后重试。'
-  if (kind === 'stalled') return '传输停住了：远端在低速阈值内没有继续送数据，git 自己放弃了这次传输。换网络或稍后重试。'
-  if (kind === 'timeout') return '这条命令在预算时间内没有回话，已经把它整棵停掉了（这样做是为了不挂在等输入上）。稍后重试；若反复如此，按上面那句「疑似卡在」去查。'
-  if (kind === 'budget-exhausted') return '这一次操作的总预算用完了，后面的步骤没有开始。请分开操作，或稍后再试。'
-  if (kind === 'spawn-failed') return 'git 进程没起来（环境问题，不是凭据问题）。请确认这台机器上装了 git 并且能找到它。'
-  if (kind === 'env') return '宿主现在拿不到 git 命令或进程出口，这一步做不了。'
-  if (kind === 'args') return '这一步没有给出要跑的 git 参数。'
-  return 'git 报了一个我们没归类的失败；上面那行是它的原话。'
+  if (kind === 'need-credentials') return 'git cannot get credentials on this machine, and interactive prompting is disabled. Run the same operation once in a terminal (for example git fetch) to finish signing in, then retry.'
+  if (kind === 'auth-rejected') return 'the remote rejects this machine\'s credentials (likely expired or revoked). Sign in again in a terminal, then come back.'
+  if (kind === 'no-permission') return 'the credentials are valid, but this account has no permission for the target repository. Use an account with access, or ask the repository administrator to grant it.'
+  if (kind === 'network') return 'cannot reach the remote (network or proxy issue), unrelated to credentials; check the network or proxy and retry.'
+  if (kind === 'stalled') return 'the transfer stalled: the remote sent no more data within the low-speed threshold, so git abandoned the transfer. Switch networks or retry later.'
+  if (kind === 'timeout') return 'this command did not respond within its time budget, so its whole process tree was stopped (to avoid hanging on input). Retry later; if it keeps happening, investigate the suspected blocker named above.'
+  if (kind === 'budget-exhausted') return 'this operation used up its total budget, so the remaining steps did not start. Split the operation, or retry later.'
+  if (kind === 'spawn-failed') return 'the git process did not start (an environment problem, not a credential problem). Make sure git is installed and can be found on this machine.'
+  if (kind === 'env') return 'the host cannot access the git command or process launcher right now, so this step cannot run.'
+  if (kind === 'args') return 'this step provided no git arguments to run.'
+  return 'git reported a failure we do not classify; the line above is its original message.'
 }
 
 /** 造一个安全执行器；依赖全部由入口显式传入（runGit 就是那条共享的 git 进程出口）。 */
@@ -184,7 +184,7 @@ export function createCredentialSafeGit(deps: CredentialSafeGitDeps): any {
     const t: string = String(text || '').replace(/\r/g, '').trim()
     if (!t) return ''
     const LIMIT: number = 1500
-    return t.length <= LIMIT ? t : '…（已截断，下面只留最后 ' + LIMIT + ' 字）' + '\n' + t.slice(t.length - LIMIT)
+    return t.length <= LIMIT ? t : '… (truncated; only the last ' + LIMIT + ' characters are kept below)' + '\n' + t.slice(t.length - LIMIT)
   }
 
   /** 失败信封的唯一真源（扁平信封；kind 是稳定标识符，话术在 hintFor；detail 是截断后的 stderr 尾巴，读不到 stderr 的调用方靠它）。 */
@@ -213,14 +213,14 @@ export function createCredentialSafeGit(deps: CredentialSafeGitDeps): any {
 
   /** 卡住的角色：这一步只在失败之后才花一条本地 git 命令的钱（happy path 不付）。 */
   async function suspectOf(exe: any, cwd: any, args: any, kind: any): Promise<string> {
-    if (looksLikeSsh(args)) return 'ssh 通道（这条命令走的是 ssh，凭据问题与服务端都要看它）'
+    if (looksLikeSsh(args)) return 'the ssh channel (this command uses ssh, so check it for both credential and server problems)'
     if (kind === 'timeout' || kind === 'need-credentials' || kind === 'auth-rejected' || kind === 'stalled') {
       // 探针这一条（只在本步已经失败之后才跑，问一句本机配了什么凭据助手）：单条超时直接取中央 YAML 的
       // gitCredentialProbeTimeoutMs（GIT_CREDENTIAL_PROBE_TIMEOUT_MS）——给得短，探针不该把失败回包拖慢。
       const r: any = await runGit(exe, cwd, ['-C', cwd, 'config', '--get', 'credential.helper'], { timeoutMs: GIT_CREDENTIAL_PROBE_TIMEOUT_MS, stdoutLimit: 4096 })
       const name: string = (r && r.kind === 'ok') ? String(r.stdout || '').trim() : ''
-      if (name) return '本机配的凭据助手 ' + name + '（它没在预算内回话；也可能是远端或代理）'
-      return '本机的凭据链（没有配凭据助手；也可能是远端或代理）'
+      if (name) return 'the local credential helper ' + name + ' (it did not respond within budget; the remote or proxy may also be responsible)'
+      return 'the local credential chain (no credential helper configured; the remote or proxy may also be responsible)'
     }
     return ''
   }
@@ -230,16 +230,16 @@ export function createCredentialSafeGit(deps: CredentialSafeGitDeps): any {
     const started: number = Date.now()
     const req: any = request || {}
     const args: any = Array.isArray(req.args) ? req.args : []
-    if (args.length === 0) return fail('args', '没有给出要跑的 git 参数')
+    if (args.length === 0) return fail('args', 'no git arguments were provided')
     const total: number = Math.round(deadline - started)
-    if (total < MIN_BUDGET_MS) return fail('budget-exhausted', '这一次操作的总预算已经用完，这一步没有开始')
+    if (total < MIN_BUDGET_MS) return fail('budget-exhausted', 'this operation\'s total budget is used up, so this step did not start')
     const exe: any = await resolveGitExecutable()
-    if (!exe) return fail('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
-    if (typeof runGit !== 'function') return fail('env', '没有拿到共享的 git 进程出口（runGit）')
+    if (!exe) return fail('env', 'cannot find the git command (platform.resolveExecutable("git") returned no path)')
+    if (typeof runGit !== 'function') return fail('env', 'the shared git process launcher (runGit) is unavailable')
     // #1003 契约（2026-10-12 维护者拍板）：拿不到工作区目录时如实失败，不许拿进程目录顶上——
     //   这一条会真的执行 git（凭据操作），落到别人的目录里就是在错的仓库上动手。
     const cwd: any = (typeof req.cwd === 'string' && req.cwd.trim()) ? req.cwd : ''
-    if (!cwd) return fail('cwd', '这个工作区还没就绪（还没认出是哪个目录），所以这一次没有执行任何 git 命令')
+    if (!cwd) return fail('cwd', 'this workspace is not ready yet (its directory has not been recognized), so no git command ran')
     const clearHelpers: boolean = req.clearHelpers === true || (callOpts && callOpts.clearHelpers === true)
     const perOp: number = clamp(req.timeoutMs, budgetFor(args), MIN_BUDGET_MS, MAX_BUDGET_MS)
     const budget: number = Math.max(MIN_BUDGET_MS, Math.min(perOp, total))
@@ -251,19 +251,19 @@ export function createCredentialSafeGit(deps: CredentialSafeGitDeps): any {
     if (res && res.kind === 'ok') return { ok: true, kind: 'ok', exitCode: 0, stdout: res.stdout, truncated: res.truncated === true, elapsedMs: elapsedMs }
     if (res && res.kind === 'timeout') {
       const suspect: string = await suspectOf(exe, cwd, args, 'timeout')
-      return fail('timeout', '这条命令在 ' + budget + ' 毫秒里没有回话，已经整棵停掉', { exitCode: -1, elapsedMs: elapsedMs, suspect: suspect })
+      return fail('timeout', 'this command did not respond within ' + budget + ' ms; its whole process tree was stopped', { exitCode: -1, elapsedMs: elapsedMs, suspect: suspect })
     }
     if (res && res.kind === 'stalled') { // #847：看门狗判的「传输停住」，与文字归类出来的 stalled 同一档
       const suspect: string = await suspectOf(exe, cwd, args, 'stalled')
-      return fail('stalled', '命令的输出停了 ' + res.stallMs + ' 毫秒没有再增长，已经整棵停掉', { exitCode: -1, elapsedMs: elapsedMs, suspect: suspect })
+      return fail('stalled', 'command output stopped growing for ' + res.stallMs + ' ms; its whole process tree was stopped', { exitCode: -1, elapsedMs: elapsedMs, suspect: suspect })
     }
-    if (!res || res.kind === 'spawn-failed') return fail('spawn-failed', '起不了 git 进程：' + String((res && res.message) || '未知'), { exitCode: -1, elapsedMs: elapsedMs })
+    if (!res || res.kind === 'spawn-failed') return fail('spawn-failed', 'cannot start the git process: ' + String((res && res.message) || 'unknown'), { exitCode: -1, elapsedMs: elapsedMs })
     const text: string = String(res.stderr || '')
     const kind: string = classifyGitFailure(res.exitCode, text)
     const suspect: string = await suspectOf(exe, cwd, args, kind)
     const extra: any = { exitCode: res.exitCode, elapsedMs: elapsedMs, detail: tailOf(text) }
     if (suspect) extra.suspect = suspect
-    return fail(kind, reasonLine(text) || ('git 退出码 ' + res.exitCode), extra)
+    return fail(kind, reasonLine(text) || ('git exit code ' + res.exitCode), extra)
   }
 
   /** 开一次调用：一次用户动作 = 一次调用，所有步骤共用这一份总预算。 */
@@ -355,7 +355,7 @@ export function createGhExecution(deps: GhExecutionDeps): { resolveGh: () => Pro
       const outProbe = (probeHandle.collected && probeHandle.collected.stdout) ? probeHandle.collected.stdout.readFrom(0) : { text: '' }
       if (probeOutcome && probeOutcome.exitCode === 0 && String(outProbe.text||'').includes('gh version')) { setGhPath('gh'); setGhLastError(null); return 'gh' }
     } catch {}
-    setGhLastError('gh 不可用：DSH 启动时继承的 PATH 中未解析到 gh 可执行文件（不代表未安装；若已安装，将 gh 所在目录加入 PATH 或将 DSH_GH_PATH 设为 gh 可执行文件的绝对路径，再重启 DSH；确认未安装时访问 https://cli.github.com/）')
+    setGhLastError('gh unavailable: the gh executable was not found on the PATH DSH inherited at startup (this does not mean it is not installed; if it is installed, add its directory to PATH or set DSH_GH_PATH to the absolute path of the gh executable, then restart DSH; if it is not installed, visit https://cli.github.com/)')
     try { if (logCtx) { let hasGhPath = false; try { hasGhPath = !!(platform && platform.env && platform.env.get && platform.env.get('DSH_GH_PATH')) } catch (eH) {} logCtx.fire('warn', 'gh.resolve.fail', { hasDSH_GH_PATH: hasGhPath, errorHash: hash8(getGhLastError()) }) } } catch (eL) {}
     return null
   }
@@ -374,7 +374,7 @@ export function createGhExecution(deps: GhExecutionDeps): { resolveGh: () => Pro
     //   这一条发生在拿名额之前，所以没有名额要还；如实回一条环境档失败，让调用方按「还没就绪」处理。
     if (!(typeof cwd === 'string' && cwd.trim())) {
       try { if (logCtx) logCtx.fire('warn', 'gh.exec', { argv0: 'gh', via: String(via || ''), cmd: ghCommandLabel(args), cwdHash: hash8(''), latencyMs: Date.now() - ghT0, kind: 'no-cwd', exitCode: -1, rateClass: '' }) } catch (eL) {}
-      return { ok: false, kind: 'env', error: '这个工作区还没就绪（还没认出是哪个目录），所以这一次没有执行任何 gh 命令' }
+      return { ok: false, kind: 'env', error: 'this workspace is not ready yet (its directory has not been recognized), so no gh command ran' }
     }
     // #969 分档超时（读短写长探活最短）；#965 读写分桶拿名额（满了等；不传取消信号，拿不到只会等不会抛）。
     const rkBucket = isWriteGhArgs(args) ? 'write' : 'read'
@@ -399,7 +399,7 @@ export function createGhExecution(deps: GhExecutionDeps): { resolveGh: () => Pro
       if (outboundQueueTimeoutOf(eAcq)) {
         try { if (logCtx) logCtx.fire('warn', 'gh.timeout', { argv0: 'gh', timeoutMs: rkQueueTimeout, layer: 'host-queue', via: String(via || ''), cmd: rkCmd, waitedMs: rkWaitedMs, phase: 'queue' }) } catch (eL) {}
         try { if (logCtx) logCtx.fire('info', 'gh.exec', { argv0: 'gh', via: String(via || ''), cmd: rkCmd, cwdHash: hash8(cwd || DEFAULT_CWD), latencyMs: Date.now() - ghT0, waitedMs: rkWaitedMs, kind: 'network', exitCode: -1, rateClass: '' }) } catch (eL) {}
-        return { ok: false, kind: 'network', code: -1, error: 'gh 在 ' + rkQueueTimeout + ' 毫秒内没等到出站名额（命令 ' + (rkCmd || 'gh') + '；排队上限 ' + rkQueueTimeout + ' 毫秒，本档预算 ' + rkTimeout + ' 毫秒；到点时它还在排队，一次都没有跑起来）。这一笔已经中止。' }
+        return { ok: false, kind: 'network', code: -1, error: 'gh waited ' + rkQueueTimeout + ' ms without getting an outbound slot (command ' + (rkCmd || 'gh') + '; queue limit ' + rkQueueTimeout + ' ms, tier budget ' + rkTimeout + ' ms; it was still queued at the deadline and never ran). This call was aborted.' }
       }
       // 冷却期间拿名额会被准入闸直接拒绝（code=admission-cooldown）：这一笔没有起进程，
       // 回一句「通路不通」比笼统的「限时没回来」有用；这句和房间 client、平台通道共用 outbound-tiers 的口径。

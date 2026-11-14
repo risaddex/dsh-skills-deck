@@ -252,7 +252,7 @@ function isBucketName(v: string): v is LedgerBucketName {
 function kindOf(model?: LedgerBackendModel): BudgetKind {
   const raw = model && typeof model.kind === 'string' ? model.kind : ''
   if (BUDGET_KINDS.indexOf(raw as BudgetKind) >= 0) return raw as BudgetKind
-  throw new Error('ensureBackend 要一份后端额度模型（kind 只认 two-buckets / requests-only / off-network / unknown），实得 ' + JSON.stringify(raw))
+  throw new Error('ensureBackend requires a backend quota model (kind must be two-buckets / requests-only / off-network / unknown), received ' + JSON.stringify(raw))
 }
 
 /**
@@ -298,7 +298,7 @@ export function createLedger(deps?: LedgerDeps) {
   /** 按档位名取一份账；名字不认识就当场抛，理由同上。 */
   function accountOf(name: string) {
     const a = accounts[name]
-    if (!a) throw new Error('账本没有这一档：' + String(name) + '（只认插件后台、人的动作、AI 工具三档）')
+    if (!a) throw new Error('the ledger has no tier: ' + String(name) + ' (only plugin background, human action and AI tool tiers are supported)')
     return a
   }
 
@@ -344,13 +344,13 @@ export function createLedger(deps?: LedgerDeps) {
    */
   function ensureBackend(backendId: string, model?: LedgerBackendModel): EnsureBackendResult {
     const id = normBackendId(backendId)
-    if (!id) throw new Error('ensureBackend 要后端标识：账本按「后端 + 桶」记账，没有后端就分不出这是谁的账')
+    if (!id) throw new Error('ensureBackend requires a backend identifier: the ledger records by backend + bucket, so without a backend it cannot attribute usage')
     const kind = kindOf(model)
     // 模型自报的后端与这次要建的后端不一致，说明装配时把某个后端的花钱口径装到了另一个后端名下，
     // 建出来的桶会记错账。当场抛，不要等第一笔花费再发现。
     const declared = model && typeof model.backendId === 'string' ? normBackendId(model.backendId) : ''
     if (declared && declared !== id) {
-      throw new Error('ensureBackend 收到的是「' + declared + '」的花钱口径，却要建在「' + id + '」名下（装配错，账本不替它猜）')
+      throw new Error('ensureBackend received the quota model of "' + declared + '" but was asked to register it under "' + id + '" (wiring error; the ledger will not guess)')
     }
     const prev = backends.get(id)
     if (prev && prev.kind === kind) {
@@ -425,7 +425,7 @@ export function createLedger(deps?: LedgerDeps) {
     const a = accountOf(e.account)
     const id = normBackendId(e.backendId)
     const b = buckets.get(bucketKey(id, e.bucket))
-    if (!b) throw new Error('账本没有这个桶：' + bucketKey(id, e.bucket) + '（先 ensureBackend 建桶；装配错不许静默丢账）')
+    if (!b) throw new Error('the ledger has no bucket: ' + bucketKey(id, e.bucket) + ' (create the bucket with ensureBackend first; wiring errors must not silently lose accounting)')
     const requests = num(e.requests)
     const points = num(e.points)
     // 计量单位由桶决定：graphql 记点数，rest 与 requests 记请求条数。两桶互不折算。
@@ -465,8 +465,8 @@ export function createLedger(deps?: LedgerDeps) {
     const owned = bucketsOf(id)
     const applied: LedgerBucketName[] = []
     for (const key of Object.keys(src)) {
-      if (!isBucketName(key)) throw new Error('账本不认识这个桶：' + key + '（只认 rest / graphql / requests）')
-      if (owned.indexOf(key) < 0) throw new Error('这个桶不属于后端 ' + id + '：' + key + '（先 ensureBackend 建桶；读数不许跨后端落账）')
+      if (!isBucketName(key)) throw new Error('the ledger does not recognize this bucket: ' + key + ' (only rest / graphql / requests are supported)')
+      if (owned.indexOf(key) < 0) throw new Error('this bucket does not belong to backend ' + id + ': ' + key + ' (create the bucket with ensureBackend first; readings must not be recorded across backends)')
       const r = src[key]
       if (!r) continue
       const b = buckets.get(bucketKey(id, key))
@@ -512,10 +512,10 @@ export function createLedger(deps?: LedgerDeps) {
    */
   function noteRateLimited(backendId: string, bucket: string, seconds: unknown, at?: unknown) {
     const s = num(seconds)
-    if (!(s > 0)) throw new Error('降档信号要带服务端给的秒数（Retry-After），账本不替它编一个时长')
+    if (!(s > 0)) throw new Error('the downgrade signal requires the server\'s delay in seconds (Retry-After); the ledger will not invent a duration')
     const id = normBackendId(backendId)
     const b = buckets.get(bucketKey(id, bucket))
-    if (!b) throw new Error('账本没有这个桶：' + bucketKey(id, bucket) + '（降档信号不能记到不存在的桶上）')
+    if (!b) throw new Error('the ledger has no bucket: ' + bucketKey(id, bucket) + ' (a downgrade signal cannot be recorded against a nonexistent bucket)')
     const t = (typeof at === 'number') ? at : now()
     b.rateLimitedUntil = Math.max(b.rateLimitedUntil, t + s * 1000)
     return { bucket: b.bucket, until: b.rateLimitedUntil }
@@ -526,7 +526,7 @@ export function createLedger(deps?: LedgerDeps) {
     rollHour()
     const a = accountOf(accountName)
     const c = a.byKey[key]
-    if (!c) throw new Error('账本没有这一桶：' + String(key) + '（键是「后端/桶名」，例如 github/rest）')
+    if (!c) throw new Error('the ledger has no bucket: ' + String(key) + ' (the key is backend/bucket, for example github/rest)')
     return { requests: c.requests, points: c.points }
   }
 

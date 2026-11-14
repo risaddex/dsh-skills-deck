@@ -67,13 +67,13 @@ export type BudgetReason =
 
 /** 理由代号的中文短名：日志与界面直接用人话，不在各处再翻一遍。 */
 export const BUDGET_REASON_LABEL: Record<BudgetReason, string> = {
-  'hard-cap': '硬顶拒绝',
-  'off-network-free': '离网免额度',
-  'reading-unknown': '读数未知',
-  'requests-available': '请求额度可用',
-  'requests-exhausted': '请求额度用尽',
-  exhausted: '额度见底',
-  sufficient: '额度充足',
+  'hard-cap': 'Hard cap refusal',
+  'off-network-free': 'Offline, no quota cost',
+  'reading-unknown': 'Reading unknown',
+  'requests-available': 'Request quota available',
+  'requests-exhausted': 'Request quota exhausted',
+  exhausted: 'Quota exhausted',
+  sufficient: 'Sufficient quota',
 }
 
 /** 一次裁决的结论：放行，或者拒绝 / 推迟并说清理由。 */
@@ -200,7 +200,7 @@ export function familiesOfOp(op: string): OpFamilyChoice {
 }
 
 /** 额度的中文短名：给人看的文案里用它，日志与门禁代号仍是 rest / graphql / requests。 */
-const FAMILY_LABEL: Record<string, string> = { rest: 'REST 请求', graphql: 'GraphQL 点数', requests: '请求次数' }
+const FAMILY_LABEL: Record<string, string> = { rest: 'REST requests', graphql: 'GraphQL points', requests: 'Requests' }
 
 /** 把额度短名交出去（闸的拒绝文案要按桶点名，不能只写「一个桶」）。 */
 export function familyLabelOf(family: string): string {
@@ -215,13 +215,13 @@ export function resetClockText(at: unknown): string {
   const ms = typeof at === 'number' && isFinite(at) ? at : 0
   if (!(ms > 0)) return ''
   const d = new Date(ms)
-  return '约 ' + ('0' + String(d.getHours())).slice(-2) + ':' + ('0' + String(d.getMinutes())).slice(-2) + ' 恢复'
+  return 'recovers at about ' + ('0' + String(d.getHours())).slice(-2) + ':' + ('0' + String(d.getMinutes())).slice(-2) + ''
 }
 
 /** 一个桶现在还剩多少（单位按额度给：GraphQL 按点、请求按条）。 */
 function remainingTextOf(family: string, level: BucketLevel): string {
   const left = level && typeof level.remaining === 'number' ? level.remaining : 0
-  return '还剩 ' + left + (family === 'graphql' ? ' 点' : ' 条')
+  return 'remaining: ' + left + (family === 'graphql' ? ' points' : ' requests')
 }
 
 /**
@@ -231,14 +231,14 @@ function remainingTextOf(family: string, level: BucketLevel): string {
  * 恢复时刻读不到就不写（resetClockText 回空串），绝不编一个时刻。
  */
 function quotaDetailText(family: string, level: BucketLevel, cost: number, floor: number): string {
-  const unit = family === 'graphql' ? '点' : '条'
+  const unit = family === 'graphql' ? 'points' : 'requests'
   const left = level && typeof level.remaining === 'number' && isFinite(level.remaining) ? level.remaining : 0
   const limit = level && typeof level.limit === 'number' && isFinite(level.limit) ? level.limit : 0
-  const parts = ['服务端还剩 ' + left + ' ' + unit + '（上限 ' + limit + '，保底 ' + floor + '）']
-  if (cost > 0) parts.push('这一笔预计花 ' + cost + ' ' + unit + '，花完只剩 ' + Math.max(0, left - cost) + ' ' + unit)
+  const parts = ['server remaining: ' + left + ' ' + unit + ' (limit ' + limit + ', floor ' + floor + ')']
+  if (cost > 0) parts.push('estimated cost: ' + cost + ' ' + unit + ', remaining afterwards: ' + Math.max(0, left - cost) + ' ' + unit)
   const clock = resetClockText(level && level.resetAt)
   if (clock) parts.push(clock)
-  return parts.join('；')
+  return parts.join('; ')
 }
 
 /**
@@ -251,7 +251,7 @@ export function exhaustedMessage(family: string, level: BucketLevel | null, cost
   const lv = level || { remaining: 0, limit: 0 }
   const c = typeof cost === 'number' && isFinite(cost) ? cost : 0
   const f = typeof floor === 'number' && isFinite(floor) ? floor : 0
-  return '额度见底：' + familyLabelOf(family) + '额度不够了（' + quotaDetailText(family, lv, c, f) + '），这次先不执行。'
+  return 'Quota exhausted: ' + familyLabelOf(family) + ' quota is insufficient (' + quotaDetailText(family, lv, c, f) + '); this call will not run.'
 }
 
 /**
@@ -259,17 +259,17 @@ export function exhaustedMessage(family: string, level: BucketLevel | null, cost
  * 恢复时刻取两族里「先恢复的那一个」—— 只要有一族恢复就能重试，写最晚的那个会让人白等。
  */
 function exhaustedAnyMessage(families: string[], levels: BucketLevel[], costs?: number[], floors?: number[]): string {
-  const names = families.map(function (f: string): string { return familyLabelOf(f) }).join('与')
+  const names = families.map(function (f: string): string { return familyLabelOf(f) }).join(' and ')
   const detail = families.map(function (f: string, i: number): string {
     const c = costs && typeof costs[i] === 'number' && isFinite(costs[i]) ? costs[i] : 0
     const fl = floors && typeof floors[i] === 'number' && isFinite(floors[i]) ? floors[i] : 0
     return quotaDetailText(f, levels[i], c, fl)
-  }).join('；')
-  return '额度见底：' + names + '两种额度都不够了（' + detail + '），这次先不执行。'
+  }).join('; ')
+  return 'Quota exhausted: ' + names + ' quotas are both insufficient (' + detail + '); this call will not run.'
 }
 
 /** 硬顶的原话：桥、门禁与给人看的说明共用这一句，不各写各的。 */
-export const HARD_CAP_MESSAGE = '硬顶：这次调用没有写权限，写操作直接拒绝。'
+export const HARD_CAP_MESSAGE = 'Hard cap: this call has no write permission, so writes are refused.'
 
 /**
  * 按预算模型裁决一笔调用。

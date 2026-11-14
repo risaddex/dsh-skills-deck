@@ -144,7 +144,7 @@ export function createProbeHandler(deps: ProbeHandlerDeps): { handleProbe: (args
   async function handleProbeOnce(args: any, cwdRef: { cwd: string, backendId?: string, repoIdentity?: string }): Promise<any> {
     // #1003 空目录闸：同上。
     const _rawProbeCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawProbeCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。', errorKind: 'env' }
+    if (!_rawProbeCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.', errorKind: 'env' }
     const cwd: any = await canonicalKey(_rawProbeCwd)
     // #1835：外层包装要知道这一趟落在哪个工作区；空 cwd 在上面已经早退，走不到这里。
     const _probeCwd = String(cwd == null ? '' : cwd)
@@ -178,7 +178,7 @@ export function createProbeHandler(deps: ProbeHandlerDeps): { handleProbe: (args
         if (tracker && typeof tracker.list === 'function') {
           // #1753：装配缺件要如实说成 env。没有这根线时房间会因空 exec 回 127，外面再把 127 归成网络故障，
           //   界面于是每 5 秒重试并常驻「刷新失败」——错的是接线，不是网络，报错必须指到接线这一层。
-          if (typeof detectionExec !== 'function') return { ok: false, error: '探针缺少执行器装配：宿主没有把「执行命令」的能力传给探针，这是插件内部接线问题，不是网络故障。', errorKind: 'env' }
+          if (typeof detectionExec !== 'function') return { ok: false, error: 'The probe has no executor: the host did not pass command execution to it. This is internal plugin wiring, not a network failure.', errorKind: 'env' }
           let repoRef: any = null
           try { repoRef = reg.describe({ cwd }, _selProbe.backendId) } catch {}
           // #1584 F4：空 refId 的壳不算身份；先问会话，拿不到再走原兜底（不改变无会话时的旧行为）。
@@ -204,7 +204,7 @@ export function createProbeHandler(deps: ProbeHandlerDeps): { handleProbe: (args
           }
           const opCtx: any = { cwd, platform: await getPlatform(), fs: ctx.get('fs'), exec: function (c: any, ar: any, o: any): any { return detectionExec(c, ar, o, 'probe') }, logEvent: logTruncation }
           const r: any = await tracker.list(repoRef, {}, opCtx)
-          if (!r || !r.ok) return { ok: false, error: errText((r && r.error) || 'probe list 失败'), errorKind: kindOf(r && r.error) }
+          if (!r || !r.ok) return { ok: false, error: errText((r && r.error) || 'probe list failed'), errorKind: kindOf(r && r.error) }
           // 这一拍不截断了：清掉「已记过」标记，下次再截断还能落一行。
           if (r.truncated !== true) delete truncationLoggedByRepo[rk1]
           const all: any[] = Array.isArray(r.data) ? r.data : []
@@ -270,7 +270,7 @@ export function createProbeHandler(deps: ProbeHandlerDeps): { handleProbe: (args
       if (roundBudget && remote && remote.ok === false && remote.budget && remote.budget.refused > 0) {
         return { ok: true, changed: false, mode: 'throttled', reason: 'fallback-budget-exhausted', count: 0, since: '' }
       }
-      if (!remote || remote.ok !== true) return { ok: false, error: errText((remote && remote.error) || 'probe 失败'), errorKind: kindOf(remote && remote.error) }
+      if (!remote || remote.ok !== true) return { ok: false, error: errText((remote && remote.error) || 'probe failed'), errorKind: kindOf(remote && remote.error) }
       const repo: any = remote.repo
       // #1885 评审修复：这一支的库身份就在 remote 上（窗口扫描的同一份），回包版本读它。
       cwdRef.backendId = String(probeOpts.backendId || '')

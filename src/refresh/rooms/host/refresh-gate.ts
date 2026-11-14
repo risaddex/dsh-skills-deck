@@ -238,7 +238,7 @@ export function policyLimits(src: unknown) {
 /** 调用点 → 类别；给了类别就直接用它（校验取值）。两者都没有的按「后台」算，并计入漏分类计数。 */
 export function classify(source: unknown, explicitCategory?: string) {
   if (explicitCategory) {
-    if (GATE_CATEGORIES.indexOf(explicitCategory) < 0) throw new Error('没有这个类别：' + String(explicitCategory))
+    if (GATE_CATEGORIES.indexOf(explicitCategory) < 0) throw new Error('unknown category: ' + String(explicitCategory))
     return { category: explicitCategory, known: true }
   }
   const hit = CALL_SITE_CATEGORIES[String(source)]
@@ -279,7 +279,7 @@ export function createGate(deps?: GateDeps) {
   const opts = deps || {}
   // 账本在这里断言成整本形状：紧接着那条判断仍原样在运行时把不合格的账本当掉（接线出错就当场抛），
   // 断言只为让下面那些内层函数里的读法成立 —— TS 不把这里 const 的收窄带进内层函数，运行时不多不少一行。
-  const ledger = opts.ledger as LedgerShape; if (!ledger || typeof ledger.view !== 'function') throw new Error('闸要一本账：deps.ledger 缺 view 这一条')
+  const ledger = opts.ledger as LedgerShape; if (!ledger || typeof ledger.view !== 'function') throw new Error('the gate requires a ledger: deps.ledger lacks view')
   const now = typeof opts.now === 'function' ? opts.now : Date.now
   const logCtx = opts.logCtx || null
   const hash8 = typeof opts.hash8 === 'function' ? opts.hash8 : shortHash
@@ -471,7 +471,7 @@ export function createGate(deps?: GateDeps) {
       // 推迟的回执也带四格事实：调用方要能分清「没额度被挡」与「这个后端本来就没有额度」。
       return Object.assign({ sent: false, verdict: 'defer', reason: v.reason, detail: (REASONS as Readonly<Record<string, string>>)[v.reason] || '', requests: 0, points: 0 }, slot.facts)
     }
-    if (typeof perform !== 'function') throw new Error('闸放行了却没有发送函数：' + r.kind)
+    if (typeof perform !== 'function') throw new Error('the gate allowed the call but no send function was provided: ' + r.kind)
     let requests = 0
     let points = 0
     let remaining: number | null = null
@@ -517,7 +517,7 @@ export function createGate(deps?: GateDeps) {
     const slot = slotOf(r)
     const seconds = num(s.seconds)
     // 没有额度的后端（未知 / 离网）在账本里没有桶，不能去账本降档；但「这一桶要等多久」仍要如实回给调用方。
-    if (!(seconds > 0)) throw new Error('降档信号要带服务端给的秒数')
+    if (!(seconds > 0)) throw new Error('the downgrade signal requires the server\'s delay in seconds')
     const at = slot.hasQuota ? ledger.noteRateLimited(r.backendId, slot.bucket, s.seconds, now()) : { until: now() + seconds * 1000 }
     if (s.workspaceKey) wsState(r.workspaceKey).rateLimitedUntil = Math.max(wsState(r.workspaceKey).rateLimitedUntil, at.until)
     stats.retryAfter += 1

@@ -223,7 +223,7 @@ export function createAttention(deps?: AttentionDeps | null): Attention {
   async function handleFocus(args: FocusArgs): Promise<any> {
     const a: any = args || {}
     const windowId = String(a.windowId || '')
-    if (!windowId) return { ok: false, error: '没有窗口标识', text: '这一笔上报没有带窗口标识，视同没有发生：插件认不出是哪个窗口在看，不敢据此调整刷新。' }
+    if (!windowId) return { ok: false, error: 'window identifier missing', text: 'This report has no window identifier and is ignored: the plugin cannot tell which window is viewing it, so it cannot adjust refresh based on it.' }
     // 清单已标成共享层的取值联合；外面报上来的 kind 是字符串，查得到才收、查不到按 focus，
     // 这一处收窄不改判断（从前读转译产物时类型被剥掉，看不出这道缺口）。
     const kind = (ATTENTION_SIGNAL_KINDS as readonly string[]).indexOf(String(a.kind || '')) >= 0 ? (String(a.kind) as AttentionSignalKind) : 'focus'
@@ -296,7 +296,7 @@ export function createAttention(deps?: AttentionDeps | null): Attention {
   /** 忘掉一个窗口（窗口关了、页面销毁时最后报一次）。 */
   async function forget(args: any): Promise<any> {
     const windowId = String((args && args.windowId) || '')
-    if (!windowId) return { ok: false, error: '没有窗口标识' }
+    if (!windowId) return { ok: false, error: 'window identifier missing' }
     const next: any = createAttentionState()
     for (const id of Object.keys(state.windows)) {
       if (id === windowId) continue

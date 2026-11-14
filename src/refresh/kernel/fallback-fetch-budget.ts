@@ -107,7 +107,7 @@ export function createFallbackRoundBudget(options: { kind: FallbackRoundKind; li
   const kind = options.kind
   const limits = options.limits
   const limit = roundLimitOf(kind, limits)
-  if (!usableNumber(limit)) throw new Error('降级取数预算：' + kind + ' 轮的上限没配置或不是非负数')
+  if (!usableNumber(limit)) throw new Error('Fallback fetch budget: ' + kind + ' round limit is missing or is not a nonnegative number')
   let nextId = 1
   let charged = 0
   let settled = 0
@@ -127,11 +127,11 @@ export function createFallbackRoundBudget(options: { kind: FallbackRoundKind; li
     const opts: FallbackReserveOptions = input || {}
     const bucket: FallbackLedgerBucket = opts.bucket === 'write' ? 'write' : 'read'
     const cost = opts.cost == null ? 1 : opts.cost
-    if (!usableNumber(cost) || cost < 1) throw new Error('降级取数预算：预扣条数必须是正整数，拿到的是 ' + String(cost))
+    if (!usableNumber(cost) || cost < 1) throw new Error('Fallback fetch budget: reservation count must be a positive integer, received ' + String(cost))
     const classLabel = typeof opts.classLabel === 'string' ? opts.classLabel : ''
     if (kind === 'detail') {
       // 详情轮的上限按「类」算：同一类补几次都只占一格，第 6 类拒发。
-      if (!classLabel) throw new Error('降级取数预算：详情轮必须带请求类名（classLabel），否则 5 类上限无从判定')
+      if (!classLabel) throw new Error('Fallback fetch budget: the detail round requires a request class (classLabel) to enforce the five-class limit')
       if (!classes.has(classLabel) && classes.size >= limit) { refused += 1; buckets[bucket].refused += 1; return null }
     } else if (used() + cost > limit) {
       // 增量 / 枚举轮：预扣之后超上限就当场拒发，一个字节都不许出去。
@@ -148,11 +148,11 @@ export function createFallbackRoundBudget(options: { kind: FallbackRoundKind; li
     return token
   }
   function settle(token: FallbackReserveToken, actualRequests: number, outcome: 'corrected' | 'backfilled'): void {
-    if (!token || !token.id || !tokens.has(token.id)) throw new Error('降级取数预算：小票不认识（可能来自另一本账），拒绝记账')
+    if (!token || !token.id || !tokens.has(token.id)) throw new Error('Fallback fetch budget: unknown reservation (possibly from another ledger), refusing to record it')
     const entry = tokens.get(token.id)!
-    if (!entry.open) throw new Error('降级取数预算：同一笔已经定过账了，拒绝记第二次')
-    if (token.kind !== kind) throw new Error('降级取数预算：小票属于 ' + token.kind + ' 轮，不能记进 ' + kind + ' 轮')
-    if (!usableNumber(actualRequests)) throw new Error('降级取数预算：实际条数必须是非负数，拿到的是 ' + String(actualRequests))
+    if (!entry.open) throw new Error('Fallback fetch budget: this reservation was already settled, refusing to record it twice')
+    if (token.kind !== kind) throw new Error('Fallback fetch budget: this reservation belongs to the ' + token.kind + ' round and cannot be recorded in the ' + kind + ' round')
+    if (!usableNumber(actualRequests)) throw new Error('Fallback fetch budget: actual count must be nonnegative, received ' + String(actualRequests))
     entry.open = false
     charged -= token.cost
     settled += actualRequests
@@ -213,7 +213,7 @@ export interface FallbackConcurrencyGate {
  */
 export function createFallbackConcurrencyGate(options: { maxConcurrency: number }): FallbackConcurrencyGate {
   const max = options.maxConcurrency
-  if (!usableNumber(max) || max < 1) throw new Error('降级取数并发闸：并发上限必须是正整数，拿到的是 ' + String(max))
+  if (!usableNumber(max) || max < 1) throw new Error('Fallback fetch concurrency gate: the concurrency limit must be a positive integer, received ' + String(max))
   let running = 0
   let peak = 0
   let admitted = 0

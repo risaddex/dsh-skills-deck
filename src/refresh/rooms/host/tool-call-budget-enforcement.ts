@@ -223,14 +223,14 @@ function newAbort(): AbortControllerLike | null {
  *  不能叫人直接重放（是否生效说不清）。以前所有超时共用写口径，列表读超时的回执一边说
  *  「重新读没有副作用」一边说「不要直接重放写操作」，自相矛盾。 */
 function timeoutResult(mode?: 'read' | 'write'): OpOutcome {
-  if (mode === 'read') return { ok: false, error: { kind: 'timeout', message: '这一次读在限时内没等到后端回话：读没有副作用，等一会儿重调一次就行（没读全不代表内容不存在）。' } }
-  return { ok: false, error: { kind: 'timeout', message: '这一次远端调用在限时内没回来，是否生效说不清：先按返回里说的办法核对现状再续，不要直接重放写操作。' } }
+  if (mode === 'read') return { ok: false, error: { kind: 'timeout', message: 'This read received no backend response within its time limit: reads have no side effects, so wait briefly and retry (an incomplete read does not mean the content does not exist).' } }
+  return { ok: false, error: { kind: 'timeout', message: 'This remote call did not return within its time limit, so its effect is unknown: check the current state as described in the response before continuing; do not replay writes directly.' } }
 }
 function abortedResult(): OpOutcome {
-  return { ok: false, error: { kind: 'aborted', message: '这次调用被中止了，没做完就是没做：按需重调一次即可。' } }
+  return { ok: false, error: { kind: 'aborted', message: 'This call was aborted; unfinished work was not done. Retry if needed.' } }
 }
 function budgetResult(): OpOutcome {
-  return { ok: false, error: { kind: 'over-budget', message: '剩余额度不够再发一次远端调用了，这次没动手：带同样参数重调一次即可接着做。' } }
+  return { ok: false, error: { kind: 'over-budget', message: 'Not enough quota remains for another remote call, so nothing was attempted; retry with the same arguments to continue.' } }
 }
 
 /**
@@ -357,7 +357,7 @@ export function withCallScope(c: unknown, exec?: unknown, opts?: CallScopeOpts):
     if (r.aborted || r.refused === 'aborted') return abortedResult()
     if (r.refused === 'budget') return budgetResult()
     const err = (r.error || null) as UnknownRecord | null
-    return { ok: false, error: { kind: 'backend-threw', message: '这一次远端调用抛错了（已拦下）：' + String((err && err.message) || r.error || '未知').slice(0, 200) } }
+    return { ok: false, error: { kind: 'backend-threw', message: 'This remote call threw an error (caught): ' + String((err && err.message) || r.error || 'unknown').slice(0, 200) } }
   }
 
   function memoGet(kind: string, key: string): OpOutcome | null {
@@ -368,7 +368,7 @@ export function withCallScope(c: unknown, exec?: unknown, opts?: CallScopeOpts):
     memo.store.set(kind + '|' + key, { seq: memo.seq, result: result, members: isArr(members) ? members.map(String) : null })
   }
   function noTracker(): OpOutcome {
-    return { ok: false, error: { kind: 'backend-threw', message: '这次没拿到后端实现，我没往下做。' } }
+    return { ok: false, error: { kind: 'backend-threw', message: 'No backend implementation was available, so I did not continue.' } }
   }
 
   // 写穿透共用（新增七个操作中的六个写操作）：无记忆缓存，成功只脏该票
@@ -455,12 +455,12 @@ export function withCallScope(c: unknown, exec?: unknown, opts?: CallScopeOpts):
       listMaps: async function (repo: unknown, ctx?: unknown): Promise<OpOutcome> {
         void ctx
         const listMapsFn = real.listMaps as ((repo: unknown, ctx: unknown) => Promise<unknown>) | undefined
-        if (typeof listMapsFn !== 'function') return { ok: false, error: { kind: 'unsupported', message: '这个后端没有地图薄行，按老路取' } }
+        if (typeof listMapsFn !== 'function') return { ok: false, error: { kind: 'unsupported', message: 'this backend has no thin map rows; using the previous fetch path' } }
         return mapOpOutcome(await execOp('listMaps', function (c2) { return listMapsFn(repo, c2) }), 'read')
       },
       getRepoPermissions: async function (repo: unknown, ctx?: unknown): Promise<OpOutcome> {
         void ctx
-        if (!real.getRepoPermissions) return { ok: false, error: { kind: 'unsupported', message: '这个后端没有仓库写权限旁路，按未知处理' } }
+        if (!real.getRepoPermissions) return { ok: false, error: { kind: 'unsupported', message: 'this backend has no repository-write-permission bypass; treated as unknown' } }
         return mapOpOutcome(await execOp('repoPermissions', function (c2) { return real.getRepoPermissions!(repo, c2) }), 'read')
       },
       close: async function (repo: unknown, key: unknown, f?: unknown, ctx?: unknown): Promise<OpOutcome> {

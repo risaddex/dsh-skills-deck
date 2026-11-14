@@ -124,16 +124,16 @@ const depsGraphqlDead: any = decide('getDependencies', 4000, 200)
 check(depsGraphqlDead.allowed === true && JSON.stringify(channelsOf(depsGraphqlDead)) === JSON.stringify(['rest']),
   'B、GraphQL 见底：依赖投影只走 REST', depsGraphqlDead)
 const bothDead: any = decide('list', 200, 200)
-check(bothDead.allowed === false && String(bothDead.message || '').indexOf('两种额度都不够') >= 0,
+check(bothDead.allowed === false && String(bothDead.message || '').indexOf('quotas are both insufficient') >= 0,
   'B、两族都见底：双渠道读被拒，并点名两种额度', bothDead)
 const restOnlyBlocked: any = decide('preflight', 200, 4000)
-check(restOnlyBlocked.allowed === false && String(restOnlyBlocked.message || '').indexOf('REST 请求') >= 0,
+check(restOnlyBlocked.allowed === false && String(restOnlyBlocked.message || '').indexOf('REST requests') >= 0,
   'B、REST-only 读在 REST 见底时被拒（GraphQL 有余也不能顶替）', restOnlyBlocked)
 const restOnlyAlive: any = decide('getRepoPermissions', 4000, 200)
 check(restOnlyAlive.allowed === true && JSON.stringify(channelsOf(restOnlyAlive)) === JSON.stringify(['rest']),
   'B、REST-only 读在 GraphQL 见底时照常放行（#1681 的正例）', restOnlyAlive)
 const graphqlOnlyBlocked: any = decide('counts', 4000, 200)
-check(graphqlOnlyBlocked.allowed === false && String(graphqlOnlyBlocked.message || '').indexOf('GraphQL 点数') >= 0,
+check(graphqlOnlyBlocked.allowed === false && String(graphqlOnlyBlocked.message || '').indexOf('GraphQL points') >= 0,
   'B、GraphQL-only 读在 GraphQL 见底时被拒（REST 有余也不能顶替）', graphqlOnlyBlocked)
 const graphqlOnlyAlive: any = decide('listMaps', 200, 4000)
 check(graphqlOnlyAlive.allowed === true && JSON.stringify(channelsOf(graphqlOnlyAlive)) === JSON.stringify(['graphql']),

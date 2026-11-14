@@ -155,26 +155,26 @@ export interface PolicyInput {
  * 代号是稳定接口：改含义容易，改字符串等于把历史日志的口径也改了，所以只许加、不许改字面。
  */
 export const REASONS: Readonly<Record<string, string>> = {
-  'quota-read-free': '读服务端剩余额度：这个接口不扣配额，永远放行',
-  'user-action-always': '人在界面上亲手做的动作：永不降档，红档也照做',
-  'user-action-rate-limited': '撞上限流时人亲手做的动作：照样做，但界面要说清是额度被别人用掉了',
-  'rate-limited': '撞上限流：这一轮先停，等额度恢复再试',
-  'failure-backoff': '连续失败到了退避门槛：拉开间隔再试，成功一次立刻归零',
-  'failure-half-open': '连续失败退避了一大轮：放这一笔进来试一次，成了解锁、不成按下一档接着等',
-  'background-fits': '后台档：额度够，按节拍跑',
-  'background-inactive': '不在活跃集合里：后台档一次都不发，切回来时按生命周期那一次取',
-  'background-tier-yellow': '后台档进了黄档：后台刷新全停（先牺牲的从来不是人的动作）',
-  'background-tier-red': '后台档进了红档：自动刷新全停，只留人的动作',
-  'reserve-kept-for-writes': '读的额度已用完，只剩给写留的保底：读让路，写保住',
-  'lifecycle-fits': '切进工作区那一次：额度够，照常取数（先从缓存铺满，再探测补齐）',
-  'lifecycle-cache-only': '切进工作区那一次：额度不够，降级为只出缓存加只探测不重建',
-  'ai-tool-within-caps': 'AI 工具调用：单次与每小时的硬顶都还够',
-  'ai-tool-over-call-cap': 'AI 工具调用超了单次硬顶：拒绝，并说明用了多少、顶在哪',
+  'quota-read-free': 'reading the server\'s remaining quota: this endpoint costs no quota, always allowed',
+  'user-action-always': 'an action a person did by hand in the interface: never downgraded, done even in the red tier',
+  'user-action-rate-limited': 'an action a person did by hand while rate limited: done anyway, but the interface must say the quota was used up by others',
+  'rate-limited': 'rate limited: stop this round and retry once the quota recovers',
+  'failure-backoff': 'consecutive failures reached the backoff threshold: retry at a wider interval; one success resets it',
+  'failure-half-open': 'backed off a full round after consecutive failures: let this one through as a trial; success unlocks, failure waits for the next step',
+  'background-fits': 'background tier: enough quota, running on schedule',
+  'background-inactive': 'not in the active set: the background tier sends nothing; the lifecycle fetch runs when the workspace is switched back',
+  'background-tier-yellow': 'background tier entered yellow: all background refresh stops (a person\'s actions are never the first to go)',
+  'background-tier-red': 'background tier entered red: all automatic refresh stops, only a person\'s actions remain',
+  'reserve-kept-for-writes': 'the read quota is used up and only the floor kept for writes remains: reads yield, writes are protected',
+  'lifecycle-fits': 'switching into the workspace: enough quota, fetching as usual (fill from cache first, then probe to complete)',
+  'lifecycle-cache-only': 'switching into the workspace: not enough quota, degraded to cache only plus probe without rebuild',
+  'ai-tool-within-caps': 'AI tool call: both the per-call and the hourly hard caps have room',
+  'ai-tool-over-call-cap': 'AI tool call over the per-call hard cap: refused, stating how much was used and where the cap is',
   // #1527 起每小时顶降为提醒，现在会出现的是下面的 ai-tool-over-hour-soft；这一条不再产生，
   // 留着只为让历史日志仍读得懂（代号是稳定接口，只许加，不删也不改字面）。
-  'ai-tool-over-hour-cap': 'AI 工具这一小时超了硬顶：拒绝，并说明用了多少、顶在哪',
-  'ai-tool-over-hour-soft': 'AI 工具这一小时越过了提醒线：照常放行，回执里说明用了多少、提醒线在哪',
-  'ai-tool-below-remaining': '剩余额度已到保底线：先拒 AI 工具，绝不挤掉插件刷新与人的动作',
+  'ai-tool-over-hour-cap': 'AI tools went over the hourly hard cap: refused, stating how much was used and where the cap is',
+  'ai-tool-over-hour-soft': 'AI tools crossed the hourly warning line: allowed as usual, the receipt states how much was used and where the line is',
+  'ai-tool-below-remaining': 'the remaining quota reached the floor: AI tools are refused first, never crowding out plugin refresh or a person\'s actions',
 }
 
 /** 原因代号：取值只能来自上面那张表。 */
@@ -369,21 +369,21 @@ export function aiToolAdmission(call: AiToolCall, hour: HourSpend, quota: QuotaV
  * 读数未知时如实说「暂时说不出还剩多少」，不拿占位的 1 点冒充读数（#1435 的坑）。
  */
 function overHourNotice(points: number, requests: number, quota: QuotaView, limits: PolicyLimits): string {
-  const used = '这一小时 AI 工具已用到 ' + points + ' 点、' + requests + ' 条'
-  const line = '越过了插件给自己设的提醒线（每小时 ' + limits.aiToolMaxPointsPerHour + ' 点 / '
-    + limits.aiToolMaxRequestsPerHour + ' 条）：这次照常放行'
+  const used = 'AI tools have used ' + points + ' points and ' + requests + ' requests this hour'
+  const line = 'crossing the warning line the plugin sets for itself (' + limits.aiToolMaxPointsPerHour + ' points / '
+    + limits.aiToolMaxRequestsPerHour + ' requests per hour): this call is allowed as usual'
   let rest = ''
   if (quota.known === false) {
-    rest = '；额度读数还没同步上来，暂时说不出服务端还剩多少'
+    rest = '; the quota reading has not synced yet, so the server\'s remaining quota is unknown for now'
   } else {
-    const unit = quota.bucket === 'graphql' ? '点' : '条'
-    rest = '；服务端这一桶还剩 ' + quota.remaining + ' ' + unit
+    const unit = quota.bucket === 'graphql' ? 'points' : 'requests'
+    rest = '; remaining in this server bucket: ' + quota.remaining + ' ' + unit
     if (typeof quota.limit === 'number' && quota.limit > 0) {
       const floor = typeof quota.floor === 'number' ? quota.floor : quota.reserve
-      rest += '（上限 ' + quota.limit + '，保底 ' + floor + '）'
+      rest += ' (limit ' + quota.limit + ', floor ' + floor + ')'
     }
   }
-  return used + '，' + line + rest + '。接下来请把大调用拆小。'
+  return used + ', ' + line + rest + '. Split large calls from here on.'
 }
 
 // ---------- 八、退避与节拍（调用方按这两个函数安排下一次） ----------

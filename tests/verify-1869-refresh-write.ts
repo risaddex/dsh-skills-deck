@@ -175,7 +175,7 @@ async function main(): Promise<void> {
     const badReply: any = await bad.handleRefresh({ cwd: dir })
     check(badReply && badReply.ok === false, 'B1 写库失败时刷新如实失败', badReply && badReply.ok)
     const badText = String((badReply && badReply.error) || '')
-    check(badText.indexOf('没写进本地快照库') >= 0 && badText.indexOf('disk-full') >= 0,
+    check(badText.indexOf('not written to the local snapshot library') >= 0 && badText.indexOf('disk-full') >= 0,
       'B2 失败原因说清是写库失败并带上库层原因（disk-full）', badText)
     const replay2 = await replayOf(dir)
     check(replay2 !== null && replay2.mergeVersion === replay1!.mergeVersion, 'B3 写库失败时合并版本不动', replay2 && replay2.mergeVersion)

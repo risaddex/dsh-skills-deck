@@ -74,7 +74,7 @@ function textOf(e: unknown): string {
     const message = (e as { message?: unknown } | null | undefined)?.message
     return (typeof message === 'string' && message) ? message : String(e)
   } catch {
-    return '未知错误'
+    return 'unknown error'
   }
 }
 

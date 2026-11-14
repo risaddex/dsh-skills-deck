@@ -76,7 +76,7 @@ export function changeRowPatch(item: any, rowFieldsOf?: ((row: any) => any) | nu
   const fieldsOf = (typeof rowFieldsOf === 'function')
     ? rowFieldsOf
     : (typeof snapshotRowFieldsOf === 'function' ? snapshotRowFieldsOf : null)
-  if (!fieldsOf) throw new Error('变化集合并没有行换算：客户端闭包里没有 snapshotRowFieldsOf，调用方也没交 options.rowFieldsOf')
+  if (!fieldsOf) throw new Error('change-set merge has no row conversion: the client closure lacks snapshotRowFieldsOf and the caller did not provide options.rowFieldsOf')
   const f = fieldsOf(item)
   const patch: any = { key: f.key }
   if (f.number !== null) patch.number = f.number
