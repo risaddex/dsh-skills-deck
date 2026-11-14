@@ -59,7 +59,7 @@ export function parseBlame(stdout: string): BlameResult {
   for (let i = 0; i < raw.length; i++) {
     const line: string = raw[i]
     if (line.length > 0 && line.charAt(0) === '\t') {
-      if (!cur) return fail('blame', '第 ' + String(i + 1) + ' 行是内容行，但前面没有这段的行头')
+      if (!cur) return fail('blame', 'line ' + String(i + 1) + ' is a content line without a preceding header')
       cur.text = line.slice(1)
       out.push(cur as BlameLine)
       cur = null
@@ -67,27 +67,27 @@ export function parseBlame(stdout: string): BlameResult {
     }
     const head = BLAME_HEAD_RE.exec(line)
     if (head) {
-      if (cur) return fail('blame', '第 ' + String(i + 1) + ' 行开了新的一行，但上一行没有原文行')
+      if (cur) return fail('blame', 'line ' + String(i + 1) + ' starts a new entry, but the previous entry has no source line')
       cur = { oid: head[1], author: '', authorTimeMs: null, summary: '', filename: '', line: Number(head[3]), origLine: Number(head[2]), text: '', boundary: false, previous: null }
       continue
     }
-    if (!cur) return fail('blame', '第 ' + String(i + 1) + ' 行不是行头也不是原文行')
+    if (!cur) return fail('blame', 'line ' + String(i + 1) + ' is neither a header nor a source line')
     // boundary 是 --line-porcelain 里唯一没有值的头：git 用单独一行表示「这一行是最早的边界」。
     // 2026-10-31 真机采样确认（2.49.0.windows.1）它确实不带值；把它当带值头会误判坏形状。
     if (line === 'boundary') { cur.boundary = true; continue }
     const sp: number = line.indexOf(' ')
-    if (sp < 0) return fail('blame', '第 ' + String(i + 1) + ' 行的头字段没有值：' + line.slice(0, 40))
+    if (sp < 0) return fail('blame', 'line ' + String(i + 1) + ' has a header field without a value: ' + line.slice(0, 40))
     const key: string = line.slice(0, sp)
     const val: string = line.slice(sp + 1)
     if (key === 'author') cur.author = val
     else if (key === 'summary') cur.summary = val
     else if (key === 'filename') cur.filename = val
     else if (key === 'boundary') cur.boundary = true
-    else if (key === 'previous') { const pv: string = String(val).split(' ')[0]; if (!isOid(pv)) return fail('blame', 'previous 不是提交号'); cur.previous = pv }
-    else if (key === 'author-time') { const ms: number = Number(val) * 1000; if (!isFinite(ms)) return fail('blame', 'author-time 不是数字'); cur.authorTimeMs = ms }
+    else if (key === 'previous') { const pv: string = String(val).split(' ')[0]; if (!isOid(pv)) return fail('blame', 'previous is not a commit id'); cur.previous = pv }
+    else if (key === 'author-time') { const ms: number = Number(val) * 1000; if (!isFinite(ms)) return fail('blame', 'author-time is not numeric'); cur.authorTimeMs = ms }
     else if (key === 'author-tz' || key === 'committer' || key === 'committer-mail' || key === 'committer-time' || key === 'committer-tz' || key === 'author-mail') { /* 界面上用不到的字段，原样略过 */ }
   }
-  if (cur) return fail('blame', '最后一行没有原文行')
+  if (cur) return fail('blame', 'the last entry has no source line')
   return { ok: true, lines: out }
 }
 
@@ -121,7 +121,7 @@ export function parseRangeDiff(stdout: string): RangeDiffResult {
       // 续行（多行提交说明的第二行起）以空格开头；其余不认识的行按原样收进 extraLines，
       // 但不让整次解析失败 —— git 在大段对照里会画分隔用的空行与提示行，那些不是数据。
       if (line.charAt(0) === ' ') { extra.push(line); continue }
-      return fail('range-diff', '第 ' + String(i + 1) + ' 行不是 range-diff 的对照行：' + line.slice(0, 60))
+      return fail('range-diff', 'line ' + String(i + 1) + ' is not a range-diff comparison line: ' + line.slice(0, 60))
     }
     pairs.push({
       leftNo: m[1] === '-' ? null : Number(m[1]),
@@ -163,11 +163,11 @@ export function parseReflog(stdout: string): ReflogResult {
     // 格式串以 %gs%x00 结尾，行尾换行又会补一段空串：真机输出是 6 段、末段为空。
     // 先把末尾空段去掉再要求恰好 5 段 —— 这样「5 段 + 尾空」通过，多出来的真实字段（6 段 + 尾空）仍然显式失败。
     const real: string[] = f.length > 0 && f[f.length - 1] === '' ? f.slice(0, f.length - 1) : f
-    if (real.length !== 5) return fail('reflog', '第 ' + String(i + 1) + ' 行有 ' + String(real.length) + ' 个字段，格式串是 5 段')
-    if (!isOid(real[0])) return fail('reflog', '第 ' + String(i + 1) + ' 行的提交号不是哈希')
-    if (real[1] === '') return fail('reflog', '第 ' + String(i + 1) + ' 行的短提交号是空的')
-    if (real[2] === '') return fail('reflog', '第 ' + String(i + 1) + ' 行的选择器是空的')
-    if (real[4] === '') return fail('reflog', '第 ' + String(i + 1) + ' 行的动作说明是空的')
+    if (real.length !== 5) return fail('reflog', 'line ' + String(i + 1) + ' has ' + String(real.length) + ' fields, but the format has 5')
+    if (!isOid(real[0])) return fail('reflog', 'line ' + String(i + 1) + ' has a commit id that is not a hash')
+    if (real[1] === '') return fail('reflog', 'line ' + String(i + 1) + ' has an empty short commit id')
+    if (real[2] === '') return fail('reflog', 'line ' + String(i + 1) + ' has an empty selector')
+    if (real[4] === '') return fail('reflog', 'line ' + String(i + 1) + ' has an empty action description')
     out.push({ oid: real[0], short: real[1], selector: real[2], actor: real[3], subject: real[4] })
   }
   return { ok: true, entries: out }
@@ -183,8 +183,8 @@ export type DescribeResult = { ok: true; describe: DescribeShape } | ParseFailur
 
 export function parseDescribe(stdout: string): DescribeResult {
   const text: string = String(stdout).replace(/\r\n/g, '\n').trim()
-  if (text === '') return fail('describe', 'git describe 成功了却没有输出')
-  if (text.indexOf('\n') >= 0) return fail('describe', 'git describe 输出了多行')
+  if (text === '') return fail('describe', 'git describe succeeded but produced no output')
+  if (text.indexOf('\n') >= 0) return fail('describe', 'git describe produced multiple lines')
   return { ok: true, describe: { text: text, dirty: text.slice(-6) === '-dirty' } }
 }
 

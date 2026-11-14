@@ -35,19 +35,19 @@ export function parseLog(stdout: string): LogResult {
   if (fields.length % 9 === 0 && fields.every((f, idx) => idx % 9 !== 8 || f === '')) {
     stride = 9
   } else if (fields.length % 8 !== 0) {
-    return fail('字段总数不是 8 或 9 的倍数')
+    return fail('field count is not a multiple of 8 or 9')
   }
   const out: LogRecord[] = []
   for (let i = 0; i < fields.length; i += stride) {
     const [oid, short, author, email, aI, cI, subject, parentsRaw] = fields.slice(i, i + 8)
-    if (!/^[0-9a-f]{40}$/.test(oid) && !/^[0-9a-f]{64}$/.test(oid)) return fail('H 非哈希')
-    if (!short) return fail('h 为空')
+    if (!/^[0-9a-f]{40}$/.test(oid) && !/^[0-9a-f]{64}$/.test(oid)) return fail('H is not a hash')
+    if (!short) return fail('h is empty')
     const aMs = Date.parse(aI)
     const cMs = Date.parse(cI)
-    if (Number.isNaN(aMs) || Number.isNaN(cMs)) return fail('日期非 ISO')
+    if (Number.isNaN(aMs) || Number.isNaN(cMs)) return fail('date is not ISO')
     const parents = parentsRaw === '' ? [] : parentsRaw.split(' ')
     for (const p of parents) {
-      if (!/^[0-9a-f]{40}$/.test(p) && !/^[0-9a-f]{64}$/.test(p)) return fail('父提交非哈希')
+      if (!/^[0-9a-f]{40}$/.test(p) && !/^[0-9a-f]{64}$/.test(p)) return fail('parent commit is not a hash')
     }
     out.push({ oid, short, author, email, authorDateMs: aMs, commitDateMs: cMs, subject, parents })
   }
@@ -82,8 +82,8 @@ export function parseLogStats(stdout: string): LogStatsResult {
       continue
     }
     const m = /^(\d+) files? changed/.exec(line)
-    if (!m) return fail('shortstat 行不是「N files changed」的形状')
-    if (current === '') return fail('shortstat 之前没有提交号')
+    if (!m) return fail('shortstat line is not in the "N files changed" shape')
+    if (current === '') return fail('no commit id precedes shortstat')
     out.push({ oid: current, files: Number(m[1]) })
     current = ''
   }
@@ -123,12 +123,12 @@ export function parseLogFiles(stdout: string): LogFilesResult {
     if (piece === '') continue
     if (piece.charAt(0) === LOG_FILES_MARK) {
       const oid: string = piece.slice(1).trim()
-      if (!/^[0-9a-f]{40}$/.test(oid) && !/^[0-9a-f]{64}$/.test(oid)) return fail('提交号那一段不是哈希')
+      if (!/^[0-9a-f]{40}$/.test(oid) && !/^[0-9a-f]{64}$/.test(oid)) return fail('the commit id field is not a hash')
       cur = { oid, paths: [] }
       out.push(cur)
       continue
     }
-    if (cur === null) return fail('文件路径出现在提交号之前')
+    if (cur === null) return fail('a file path appears before the commit id')
     cur.paths.push(piece)
   }
   return { ok: true, commits: out }

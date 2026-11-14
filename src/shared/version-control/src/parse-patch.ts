@@ -56,7 +56,7 @@ export function parsePatch(stdout: string): PatchResult {
     else if (ln.startsWith('+')) out.push({ kind: 'add', text: ln })
     else if (ln.startsWith('-')) out.push({ kind: 'del', text: ln })
     else if (ln.startsWith(' ') || ln === '') out.push({ kind: 'context', text: ln })
-    else return { ok: false, error: 'patch-malformed', detail: '未知差异行首字符' }
+    else return { ok: false, error: 'patch-malformed', detail: 'unknown diff line prefix' }
   }
   return { ok: true, lines: out }
 }

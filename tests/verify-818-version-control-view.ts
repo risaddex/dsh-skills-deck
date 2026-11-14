@@ -1903,7 +1903,7 @@ async function main() {
   // 2.34 换成版本门说明）。贮藏页这一层只证明低版本上也不再画 7.3，两处不各说各话。
   const oldStashHtml = stashPageOf(stashEntries, 'git version 2.34.0')
   check(attrValuesOf(oldStashHtml, 'data-vc-stash-cap').indexOf('7.3') < 0 && oldStashHtml.indexOf('data-vc-stash-gate') < 0, 'Z16m 2.34 上贮藏页同样不画 7.3（版本门只在改动页提交区那一个入口上表达）')
-  check(VIEW.STASH_STAGED_ALTERNATIVE === LOC.zh['vc.stash.gate.alternative'], 'Z16n 版本门的替代做法仍是账本那一句（改动页提交区照同一份口径说）')
+  check(VIEW.STASH_STAGED_ALTERNATIVE === LOC.en['vc.stash.gate.alternative'], 'Z16n 版本门的替代做法仍是账本那一句（改动页提交区照同一份口径说）')
   check(VIEW.vcStashStagedStateOf('git version 2.34.0').needed === '2.35.0', 'Z16o 版本门要的版本号仍来自共享规则（2.35.0，界面不自己比版本号）')
   const dropConfirmHtml = stashPageOf(stashEntries, 'git version 2.49.0', Object.assign(VIEW.vcStashStateNew(), { confirm: { op: 'drop', selector: 'stash@{0}', subject: 'On main: 第一条贮藏' } }))
   check(dropConfirmHtml.indexOf('data-vc-stash-confirm="drop"') >= 0 && attrValuesOf(dropConfirmHtml, 'data-vc-confirm-seg').length === 4, 'Z16p 删除一条：确认卡就地出，四段（做什么 / 不做什么 / 可不可逆 / 动词）齐全')
@@ -2016,7 +2016,7 @@ async function main() {
   check(hkHtml.indexOf(LOC.zh['vc.hooks.notConfigured']) >= 0 && hkHtml.indexOf('data-vc-hooks-dir="1"') >= 0 && hkHtml.indexOf('D:/w/repo/.git/hooks') >= 0, 'Z17ab 钩子目录与「用的是默认目录」都说明白（core.hooksPath 没配置时）')
   const hkLowHtml = cfgShellOf('hooks', cfgStateOf('git version 2.34.1'))
   check(attrValuesOf(hkLowHtml, 'data-vc-hook-run').length === 0 && hkLowHtml.indexOf('data-vc-hooks-gate="hidden"') >= 0, 'Z17ac 2.34 上 12.6 低于 2.36：运行按钮一个不留，改打印版本门提示（隐藏不等于沉默）')
-  check(hkLowHtml.indexOf('2.36.0') >= 0 && hkLowHtml.indexOf(LOC.zh['vc.hooks.gate.alternative']) >= 0 && LOC.zh['vc.hooks.gate.alternative'] === VIEW.CONFIG_HOOK_RUN_ALTERNATIVE, 'Z17ad 版本门提示写出需要 2.36.0，并照账本的替代做法原话说（与共享层同一句）')
+  check(hkLowHtml.indexOf('2.36.0') >= 0 && hkLowHtml.indexOf(LOC.zh['vc.hooks.gate.alternative']) >= 0 && LOC.en['vc.hooks.gate.alternative'] === VIEW.CONFIG_HOOK_RUN_ALTERNATIVE, 'Z17ad 版本门提示写出需要 2.36.0，并照账本的替代做法原话说（与共享层同一句）')
   check(hkLowHtml.indexOf('data-vc-hooks-gate-alternative="1"') >= 0, 'Z17ae 替代做法单独带标记（读屏与门禁都找得到这一句）')
   const hkCheckReply = {
     ok: true, contract: VIEW.CONFIG_CHECK_CONTRACT, version: VIEW.CONFIG_CHECK_VERSION, readAtMs: NOW, op: 'hook-run',

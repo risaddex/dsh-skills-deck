@@ -19,8 +19,8 @@ export const CONFLICT_WRITE_OPS: any[] = [
   { id: 'merge-ff-only', capId: '6.2', kind: 'write', dangerous: false, confirm: false, reversible: true, needs: 'target', fs: false, labelKey: 'vc.conflicts.op.mergeFfOnly', command: 'git merge --ff-only <target>' },
   { id: 'merge-no-ff', capId: '6.3', kind: 'write', dangerous: false, confirm: false, reversible: true, needs: 'target', fs: false, labelKey: 'vc.conflicts.op.mergeNoFf', command: 'git merge --no-ff <target>' },
   { id: 'merge-squash', capId: '6.4', kind: 'write', dangerous: false, confirm: false, reversible: true, needs: 'target', fs: false, labelKey: 'vc.conflicts.op.mergeSquash', command: 'git merge --squash <target>' },
-  { id: 'take-side', capId: '6.6', kind: 'write', dangerous: false, confirm: false, reversible: false, needs: 'path-side', fs: false, labelKey: 'vc.conflicts.op.takeSide', command: 'git checkout --ours / --theirs -- <path>（保留删除用 git rm -- <path>）' },
-  { id: 'save-file', capId: '6.7', kind: 'write', dangerous: false, confirm: false, reversible: false, needs: 'path-text', fs: true, labelKey: 'vc.conflicts.op.saveFile', command: '面板内整份编辑（保存前 git diff --check；不推外部编辑器）' },
+  { id: 'take-side', capId: '6.6', kind: 'write', dangerous: false, confirm: false, reversible: false, needs: 'path-side', fs: false, labelKey: 'vc.conflicts.op.takeSide', command: 'git checkout --ours / --theirs -- <path> (use git rm -- <path> to keep the deletion)' },
+  { id: 'save-file', capId: '6.7', kind: 'write', dangerous: false, confirm: false, reversible: false, needs: 'path-text', fs: true, labelKey: 'vc.conflicts.op.saveFile', command: 'full-file edit in the panel (git diff --check before saving; no external editor)' },
   { id: 'mark-resolved', capId: '6.8', kind: 'write', dangerous: false, confirm: false, reversible: true, needs: 'path', fs: false, labelKey: 'vc.conflicts.op.markResolved', command: 'git add -- <path>' },
   { id: 'op-continue', capId: '6.11', kind: 'write', dangerous: false, confirm: false, reversible: true, needs: 'none', fs: false, labelKey: 'vc.conflicts.op.opContinue', command: 'git <operation> --continue' },
   { id: 'op-skip', capId: '6.12', kind: 'write', dangerous: true, confirm: true, reversible: false, needs: 'none', fs: false, labelKey: 'vc.conflicts.op.opSkip', command: 'git <operation> --skip' },
@@ -30,7 +30,7 @@ export const CONFLICT_WRITE_OPS: any[] = [
 /** 五条只读动作：6.5 冲突清单、6.9 面板冲突视图、6.10 merge-tree 预演、6.14 rerere、6.15 残留标记检查。 */
 export const CONFLICT_READ_OPS: any[] = [
   { id: 'conflict-list', capId: '6.5', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'none', fs: false, labelKey: 'vc.conflicts.op.conflictList', command: 'git status --porcelain=v2 --branch -z + git ls-files --stage -z' },
-  { id: 'conflict-view', capId: '6.9', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'path', fs: false, labelKey: 'vc.conflicts.op.conflictView', command: '面板冲突视图（不调用 git mergetool）' },
+  { id: 'conflict-view', capId: '6.9', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'path', fs: false, labelKey: 'vc.conflicts.op.conflictView', command: 'panel conflict view (git mergetool is not called)' },
   { id: 'merge-preview', capId: '6.10', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'target', fs: false, labelKey: 'vc.conflicts.op.mergePreview', command: 'git merge-tree --write-tree --name-only <target>' },
   { id: 'rerere-view', capId: '6.14', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'none', fs: false, labelKey: 'vc.conflicts.op.rerereView', command: 'git rerere status / git config rerere.enabled' },
   { id: 'marker-check', capId: '6.15', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'none', fs: false, labelKey: 'vc.conflicts.op.markerCheck', command: 'git diff --check / git diff --cached --check' }

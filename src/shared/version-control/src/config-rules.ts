@@ -15,7 +15,7 @@
 export const CONFIG_HOOK_RUN_MIN_VERSION = '2.36.0'
 
 /** 12.6 低版本时的替代做法：与能力账本 versionAlternative 字字一致，界面照抄这一句。 */
-export const CONFIG_HOOK_RUN_ALTERNATIVE = '2.36 以下在终端直接执行钩子文件'
+export const CONFIG_HOOK_RUN_ALTERNATIVE = 'Below 2.36, run the hook file directly in a terminal'
 
 /** 预检回包契约名与版本：界面与门禁据此判断「这是新协议的票」而不是旧回包。 */
 export const CONFIG_CHECK_CONTRACT = 'version-control.config-check'
@@ -163,14 +163,14 @@ export function parseConfigList(stdout: any): any {
   if (text === '') return { ok: true, entries: [] }
   const parts: string[] = text.split('\u0000')
   if (parts.length > 0 && parts[parts.length - 1] === '') parts.pop()
-  if (parts.length % 2 !== 0) return { ok: false, detail: '字段数不成对（' + parts.length + ' 段）' }
+  if (parts.length % 2 !== 0) return { ok: false, detail: 'field count is not paired (' + parts.length + ' fields)' }
   const entries: any[] = []
   for (let i: number = 0; i < parts.length; i += 2) {
     const origin: string = parts[i]
     const pair: string = parts[i + 1]
     const at: number = pair.indexOf('\n')
     const key: string = at < 0 ? pair : pair.slice(0, at)
-    if (key === '') return { ok: false, detail: '第 ' + (i / 2 + 1) + ' 条没有键名' }
+    if (key === '') return { ok: false, detail: 'entry ' + (i / 2 + 1) + ' has no key' }
     entries.push({ origin: origin, key: key, value: at < 0 ? '' : pair.slice(at + 1) })
   }
   return { ok: true, entries: entries }
@@ -221,7 +221,7 @@ export function parseCheckAttr(stdout: any): any {
   if (text === '') return { ok: true, entries: [] }
   const parts: string[] = text.split('\u0000')
   if (parts.length > 0 && parts[parts.length - 1] === '') parts.pop()
-  if (parts.length % 3 !== 0) return { ok: false, detail: '字段数不是三的倍数（' + parts.length + ' 段）' }
+  if (parts.length % 3 !== 0) return { ok: false, detail: 'field count is not a multiple of three (' + parts.length + ' fields)' }
   const entries: any[] = []
   for (let i: number = 0; i < parts.length; i += 3) entries.push({ path: parts[i], attr: parts[i + 1], value: parts[i + 2] })
   return { ok: true, entries: entries }
@@ -270,24 +270,24 @@ export function configCheckPlanOf(op: any, args: any): any {
   const a: any = args || {}
   const s = function (v: any): string { return v === undefined || v === null ? '' : String(v) }
   const want: string = s(op)
-  if (CONFIG_WRITE_OPS.indexOf(want) < 0) return { ok: false, reason: 'bad-target', message: '不认识的配置写动作：' + want + '（允许：' + CONFIG_WRITE_OPS.join(' / ') + '）' }
+  if (CONFIG_WRITE_OPS.indexOf(want) < 0) return { ok: false, reason: 'bad-target', message: 'unknown config write action: ' + want + ' (allowed: ' + CONFIG_WRITE_OPS.join(' / ') + ')' }
   // 动作在参数里又写了一遍时，两处必须一致：外面按 A 判、里面按 B 执行的分裂是写层最怕的错位。
   const declared: string = s(a.op)
-  if (declared !== '' && declared !== want) return { ok: false, reason: 'bad-target', message: '动作字段对不上：外层是 ' + want + '，参数里写的是 ' + declared }
+  if (declared !== '' && declared !== want) return { ok: false, reason: 'bad-target', message: 'action fields do not match: outer action is ' + want + ', arguments say ' + declared }
   if (want === 'hook-run') {
     const problem: string | null = hookNameProblem(a.name)
-    if (problem) return { ok: false, reason: problem, message: '钩子名字只能用小写字母、数字与连字符，且不能以短横线开头' }
+    if (problem) return { ok: false, reason: problem, message: 'hook names may only use lowercase letters, digits and hyphens, and cannot start with a hyphen' }
     return { ok: true, plan: { op: want, name: s(a.name) } }
   }
   const key: string = s(a.key)
-  if (!configKeyEditable(key)) return { ok: false, reason: 'key-readonly', message: '配置页只改提交身份的两个键（user.name / user.email）；其余键只读，不做通用键值编辑器' }
+  if (!configKeyEditable(key)) return { ok: false, reason: 'key-readonly', message: 'the config page only changes the two commit identity keys (user.name / user.email); other keys are read-only, and it is not a general key-value editor' }
   const scope: string = s(a.scope) === '' ? 'local' : s(a.scope)
-  if (!configScopeWritable(scope)) return { ok: false, reason: 'scope-invalid', message: '作用域只能选本仓库（--local）或这台机器（--global），系统级配置不给写' }
+  if (!configScopeWritable(scope)) return { ok: false, reason: 'scope-invalid', message: 'scope must be this repository (--local) or this machine (--global); system config cannot be written' }
   if (want === 'config-set') {
     const value: string = s(a.value)
     const problem: string | null = identityValueError(key, value)
     if (problem) {
-      const text: string = problem === 'email-invalid' ? '邮箱形状不对：要有 @ 与域名点号，且不含空白' : (problem === 'value-too-long' ? '新值太长了（最多 ' + CONFIG_VALUE_MAX + ' 个字符）' : (problem === 'value-empty' ? '新值不能为空' : '新值里有换行或控制字符，配置值写不下这些'))
+      const text: string = problem === 'email-invalid' ? 'invalid email: it needs @ and a dotted domain, with no whitespace' : (problem === 'value-too-long' ? 'new value is too long (maximum ' + CONFIG_VALUE_MAX + ' characters)' : (problem === 'value-empty' ? 'new value cannot be empty' : 'new value contains line breaks or control characters, which config values cannot store'))
       return { ok: false, reason: problem, message: text }
     }
     return { ok: true, plan: { op: want, key: key, scope: scope, value: value } }

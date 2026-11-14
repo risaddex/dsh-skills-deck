@@ -36,7 +36,7 @@ export function isInactiveEffect(e: unknown): boolean {
 
 /** 实例已销毁时要回给上层的失败正文：runGh 的失败信封与 execProc 的失败对象共用这一句。
  *  只写这一处（ADR 一值一处）：两处各写一遍的话，改文案时容易只改一处、两条出口说的话对不上。 */
-export const DISPOSED_MESSAGE = '插件运行实例已销毁，这条命令没有执行完'
+export const DISPOSED_MESSAGE = 'the plugin instance was disposed; this command did not finish'
 
 /** 把「归还一次名额」包成幂等：几条退出路径都会调它，真正归还只发生一次。
  *  不这样写的话，后来新增的退出路径只要漏调一次就泄漏名额；多调一次虽然底层自己也幂等，

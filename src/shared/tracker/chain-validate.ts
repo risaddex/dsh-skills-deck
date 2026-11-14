@@ -65,7 +65,7 @@ const ERROR_KIND = Object.freeze({ PARSE: 'parse', UNSUPPORTED: 'unsupported' })
 function isPlainObject(v: unknown): v is Record<string, unknown> { return v != null && typeof v === 'object' && !Array.isArray(v) }
 
 function deriveCheckId(item: ValidateCheckItemLike | null | undefined): string {
-  if (!item) throw new Error('CheckItem 必须为对象')
+  if (!item) throw new Error('CheckItem must be an object')
   if (typeof item.id === 'string' && item.id.trim()) return item.id.trim()
   // 回退用 check 字符串（票面简化形态）
   const c = item.check
@@ -76,7 +76,7 @@ function deriveCheckId(item: ValidateCheckItemLike | null | undefined): string {
     if (c.id) return String(c.kind) + ':' + String(c.id)
     if (c.primitive) return 'primitive:' + String(c.primitive) + ':' + String(c.command || c.path || c.key || c.skill || '')
   }
-  throw new Error('CheckItem 需 id 或 string check 标识（链内唯一键）')
+  throw new Error('CheckItem requires id or a string check identifier (unique key within the chain)')
 }
 
 function normalizeResult(v: { status?: unknown; ok?: unknown } | string | boolean | null | undefined): string {
@@ -104,9 +104,9 @@ const VALID_PRIMITIVES = new Set<string>(Object.values(PRIMITIVE_KIND))
  * @returns {{ok: boolean, error?: {kind: string, message: string}, unsupported?: boolean}}
  */
 export function validateAction(action: ValidateAction | null | undefined): ValidateResult {
-  if (!action || typeof action !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'action 必须为对象' } }
+  if (!action || typeof action !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'action must be an object' } }
   const type = String(action.type || '').trim()
-  if (!type) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'action.type 必填' } }
+  if (!type) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'action.type is required' } }
   if (!VALID_ACTION_TYPES.has(type)) return { ok: true, unsupported: true }
 
   // 归一字段兼容：prompt/promptId, method/endpoint, schema/fields, submitAction/submit/form.submit
@@ -118,33 +118,33 @@ export function validateAction(action: ValidateAction | null | undefined): Valid
 
   switch (type) {
     case ACTION_TYPE.INJECT_PROMPT: {
-      if (!getPrompt || typeof getPrompt !== 'string' || !String(getPrompt).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'inject-prompt 需 prompt/promptId' } }
+      if (!getPrompt || typeof getPrompt !== 'string' || !String(getPrompt).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'inject-prompt requires prompt/promptId' } }
       return { ok: true }
     }
     case ACTION_TYPE.OPEN_URL: {
-      if (!getUrl || typeof getUrl !== 'string' || !String(getUrl).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'open-url 需 url' } }
+      if (!getUrl || typeof getUrl !== 'string' || !String(getUrl).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'open-url requires url' } }
       return { ok: true }
     }
     case ACTION_TYPE.RPC: {
-      if (!getMethod || typeof getMethod !== 'string' || !String(getMethod).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'rpc 需 method/endpoint' } }
+      if (!getMethod || typeof getMethod !== 'string' || !String(getMethod).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'rpc requires method/endpoint' } }
       return { ok: true }
     }
     case ACTION_TYPE.CONTRACT_OP: {
       const op = (action as ValidateAction).op
-      if (!op || typeof op !== 'string' || !String(op).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'contract-op 需 op（契约操作名，如 initProject）' } }
+      if (!op || typeof op !== 'string' || !String(op).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'contract-op requires op (contract operation name, such as initProject)' } }
       return { ok: true }
     }
     case ACTION_TYPE.FORM: {
       const fields = getSchema
-      if (!Array.isArray(fields) || fields.length === 0) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form 需 schema/fields 非空数组' } }
+      if (!Array.isArray(fields) || fields.length === 0) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form requires a nonempty schema/fields array' } }
       for (let i = 0; i < fields.length; i++) {
         const f = fields[i]
-        if (!f || typeof f !== 'object' || !f.name || typeof f.name !== 'string' || !String(f.name).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.fields[' + i + '].name 必填' } }
+        if (!f || typeof f !== 'object' || !f.name || typeof f.name !== 'string' || !String(f.name).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.fields[' + i + '].name is required' } }
         // label / labelKey 二选一兼容
         const hasLabel = (f.label && typeof f.label === 'string' && String(f.label).trim()) || (f.labelKey && typeof f.labelKey === 'string' && String(f.labelKey).trim())
-        if (!hasLabel) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.fields[' + i + '].label/labelKey 必填' } }
+        if (!hasLabel) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.fields[' + i + '].label/labelKey is required' } }
       }
-      if (!getSubmit || typeof getSubmit !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form 需 submitAction/submit' } }
+      if (!getSubmit || typeof getSubmit !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form requires submitAction/submit' } }
       // submit 需为合法动作或含 endpoint
       const subType = getSubmit.type
       const subEndpoint = getSubmit.endpoint || getSubmit.method
@@ -152,43 +152,43 @@ export function validateAction(action: ValidateAction | null | undefined): Valid
         // 未知提交类型按 unsupported 透传，不判错
       } else if (String(subType || '').trim() === ACTION_TYPE.CONTRACT_OP) {
         const subOp = (getSubmit as ValidateAction).op
-        if (!subOp || typeof subOp !== 'string' || !String(subOp).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.submit 的 contract-op 需 op' } }
+        if (!subOp || typeof subOp !== 'string' || !String(subOp).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.submit contract-op requires op' } }
       } else if (!subType && !subEndpoint) {
-        return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.submit 需 type 或 endpoint' } }
+        return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'form.submit requires type or endpoint' } }
       }
       return { ok: true }
     }
     case ACTION_TYPE.WIZARD: {
       const steps = action.steps
-      if (!Array.isArray(steps) || steps.length === 0) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard 需 steps 非空数组（至少一项）' } }
+      if (!Array.isArray(steps) || steps.length === 0) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard requires a nonempty steps array (at least one item)' } }
       for (let si = 0; si < steps.length; si++) {
         const s = steps[si]
-        if (!s || typeof s !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '] 必须为对象' } }
+        if (!s || typeof s !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '] must be an object' } }
         const schema = s.schema || s.fields
-        if (!Array.isArray(schema)) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].schema/fields 必须为数组' } }
+        if (!Array.isArray(schema)) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].schema/fields must be an array' } }
         // 允许空 schema（单步空表单的占位校验在门禁层），但若有字段则校验形状复用 FieldSchema
         for (let fi = 0; fi < schema.length; fi++) {
           const f = schema[fi]
-          if (!f || typeof f !== 'object' || !f.name || typeof f.name !== 'string' || !String(f.name).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].fields[' + fi + '].name 必填' } }
+          if (!f || typeof f !== 'object' || !f.name || typeof f.name !== 'string' || !String(f.name).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].fields[' + fi + '].name is required' } }
           const hasLabel = (f.label && typeof f.label === 'string' && String(f.label).trim()) || (f.labelKey && typeof f.labelKey === 'string' && String(f.labelKey).trim()) || (f.name && typeof f.name === 'string')
           // 兼容：wizard 复用 FieldSchema 允许仅 name（label 回落 name），但若显式提供则需非空字符串
-          if (f.label !== undefined && f.label !== null && typeof f.label !== 'string') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].fields[' + fi + '].label 必须为字符串' } }
+          if (f.label !== undefined && f.label !== null && typeof f.label !== 'string') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].fields[' + fi + '].label must be a string' } }
           if (f.type !== undefined && f.type !== null) {
             const vt = String(f.type).trim()
-            if (vt && !['text','number','date','single','multi','directory','file'].includes(vt)) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].fields[' + fi + '].type 非法：' + vt } }
+            if (vt && !['text','number','date','single','multi','directory','file'].includes(vt)) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.steps[' + si + '].fields[' + fi + '].type is invalid: ' + vt } }
           }
         }
       }
-      if (!getSubmit || typeof getSubmit !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard 需 submitAction/submit' } }
+      if (!getSubmit || typeof getSubmit !== 'object') return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard requires submitAction/submit' } }
       const subType = getSubmit.type
       const subEndpoint = getSubmit.endpoint || getSubmit.method
       if (subType && !VALID_ACTION_TYPES.has(String(subType).trim())) {
         // 未知提交类型按 unsupported 透传
       } else if (String(subType || '').trim() === ACTION_TYPE.CONTRACT_OP) {
         const subOp = (getSubmit as ValidateAction).op
-        if (!subOp || typeof subOp !== 'string' || !String(subOp).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.submit 的 contract-op 需 op' } }
+        if (!subOp || typeof subOp !== 'string' || !String(subOp).trim()) return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.submit contract-op requires op' } }
       } else if (!subType && !subEndpoint) {
-        return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.submit 需 type 或 endpoint' } }
+        return { ok: false, error: { kind: ERROR_KIND.PARSE, message: 'wizard.submit requires type or endpoint' } }
       }
       return { ok: true }
     }
@@ -211,12 +211,12 @@ export function validateCheckItem(item: ValidateRecord | null | undefined): stri
   let idOk = false
   if (typeof item.id === 'string' && item.id.trim()) idOk = true
   const c = item.check
-  if (!c) errors.push('check 必须提供（string 或对象）')
+  if (!c) errors.push('check is required (string or object)')
   else if (typeof c === 'string') {
-    if (!c.trim()) errors.push('check string 需非空')
+    if (!c.trim()) errors.push('check string must be nonempty')
     else idOk = true
   } else if (typeof c === 'object') {
-    if (c.kind !== 'primitive' && c.kind !== 'backend' && c.kind !== 'preflight') errors.push('check.kind must be primitive|backend|preflight（或用 string 简写）')
+    if (c.kind !== 'primitive' && c.kind !== 'backend' && c.kind !== 'preflight') errors.push('check.kind must be primitive|backend|preflight (or use a string shorthand)')
     if (c.kind === 'primitive') {
       if (!VALID_PRIMITIVES.has(c.primitive)) errors.push('primitive must be one of ' + [...VALID_PRIMITIVES].join(','))
       if (c.primitive === PRIMITIVE_KIND.COMMAND_EXISTS && typeof c.command !== 'string') errors.push('commandExists needs command:string')
@@ -232,9 +232,9 @@ export function validateCheckItem(item: ValidateRecord | null | undefined): stri
     }
     idOk = idOk || (typeof c.id === 'string' && c.id.trim())
   } else {
-    errors.push('check 需为 string 或对象')
+    errors.push('check must be a string or object')
   }
-  if (!idOk) errors.push('需提供 item.id 或 string check（链内唯一键）')
+  if (!idOk) errors.push('item.id or a string check is required (unique key within the chain)')
 
   // onPass / onFail 需为对象，show 可为 null 或含 title/i18nKey
   for (const k of ['onPass','onFail']) {

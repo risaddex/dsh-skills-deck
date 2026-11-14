@@ -66,7 +66,7 @@ export function parseStatus(stdout: string): StatusResult {
   while (i < fields.length) {
     const f = fields[i]
     i += 1
-    if (f === '') return fail('空记录')
+    if (f === '') return fail('empty record')
     if (f.charAt(0) === '#') {
       const line = f
       if (line.startsWith('# branch.head ')) {
@@ -76,12 +76,12 @@ export function parseStatus(stdout: string): StatusResult {
       } else if (line.startsWith('# branch.oid ')) {
         const v = line.slice('# branch.oid '.length)
         branch.oid = v === '(initial)' ? null : v
-        if (branch.oid !== null && !HEX.test(branch.oid)) return fail('branch.oid 非十六进制')
+        if (branch.oid !== null && !HEX.test(branch.oid)) return fail('branch.oid is not hexadecimal')
       } else if (line.startsWith('# branch.upstream ')) {
         branch.upstream = line.slice('# branch.upstream '.length) || null
       } else if (line.startsWith('# branch.ab ')) {
         const m = /^# branch\.ab \+(\d+) -(\d+)$/.exec(line)
-        if (!m) return fail('branch.ab 形状不对')
+        if (!m) return fail('branch.ab has the wrong shape')
         branch.ahead = Number(m[1]); branch.behind = Number(m[2])
       }
       continue
@@ -90,42 +90,42 @@ export function parseStatus(stdout: string): StatusResult {
     if (tag === '1') {
       // 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
       const parts = splitFixedFields(f, 8)
-      if (!parts) return fail('1 记录固定字段不足 8 项')
+      if (!parts) return fail('record 1 has fewer than 8 fixed fields')
       const xy = parts[1]
-      if (!/^[.MTAUDRC]{2}$/.test(xy)) return fail('1 记录 XY 非法')
-      if (parts[8] === '') return fail('1 记录路径为空')
+      if (!/^[.MTAUDRC]{2}$/.test(xy)) return fail('record 1 has invalid XY')
+      if (parts[8] === '') return fail('record 1 has an empty path')
       entries.push({ kind: 'ordinary', x: xy.charAt(0), y: xy.charAt(1), path: parts[8], origPath: null })
     } else if (tag === '2') {
       // 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>，原路径在下一个 NUL 字段
       const parts = splitFixedFields(f, 9)
-      if (!parts) return fail('2 记录固定字段不足 9 项')
+      if (!parts) return fail('record 2 has fewer than 9 fixed fields')
       const xy = parts[1]
-      if (!/^[.MTAUDRC]{2}$/.test(xy)) return fail('2 记录 XY 非法')
-      if (parts[9] === '') return fail('2 记录路径为空')
-      if (i >= fields.length) return fail('2 记录缺原路径字段')
+      if (!/^[.MTAUDRC]{2}$/.test(xy)) return fail('record 2 has invalid XY')
+      if (parts[9] === '') return fail('record 2 has an empty path')
+      if (i >= fields.length) return fail('record 2 is missing the original path field')
       const orig = fields[i]
       i += 1
-      if (orig === '') return fail('2 记录原路径为空')
+      if (orig === '') return fail('record 2 has an empty original path')
       entries.push({ kind: 'renamed', x: xy.charAt(0), y: xy.charAt(1), path: parts[9], origPath: orig })
     } else if (tag === 'u') {
       // u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
       const parts = splitFixedFields(f, 10)
-      if (!parts) return fail('u 记录固定字段不足 10 项')
+      if (!parts) return fail('record u has fewer than 10 fixed fields')
       const xy = parts[1]
-      if (xy.length !== 2) return fail('u 记录 XY 非法')
-      if (parts[10] === '') return fail('u 记录路径为空')
+      if (xy.length !== 2) return fail('record u has invalid XY')
+      if (parts[10] === '') return fail('record u has an empty path')
       entries.push({ kind: 'unmerged', x: xy.charAt(0), y: xy.charAt(1), path: parts[10], origPath: null })
     } else if (tag === '?') {
-      if (f.charAt(1) !== ' ') return fail('? 记录缺少空格')
+      if (f.charAt(1) !== ' ') return fail('record ? is missing a space')
       entries.push({ kind: 'untracked', x: '?', y: '?', path: f.slice(2), origPath: null })
     } else if (tag === '!') {
-      if (f.charAt(1) !== ' ') return fail('! 记录缺少空格')
+      if (f.charAt(1) !== ' ') return fail('record ! is missing a space')
       entries.push({ kind: 'ignored', x: '!', y: '!', path: f.slice(2), origPath: null })
     } else {
-      return fail('未知行首字符 ' + JSON.stringify(tag))
+      return fail('unknown line prefix ' + JSON.stringify(tag))
     }
   }
-  if (!sawHead) return fail('缺 # branch.head 行')
+  if (!sawHead) return fail('missing # branch.head line')
   return { ok: true, branch, entries }
 }
 

@@ -27,13 +27,13 @@ export const FIRST_SCREEN_SLICES: string[] = ['workspace', 'changes', 'history',
 
 /** 七片的中文名（报错、悬停与门禁的人话；不是界面主文案，界面文案走词条）。 */
 export const FIRST_SCREEN_SLICE_LABELS: Record<string, string> = {
-  workspace: '工作区状态',
-  changes: '改动',
-  history: '提交历史首页',
-  worktrees: '工作树',
-  stashes: '贮藏',
-  sync: '同步带',
-  version: '版本与能力开关',
+  workspace: 'Workspace status',
+  changes: 'Changes',
+  history: 'Commit history',
+  worktrees: 'Worktrees',
+  stashes: 'Stashes',
+  sync: 'Sync band',
+  version: 'Version and capability switches',
 }
 
 /**
@@ -156,9 +156,9 @@ export function firstScreenIsPartial(snapshot: any): boolean {
 /** 刷新时机的说明句：未知时机回空串（不编第零种时机）。 */
 export function firstScreenRefreshNoteOf(moment: any): string {
   const key = String(moment === null || moment === undefined ? '' : moment)
-  if (key === 'enter') return '进入页面时读一次'
-  if (key === 'task-done') return '任务完成后重读一次'
-  if (key === 'manual') return '手动刷新时重读一次'
+  if (key === 'enter') return 'read once when entering the page'
+  if (key === 'task-done') return 're-read once after a task finishes'
+  if (key === 'manual') return 're-read once on manual refresh'
   return ''
 }
 

@@ -157,7 +157,7 @@ export async function probeCardViaDirect(cardPath: string, skillName: string): P
 // 反例：每个通道各说各的，四个候选根乘两个通道刷出八条，横幅就没法看了。
 export function evidenceSummary(channels: ProbeChannel[] | null | undefined, lang: unknown): string {
   if (!channels || !channels.length) return ''
-  const stOf = function (c: ProbeChannel): string { return c.result === 'valid' ? '命中' : (c.result === 'invalid' ? '无效' : (c.result === 'missing' ? '未找到' : String(c.result || '?'))) }
+  const stOf = function (c: ProbeChannel): string { return c.result === 'valid' ? (lang === 'zh' ? '命中' : 'found') : (c.result === 'invalid' ? (lang === 'zh' ? '无效' : 'invalid') : (c.result === 'missing' ? (lang === 'zh' ? '未找到' : 'not found') : String(c.result || '?'))) }
   // 按通道分组：同通道结果一致 → 合并成一条（如 fs=未找到×4）；不一致才逐条展开（人读优先，横幅不刷屏）
   const byChan: Record<string, ProbeChannel[]> = {}
   for (let i = 0; i < channels.length; i++) {
@@ -178,7 +178,7 @@ export function evidenceSummary(channels: ProbeChannel[] | null | undefined, lan
       for (let i = 0; i < list.length; i++) parts.push(label + ':' + list[i].root + '=' + stOf(list[i]))
     }
   }
-  return (lang === 'en') ? ('; probed: ' + parts.join(', ')) : ('；已查：' + parts.join('，'))
+  return (lang === 'zh') ? ('；已查：' + parts.join('，')) : ('; probed: ' + parts.join(', '))
 }
 // 轻探判装只认一个口径：任一通道命中合法名片即已安装（新契约），通道全空才判缺席，名片在但内容不对判无效。
 // 反例：注册表没收录就判未安装，用户盘上明明装齐了，横幅还会一直报警，这正是 #296 要修的分歧。
@@ -188,12 +188,12 @@ export async function lightProbeReason(skillName: string, lang: unknown, cwd: un
   let platform: ProbePlatform | null = (e && e.platform) || null
   if (!platform && e && typeof e.getPlatform === 'function') { try { platform = await e.getPlatform() } catch {} }
   if (!platform) {
-    return { kind: 'missing', detail: (lang === 'en') ? 'Not installed' : '未安装', hint: 'prompt:installSkills', channels: [{ channel: 'fs', root: 'user-agents', result: 'unavailable', detail: 'platform unavailable' }] }
+    return { kind: 'missing', detail: (lang === 'zh') ? '未安装' : 'Not installed', hint: 'prompt:installSkills', channels: [{ channel: 'fs', root: 'user-agents', result: 'unavailable', detail: 'platform unavailable' }] }
   }
   let home: string | null = null
   try { home = await platform.getHome() } catch {}
   if (!home) {
-    return { kind: 'missing', detail: (lang === 'en') ? 'Not installed' : '未安装', hint: 'prompt:installSkills', channels: [] }
+    return { kind: 'missing', detail: (lang === 'zh') ? '未安装' : 'Not installed', hint: 'prompt:installSkills', channels: [] }
   }
   // 候选根：用户标准根（.agents/skills 优先，.dsh/skills 次之）+ 项目根（.dsh/skills + .agents/skills）
   const candidates = [
@@ -232,10 +232,10 @@ export async function lightProbeReason(skillName: string, lang: unknown, cwd: un
   }
   if (validHit) {
     // 新契约：任一通道命中合法名片即已安装（附来源 + 注册表未收录的如实注记）
-    return { kind: 'ok', detail: (lang === 'en') ? 'Installed' : '已安装', hint: '', sourcePath: validHit.path, via: validHit.via, registryMiss: true, channels }
+    return { kind: 'ok', detail: (lang === 'zh') ? '已安装' : 'Installed', hint: '', sourcePath: validHit.path, via: validHit.via, registryMiss: true, channels }
   }
   if (invalidSeen) {
-    return { kind: 'invalid', detail: (lang === 'en') ? 'Invalid skill card' : '名片无效', hint: 'prompt:installSkills', channels }
+    return { kind: 'invalid', detail: (lang === 'zh') ? '名片无效' : 'Invalid skill card', hint: 'prompt:installSkills', channels }
   }
-  return { kind: 'missing', detail: (lang === 'en') ? 'Not installed (missing)' : '未安装（缺失）', hint: 'prompt:installSkills', channels }
+  return { kind: 'missing', detail: (lang === 'zh') ? '未安装（缺失）' : 'Not installed (missing)', hint: 'prompt:installSkills', channels }
 }

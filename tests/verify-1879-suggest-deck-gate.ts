@@ -109,7 +109,7 @@ async function main() {
   const wroteText = wrote.ok === true ? wrote.text : ''
   check(wrote.ok === true, '带 suggest: off 的设置文档能写出去。', wrote.ok ? '' : wrote.message)
   check(wroteText.indexOf('suggest: "off"') >= 0, '写出去的一份里出现 suggest: "off"（on/off 是 YAML 的保留词，必须带引号）。', wroteText.slice(0, 600))
-  check(wroteText.indexOf('# 下一步建议气泡：on 显示、off 不显示（关掉只影响气泡，模型照常可以给建议）') >= 0, '写出去的那一行上面有一句看得懂的注释。', wroteText.slice(0, 600))
+  check(wroteText.indexOf('# Next-step suggestion bubbles: on or off (off hides only bubbles; the model may still suggest steps)') >= 0, '写出去的那一行上面有一句看得懂的注释。', wroteText.slice(0, 600))
   const wroteBack = parseSettings(wroteText)
   check(wroteBack.ok === true && wroteBack.value.workspaces['D:\\ws\\demo'].suggest === 'off', '写出去再读回来，suggest 仍是 off（往返稳定）。', JSON.stringify(wroteBack.ok ? wroteBack.value.workspaces : wroteBack.message))
 

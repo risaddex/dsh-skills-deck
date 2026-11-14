@@ -30,11 +30,11 @@ export const SLOTS_VERSION: number = 1
 
 // 五端口定义（ADR 5.1 视觉锚定表一行一对象）
 export const SLOT_DEFS: ReadonlyArray<SlotDef> = Object.freeze([
-  Object.freeze({ id: 'banner-seat', label: 'banner-seat', visual: '主区顶部 42px 满宽横幅，同槽互斥（蓝/黄/红）', parentSlot: 'shell.overlay', scope: 'root', kind: 'list', order: 10, zGroup: 'banner' }),
-  Object.freeze({ id: 'dock-seat', label: 'dock-seat', visual: '右栏 details 内的 Tab 栏（非整列外壳）', parentSlot: 'details', scope: 'session-maybe', kind: 'list', order: 20, zGroup: 'dock' }),
-  Object.freeze({ id: 'statusbar-seat', label: 'statusbar-seat', visual: '输入区胶囊区（输入框正上方药丸横排）', parentSlot: 'conversation.input.dock', scope: 'session', kind: 'list', order: 30, zGroup: 'statusbar' }),
-  Object.freeze({ id: 'modal-seat', label: 'modal-seat', visual: '主区居中遮罩弹窗', parentSlot: 'shell.overlay', scope: 'root', kind: 'single', order: 100, zGroup: 'modal' }),
-  Object.freeze({ id: 'toast-seat', label: 'toast-seat', visual: '右下角轻提示队列', parentSlot: 'shell.overlay', scope: 'root', kind: 'list', order: 90, zGroup: 'toast' }),
+  Object.freeze({ id: 'banner-seat', label: 'banner-seat', visual: 'Full-width 42px banner at the top of the main area; mutually exclusive in this slot (blue/yellow/red)', parentSlot: 'shell.overlay', scope: 'root', kind: 'list', order: 10, zGroup: 'banner' }),
+  Object.freeze({ id: 'dock-seat', label: 'dock-seat', visual: 'Tab bar inside the right details sidebar (not the entire sidebar shell)', parentSlot: 'details', scope: 'session-maybe', kind: 'list', order: 20, zGroup: 'dock' }),
+  Object.freeze({ id: 'statusbar-seat', label: 'statusbar-seat', visual: 'Input capsule area (a horizontal pill row immediately above the input)', parentSlot: 'conversation.input.dock', scope: 'session', kind: 'list', order: 30, zGroup: 'statusbar' }),
+  Object.freeze({ id: 'modal-seat', label: 'modal-seat', visual: 'Centered modal overlay in the main area', parentSlot: 'shell.overlay', scope: 'root', kind: 'single', order: 100, zGroup: 'modal' }),
+  Object.freeze({ id: 'toast-seat', label: 'toast-seat', visual: 'Toast queue at the bottom right', parentSlot: 'shell.overlay', scope: 'root', kind: 'list', order: 90, zGroup: 'toast' }),
 ])
 
 // 快查表 id → def

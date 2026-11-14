@@ -42,7 +42,7 @@ function fail(detail: string): StashParseResult {
  * 空输出是合法的（真没有贮藏），回空数组；末尾多余空行忽略；其余任何形状问题整份失败。
  */
 export function parseStashList(stdout: string): StashParseResult {
-  if (typeof stdout !== 'string') return fail('stdout 不是字符串')
+  if (typeof stdout !== 'string') return fail('stdout is not a string')
   const text = stdout.replace(/\r\n/g, '\n')
   const entries: StashRecord[] = []
   const lines = text.split('\n')
@@ -51,17 +51,17 @@ export function parseStashList(stdout: string): StashParseResult {
     if (line === '') continue
     const fields = line.split('\u0000')
     if (fields.length !== 4) {
-      return fail('第 ' + String(i + 1) + ' 行字段数是 ' + String(fields.length) + '，应为 4（选择器/oid/时间/主题）')
+      return fail('line ' + String(i + 1) + ' has ' + String(fields.length) + ' fields; expected 4 (selector/oid/time/subject)')
     }
     const selector = fields[0]
     const oid = fields[1]
     const ct = fields[2]
     const subject = fields[3]
-    if (!SELECTOR_RE.test(selector)) return fail('第 ' + String(i + 1) + ' 行的选择器不是 stash@{n}：' + selector)
-    if (!OID_RE.test(oid)) return fail('第 ' + String(i + 1) + ' 行的 oid 不是 40 或 64 位十六进制：' + oid)
-    if (!/^[0-9]+$/.test(ct)) return fail('第 ' + String(i + 1) + ' 行的时间不是秒数：' + ct)
+    if (!SELECTOR_RE.test(selector)) return fail('line ' + String(i + 1) + ' has a selector other than stash@{n}: ' + selector)
+    if (!OID_RE.test(oid)) return fail('line ' + String(i + 1) + ' has an oid that is not 40 or 64 hex digits: ' + oid)
+    if (!/^[0-9]+$/.test(ct)) return fail('line ' + String(i + 1) + ' has a time that is not in seconds: ' + ct)
     const seconds = Number(ct)
-    if (!isFinite(seconds)) return fail('第 ' + String(i + 1) + ' 行的时间不是有限数：' + ct)
+    if (!isFinite(seconds)) return fail('line ' + String(i + 1) + ' has a time that is not a finite number: ' + ct)
     entries.push({ selector: selector, oid: oid, atMs: seconds * 1000, subject: subject })
   }
   return { ok: true, entries: entries }

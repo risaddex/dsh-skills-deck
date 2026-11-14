@@ -31,7 +31,7 @@ export const MIGRATE_ACTIONS: any[] = [
   { action: 'bundle-unbundle', id: '11.13', op: 'bundle', mode: 'unbundle', level: '写', commandText: 'git bundle create / verify / unbundle', task: true, readOnly: false, needsConfirm: false, extra: false },
   { action: 'fast-export', id: '5.13', op: 'fast-export', level: '毁', commandText: 'git fast-export', task: true, readOnly: false, needsConfirm: false, extra: false },
   { action: 'fast-import', id: '5.13', op: 'fast-import', level: '毁', commandText: 'git fast-import', task: true, readOnly: false, needsConfirm: true, stdinFile: true, extra: false },
-  { action: 'svn-probe', id: null, op: 'svn-probe', level: '读', commandText: 'git svn info（只读探测）', task: false, readOnly: true, needsConfirm: false, extra: true },
+  { action: 'svn-probe', id: null, op: 'svn-probe', level: '读', commandText: 'git svn info (read-only probe)', task: false, readOnly: true, needsConfirm: false, extra: true },
   { action: 'svn-fetch', id: null, op: 'svn-fetch', level: '写', commandText: 'git svn fetch', task: true, readOnly: false, needsConfirm: true, extra: true }
 ]
 
@@ -61,50 +61,50 @@ function mgBad(reason: string, message: string): any {
 // 允许 Windows 盘符（C:/…、C:\…）、UNC（\\server\share）与 POSIX 的 / 开头。
 export function migratePathProblem(value: any): string {
   const text = mgTextOf(value)
-  if (text === '') return '路径不能为空'
-  if (text.length > 2048) return '路径超过 2048 个字符'
-  if (text.indexOf('\u0000') >= 0) return '路径里不许有 NUL 字符'
-  if (/^[-+]/.test(text) === true) return '路径不许以短横线或加号开头'
+  if (text === '') return 'path cannot be empty'
+  if (text.length > 2048) return 'path exceeds 2048 characters'
+  if (text.indexOf('\u0000') >= 0) return 'path cannot contain NUL characters'
+  if (/^[-+]/.test(text) === true) return 'path cannot start with a hyphen or plus sign'
   const segments = text.split(/[\\/]/)
   for (let i = 0; i < segments.length; i = i + 1) {
-    if (segments[i] === '..') return '路径里不许有上跳段（..）'
+    if (segments[i] === '..') return 'path cannot contain parent segments (..)'
   }
-  if (/^(?:[A-Za-z]:[\\/]|[\\/])/.test(text) === false) return '路径必须是绝对路径（例如 D:/备份/repo.bundle）'
+  if (/^(?:[A-Za-z]:[\\/]|[\\/])/.test(text) === false) return 'path must be absolute (for example D:/backup/repo.bundle)'
   return ''
 }
 
 // 引用名（bundle 的 ref、archive 的 ref）：拒绝空白、控制字符、减号开头与顶替选项的写法。
 export function migrateRefProblem(value: any): string {
   const text = mgTextOf(value)
-  if (text === '') return '引用不能为空'
-  if (text.length > 300) return '引用超过 300 个字符'
-  if (text.charAt(0) === '-' || text.charAt(0) === '+') return '引用不许以短横线或加号开头'
-  if (/[\s\u0000-\u001f]/.test(text) === true) return '引用里不许有空白或控制字符'
+  if (text === '') return 'ref cannot be empty'
+  if (text.length > 300) return 'ref exceeds 300 characters'
+  if (text.charAt(0) === '-' || text.charAt(0) === '+') return 'ref cannot start with a hyphen or plus sign'
+  if (/[\s\u0000-\u001f]/.test(text) === true) return 'ref cannot contain whitespace or control characters'
   return ''
 }
 
 // 分支名守卫：与 git check-ref-format 的主要拒绝面一致（空白、控制字符、..、@{、~^:?*[\\ 与结尾斜杠）。
 export function migrateBranchProblem(value: any): string {
   const text = mgTextOf(value)
-  if (text === '') return '初始分支名不能为空'
-  if (text.length > 200) return '初始分支名超过 200 个字符'
-  if (text.charAt(0) === '-' || text.charAt(0) === '/') return '初始分支名不许以短横线或斜杠开头'
-  if (/[\s\u0000-\u001f]/.test(text) === true) return '初始分支名里不许有空白或控制字符'
-  if (text.indexOf('..') >= 0) return '初始分支名里不许有连续两个点'
-  if (text.indexOf('@{') >= 0) return '初始分支名里不许有 @{'
-  if (/[~^:?*\[\\]/.test(text) === true) return '初始分支名里不许有 git 的保留符号'
-  if (text.charAt(text.length - 1) === '/') return '初始分支名不许以斜杠结尾'
+  if (text === '') return 'initial branch name cannot be empty'
+  if (text.length > 200) return 'initial branch name exceeds 200 characters'
+  if (text.charAt(0) === '-' || text.charAt(0) === '/') return 'initial branch name cannot start with a hyphen or slash'
+  if (/[\s\u0000-\u001f]/.test(text) === true) return 'initial branch name cannot contain whitespace or control characters'
+  if (text.indexOf('..') >= 0) return 'initial branch name cannot contain two consecutive dots'
+  if (text.indexOf('@{') >= 0) return 'initial branch name cannot contain @{'
+  if (/[~^:?*\[\\]/.test(text) === true) return 'initial branch name cannot contain git-reserved symbols'
+  if (text.charAt(text.length - 1) === '/') return 'initial branch name cannot end with a slash'
   return ''
 }
 
 // svn 地址守卫：只认常见协议；拒绝空白、NUL 与减号开头，避免落进 git 的选项位置。
 export function migrateUrlProblem(value: any): string {
   const text = mgTextOf(value)
-  if (text === '') return 'svn 地址不能为空'
-  if (text.length > 2048) return 'svn 地址超过 2048 个字符'
-  if (/[\s\u0000-\u001f]/.test(text) === true) return 'svn 地址里不许有空白或控制字符'
-  if (text.charAt(0) === '-') return 'svn 地址不许以短横线开头'
-  if (/^(?:https?|svn|svn\+ssh|file|ssh|git):\/\//.test(text) === false) return 'svn 地址必须以 http(s)://、svn://、svn+ssh:// 或 file:// 开头'
+  if (text === '') return 'svn URL cannot be empty'
+  if (text.length > 2048) return 'svn URL exceeds 2048 characters'
+  if (/[\s\u0000-\u001f]/.test(text) === true) return 'svn URL cannot contain whitespace or control characters'
+  if (text.charAt(0) === '-') return 'svn URL cannot start with a hyphen'
+  if (/^(?:https?|svn|svn\+ssh|file|ssh|git):\/\//.test(text) === false) return 'svn URL must start with http(s)://, svn://, svn+ssh:// or file://'
   return ''
 }
 
@@ -150,7 +150,7 @@ function mgBasePlan(entry: any, plan: any): any {
 // 把动作参数归一成 plan；plan.taskArgs 直接进长任务通道，plan.targetText 进确认卡点名对象。
 export function migratePlanOf(action: any, input: any): any {
   const entry = migrateActionOf(action)
-  if (entry === null) return mgBad('unknown-action', '不认识的迁移动作：' + String(action))
+  if (entry === null) return mgBad('unknown-action', 'unknown migration action: ' + String(action))
   const a = input === undefined || input === null ? {} : input
   if (entry.action === 'init') {
     const pathProblem = migratePathProblem(a.path)
@@ -167,8 +167,8 @@ export function migratePlanOf(action: any, input: any): any {
         bare: a.bare === true,
         initMode: initMode,
         versionNeed: initMode === 'initial-branch' ? '2.28' : '2.11',
-        versionNote: initMode === 'initial-branch' ? '' : '本机 git 低于 2.28，初始分支名在建库之后用 symbolic-ref 改名，效果相同。',
-        targetText: (a.bare === true ? '裸仓库 ' : '仓库 ') + mgTextOf(a.path) + '（初始分支 ' + branch + '）'
+        versionNote: initMode === 'initial-branch' ? '' : 'Local git is older than 2.28; the initial branch is renamed with symbolic-ref after repository creation, with the same result.',
+        targetText: (a.bare === true ? 'bare repository ' : 'repository ') + mgTextOf(a.path) + ' (initial branch ' + branch + ')'
       })
     }
   }
@@ -185,7 +185,7 @@ export function migratePlanOf(action: any, input: any): any {
         ref: ref,
         pathAbsent: [mgTextOf(a.outputPath)],
         taskArgs: { outputPath: mgTextOf(a.outputPath), ref: ref },
-        targetText: '归档文件 ' + mgTextOf(a.outputPath) + '（来源 ' + ref + '）'
+        targetText: 'archive file ' + mgTextOf(a.outputPath) + ' (source ' + ref + ')'
       })
     }
   }
@@ -206,7 +206,7 @@ export function migratePlanOf(action: any, input: any): any {
         ref: ref,
         pathAbsent: [mgTextOf(a.outputPath)],
         taskArgs: taskArgs,
-        targetText: '离线包 ' + mgTextOf(a.outputPath) + (ref === '' ? '（包含全部引用）' : '（包含 ' + ref + '）')
+        targetText: 'offline bundle ' + mgTextOf(a.outputPath) + (ref === '' ? ' (includes all refs)' : ' (includes ' + ref + ')')
       })
     }
   }
@@ -219,7 +219,7 @@ export function migratePlanOf(action: any, input: any): any {
         inputPath: mgTextOf(a.filePath),
         // 长任务通道只认 op='bundle' 加 mode：verify 只校验，unbundle 把包里的引用装回。
         taskArgs: { mode: entry.mode, filePath: mgTextOf(a.filePath) },
-        targetText: '离线包 ' + mgTextOf(a.filePath)
+        targetText: 'offline bundle ' + mgTextOf(a.filePath)
       })
     }
   }
@@ -232,7 +232,7 @@ export function migratePlanOf(action: any, input: any): any {
         outputPath: mgTextOf(a.outputPath),
         pathAbsent: [mgTextOf(a.outputPath)],
         taskArgs: { outputPath: mgTextOf(a.outputPath) },
-        targetText: '导出文件 ' + mgTextOf(a.outputPath)
+        targetText: 'export file ' + mgTextOf(a.outputPath)
       })
     }
   }
@@ -251,11 +251,11 @@ export function migratePlanOf(action: any, input: any): any {
         inputPath: mgTextOf(a.filePath),
         branch: branch,
         pathAbsent: [mgTextOf(a.targetPath)],
-        targetText: '新仓库 ' + mgTextOf(a.targetPath) + '（导入 ' + mgTextOf(a.filePath) + '）'
+        targetText: 'new repository ' + mgTextOf(a.targetPath) + ' (import ' + mgTextOf(a.filePath) + ')'
       })
     }
   }
-  if (entry.action === 'svn-probe') return { ok: true, plan: mgBasePlan(entry, { targetText: 'svn 桥探测' }) }
+  if (entry.action === 'svn-probe') return { ok: true, plan: mgBasePlan(entry, { targetText: 'svn bridge probe' }) }
   // svn-fetch
   const urlProblem = migrateUrlProblem(a.url)
   if (urlProblem !== '') return mgBad('bad-url', urlProblem)
@@ -263,7 +263,7 @@ export function migratePlanOf(action: any, input: any): any {
     ok: true,
     plan: mgBasePlan(entry, {
       taskArgs: { url: mgTextOf(a.url) },
-      targetText: 'svn 仓库 ' + mgTextOf(a.url) + '（抓取一次）'
+      targetText: 'svn repository ' + mgTextOf(a.url) + ' (one fetch)'
     })
   }
 }

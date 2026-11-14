@@ -66,12 +66,12 @@ export function recoveryPointOf(input: any): any {
   const a: any = input || {}
   const impact: RecoveryImpact = a.impact
   const problem: string | null = recoveryImpactProblem(impact)
-  if (problem === 'bad-count') return { ok: false, reason: 'recovery-unreadable', message: '硬重置会丢多少东西还没数清（计数读不出来），不给半份说明，也不签票。' }
-  if (problem === 'bad-truncated') return { ok: false, reason: 'recovery-unreadable', message: '硬重置会丢多少东西还没数清（读数的完整性标志缺席），不给半份说明，也不签票。' }
-  if (impact.truncated === true) return { ok: false, reason: 'recovery-unreadable', message: '硬重置的影响读数被截断了，数不全就不签票；请换一个小一点的目标提交再试。' }
+  if (problem === 'bad-count') return { ok: false, reason: 'recovery-unreadable', message: 'The loss from this hard reset is not counted yet (the count could not be read), so no partial explanation or ticket is issued.' }
+  if (problem === 'bad-truncated') return { ok: false, reason: 'recovery-unreadable', message: 'The loss from this hard reset is not counted yet (the completeness flag is missing), so no partial explanation or ticket is issued.' }
+  if (impact.truncated === true) return { ok: false, reason: 'recovery-unreadable', message: 'The hard reset impact reading was truncated; without a complete count no ticket is issued. Choose a closer target commit and retry.' }
   const headOid: string = String(a.headOid || '')
   const targetOid: string = String(a.targetOid || '')
-  if (headOid === '' || targetOid === '') return { ok: false, reason: 'recovery-unreadable', message: '恢复点缺当前头或目标提交，不给半份说明，也不签票。' }
+  if (headOid === '' || targetOid === '') return { ok: false, reason: 'recovery-unreadable', message: 'The recovery point lacks the current HEAD or target commit, so no partial explanation or ticket is issued.' }
   const before: string = String(a.reflogBefore || 'HEAD@{0}')
   const after: string = String(a.reflogAfter || 'HEAD@{1}')
   const point: RecoveryPoint = {
@@ -106,7 +106,7 @@ export function recoveryRestoreStepsOf(point: any): string[] {
   if (head === '') return []
   return [
     'git reset --hard ' + head,
-    '如果上面的提交号已经失效，再用 reflog 找回：git reflog 里找 ' + String(restore.reflogAfter || 'HEAD@{1}') + ' 那一行，然后 git reset --hard ' + String(restore.reflogAfter || 'HEAD@{1}'),
+    'If the commit id above is no longer valid, recover it with reflog: find ' + String(restore.reflogAfter || 'HEAD@{1}') + ' in git reflog, then git reset --hard ' + String(restore.reflogAfter || 'HEAD@{1}'),
   ]
 }
 
@@ -114,8 +114,8 @@ export function recoveryRestoreStepsOf(point: any): string[] {
 export function recoverySummaryOf(point: any): string {
   const p: any = point || {}
   const d: any = p.discard || {}
-  const text: string = String(Number(d.files) || 0) + ' 个文件、' + (String(Number(d.added) || 0) + ' 行新增、' + String(Number(d.deleted) || 0) + ' 行删除')
-  return Number(d.binary) > 0 ? text + '，另有 ' + String(Number(d.binary)) + ' 个二进制文件' : text
+  const text: string = String(Number(d.files) || 0) + ' files, ' + (String(Number(d.added) || 0) + ' lines added, ' + String(Number(d.deleted) || 0) + ' lines deleted')
+  return Number(d.binary) > 0 ? text + ', plus ' + String(Number(d.binary)) + ' binary files' : text
 }
 
 export const RECOVERY_POINT_SOURCE = 'src/shared/version-control/src/recovery-point.ts'
@@ -146,13 +146,13 @@ export interface BackupPoint {
 export function backupPointOf(input: any): any {
   const a: any = input || {}
   const kind: string = String(a.kind || '')
-  if (kind !== 'mirror' && kind !== 'bundle') return { ok: false, reason: 'backup-unreadable', message: '备份方式读不出来（只认镜像克隆或整仓打包），不签票、不执行重写。' }
+  if (kind !== 'mirror' && kind !== 'bundle') return { ok: false, reason: 'backup-unreadable', message: 'The backup method could not be read (only mirror clone or full bundle is accepted), so no ticket is issued and no rewrite runs.' }
   const pathText: string = typeof a.path === 'string' ? a.path : ''
-  if (pathText === '') return { ok: false, reason: 'backup-unreadable', message: '备份路径读不出来，不签票、不执行重写。' }
+  if (pathText === '') return { ok: false, reason: 'backup-unreadable', message: 'The backup path could not be read, so no ticket is issued and no rewrite runs.' }
   const bytes: number = Number(a.bytes)
-  if (typeof a.bytes !== 'number' || !isFinite(bytes) || bytes < 0 || Math.floor(bytes) !== bytes) return { ok: false, reason: 'backup-unreadable', message: '备份大小读不出来，不签票、不执行重写。' }
+  if (typeof a.bytes !== 'number' || !isFinite(bytes) || bytes < 0 || Math.floor(bytes) !== bytes) return { ok: false, reason: 'backup-unreadable', message: 'The backup size could not be read, so no ticket is issued and no rewrite runs.' }
   const elapsedMs: number = Number(a.elapsedMs)
-  if (typeof a.elapsedMs !== 'number' || !isFinite(elapsedMs) || elapsedMs < 0 || Math.floor(elapsedMs) !== elapsedMs) return { ok: false, reason: 'backup-unreadable', message: '备份耗时读不出来，不签票、不执行重写。' }
+  if (typeof a.elapsedMs !== 'number' || !isFinite(elapsedMs) || elapsedMs < 0 || Math.floor(elapsedMs) !== elapsedMs) return { ok: false, reason: 'backup-unreadable', message: 'The backup duration could not be read, so no ticket is issued and no rewrite runs.' }
   const atMs: number = typeof a.atMs === 'number' && isFinite(a.atMs) ? a.atMs : 0
   const point: BackupPoint = { kind: kind as BackupKind, required: true, path: pathText, bytes: bytes, elapsedMs: elapsedMs, atMs: atMs }
   return { ok: true, point: point }
@@ -180,8 +180,8 @@ export function humanBytesOf(value: any): string {
 /** 备份点的一句话摘要：确认卡、执行回包、任务残留说明共用这一句。 */
 export function backupSummaryOf(point: any): string {
   const p: any = point || {}
-  const way: string = p.kind === 'bundle' ? '整仓打包' : '镜像克隆'
-  return way + '备份在 ' + String(p.path || '') + '，大小 ' + humanBytesOf(p.bytes) + '，耗时 ' + String(Number(p.elapsedMs) || 0) + ' 毫秒'
+  const way: string = p.kind === 'bundle' ? 'full bundle' : 'mirror clone'
+  return way + 'Backup at ' + String(p.path || '') + ', size ' + humanBytesOf(p.bytes) + ', took ' + String(Number(p.elapsedMs) || 0) + ' ms'
 }
 
 /**
@@ -193,8 +193,8 @@ export function backupRestoreStepsOf(point: any): string[] {
   const target: string = String(p.path || '')
   if (target === '') return []
   return [
-    'git clone ' + target + ' <新的仓库目录>',
-    '核对恢复出来的提交号与备份说明里的一致，再决定是否用它替换当前仓库',
-    '面板只给步骤、不执行恢复：规格要求整仓重写不提供自动恢复',
+    'git clone ' + target + ' <new-repository-directory>',
+    'Check that the restored commit ids match the backup notes before deciding whether to replace the current repository',
+    'The panel only gives steps and does not restore: the spec requires no automatic restore for full-repository rewrites',
   ]
 }

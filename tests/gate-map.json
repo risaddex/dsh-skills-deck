@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-14T11:41:22.135Z",
+  "generatedAt": "2026-11-14T12:22:53.915Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 601,
   "gateCount": 601,
@@ -10546,16 +10546,28 @@
       "step": "node tests/verify-english-surface.ts",
       "file": "tests/verify-english-surface.ts",
       "guards": [
-        "src/refresh"
+        "src/refresh",
+        "src/shared",
+        "src/shared/naming-attribution.ts",
+        "src/shared/naming-titles.ts",
+        "src/shared/skill-probe-channels.ts",
+        "src/shared/version-control/src/capability-ledger.ts",
+        "src/shared/version-control/src/migrate-actions.ts",
+        "src/shared/version-control/src/stash-rules.ts",
+        "src/shared/version-control/src/sync-actions.ts",
+        "src/shared/version-control/src/undo-ops.ts",
+        "src/shared/version-control/src/worktree-ops.ts"
       ],
       "dirs": [
-        "src/refresh"
+        "src/refresh",
+        "src/shared",
+        "src/shared/version-control/src"
       ],
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：源码里的路径字面量 1 条"
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；源码里的路径字面量 10 条"
     },
     {
       "step": "node tests/verify-error-normalize-log.ts",
@@ -15654,6 +15666,7 @@
       "node tests/verify-955-alignment.ts",
       "node tests/verify-968-skill-ondemand.ts",
       "node tests/verify-bundled-skills.ts",
+      "node tests/verify-english-surface.ts",
       "node tests/verify-host-log-slot-single-source.ts",
       "node tests/verify-naming-e2e.ts",
       "node tests/verify-naming-guardian.ts",
@@ -15809,6 +15822,7 @@
       "node tests/verify-841-write-phones.ts",
       "node tests/verify-842-version-control-write-view.ts",
       "node tests/verify-976-pull-dirty-warn.ts",
+      "node tests/verify-english-surface.ts",
       "node tests/verify-file-granularity.ts",
       "node tests/verify-time-config.ts",
       "node tests/verify-version-control-rules.ts"

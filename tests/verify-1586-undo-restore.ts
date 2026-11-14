@@ -334,7 +334,7 @@ async function main(): Promise<void> {
     check(good.ok === true && good.point.discard.files === 2 && good.point.commits === 4, 'F1 恢复点原样收下四项计数与提交数')
     const steps = rec.recoveryRestoreStepsOf(good.point)
     check(steps.length === 2 && steps[0] === 'git reset --hard ' + 'a'.repeat(40) && steps[1].indexOf('HEAD@{1}') > 0, 'F2 找回旧提交的两步写法（旧提交已失效时再用 reflog）')
-    check(rec.recoverySummaryOf(good.point).indexOf('2 个文件') === 0 && rec.recoverySummaryOf(good.point).indexOf('二进制') > 0, 'F3 一句话摘要把丢失量写全（含二进制）')
+    check(rec.recoverySummaryOf(good.point).indexOf('2 files') === 0 && rec.recoverySummaryOf(good.point).indexOf('binary') > 0, 'F3 一句话摘要把丢失量写全（含二进制）')
     check(rec.recoveryImpactProblem({ files: -1, added: 0, deleted: 0, binary: 0, truncated: false }) === 'bad-count', 'F4 计数为负：判坏')
     check(rec.recoveryImpactProblem({ files: 0, added: 0, deleted: 0, binary: 0 }) === 'bad-truncated', 'F5 缺完整性标志：判坏')
     const cut = rec.recoveryPointOf({ headOid: 'a'.repeat(40), targetOid: 'b'.repeat(40), impact: { files: 1, added: 1, deleted: 0, binary: 0, truncated: true } })

@@ -92,7 +92,7 @@ const CHECK_STATE = Object.freeze({
 function isPlainObject(v: unknown): v is Record<string, unknown> { return v != null && typeof v === 'object' && !Array.isArray(v) }
 
 function deriveCheckId(item: EvalCheckItem | null | undefined): string {
-  if (!item) throw new Error('CheckItem 必须为对象')
+  if (!item) throw new Error('CheckItem must be an object')
   if (typeof item.id === 'string' && item.id.trim()) return item.id.trim()
   // 回退用 check 字符串（票面简化形态）
   const c = item.check
@@ -103,7 +103,7 @@ function deriveCheckId(item: EvalCheckItem | null | undefined): string {
     if (c.id) return String(c.kind) + ':' + String(c.id)
     if (c.primitive) return 'primitive:' + String(c.primitive) + ':' + String(c.command || c.path || c.key || c.skill || '')
   }
-  throw new Error('CheckItem 需 id 或 string check 标识（链内唯一键）')
+  throw new Error('CheckItem requires id or a string check identifier (unique key within the chain)')
 }
 
 function normalizeResult(v: { status?: unknown; ok?: unknown } | string | boolean | null | undefined): string {
@@ -336,17 +336,17 @@ export function chainProgress(snap: EvalChainSnapshot | null | undefined): { don
  * @returns {{kind:'done'|'current'|'fail'|'pending'|'empty', labelKey:string, fallback:string}}
  */
 export function capsuleSummary(snap: EvalChainSnapshot | null | undefined): { kind: string; labelKey: string; fallback: string } {
-  if (!snap || snap.totalCount===0) return { kind:'empty', labelKey:'chain.empty', fallback:'无检查' }
-  if (snap.chainState==='allDone') return { kind:'done', labelKey:'chain.done', fallback:'全部就绪' }
-  if (snap.chainState==='pending') return { kind:'pending', labelKey:'chain.pending', fallback:'检测中…'}
+  if (!snap || snap.totalCount===0) return { kind:'empty', labelKey:'chain.empty', fallback:'No checks' }
+  if (snap.chainState==='allDone') return { kind:'done', labelKey:'chain.done', fallback:'All ready' }
+  if (snap.chainState==='pending') return { kind:'pending', labelKey:'chain.pending', fallback:'Detecting…'}
   // currentIndex 为 null 时原来 steps[null] 得 undefined，走下面 !cur 那一支；
   // 这里把同一分支显式写出来，行为不变（null 索引本来也只在类型层被禁，运行时就是 undefined）。
   const cur = snap.currentIndex === null ? undefined : snap.steps[snap.currentIndex]
-  if (!cur) return { kind:'pending', labelKey:'chain.pending', fallback:'检测中…'}
+  if (!cur) return { kind:'pending', labelKey:'chain.pending', fallback:'Detecting…'}
   // 展示文案取 show.fallback 否则 show.title（两处都缺回默认串）：先把「有没有」算进 showText，
   // 再用它选分支——原来是同一表达式在条件与分支里各写一遍，运行时值一样，类型层第二遍收不窄。
   const showText: string | null | undefined = cur.show && (cur.show.fallback || cur.show.title)
-  if (cur.status===CHECK_STATE.CURRENT) return { kind:'current', labelKey:'chain.current', fallback: showText ? showText : '待处理' }
-  if (cur.status===CHECK_STATE.FAIL) return { kind:'fail', labelKey:'chain.fail', fallback: showText ? showText : '未通过' }
+  if (cur.status===CHECK_STATE.CURRENT) return { kind:'current', labelKey:'chain.current', fallback: showText ? showText : 'Pending' }
+  if (cur.status===CHECK_STATE.FAIL) return { kind:'fail', labelKey:'chain.fail', fallback: showText ? showText : 'Failed' }
   return { kind: cur.status, labelKey:'chain.'+cur.status, fallback: showText ? showText : String(cur.status) }
 }

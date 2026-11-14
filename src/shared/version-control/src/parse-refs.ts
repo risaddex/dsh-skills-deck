@@ -53,17 +53,17 @@ export function parseRefs(stdout: string): RefsResult {
   const out: RefRecord[] = []
   for (const ln of lines) {
     const parts = ln.split('\0')
-    if (parts.length !== 8) return fail('字段数不是 8')
+    if (parts.length !== 8) return fail('field count is not 8')
     const [ref, short, oid, upstreamShort, trackRaw, headMark, dateRaw, subject] = parts
-    if (!ref.startsWith('refs/heads/')) return fail('refname 不在 refs/heads 下')
-    if (!short) return fail('short 为空')
-    if (!/^[0-9a-f]{40}$/.test(oid) && !/^[0-9a-f]{64}$/.test(oid)) return fail('objectname 非哈希')
+    if (!ref.startsWith('refs/heads/')) return fail('refname is not under refs/heads')
+    if (!short) return fail('short is empty')
+    if (!/^[0-9a-f]{40}$/.test(oid) && !/^[0-9a-f]{64}$/.test(oid)) return fail('objectname is not a hash')
     const track = parseTrack(trackRaw)
-    if (!track) return fail('upstream:track 取值未知')
+    if (!track) return fail('unknown upstream:track value')
     const head = headMark.trim()
-    if (head !== '' && head !== '*') return fail('HEAD 字段不是星号或空')
+    if (head !== '' && head !== '*') return fail('HEAD field is neither an asterisk nor empty')
     const ms = Date.parse(dateRaw)
-    if (Number.isNaN(ms)) return fail('committerdate 非 ISO 日期')
+    if (Number.isNaN(ms)) return fail('committerdate is not an ISO date')
     out.push({
       ref, short, oid, upstream: upstreamShort === '' ? null : upstreamShort,
       upstreamGone: track.gone, ahead: track.ahead, behind: track.behind,

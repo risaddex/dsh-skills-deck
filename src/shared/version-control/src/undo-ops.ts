@@ -130,13 +130,13 @@ export function undoCommitsOf(input: any): any {
   } else {
     list = String(input === undefined || input === null ? '' : input).split('\n').map(function (one: string) { return one.trim() }).filter(function (one: string) { return one !== '' })
   }
-  if (list.length === 0) return { ok: false, reason: 'commits-empty', index: 0, message: '还没有填要拣选的提交。' }
-  if (list.length > UNDO_COMMIT_MAX) return { ok: false, reason: 'commits-too-many', index: 0, message: '一次最多拣选 ' + String(UNDO_COMMIT_MAX) + ' 条提交。' }
+  if (list.length === 0) return { ok: false, reason: 'commits-empty', index: 0, message: 'No commits to cherry-pick have been entered yet.' }
+  if (list.length > UNDO_COMMIT_MAX) return { ok: false, reason: 'commits-too-many', index: 0, message: 'At most ' + String(UNDO_COMMIT_MAX) + ' commits can be cherry-picked at once.' }
   const seen: Record<string, boolean> = {}
   for (let i = 0; i < list.length; i += 1) {
     const problem: string | null = undoRevProblem(list[i])
-    if (problem) return { ok: false, reason: 'commits-invalid', index: i + 1, message: '第 ' + String(i + 1) + ' 条提交写的不像一个引用：' + list[i] }
-    if (seen[list[i]]) return { ok: false, reason: 'commits-duplicate', index: i + 1, message: '第 ' + String(i + 1) + ' 条与前面重复了：' + list[i] }
+    if (problem) return { ok: false, reason: 'commits-invalid', index: i + 1, message: 'Commit ' + String(i + 1) + ' does not look like a ref: ' + list[i] }
+    if (seen[list[i]]) return { ok: false, reason: 'commits-duplicate', index: i + 1, message: 'Commit ' + String(i + 1) + ' duplicates an earlier entry: ' + list[i] }
     seen[list[i]] = true
   }
   return { ok: true, commits: list }
@@ -156,20 +156,20 @@ export function undoPlanOf(input: any): any {
   const a: any = input || {}
   const op: string = String(a.op === undefined || a.op === null ? '' : a.op)
   const def: UndoOpDef | null = undoOpOf(op)
-  if (!def) return { ok: false, reason: 'unknown-op', field: 'op', message: '没有这条历史改写动作：' + op }
+  if (!def) return { ok: false, reason: 'unknown-op', field: 'op', message: 'unknown history rewrite action: ' + op }
   const plan: any = { op: def.op, target: '', targetOid: '', message: '', commits: [], resetMode: String(def.resetMode) }
   if (def.needsTarget) {
     const rawTarget: string = String(a.target === undefined || a.target === null || a.target === '' ? def.targetDefault : a.target).trim()
     const problem: string | null = rawTarget === '' ? 'required' : undoRevProblem(rawTarget)
-    if (problem === 'required') return { ok: false, reason: 'required-target', field: 'target', message: '这个动作要先填一个提交。' }
-    if (problem) return { ok: false, reason: 'bad-target', field: 'target', message: '这个提交写的不是一个引用：' + rawTarget }
+    if (problem === 'required') return { ok: false, reason: 'required-target', field: 'target', message: 'This action requires a commit first.' }
+    if (problem) return { ok: false, reason: 'bad-target', field: 'target', message: 'This commit is not a ref: ' + rawTarget }
     plan.target = rawTarget
   }
   if (def.needsMessage) {
     const message: string = String(a.message === undefined || a.message === null ? '' : a.message)
     const problem: string | null = undoMessageProblem(message)
-    if (problem === 'too-long') return { ok: false, reason: 'message-too-long', field: 'message', message: '还原说明最多 ' + String(UNDO_MESSAGE_MAX) + ' 个字符。' }
-    if (problem) return { ok: false, reason: 'bad-message', field: 'message', message: '还原说明里有不能用的字符。' }
+    if (problem === 'too-long') return { ok: false, reason: 'message-too-long', field: 'message', message: 'The revert message may contain at most ' + String(UNDO_MESSAGE_MAX) + ' characters.' }
+    if (problem) return { ok: false, reason: 'bad-message', field: 'message', message: 'The revert message contains disallowed characters.' }
     plan.message = message
   }
   if (def.needsCommits) {

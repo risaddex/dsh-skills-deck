@@ -157,7 +157,7 @@ async function main() {
     const newer = parseConfig('version: 9\nbackendId: github\npickedAt: 1\nsource: user\nlayout: multi\n', 'workspace')
     check(newer.ok === true && newer.readonly === true && (newer.warnings || []).join().indexOf('version-newer') >= 0, 'C5 高版本读成功但标只读', JSON.stringify(newer))
     const noWrite = stringifyConfig({ version: 9, backendId: 'github', pickedAt: 1, source: 'user', layout: 'multi' }, 'workspace')
-    check(noWrite.ok === false && noWrite.reason === 'version-newer' && /升级插件/.test(noWrite.message), 'C5 高版本拒绝写并有明确回执', JSON.stringify(noWrite))
+    check(noWrite.ok === false && noWrite.reason === 'version-newer' && /upgrade the plugin/.test(noWrite.message), 'C5 高版本拒绝写并有明确回执', JSON.stringify(noWrite))
     const v2auto = parseConfig('version: 2\nbackendId: github\npickedAt: 1\nsource: auto\nlayout: multi\n', 'workspace')
     check(v2auto.ok === false && v2auto.reason === 'bad-shape', 'C5 版本 2 里不再认 auto（旧的自动结论不许钉成新文件）', JSON.stringify(v2auto))
   }

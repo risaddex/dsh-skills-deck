@@ -56,24 +56,24 @@ export function parseDiffFiles(stdout: string): DiffFilesResult {
     if (countsOnly) {
       const added = parseCount(countsOnly[1])
       const deleted = parseCount(countsOnly[2])
-      if (added === undefined || deleted === undefined) return fail('计数非数字')
-      if (i >= fields.length) return fail('重命名缺原路径字段')
+      if (added === undefined || deleted === undefined) return fail('count is not numeric')
+      if (i >= fields.length) return fail('rename is missing the original path field')
       const orig = fields[i]
       i += 1
-      if (orig === '') return fail('原路径为空')
-      if (i >= fields.length) return fail('重命名缺新路径字段')
+      if (orig === '') return fail('original path is empty')
+      if (i >= fields.length) return fail('rename is missing the new path field')
       const path = fields[i]
       i += 1
-      if (path === '') return fail('新路径为空')
+      if (path === '') return fail('new path is empty')
       out.push({ path, origPath: orig, added, deleted })
       continue
     }
     const inline = INLINE_RE.exec(head)
-    if (!inline) return fail('计数头不是 两数+TAB')
+    if (!inline) return fail('count header is not two numbers plus TAB')
     const added = parseCount(inline[1])
     const deleted = parseCount(inline[2])
-    if (added === undefined || deleted === undefined) return fail('计数非数字')
-    if (inline[3] === '') return fail('路径为空')
+    if (added === undefined || deleted === undefined) return fail('count is not numeric')
+    if (inline[3] === '') return fail('path is empty')
     out.push({ path: inline[3], origPath: null, added, deleted })
   }
   return { ok: true, files: out }

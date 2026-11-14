@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   check(credential.finalForm === '只读' && credential.level === '写' && credential.command.indexOf('git credential') === 0,
     '8.15 认证与凭据记为「写 / 只读」：面板只展示凭据助手链，不输入不保存令牌')
   const gitk = rowOf('13.14')
-  check(gitk.page === 'commits' && typeof gitk.panelPath === 'string' && gitk.panelPath.indexOf('提交历史页') >= 0,
+  check(gitk.page === 'commits' && typeof gitk.panelPath === 'string' && gitk.panelPath.indexOf('commit history page') >= 0,
     '13.14 归提交历史页，面板替代路径写明用提交历史页的图形化视图（不调用 gitk）')
   const patchMail = rowOf('14.1')
   check(patchMail.finalForm === '操作' && patchMail.page === 'migrate' && patchMail.level === '写' && patchMail.command.indexOf('git format-patch') === 0,

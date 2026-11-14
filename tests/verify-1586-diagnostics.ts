@@ -145,7 +145,7 @@ async function decisionGroup() {
   check(verdictOf('replace-create', repCreate, Object.assign({}, factsReplaced, { replaces: [], fromOid: 'aaaa', toOid: 'aaaa' })) === 'block:same-object', 'B8 建立替换：两个对象相同时挡住')
   check(verdictOf('replace-delete', repDelete, factsReplaced) === 'allow' && verdictOf('replace-delete', repDelete, Object.assign({}, factsReplaced, { replaces: [] })) === 'block:no-replace', 'B9 撤销替换：列表里有就放行，没有就挡住')
   const confirmStart = mod.diagnosticsConfirmOf('bisect-start', start, Object.assign({}, factsIdle, { badOid: 'b1', goodOid: 'g1' }))
-  check(confirmStart && typeof confirmStart.verb === 'string' && confirmStart.verb.indexOf('二分') >= 0, 'B10 确认卡文案：开始二分说清动作动词与后果（界面四段从它来）')
+  check(confirmStart && typeof confirmStart.verb === 'string' && confirmStart.verb.indexOf('bisect') >= 0, 'B10 确认卡文案：开始二分说清动作动词与后果（界面四段从它来）')
   check(mod.diagnosticsConfirmRequiredOf('bisect-start') === true && mod.diagnosticsConfirmRequiredOf('bisect-reset') === true && mod.diagnosticsConfirmRequiredOf('replace-create') === true && mod.diagnosticsConfirmRequiredOf('replace-delete') === true, 'B11 四个改仓库的动作都要确认卡')
   check(mod.diagnosticsConfirmRequiredOf('bisect-bad') === false && mod.diagnosticsConfirmRequiredOf('bisect-good') === false && mod.diagnosticsConfirmRequiredOf('bisect-skip') === false, 'B12 标坏 / 标好 / 跳过只是随手标记，不弹确认卡（工具就该一步一下）')
   const digestA = mod.diagnosticsPlanDigestInput(start)
@@ -342,7 +342,7 @@ async function checkGroup() {
   const allowStart = await vc.handleGitDiagnosticsCheck({ cwd: REPO, op: 'bisect-start', bad: BAD_OID, good: GOOD_OID })
   check(allowStart && allowStart.ok === true, 'D1 开始二分：空闲仓库上预检放行（先把能做的这一档备好）', JSON.stringify(allowStart).slice(0, 200))
   check(allowStart && allowStart.contract === mod.DIAGNOSTICS_CHECK_CONTRACT && allowStart.version === mod.DIAGNOSTICS_CHECK_VERSION && allowStart.decision === 'allow' && sameList(allowStart.reasons, ['ok']), 'D2 预检回包带固定契约名与版本、判定与理由标识符（界面据它画预检结论）')
-  check(allowStart && allowStart.confirmRequired === true && allowStart.confirm && allowStart.confirm.kind === 'bisect-start' && allowStart.confirm.verb.indexOf('二分') >= 0, 'D3 改仓库状态的动作要确认卡：回包里带确认口径与一句人话动词（界面四段从它来）')
+  check(allowStart && allowStart.confirmRequired === true && allowStart.confirm && allowStart.confirm.kind === 'bisect-start' && allowStart.confirm.verb.indexOf('bisect') >= 0, 'D3 改仓库状态的动作要确认卡：回包里带确认口径与一句人话动词（界面四段从它来）')
   check(allowStart && allowStart.ticket && typeof allowStart.ticket.id === 'string' && allowStart.ticket.expiresAtMs === T0 + 120000, 'D4 放行就签一张票：票据号在、有效期一百二十秒（时钟取注入的读钟）')
   check(allowStart && allowStart.scene && allowStart.scene.active === false && sameList(allowStart.scene.replaces, []), 'D5 预检回包里带现场摘要（在不在二分、有哪些替换），界面不用再单独读一次')
 

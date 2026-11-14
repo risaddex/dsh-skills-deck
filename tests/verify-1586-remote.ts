@@ -326,7 +326,7 @@ async function hGroup() {
   clock.t = 1700000003000
   const denied = await vcDenied.handleGitRemoteOnline({ cwd: ROOT, name: 'origin', refs: ['main'] })
   check(denied.ok === false && denied.error.kind === 'needs-credential' && denied.error.message.indexOf('secret-token') < 0, 'H26 要凭据时明确失败并抹掉原话里的口令（不拿上一次结果冒充这一次）')
-  check(denied.ok === false && denied.error.hint.indexOf('终端') >= 0, 'H27 要凭据的失败给下一步：去终端登录一次')
+  check(denied.ok === false && denied.error.hint.indexOf('terminal') >= 0, 'H27 要凭据的失败给下一步：去终端登录一次')
   const truncRepo = statefulGit()
   truncRepo.state.online = 'truncated'
   const truncVc = makeVc(truncRepo.route)

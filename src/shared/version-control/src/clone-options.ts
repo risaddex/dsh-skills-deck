@@ -64,7 +64,7 @@ export function cloneMaskedUrl(url: any): string {
     }
     out = out.replace(/([?&](?:token|access_token|password|passwd|auth)=)[^&#]*/gi, '$1***')
   } catch (e) {
-    return '（地址形状无法安全展示，已隐藏）'
+    return '(address hidden because its shape cannot be displayed safely)'
   }
   return out
 }
@@ -74,8 +74,8 @@ export function cloneMaskedUrl(url: any): string {
 export function cloneDepthProblem(depth: any): string | null {
   if (depth === undefined || depth === null || String(depth).trim() === '') return null
   const n = Number(depth)
-  if (!isFinite(n) || Math.floor(n) !== n) return '深度必须是整数（留空表示完整历史）'
-  if (n < 1 || n > CLONE_DEPTH_MAX) return '深度必须在 1 到 ' + CLONE_DEPTH_MAX + ' 之间（留空表示完整历史）'
+  if (!isFinite(n) || Math.floor(n) !== n) return 'depth must be an integer (leave empty for full history)'
+  if (n < 1 || n > CLONE_DEPTH_MAX) return 'depth must be between 1 and ' + CLONE_DEPTH_MAX + ' (leave empty for full history)'
   return null
 }
 
@@ -84,13 +84,13 @@ export function cloneDepthProblem(depth: any): string | null {
 export function cloneBranchProblem(branch: any): string | null {
   if (branch === undefined || branch === null || String(branch).trim() === '') return null
   const s = String(branch).trim()
-  if (s.length > 255) return '分支名太长（最多 255 个字符）'
-  if (s.charAt(0) === '-' || s.charAt(0) === '+') return '分支名不能以短横线或加号开头'
-  if (/[\u0000-\u0020\u007f~^:?*\[\\]/.test(s)) return '分支名里不能有空白或 ~ ^ : ? * [ \\ 这些字符'
-  if (s.indexOf('..') >= 0) return '分支名里不能有连续两个点'
-  if (s.charAt(s.length - 1) === '/' || s.charAt(s.length - 1) === '.') return '分支名不能以 / 或 . 结尾'
-  if (s.indexOf('//') >= 0) return '分支名里不能有连续两个斜杠'
-  if (/\.lock$/.test(s)) return '分支名不能以 .lock 结尾'
+  if (s.length > 255) return 'branch name is too long (maximum 255 characters)'
+  if (s.charAt(0) === '-' || s.charAt(0) === '+') return 'branch name cannot start with a hyphen or plus sign'
+  if (/[\u0000-\u0020\u007f~^:?*\[\\]/.test(s)) return 'branch name cannot contain whitespace or ~ ^ : ? * [ \\'
+  if (s.indexOf('..') >= 0) return 'branch name cannot contain two consecutive dots'
+  if (s.charAt(s.length - 1) === '/' || s.charAt(s.length - 1) === '.') return 'branch name cannot end with / or .'
+  if (s.indexOf('//') >= 0) return 'branch name cannot contain two consecutive slashes'
+  if (/\.lock$/.test(s)) return 'branch name cannot end with .lock'
   return null
 }
 
@@ -98,12 +98,12 @@ export function cloneBranchProblem(branch: any): string | null {
  *  绝对路径与相对路径都接受——相对路径由 git 按当前目录解释，这里只判形状不判存在。 */
 export function clonePathProblem(dir: any): string | null {
   const s = dir === undefined || dir === null ? '' : String(dir).trim()
-  if (s === '') return '目标目录不能为空'
-  if (s.length > 4096) return '目标目录太长（最多 4096 个字符）'
-  if (s.indexOf('\u0000') >= 0) return '目标目录里不能有 NUL 字符'
-  if (s.charAt(0) === '-') return '目标目录不能以短横线开头'
+  if (s === '') return 'target directory cannot be empty'
+  if (s.length > 4096) return 'target directory is too long (maximum 4096 characters)'
+  if (s.indexOf('\u0000') >= 0) return 'target directory cannot contain NUL characters'
+  if (s.charAt(0) === '-') return 'target directory cannot start with a hyphen'
   const parts = s.split(/[\\/]+/)
-  for (let i = 0; i < parts.length; i += 1) if (parts[i] === '..') return '目标目录里不能有 .. 段'
+  for (let i = 0; i < parts.length; i += 1) if (parts[i] === '..') return 'target directory cannot contain .. segments'
   return null
 }
 
@@ -150,10 +150,10 @@ export function cloneOptionsOf(input: any): { ok: true; options: any } | { ok: f
  *  不在这里判「连不上」——那是执行层的事，预检只判能提前判死的那几条。 */
 export function cloneUrlProblem(url: any): string | null {
   const s = url === undefined || url === null ? '' : String(url).trim()
-  if (s === '') return '要克隆的地址不能为空'
-  if (s.length > 4096) return '地址太长（最多 4096 个字符）'
-  if (s.indexOf('\u0000') >= 0) return '地址里不能有 NUL 字符'
-  if (s.charAt(0) === '-') return '地址不能以短横线开头'
+  if (s === '') return 'the address to clone cannot be empty'
+  if (s.length > 4096) return 'address is too long (maximum 4096 characters)'
+  if (s.indexOf('\u0000') >= 0) return 'address cannot contain NUL characters'
+  if (s.charAt(0) === '-') return 'address cannot start with a hyphen'
   return null
 }
 
@@ -161,7 +161,7 @@ export function cloneUrlProblem(url: any): string | null {
  *  放行时返回 null；拦的时候给出「离线模式只接受本机路径或 .bundle 离线包」的人话。 */
 export function cloneOfflineProblem(url: any): string | null {
   if (cloneSourceKindOf(url) !== 'remote') return null
-  return '离线模式只接受本机路径或 .bundle 离线包；要克隆远端地址请先联网'
+  return 'Offline mode accepts only local paths or .bundle archives; connect first to clone a remote address'
 }
 
 /** 本机路径离线克隆会走硬链接：给出提示句（警告用，不拦截）。
@@ -171,7 +171,7 @@ export function cloneHardlinkNote(url: any, options: any): string | null {
   const o: any = options || {}
   if (o.offline !== true) return null
   if (cloneSourceKindOf(url) !== 'local-path') return null
-  return '离线克隆本机仓库默认走硬链接：这份克隆与源仓库共享对象文件，源仓库被删或大改后这里可能读不出来；要独立副本，取消离线后再克隆'
+  return 'an offline clone of a local repository uses hard links by default: it shares object files with the source, so deleting or heavily changing the source may make it unreadable; disable offline mode and clone again for an independent copy'
 }
 
 export const CLONE_OPTIONS_SOURCE = 'src/shared/version-control/src/clone-options.ts'

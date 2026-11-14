@@ -108,12 +108,12 @@ function namingContentLangs(): string[] {
 
 /**
  * 内容表这次该用哪门语言的文字：沿语言链（当前活动语言开始、到默认语言止）找第一个
- * 在内容表里有列的语言；链上都没有就用 'zh'。
+ * 在内容表里有列的语言；链上都没有就用 'en'（English-first ADR）。
  *
  * 为什么由这里回答而不是继续问「当前语言是不是 en」：清单加第三门语言时，二选一判断会
  * 把第三门语言错落回中文；而「内容表有没有这门外语」才是取词时真正该问的问题。
  * 取值链：宿主闭包里用 langChainOf；Node 直跑退到 promptLang；两者都没有（纯单元测试）
- * 落 zh —— 与这次改造前的 Node 行为逐字一致。
+ * 落 en —— 没有语言信息时按 English-first ADR 用英文，不再保留旧的中文缺省。
  */
 export function namingContentLang(): string {
   let chain: string[] = []
@@ -123,7 +123,7 @@ export function namingContentLang(): string {
   } catch (e) { chain = [] }
   const langs = namingContentLangs()
   for (let i = 0; i < chain.length; i++) { if (langs.indexOf(chain[i]) >= 0) return chain[i] }
-  return langs.indexOf('zh') >= 0 ? 'zh' : (langs[0] || 'zh')
+  return langs.indexOf('en') >= 0 ? 'en' : (langs[0] || 'en')
 }
 
 /**
@@ -139,17 +139,17 @@ function namingContentLangOf(lang?: unknown): string {
   return namingContentLang()
 }
 
-/** 从一行「语言代码 → 文字」里取该语言的文字；这行没写这门语言时退到 zh（内容表的缺省列）。 */
+/** 从一行「语言代码 → 文字」里取该语言的文字；这行没写这门语言时退到 en（内容表的缺省列）。 */
 function wordFor(langId: string, row: NamingWordRow): string {
   const text = row[langId]
-  return (typeof text === 'string' && text) ? text : (row.zh || '')
+  return (typeof text === 'string' && text) ? text : (row.en || '')
 }
 
 /** 占位标题的三个类型词，按语言列取（内容表本身的 PLACEHOLDER_TITLES，不另抄一份）。 */
 type PlaceholderRow = { requirement: string; bug: string; spec: string }
 function placeholderRowFor(langId: string): PlaceholderRow {
   const tables = PLACEHOLDER_TITLES as unknown as { [lang: string]: PlaceholderRow }
-  return tables[langId] || tables.zh
+  return tables[langId] || tables.en
 }
 
 /** 生成占位标题（纯语言参数；lang 缺省时按界面语言链在内容表的列里选，显式传了就以传入为准）。type 支持：bug/requirement + 动作键。 */
@@ -173,7 +173,7 @@ export function placeholderTitleFor({ type, lang }: { type: unknown; lang: unkno
 
 /**
  * 兼容签名 (type, lang?)：Tabs/StatusBar 沿用旧调用形态；lang 缺省按界面语言链在内容表的列里选
- * （Node 独立加载、没有闭包助手时退回 zh，与改造前一致）。
+ * （Node 独立加载、没有闭包助手时退回 en，按 English-first ADR）。
  */
 // #1294：语言选择统一交给 placeholderTitleFor 完成（显式传入优先、缺省按语言链），本函数只转一道。
 export function newSessionTitleNew(type: unknown, lang?: unknown): string {
@@ -256,7 +256,7 @@ export const DRAFT_WORDS = { zh: '草稿', en: 'Draft' }
 export const DRAFT_TITLE_RE = /^\[(草稿|Draft)\](?: .+)?$/
 
 // #1294：语言参数先归一成内容表的列（'en-US' 这类带区域后缀的仍算英文），再取该列的档位词；
-//   没传语言就按界面语言链选（Node 直跑退回 zh，与改造前一致）。
+//   没传语言就按界面语言链选（Node 直跑退回 en，按 English-first ADR）。
 export function draftWordFor(lang: unknown): string {
   return wordFor(namingContentLangOf(lang), DRAFT_WORDS)
 }
@@ -268,7 +268,7 @@ export function draftWordFor(lang: unknown): string {
  */
 // 线索只是类型词时不再叠字：占位派生的新建需求这类词本身就是标签，再拼一遍会叠成两个标签。
 export function composeDraftTitle({ hint, lang, baselineTitle }: { hint?: unknown; lang?: unknown; baselineTitle?: unknown }): string {
-  // #1294：语言参数先归一成内容表的列；没传就按界面语言链选（Node 直跑退回 zh）。
+  // #1294：语言参数先归一成内容表的列；没传就按界面语言链选（Node 直跑退回 en）。
   const langId = namingContentLangOf(lang)
   const prefix = '[' + wordFor(langId, DRAFT_WORDS) + ']'
   let typeTag = ''

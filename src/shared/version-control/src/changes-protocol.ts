@@ -50,19 +50,19 @@ export interface ChangesOpMeta {
  * 撤回暂存与只停止跟踪不算危险（一个 add 就回来，一个 add 也回来）。
  */
 export const CHANGES_WRITE_OPS: ChangesOpMeta[] = [
-  { op: 'stage-hunks', capId: '1.2', write: true, dangerous: false, confirm: false, reversible: true, command: 'git apply --cached <第 N 块补丁>' },
+  { op: 'stage-hunks', capId: '1.2', write: true, dangerous: false, confirm: false, reversible: true, command: 'git apply --cached <hunk N patch>' },
   { op: 'stage-file', capId: '1.3', write: true, dangerous: false, confirm: false, reversible: true, command: 'git add -- <path>' },
   { op: 'stage-all', capId: '1.4', write: true, dangerous: false, confirm: false, reversible: true, command: 'git add -A' },
   { op: 'unstage', capId: '1.5', write: true, dangerous: false, confirm: false, reversible: true, command: 'git reset HEAD -- <path>' },
-  { op: 'discard-file', capId: '1.6', write: true, dangerous: true, confirm: true, reversible: true, command: 'git restore -- <path>（低于 2.23 用 git checkout -- <path>）' },
-  { op: 'discard-all', capId: '1.7', write: true, dangerous: true, confirm: true, reversible: true, command: 'git restore -- .（低于 2.23 用 git checkout -- .）' },
+  { op: 'discard-file', capId: '1.6', write: true, dangerous: true, confirm: true, reversible: true, command: 'git restore -- <path> (below 2.23, use git checkout -- <path>)' },
+  { op: 'discard-all', capId: '1.7', write: true, dangerous: true, confirm: true, reversible: true, command: 'git restore -- . (below 2.23, use git checkout -- .)' },
   { op: 'clean-untracked', capId: '1.8', write: true, dangerous: true, confirm: true, reversible: false, command: 'git clean -fd -- <path>' },
-  { op: 'rm-tracked', capId: '1.9', write: true, dangerous: true, confirm: true, reversible: true, command: 'git rm -f -- <path>（连这个文件的未暂存改动一起删掉，确认卡里写明会丢多少行）' },
+  { op: 'rm-tracked', capId: '1.9', write: true, dangerous: true, confirm: true, reversible: true, command: 'git rm -f -- <path> (also deletes this file\'s unstaged changes; the confirmation card states how many lines will be lost)' },
   // 停止跟踪不是危险动作（文件还在磁盘上，一个 add 就回来），但原型要求它先贴行确认一次：
   // 「危险」与「要确认」是两件事，这里 finally 用 Confirm 这一格说出来。
   { op: 'rm-cached', capId: '1.10', write: true, dangerous: false, confirm: true, reversible: true, command: 'git rm --cached -- <path>' },
   { op: 'mv', capId: '1.11', write: true, dangerous: false, confirm: false, reversible: true, command: 'git mv -- <from> <to>' },
-  { op: 'ignore', capId: '1.12', write: true, dangerous: false, confirm: false, reversible: true, command: '追加仓库根 .gitignore（不是 git 命令）' },
+  { op: 'ignore', capId: '1.12', write: true, dangerous: false, confirm: false, reversible: true, command: 'append to the repository root .gitignore (not a git command)' },
 ]
 
 /** 2 条只读动作：看工作区状态走既有首屏读数，查为什么被忽略走 `git check-ignore -v`。 */
@@ -101,7 +101,7 @@ export function emptyChangesPlan(): ChangesPlan {
 export function makeChangesPlan(partial?: any): ChangesPlan {
   const p: any = partial || {}
   const meta: ChangesOpMeta | null = changesOpMetaOf(p.op)
-  if (!meta || meta.write !== true) throw new Error('[version-control] 改动页计划里的动作名不在写动作名单里：' + String(p.op))
+  if (!meta || meta.write !== true) throw new Error('[version-control] action name in the changes-page plan is not on the write-action list: ' + String(p.op))
   const plan: ChangesPlan = emptyChangesPlan()
   plan.op = meta.op as ChangesWriteOp
   plan.paths = Array.isArray(p.paths) ? p.paths.map(function (x: any) { return String(x) }) : []

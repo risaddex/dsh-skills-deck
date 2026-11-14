@@ -64,7 +64,7 @@ export const MAINTENANCE_OPS: MaintenanceOpMeta[] = [
   meta('commit-graph', '11.9', 'read', 'git commit-graph', { primary: true }),
   meta('multi-pack-index', '11.10', 'read', 'git multi-pack-index', { primary: true }),
   meta('pack-refs', '11.11', 'read', 'git pack-refs', { primary: true }),
-  meta('overview', '', 'read', 'git count-objects -vH 等组合读数', {}),
+  meta('overview', '', 'read', 'git count-objects -vH and related readings', {}),
 ]
 
 export const MAINTENANCE_WRITE_OPS: MaintenanceOpMeta[] = MAINTENANCE_OPS.filter(function (m) { return m.kind === 'write' })
@@ -184,11 +184,11 @@ export function maintenanceSceneProblem(scene: any): string | null {
 }
 
 export const MAINTENANCE_OPS_SOURCE = [
-  '主入口：' + MAINTENANCE_PRIMARY_IDS.join(' '),
-  '写动作：' + MAINTENANCE_WRITE_OPS.map(function (m) { return m.id }).join(' '),
-  '读动作：' + MAINTENANCE_READ_OPS.map(function (m) { return m.id }).join(' '),
-  '任务动作：' + MAINTENANCE_TASK_ACTIONS.map(function (m) { return m.id }).join(' '),
-  '任务参数：fsck --unreachable / gc / prune / maintenance run',
-  '危险区：prune 必须先整仓备份，备份失败就中止',
-  '版本门：' + Object.keys(MAINTENANCE_VERSION_HIDE).map(function (capId) { return capId + '>=' + MAINTENANCE_VERSION_HIDE[capId] }).join(' '),
+  'Primary entry: ' + MAINTENANCE_PRIMARY_IDS.join(' '),
+  'Write actions: ' + MAINTENANCE_WRITE_OPS.map(function (m) { return m.id }).join(' '),
+  'Read actions: ' + MAINTENANCE_READ_OPS.map(function (m) { return m.id }).join(' '),
+  'Task actions: ' + MAINTENANCE_TASK_ACTIONS.map(function (m) { return m.id }).join(' '),
+  'Task arguments: fsck --unreachable / gc / prune / maintenance run',
+  'Danger zone: prune requires a full repository backup first; abort if the backup fails',
+  'Version gate: ' + Object.keys(MAINTENANCE_VERSION_HIDE).map(function (capId) { return capId + '>=' + MAINTENANCE_VERSION_HIDE[capId] }).join(' '),
 ].join('\n')
