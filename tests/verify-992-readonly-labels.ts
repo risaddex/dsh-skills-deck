@@ -138,7 +138,7 @@ async function main(): Promise<void> {
     const f3 = makeCtx({ permsFails: true, addLabelFails404: true })
     const r3 = await setLabels(repo, '7', [{ name: 'bug' }], {}, f3.ctx)
     const m3 = r3.ok === false ? String(r3.error.message) : ''
-    check(r3.ok === false && r3.error.kind === 'not-found' && m3.includes('HTTP 404') && !m3.includes('读权限'), 'C6 权限问不出时原样返回 404（不改档、不瞎说没权限；实得：' + m3.slice(0, 60) + '…）')
+    check(r3.ok === false && r3.error.kind === 'not-found' && m3.includes('HTTP 404') && !/读权限|写权限|\b(?:read|write) access\b/i.test(m3), 'C6 权限问不出时原样返回 404（不改档、不瞎说没权限；实得：' + m3.slice(0, 60) + '…）')
   }
 
   // ── D) 建票 labelError + 正文区 ──

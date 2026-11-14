@@ -55,14 +55,14 @@ export function parseTagList(stdout: string): TagListOk | BranchParseFailure {
     const line: string = lines[i]
     if (!line) continue
     const parts: string[] = line.split('\u0000')
-    if (parts.length !== 5) return fail('tag-malformed', '第 ' + String(i + 1) + ' 行不是五段（名字、对象号、类型、时间、主题）')
+    if (parts.length !== 5) return fail('tag-malformed', 'line ' + String(i + 1) + ' does not have five fields (name, object id, type, time, subject)')
     const name: string = parts[0]
     const oid: string = parts[1]
     const objectType: string = parts[2]
     const atText: string = parts[3]
-    if (!name || /\s/.test(name)) return fail('tag-malformed', '第 ' + String(i + 1) + ' 行的标签名是空的或带空白')
-    if (!OID_RE.test(oid)) return fail('tag-malformed', '第 ' + String(i + 1) + ' 行的对象号不是 40 或 64 位十六进制')
-    if (atText && !/^\d+$/.test(atText)) return fail('tag-malformed', '第 ' + String(i + 1) + ' 行的打标签时间不是秒数')
+    if (!name || /\s/.test(name)) return fail('tag-malformed', 'line ' + String(i + 1) + ' has an empty tag name or one containing whitespace')
+    if (!OID_RE.test(oid)) return fail('tag-malformed', 'line ' + String(i + 1) + ' has an object id that is not 40 or 64 hex digits')
+    if (atText && !/^\d+$/.test(atText)) return fail('tag-malformed', 'line ' + String(i + 1) + ' has a tag time that is not in seconds')
     tags.push({ name: name, oid: oid, objectType: objectType, annotated: objectType === 'tag', atMs: atText ? Number(atText) * 1000 : null, subject: parts[4] })
   }
   return { ok: true, tags: tags }
@@ -78,7 +78,7 @@ export function parseBranchNameList(stdout: string): BranchNameListOk | BranchPa
     if (!line.trim()) continue
     line = line.replace(/^\*\s*/, '').trim()
     if (!line) continue
-    if (/\s/.test(line)) return fail('branch-list-malformed', '第 ' + String(i + 1) + ' 行不是单个分支名：' + line.slice(0, 120))
+    if (/\s/.test(line)) return fail('branch-list-malformed', 'line ' + String(i + 1) + ' is not a single branch name: ' + line.slice(0, 120))
     names.push(line)
   }
   return { ok: true, names: names }
@@ -94,11 +94,11 @@ export function parseBranchDescriptions(stdout: string): BranchDescriptionsOk | 
     const entry: string = entries[i]
     if (!entry) continue
     const at: number = entry.indexOf('\n')
-    if (at < 0) return fail('description-malformed', '第 ' + String(i + 1) + ' 条不是「键\n值」两段')
+    if (at < 0) return fail('description-malformed', 'line ' + String(i + 1) + ' does not have the two parts key and value separated by a newline')
     const key: string = entry.slice(0, at)
     const value: string = entry.slice(at + 1)
     const m: RegExpExecArray | null = /^branch\.(.+)\.description$/.exec(key)
-    if (!m) return fail('description-malformed', '第 ' + String(i + 1) + ' 条的键不是 branch.<名>.description：' + key.slice(0, 120))
+    if (!m) return fail('description-malformed', 'line ' + String(i + 1) + ' has a key other than branch.<name>.description: ' + key.slice(0, 120))
     descriptions[m[1]] = value
   }
   return { ok: true, descriptions: descriptions }
@@ -110,7 +110,7 @@ export function parseDescriptionText(stdout: string): DescriptionOk | BranchPars
   const text: string = typeof stdout === 'string' ? stdout : ''
   if (!text) return { ok: true, text: null }
   const stripped: string = text.replace(/\r?\n$/, '')
-  if (stripped.indexOf('\u0000') >= 0) return fail('description-malformed', '说明里出现了 NUL 字符')
+  if (stripped.indexOf('\u0000') >= 0) return fail('description-malformed', 'the description contains a NUL character')
   return { ok: true, text: stripped }
 }
 

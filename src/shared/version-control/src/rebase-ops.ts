@@ -111,10 +111,10 @@ export const REBASE_WRITE_OPS: RebaseOpMeta[] = [
  */
 export const REBASE_READ_OPS: RebaseOpMeta[] = [
   { id: 'rebase-state', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'none', labelKey: 'vc.rebase.op.rebaseState', command: 'git status / git rev-parse' },
-  { id: 'rebase-window', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'base', labelKey: 'vc.rebase.op.rebaseWindow', command: 'git log --reverse <基座>..HEAD' },
-  { id: 'rebase-onto-range', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'onto', labelKey: 'vc.rebase.op.rebaseOntoRange', command: 'git log <旧基座>..<新基座> 与 <旧基座>..HEAD' },
-  { id: 'rebase-autosquash-pairs', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'base', labelKey: 'vc.rebase.op.rebaseAutosquashPairs', command: 'git rebase -i --autosquash（只捕获待办，不执行）' },
-  { id: 'rebase-merges-cost', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'base', labelKey: 'vc.rebase.op.rebaseMergesCost', command: 'git log --merges <基座>..HEAD' },
+  { id: 'rebase-window', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'base', labelKey: 'vc.rebase.op.rebaseWindow', command: 'git log --reverse <base>..HEAD' },
+  { id: 'rebase-onto-range', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'onto', labelKey: 'vc.rebase.op.rebaseOntoRange', command: 'git log <old-base>..<new-base> and <old-base>..HEAD' },
+  { id: 'rebase-autosquash-pairs', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'base', labelKey: 'vc.rebase.op.rebaseAutosquashPairs', command: 'git rebase -i --autosquash (captures the to-do list only, does not execute)' },
+  { id: 'rebase-merges-cost', capId: '', kind: 'read', dangerous: false, confirm: false, reversible: true, needs: 'base', labelKey: 'vc.rebase.op.rebaseMergesCost', command: 'git log --merges <base>..HEAD' },
 ];
 
 /** 九条动作合在一起，给「认一条动作」与门禁对账用。 */

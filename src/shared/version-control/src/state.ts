@@ -227,16 +227,16 @@ export function classifyStepZero(exitCode: number, stdout: string, stderr: strin
     return { ok: false, error: 'step-zero-failed', detail: 'exit ' + exitCode }
   }
   const lines = String(stdout).split('\n').filter((l) => l !== '')
-  if (lines.length < 3) return { ok: false, error: 'step-zero-failed', detail: '行数不足 3' }
+  if (lines.length < 3) return { ok: false, error: 'step-zero-failed', detail: 'fewer than 3 lines' }
   const gitDir = lines[0]
   const inside = lines[1]
   const bare = lines[2]
   if ((inside !== 'true' && inside !== 'false') || (bare !== 'true' && bare !== 'false')) {
-    return { ok: false, error: 'step-zero-failed', detail: '布尔行非法' }
+    return { ok: false, error: 'step-zero-failed', detail: 'invalid boolean line' }
   }
   if (bare === 'true') return { ok: true, kind: 'bare', gitDir }
   if (inside === 'true') return { ok: true, kind: 'worktree', gitDir }
-  return { ok: false, error: 'step-zero-failed', detail: '既不在工作树也不是裸仓库' }
+  return { ok: false, error: 'step-zero-failed', detail: 'neither inside a worktree nor a bare repository' }
 }
 
 export const STATE_SOURCE = 'src/shared/version-control/src/state.ts'

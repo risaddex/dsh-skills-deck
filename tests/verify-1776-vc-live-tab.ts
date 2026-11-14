@@ -375,8 +375,8 @@ async function scenarioMain() {
   check(!m.q('[data-vc-palette]') && !m.q('[data-cap-hit]') && !m.q('[data-vc-cap-list]'), 'T10f 面板已关，页面体也没有能力行可高亮（清单已退役）')
   // 跨页落点：2.1 的落点就在改动页，返回入口要另挑一条落在别的页的能力来验。
   await m.click('[data-vc-search-entry]')
-  await m.type('[data-vc-palette-input]', '提交列表')
-  const crossRows = view.vcPaletteMatchOf('提交列表', '').map(function (cap) { return { cap: cap, target: view.vcPaletteTargetOf(cap.id) } })
+  await m.type('[data-vc-palette-input]', 'Commit list')
+  const crossRows = view.vcPaletteMatchOf('Commit list', '').map(function (cap) { return { cap: cap, target: view.vcPaletteTargetOf(cap.id) } })
   const cross = crossRows.filter(function (row) { return row.target.page !== 'changes' })[0]
   check(!!cross && !!m.q('[data-vc-palette-row="' + (cross ? cross.cap.id : '') + '"]'), 'T10g 搜索「提交列表」能找到落在别的页的能力（' + (cross ? cross.cap.id : '无') + '）')
   const crossOk = cross ? await m.click('[data-vc-palette-row="' + cross.cap.id + '"]') : false

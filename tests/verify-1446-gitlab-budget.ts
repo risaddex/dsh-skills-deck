@@ -126,17 +126,17 @@ async function main() {
   check(restLowRead.allowed === true && JSON.stringify(restLowRead.channels) === '["graphql"]', '#1765：REST 见底时双渠道读改走 GraphQL（计划只剩 GraphQL）')
   const restLowWrite = decide({ op: 'create', budget: TWO, reading: twoReading(40, 900), canWrite: true }, limits)
   check(restLowWrite.allowed === false && restLowWrite.kind === 'rate-limit' && restLowWrite.reason === 'exhausted', '两桶：写操作遇到 REST 桶降到写保底就推迟（额度见底）')
-  check(String(restLowWrite.message || '').indexOf('REST 请求') >= 0, '#1418：见底文案点名是哪一族（REST 请求）：' + String(restLowWrite.message || ''))
+  check(String(restLowWrite.message || '').indexOf('REST requests') >= 0, '#1418：见底文案点名是哪一族（REST 请求）：' + String(restLowWrite.message || ''))
   const graphqlLowRead = decide({ op: 'get', budget: TWO, reading: twoReading(900, 40), canWrite: true }, limits)
   check(graphqlLowRead.allowed === true && JSON.stringify(graphqlLowRead.channels) === '["rest"]', '#1765：GraphQL 见底时双渠道读改走 REST（计划只剩 REST）')
   const bothLowRead = decide({ op: 'get', budget: TWO, reading: twoReading(40, 40), canWrite: true }, limits)
-  check(bothLowRead.allowed === false && bothLowRead.reason === 'exhausted' && String(bothLowRead.message || '').indexOf('两种额度都不够') >= 0,
+  check(bothLowRead.allowed === false && bothLowRead.reason === 'exhausted' && String(bothLowRead.message || '').indexOf('quotas are both insufficient') >= 0,
     '#1765：两族都见底时双渠道读拦下并点名两种额度：' + String(bothLowRead.message || ''))
   // 恢复时刻：读数带 resetAt 时文案写「约 HH:MM 恢复」，没带就不写（不编时刻）。
   const withReset = { known: true, kind: 'two-buckets', buckets: { rest: { remaining: 40, limit: 1000, resetAt: 1761390000000 }, graphql: { remaining: 900, limit: 1000 } } }
   const withResetMsg = String(decide({ op: 'create', budget: TWO, reading: withReset, canWrite: true }, limits).message || '')
-  check(/约 \d\d:\d\d 恢复/.test(withResetMsg), '#1418：读数带恢复时刻时文案写出「约 HH:MM 恢复」：' + withResetMsg)
-  check(String(restLowWrite.message || '').indexOf('恢复') < 0, '#1418：读数没带恢复时刻时文案不编时刻：' + String(restLowWrite.message || ''))
+  check(/recovers at about \d\d:\d\d/.test(withResetMsg), '#1418：读数带恢复时刻时文案写出「约 HH:MM 恢复」：' + withResetMsg)
+  check(String(restLowWrite.message || '').indexOf('recovers') < 0, '#1418：读数没带恢复时刻时文案不编时刻：' + String(restLowWrite.message || ''))
   const twoHigh = decide({ op: 'list', budget: TWO, reading: twoReading(60, 60), canWrite: true }, limits)
   check(twoHigh.allowed === true && twoHigh.reason === 'sufficient', '两桶：两桶都在保底之上就放行（额度充足）')
 

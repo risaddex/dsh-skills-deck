@@ -312,7 +312,7 @@ export function submoduleSceneSummary(rows: any): string {
     if (r && r.initialized === true) initialized += 1
     if (r && r.initialized === true && r.detached === true) detached += 1
   }
-  return '共 ' + list.length + ' 个子模块，已初始化 ' + initialized + ' 个，分离头指针 ' + detached + ' 个'
+  return 'Total: ' + list.length + ' submodules, initialized: ' + initialized + ', detached HEAD: ' + detached + ''
 }
 
 /** 判定结果：decision 决定界面画不画禁用原因，reasons 按固定标识符表给词条键。 */
@@ -377,17 +377,17 @@ export function submoduleJudge(op: any, ctx: any): any {
 export function submodulePlanOf(op: any, input: any): any {
   const action = submoduleActionOf(op)
   const i = input && typeof input === 'object' ? input : {}
-  if (!action) return { ok: false, reason: 'unknown-action', message: '没有这个子模块动作' }
+  if (!action) return { ok: false, reason: 'unknown-action', message: 'unknown submodule action' }
   const plan: any = { action: action.id, capId: action.capId, kind: action.kind, path: '', url: '', branch: '' }
   if (action.needs.indexOf('path') >= 0) plan.path = String(i.path === undefined || i.path === null ? '' : i.path).trim()
   if (action.needs.indexOf('url') >= 0) plan.url = String(i.url === undefined || i.url === null ? '' : i.url).trim()
   if (action.needs.indexOf('branch') >= 0) plan.branch = String(i.branch === undefined || i.branch === null ? '' : i.branch).trim()
   const pathProblem = action.needs.indexOf('path') >= 0 ? submodulePathProblem(plan.path) : null
-  if (pathProblem) return { ok: false, reason: pathProblem, message: '路径必须是仓库内的相对路径，不能为空、不能以短横线开头、不能有上跳段' }
+  if (pathProblem) return { ok: false, reason: pathProblem, message: 'path must be repository-relative, nonempty, not start with a hyphen, and have no parent segments' }
   const urlProblem = action.needs.indexOf('url') >= 0 ? submoduleUrlProblem(plan.url) : null
-  if (urlProblem) return { ok: false, reason: urlProblem, message: '子模块地址不能为空，也不能带空白或以短横线开头' }
+  if (urlProblem) return { ok: false, reason: urlProblem, message: 'submodule address cannot be empty, contain whitespace, or start with a hyphen' }
   const branchProblem = action.needs.indexOf('branch') >= 0 ? submoduleBranchProblem(plan.branch) : null
-  if (branchProblem) return { ok: false, reason: branchProblem, message: '跟踪分支不能为空、不能带空白或以短横线开头' }
+  if (branchProblem) return { ok: false, reason: branchProblem, message: 'tracked branch cannot be empty, contain whitespace, or start with a hyphen' }
   return { ok: true, plan: plan }
 }
 
@@ -401,19 +401,19 @@ export function submodulePlanDigestInput(plan: any): string {
 export function submoduleWriteArgsOf(op: any, plan: any): any {
   const action = submoduleActionOf(op)
   const p = plan && typeof plan === 'object' ? plan : {}
-  if (!action || SUBMODULE_WRITE_OPS.indexOf(String(op)) < 0) return { ok: false, reason: 'unknown-action', message: '凭票执行只接受五个子模块写动作' }
+  if (!action || SUBMODULE_WRITE_OPS.indexOf(String(op)) < 0) return { ok: false, reason: 'unknown-action', message: 'ticket-authorized execution accepts only the five submodule write actions' }
   const path = String(p.path || '')
   const pathProblem = submodulePathProblem(path)
-  if (pathProblem) return { ok: false, reason: pathProblem, message: '路径不合格，不能拼进命令' }
+  if (pathProblem) return { ok: false, reason: pathProblem, message: 'invalid path; it cannot be put in the command' }
   if (op === 'set-url') {
     const urlProblem = submoduleUrlProblem(p.url)
-    if (urlProblem) return { ok: false, reason: urlProblem, message: '新地址不合格，不能拼进命令' }
+    if (urlProblem) return { ok: false, reason: urlProblem, message: 'invalid new address; it cannot be put in the command' }
     return { ok: true, args: ['submodule', 'set-url', '--', path, String(p.url)] }
   }
   if (op === 'sync') return { ok: true, args: ['submodule', 'sync', '--recursive', '--', path] }
   if (op === 'set-branch') {
     const branchProblem = submoduleBranchProblem(p.branch)
-    if (branchProblem) return { ok: false, reason: branchProblem, message: '跟踪分支不合格，不能拼进命令' }
+    if (branchProblem) return { ok: false, reason: branchProblem, message: 'invalid tracked branch; it cannot be put in the command' }
     return { ok: true, args: ['submodule', 'set-branch', '--branch', String(p.branch), '--', path] }
   }
   if (op === 'deinit') return { ok: true, args: ['submodule', 'deinit', '--', path] }
@@ -429,23 +429,23 @@ export function submoduleTaskOf(op: any, plan: any): any {
   // 固定批量菜单走这里：菜单号只能命中 SUBMODULE_BATCH_MENU，argv 由任务协议写死，没有任何字段能改命令。
   if (p.batch === true) {
     const menu: any = submoduleBatchMenuOf(op)
-    if (!menu || !menu.taskOp) return { ok: false, reason: 'unknown-action', message: '批量菜单里没有这个任务动作' }
+    if (!menu || !menu.taskOp) return { ok: false, reason: 'unknown-action', message: 'this task action is not in the bulk menu' }
     return { ok: true, op: menu.taskOp, args: {} }
   }
   const action = submoduleActionOf(op)
-  if (!action || action.kind !== 'task' || !action.taskOp) return { ok: false, reason: 'unknown-action', message: '这个动作不走长任务通道' }
+  if (!action || action.kind !== 'task' || !action.taskOp) return { ok: false, reason: 'unknown-action', message: 'this action does not use the long-task channel' }
   const args: any = {}
   if (action.id === 'add') {
     const urlProblem = submoduleUrlProblem(p.url)
-    if (urlProblem) return { ok: false, reason: urlProblem, message: '子模块地址不合格' }
+    if (urlProblem) return { ok: false, reason: urlProblem, message: 'invalid submodule address' }
     const pathProblem = submodulePathProblem(p.path)
-    if (pathProblem) return { ok: false, reason: pathProblem, message: '子模块路径不合格' }
+    if (pathProblem) return { ok: false, reason: pathProblem, message: 'invalid submodule path' }
     args.url = String(p.url)
     args.path = String(p.path)
   } else if (action.id !== 'status' && action.place !== 'batch') {
     if (p.path) {
       const pathProblem = submodulePathProblem(p.path)
-      if (pathProblem) return { ok: false, reason: pathProblem, message: '子模块路径不合格' }
+      if (pathProblem) return { ok: false, reason: pathProblem, message: 'invalid submodule path' }
       args.path = String(p.path)
     }
   }

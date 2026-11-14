@@ -128,7 +128,7 @@ async function main() {
   const replacePlan = ops.rewritePlanOf({ form: 'replace-text', replacements: [{ from: 'a', to: 'b' }] })
   eq(ops.rewriteTaskTokensOf('replace-text', replacePlan, { replacePath: 'C:/tmp/r.txt' }).tokens.join(' '), '--replace-text C:/tmp/r.txt', 'A79 替换用临时说明文件')
   has(ops.rewriteDisplayCommandOf('remove-paths', removePlanB), 'git filter-repo --force', 'A80 界面上显示完整的 filter-repo 命令')
-  has(ops.rewriteDisplayCommandOf('rewrite-authors', authorPlan), '面板生成', 'A81 临时文件位置用可读占位说明而不是编一个路径')
+  has(ops.rewriteDisplayCommandOf('rewrite-authors', authorPlan), 'panel-generated', 'A81 临时文件位置用可读占位说明而不是编一个路径')
 
   const scene = { repoRoot: 'C:/repo', repoName: 'repo', freeBytes: 100000000000, repoSizeBytes: 1000000, nowMs: 1700000000000 }
   eq(ops.rewriteBackupPlanOf(scene).kind, 'mirror', 'A82 磁盘足够时用镜像克隆备份')
@@ -324,7 +324,7 @@ async function main() {
   has(JSON.stringify(rigRun.state.taskStarts[0].args), '"--invert-paths"', 'B48 长任务参数含删路径开关')
   eq(rigRun.state.taskStarts[0].args[1], '--path', 'B49 长任务参数逐项独立')
   eq(rigRun.state.taskStarts[0].args[2], 'a.txt', 'B50 路径作为独立参数传入')
-  has(wRun.backupSummary, '镜像克隆', 'B51 回包给出备份摘要')
+  has(wRun.backupSummary, 'mirror clone', 'B51 回包给出备份摘要')
   check(wRun.backupRestoreSteps.length >= 1, 'B52 回包给出还原步骤但不自动恢复')
   check(rigRun.state.calls.some(function (a) { return a[0] === 'clone' && a.indexOf('--mirror') >= 0 }), 'B53 备份真的执行了镜像克隆')
   const wReplay = await rigRun.write.handleRewriteRun({ cwd: 'C:/repo', ticketId: ckRun.ticket.id, requestId: 'run-1', confirmed: true })
@@ -757,7 +757,7 @@ async function main() {
   const rwCap511 = rwLedger.CAPABILITIES.filter(function (c) { return c.id === '5.11' })[0]
   eq(rwCap511.command, 'git filter-branch', 'D106 账本 5.11 的命令原文是 filter-branch')
   check(String(rwCap511.panelPath).indexOf('filter-repo') >= 0, 'D107 账本写明面板改用 filter-repo 五张表单')
-  check(String(rwCap511.panelPath).indexOf('只读') >= 0, 'D108 账本写明 filter-branch 本体只读')
+  check(String(rwCap511.panelPath).indexOf('read-only') >= 0, 'D108 账本写明 filter-branch 本体只读')
   eq(rwLedger.CAPABILITIES.filter(function (c) { return c.id === '5.12' || c.id === '5.13' }).filter(function (c) { return c.page === 'maintenance' }).length, 0, 'D109 5.12/5.13 不归维护页（本票不吸收别的票）')
   const rwCorrupted = rwLeaf.REWRITE_FORMS.map(function (f) { return Object.assign({}, f, { capId: '5.9' }) })
   check(rwReconcile(rwCorrupted, rwLedger.CAPABILITIES).indexOf('cap:remove-paths') >= 0, 'D110 反证：把一条表单挂到别的能力上，对账当场报错')

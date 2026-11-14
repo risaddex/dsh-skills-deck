@@ -410,7 +410,7 @@ async function main() {
     eq(rig.state.taskStarts.length, 1, 'B96 备份成功后才起任务')
     eq(rig.state.taskStarts[0].op, 'prune', 'B97 起的是清除不可达对象任务')
     check(done.backup && done.backup.bytes === 4096, 'B98 回包带上备份实际大小')
-    has(String(done.backupSummary), '备份在', 'B99 回包带上人话备份摘要')
+    has(String(done.backupSummary), 'Backup at', 'B99 回包带上人话备份摘要')
     eq(done.backupRestoreSteps.length, 3, 'B100 回包带上三步还原指引')
   }
 
@@ -625,7 +625,7 @@ async function main() {
     eq(JSON.stringify(pruneDone.steps), JSON.stringify(['backup', 'task']), 'C49 清除动作先备份再起任务')
     eq(rig.state.taskStarts.length, 2, 'C50 清除也起了一条任务')
     eq(rig.state.taskStarts[1].op, 'prune', 'C51 任务是 prune')
-    has(pruneDone.backupSummary, '备份在', 'C52 回包带人话备份摘要')
+    has(pruneDone.backupSummary, 'Backup at', 'C52 回包带人话备份摘要')
     eq(pruneDone.backupRestoreSteps.length, 3, 'C53 回包带三步还原指引')
     fs.rmSync(pruneDone.backup.path, { recursive: true, force: true })
     fs.rmSync(pruneDone.backup.path + '.bundle', { recursive: true, force: true })
@@ -734,7 +734,7 @@ async function main() {
   eq(JSON.stringify(dataLeaf.vcMaintenanceConfirmOf({ ok: true, confirm: { what: 'w' } })), JSON.stringify({ what: 'w' }), 'D28 确认卡原样交给界面')
   check(dataLeaf.vcMaintenanceBackupOf({ ok: true, backup: { required: true, path: 'D:/b' } }).path === 'D:/b', 'D29 备份计划从成功回包里取')
   check(dataLeaf.vcMaintenanceBackupPointOf({ ok: true, backup: { kind: 'mirror', path: 'D:/b', bytes: 10 } }).bytes === 10, 'D30 备份点从执行回包里取')
-  check(String(dataLeaf.vcMaintenanceBackupSummaryOf({ ok: true, backupSummary: '备份在 D:/b' })).indexOf('备份在') >= 0, 'D31 备份摘要用宿主给的人话')
+  check(String(dataLeaf.vcMaintenanceBackupSummaryOf({ ok: true, backupSummary: 'Backup at D:/b' })).indexOf('Backup at') >= 0, 'D31 备份摘要用宿主给的人话')
   eq(dataLeaf.vcMaintenanceRestoreStepsOf({ ok: true, backupRestoreSteps: ['一', '二', '三'] }).length, 3, 'D32 三步还原指引原样交给界面')
   eq(dataLeaf.vcMaintenanceTaskConclusionOf({ state: 'done' }), 'done', 'D33 任务结论成功')
   eq(dataLeaf.vcMaintenanceTaskConclusionOf({ state: 'failed' }), 'failed', 'D34 任务结论失败')

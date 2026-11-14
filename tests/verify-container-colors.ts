@@ -407,7 +407,7 @@ const STATUS_EXCEPTIONS = [
   // ---- 颜色元数据 ----
   {
     file: 'src/shared/feedback-map.ts',
-    segment: '琥珀 #f59e0b',
+    segment: 'amber #f59e0b',
     reason: '反馈映射表里说明「限流那一档走琥珀」的文字描述：颜色元数据，不参与渲染。',
   },
   {

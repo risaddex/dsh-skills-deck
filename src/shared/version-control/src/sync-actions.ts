@@ -52,49 +52,49 @@ function bad(reason: string, message: string): any {
 
 // 远端名只允许常规字符、不许以减号开头、不许空白与控制字符；长度上限防住超长输入。
 export function syncRemoteProblem(name: string): string {
-  if (name === '') return '远端名不能为空'
-  if (name.length > 100) return '远端名超过 100 个字符'
-  if (name.charAt(0) === '-') return '远端名不能以减号开头'
-  if (/[\s\u0000-\u001f]/.test(name)) return '远端名不能包含空白或控制字符'
-  if (name === '.' || name === '..' || name.indexOf('..') >= 0) return '远端名不能包含两个连续的点'
+  if (name === '') return 'remote name cannot be empty'
+  if (name.length > 100) return 'remote name exceeds 100 characters'
+  if (name.charAt(0) === '-') return 'remote name cannot start with a minus sign'
+  if (/[\s\u0000-\u001f]/.test(name)) return 'remote name cannot contain whitespace or control characters'
+  if (name === '.' || name === '..' || name.indexOf('..') >= 0) return 'remote name cannot contain two consecutive dots'
   return ''
 }
 
 // 引用名（分支、标签）的宽松校验：拒绝空白、控制字符、减号开头、连续的点和 git 的保留符号。
 export function syncRefProblem(name: string): string {
-  if (name === '') return '引用名不能为空'
-  if (name.length > 200) return '引用名超过 200 个字符'
-  if (name.charAt(0) === '-') return '引用名不能以减号开头'
-  if (/[\s\u0000-\u001f]/.test(name)) return '引用名不能包含空白或控制字符'
-  if (name.indexOf('..') >= 0) return '引用名不能包含两个连续的点'
-  if (name.indexOf('@{') >= 0) return '引用名不能包含 @{'
-  if (/[~^:?*\[\\]/.test(name)) return '引用名不能包含 git 的保留符号'
-  if (name.charAt(name.length - 1) === '/') return '引用名不能以斜杠结尾'
+  if (name === '') return 'ref name cannot be empty'
+  if (name.length > 200) return 'ref name exceeds 200 characters'
+  if (name.charAt(0) === '-') return 'ref name cannot start with a minus sign'
+  if (/[\s\u0000-\u001f]/.test(name)) return 'ref name cannot contain whitespace or control characters'
+  if (name.indexOf('..') >= 0) return 'ref name cannot contain two consecutive dots'
+  if (name.indexOf('@{') >= 0) return 'ref name cannot contain @{'
+  if (/[~^:?*\[\\]/.test(name)) return 'ref name cannot contain git-reserved symbols'
+  if (name.charAt(name.length - 1) === '/') return 'ref name cannot end with a slash'
   return ''
 }
 
 // 强推租约基准必须是 ls-remote 读到的十六进制提交号；短号与空值都不接受，避免无基准强推。
 export function syncOidProblem(oid: string): string {
-  if (oid === '') return '强推必须带远端当场的提交号作为租约基准'
-  if (!/^[0-9a-fA-F]{7,64}$/.test(oid)) return '租约基准不是合法的十六进制提交号'
+  if (oid === '') return 'force push requires the current remote commit id as the lease baseline'
+  if (!/^[0-9a-fA-F]{7,64}$/.test(oid)) return 'lease baseline is not a valid hexadecimal commit id'
   return ''
 }
 
 // 引用规格（fetch 的 refspec）：拒绝空白、控制字符与减号开头，允许带 + 强制前缀与冒号两侧。
 export function syncRefspecProblem(refspec: string): string {
-  if (refspec === '') return 'refspec 不能为空'
-  if (refspec.length > 300) return 'refspec 超过 300 个字符'
-  if (refspec.charAt(0) === '-') return 'refspec 不能以减号开头'
-  if (/[\s\u0000-\u001f]/.test(refspec)) return 'refspec 不能包含空白或控制字符'
-  if (refspec.indexOf('..') >= 0) return 'refspec 不能包含两个连续的点'
+  if (refspec === '') return 'refspec cannot be empty'
+  if (refspec.length > 300) return 'refspec exceeds 300 characters'
+  if (refspec.charAt(0) === '-') return 'refspec cannot start with a minus sign'
+  if (/[\s\u0000-\u001f]/.test(refspec)) return 'refspec cannot contain whitespace or control characters'
+  if (refspec.indexOf('..') >= 0) return 'refspec cannot contain two consecutive dots'
   return ''
 }
 
 // 拉取的上游写法必须是「远端/分支」两段，避免把选项塞进上游参数。
 export function syncUpstreamProblem(upstream: string): string {
-  if (upstream === '') return '拉取必须指定上游分支，例如 origin/main'
+  if (upstream === '') return 'pull requires an upstream branch, such as origin/main'
   const cut = upstream.indexOf('/')
-  if (cut <= 0 || cut === upstream.length - 1) return '上游分支必须写成「远端/分支」两段'
+  if (cut <= 0 || cut === upstream.length - 1) return 'upstream must have two parts: remote/branch'
   const remoteProblem = syncRemoteProblem(upstream.slice(0, cut))
   if (remoteProblem !== '') return remoteProblem
   const refProblem = syncRefProblem(upstream.slice(cut + 1))
@@ -130,7 +130,7 @@ function basePlan(entry: any, plan: any): any {
 // 把动作参数归一成 plan；plan.taskArgs 直接进长任务通道，plan.targetText 进确认卡点名对象。
 export function syncPlanOf(action: any, input: any): any {
   const entry = syncActionOf(action)
-  if (entry === null) return bad('unknown-action', '不认识的同步动作：' + String(action))
+  if (entry === null) return bad('unknown-action', 'unknown sync action: ' + String(action))
   const a = input === undefined || input === null ? {} : input
   const remote = textOf(a.remote) === '' ? 'origin' : textOf(a.remote)
   const remoteProblem = syncRemoteProblem(remote)
@@ -140,8 +140,8 @@ export function syncPlanOf(action: any, input: any): any {
     const prune = a.prune === true
     const tags = a.tags === true
     const refspecs = a.refspecs === undefined || a.refspecs === null ? [] : a.refspecs
-    if (!Array.isArray(refspecs)) return bad('bad-args', 'refspecs 必须是数组')
-    if (all && refspecs.length > 0) return bad('bad-args', '--all 与具体引用不能同时使用')
+    if (!Array.isArray(refspecs)) return bad('bad-args', 'refspecs must be an array')
+    if (all && refspecs.length > 0) return bad('bad-args', '--all and specific refs cannot be used together')
     const refs: string[] = []
     for (let i = 0; i < refspecs.length; i = i + 1) {
       const ref = textOf(refspecs[i])
@@ -155,7 +155,7 @@ export function syncPlanOf(action: any, input: any): any {
         remote: remote,
         branch: '',
         taskArgs: { remote: remote, all: all, prune: prune, tags: tags, refspecs: refs },
-        targetText: '远端 ' + remote
+        targetText: 'remote ' + remote
       })
     }
   }
@@ -173,13 +173,13 @@ export function syncPlanOf(action: any, input: any): any {
         branch: upstream.slice(cut + 1),
         mode: mode,
         taskArgs: { upstream: upstream, mode: mode },
-        targetText: '上游 ' + upstream
+        targetText: 'upstream ' + upstream
       })
     }
   }
   if (entry.action === 'delete-remote-ref') {
     const kind = textOf(a.refKind) === 'tag' ? 'tag' : textOf(a.refKind) === 'branch' ? 'branch' : ''
-    if (kind === '') return bad('bad-args', '删除远端引用时必须说明删分支还是删标签')
+    if (kind === '') return bad('bad-args', 'deleting a remote ref requires specifying branch or tag')
     const name = textOf(a.name)
     const refProblem = syncRefProblem(name)
     if (refProblem !== '') return bad('bad-ref', refProblem)
@@ -192,15 +192,15 @@ export function syncPlanOf(action: any, input: any): any {
         ref: ref,
         refKind: kind,
         taskArgs: { remote: remote, deleteRef: ref },
-        targetText: (kind === 'tag' ? '远端标签 ' : '远端分支 ') + remote + '/' + name
+        targetText: (kind === 'tag' ? 'remote tag ' : 'remote branch ') + remote + '/' + name
       })
     }
   }
   if (entry.action === 'force-push') {
     const localBranch = textOf(a.localBranch)
     const branch = textOf(a.branch) === '' ? localBranch : textOf(a.branch)
-    if (syncRefProblem(localBranch) !== '') return bad('bad-branch', syncRefProblem(localBranch) || '本地分支不合法')
-    if (syncRefProblem(branch) !== '') return bad('bad-branch', syncRefProblem(branch) || '远端分支不合法')
+    if (syncRefProblem(localBranch) !== '') return bad('bad-branch', syncRefProblem(localBranch) || 'invalid local branch')
+    if (syncRefProblem(branch) !== '') return bad('bad-branch', syncRefProblem(branch) || 'invalid remote branch')
     const leaseOid = textOf(a.leaseOid)
     const oidProblem = syncOidProblem(leaseOid)
     if (oidProblem !== '') return bad('bad-lease', oidProblem)
@@ -215,9 +215,9 @@ export function syncPlanOf(action: any, input: any): any {
         leaseOid: leaseOid,
         forceIfIncludes: forceIfIncludes,
         versionNeed: '2.30',
-        versionNote: forceIfIncludes ? '' : '本机 git 低于 2.30，本次强推只带 --force-with-lease，少一道 --force-if-includes 保护。',
+        versionNote: forceIfIncludes ? '' : 'Local git is older than 2.30; this force push uses only --force-with-lease, without the extra --force-if-includes protection.',
         taskArgs: { remote: remote, localBranch: localBranch, branch: branch, forceWithLease: { branch: branch, oid: leaseOid }, forceIfIncludes: forceIfIncludes },
-        targetText: '远端分支 ' + remote + '/' + branch + '（租约基准 ' + leaseOid + '）'
+        targetText: 'remote branch ' + remote + '/' + branch + ' (lease baseline ' + leaseOid + ')'
       })
     }
   }
@@ -229,7 +229,7 @@ export function syncPlanOf(action: any, input: any): any {
         remote: remote,
         mode: mode,
         taskArgs: { remote: remote, tags: mode },
-        targetText: '远端 ' + remote + ' 的标签（' + (mode === 'tags' ? '推送全部标签' : '随提交推送标签') + '）'
+        targetText: 'remote ' + remote + ' tags (' + (mode === 'tags' ? 'push all tags' : 'push tags with commits') + ')'
       })
     }
   }
@@ -250,7 +250,7 @@ export function syncPlanOf(action: any, input: any): any {
       branch: branch,
       localBranch: localBranch,
       taskArgs: taskArgs,
-      targetText: '远端分支 ' + remote + '/' + branch
+      targetText: 'remote branch ' + remote + '/' + branch
     })
   }
 }

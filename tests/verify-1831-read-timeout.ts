@@ -104,8 +104,8 @@ async function sectionBudget(budgetMod) {
   check(seen && seen.signal && seen.signal.aborted === true, '到点后交给后端的 signal 已中止（取消下传）')
   check(seen && seen.opId === 'op-1831-read', '后端上下文带着这次操作的 opId（日志按 opId 串得起来）')
   const readMsg = String((r && r.error && r.error.message) || '')
-  check(readMsg.indexOf('不要直接重放写操作') < 0, '读超时文案不出现写操作口径（实际：' + readMsg.slice(0, 80) + '…）')
-  check(readMsg.indexOf('读') >= 0 && /重调|重试/.test(readMsg), '读超时文案明说这是一次读、可以重调（实际：' + readMsg.slice(0, 80) + '…）')
+  check(readMsg.indexOf('do not replay writes') < 0, '读超时文案不出现写操作口径（实际：' + readMsg.slice(0, 80) + '…）')
+  check(/\bread\b/i.test(readMsg) && /retry/i.test(readMsg), '读超时文案明说这是一次读、可以重调（实际：' + readMsg.slice(0, 80) + '…）')
 
   // 写操作：到点仍保留「核对现状再续、不要直接重放写操作」这套口径（#1799 的映射不动，文案分工要保留）。
   const wscope = budgetMod.withCallScope(
@@ -117,7 +117,7 @@ async function sectionBudget(budgetMod) {
   try { wr = await cap(wscope.tracker.create({ backend: 'stub', refId: 'o/n' }, { title: '演练' }, wscope.opCtx), 6000) } catch (e) { check(false, '写调用到点必须结束等待（' + e.message + '）'); return }
   const writeMsg = String((wr && wr.error && wr.error.message) || '')
   check(wr && wr.ok === false && wr.error.kind === 'timeout', '写调用到点回 timeout')
-  check(writeMsg.indexOf('不要直接重放写操作') >= 0, '写超时文案仍保留「不要直接重放写操作」（实际：' + writeMsg.slice(0, 80) + '…）')
+  check(writeMsg.indexOf('do not replay writes') >= 0, '写超时文案仍保留「不要直接重放写操作」（实际：' + writeMsg.slice(0, 80) + '…）')
 
   // 调用方取消：不必等到钳制，应当立刻收摊，并且把中止信号传给后端。
   const ac = new AbortController()

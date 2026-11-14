@@ -93,7 +93,7 @@ async function main() {
   check(Object.keys(l2.snapshot().buckets).indexOf('switchy/rest') < 0, '旧桶键从总览里消失（总览：' + Object.keys(l2.snapshot().buckets).join(',') + '）')
   // 装配错当场抛：没后端标识、口径不认识、模型自报的后端与形参对不上。
   const eNoId = throws(() => l2.ensureBackend('', gh))
-  check(eNoId.indexOf('后端标识') >= 0, '没有后端标识时建桶当场抛（' + eNoId + '）')
+  check(eNoId.indexOf('backend identifier') >= 0, '没有后端标识时建桶当场抛（' + eNoId + '）')
   const eKind = throws(() => l2.ensureBackend('weird', { kind: 'not-a-kind' }))
   check(eKind.indexOf('kind') >= 0, '口径不认识时当场抛，不静默当成未知后端（' + eKind + '）')
   const eMismatch = throws(() => l2.ensureBackend('gitlab', gh))
@@ -104,13 +104,13 @@ async function main() {
   l3.ensureBackend('github', gh)
   l3.ensureBackend('gitlab', gl)
   const cross1 = throws(() => l3.syncServer('gitlab', { rest: { limit: 5000, remaining: 5000 } }, clock))
-  check(cross1.indexOf('不属于') >= 0, 'GitHub 的 rest 读数交给 GitLab 时抛错（' + cross1 + '）')
+  check(cross1.indexOf('does not belong') >= 0, 'GitHub 的 rest 读数交给 GitLab 时抛错（' + cross1 + '）')
   const cross2 = throws(() => l3.syncServer('github', { requests: { limit: 600, remaining: 600 } }, clock))
-  check(cross2.indexOf('不属于') >= 0, 'GitLab 的 requests 读数交给 GitHub 时同样抛错（' + cross2 + '）')
+  check(cross2.indexOf('does not belong') >= 0, 'GitLab 的 requests 读数交给 GitHub 时同样抛错（' + cross2 + '）')
   const cross3 = throws(() => l3.syncServer('markdown', { rest: { limit: 1, remaining: 1 } }, clock))
   check(cross3.indexOf('ensureBackend') >= 0, '还没建桶的后端收到读数时抛错，并指路 ensureBackend（' + cross3 + '）')
   const cross4 = throws(() => l3.syncServer('github', { points: { limit: 1, remaining: 1 } }, clock))
-  check(cross4.indexOf('不认识') >= 0, '不认识的桶名直接抛，不静默跳过（' + cross4 + '）')
+  check(cross4.indexOf('does not recognize') >= 0, '不认识的桶名直接抛，不静默跳过（' + cross4 + '）')
   const partial = l3.syncServer('github', { rest: { limit: 5000, remaining: 1000 } }, clock)
   check(partial.applied.join(',') === 'rest', '只给一个桶的读数时只落那一个桶（applied=' + partial.applied.join(',') + '）')
   check(l3.view('github', 'graphql').synced === false && l3.view('gitlab', 'requests').synced === false, '没给读数的桶仍是「还没量」（不拿别人的读数顶上）')
@@ -166,7 +166,7 @@ async function main() {
     '只计请求的后端仍然把点数记进分档计数（账面对得上，用量不折）')
   // 离网：没有桶，spend 必须当场抛（装配错不许静默丢账）。
   const eMarkdown = throws(() => l5.spend({ account: 'plugin', backendId: 'markdown', bucket: 'rest', requests: 1, points: 0 }))
-  check(eMarkdown.indexOf('没有这个桶') >= 0, '离网后端没有桶，记账当场抛（' + eMarkdown + '）')
+  check(eMarkdown.indexOf('has no bucket') >= 0, '离网后端没有桶，记账当场抛（' + eMarkdown + '）')
   // 未知：只有一个 requests 桶，能记请求数（规格第 8 节「未知模型只记请求数」），
   // 而 rest / graphql 这类按额度形状分的桶它一个都没有，拿它们记账要当场抛。
   l5.spend({ account: 'plugin', backendId: 'bitbucket', bucket: 'requests', requests: 1, points: 0 })
@@ -175,11 +175,11 @@ async function main() {
   check(l5.view('bitbucket', 'requests').remaining === null && l5.view('bitbucket', 'requests').used === 0,
     '未知后端没有读数，所以读数视图保持全空、不拿记下的条数冒充剩余量（实得 ' + JSON.stringify({ remaining: l5.view('bitbucket', 'requests').remaining, used: l5.view('bitbucket', 'requests').used }) + '）')
   const eUnknownShape = throws(() => l5.spend({ account: 'plugin', backendId: 'bitbucket', bucket: 'graphql', requests: 1 }))
-  check(eUnknownShape.indexOf('没有这个桶') >= 0, '未知后端没有按额度形状分的桶，拿 graphql 记账当场抛（' + eUnknownShape + '）')
+  check(eUnknownShape.indexOf('has no bucket') >= 0, '未知后端没有按额度形状分的桶，拿 graphql 记账当场抛（' + eUnknownShape + '）')
   const eWrong = throws(() => l5.spend({ account: 'plugin', backendId: 'github', bucket: 'requests', requests: 1 }))
-  check(eWrong.indexOf('没有这个桶') >= 0, '桶不属于这个后端时当场抛，不把账记到别人的桶上（' + eWrong + '）')
+  check(eWrong.indexOf('has no bucket') >= 0, '桶不属于这个后端时当场抛，不把账记到别人的桶上（' + eWrong + '）')
   const eAccount = throws(() => l5.spend({ account: 'nobody', backendId: 'github', bucket: 'rest', requests: 1 }))
-  check(eAccount.indexOf('这一档') >= 0, '档位不认识时当场抛（' + eAccount + '）')
+  check(eAccount.indexOf('has no tier') >= 0, '档位不认识时当场抛（' + eAccount + '）')
   // quota-read：服务端不扣配额，只进 free。
   const beforeQuota = { used: l5.view('github', 'rest').used, free: l5.snapshot().free.requests }
   l5.spend({ account: 'plugin', backendId: 'github', bucket: 'rest', kind: 'quota-read', requests: 1, points: 0 })
@@ -197,8 +197,8 @@ async function main() {
   clock += 61000
   check(l6.view('github', 'rest').tier === 'green' && l6.view('github', 'rest').rateLimited === false,
     'Retry-After 的秒数过去之后档位自己回来（' + l6.view('github', 'rest').tier + '）')
-  check(throws(() => l6.noteRateLimited('github', 'rest', 0, clock)).indexOf('秒数') >= 0, '降档信号没有秒数时抛错（账本不替服务端编一个时长）')
-  check(throws(() => l6.noteRateLimited('github', 'requests', 30, clock)).indexOf('没有这个桶') >= 0, '降档信号记到不存在的桶上时抛错')
+  check(throws(() => l6.noteRateLimited('github', 'rest', 0, clock)).indexOf('delay in seconds') >= 0, '降档信号没有秒数时抛错（账本不替服务端编一个时长）')
+  check(throws(() => l6.noteRateLimited('github', 'requests', 30, clock)).indexOf('has no bucket') >= 0, '降档信号记到不存在的桶上时抛错')
 
   // ---------- ⑦ rollHour：清本小时用量，不动读数与「同步之后已花」 ----------
   const l7 = newLedger()
@@ -230,7 +230,7 @@ async function main() {
   check(snap.byAccount['plugin'].hour.requests === 0 && snap.byAccount['user-action'].hour.requests === 1,
     '总览按档位分开记，谁花的记在谁头上（plugin=' + snap.byAccount['plugin'].hour.requests + '，user-action=' + snap.byAccount['user-action'].hour.requests + '）')
   check(snap.byAccount['user-action']['github/rest'].requests === 1, '总览里每一档按桶键给一份计数（' + show(snap.byAccount['user-action']['github/rest']) + '）')
-  check(throws(() => l8.hour('plugin', 'rest')).indexOf('后端/桶名') >= 0, 'hour 只认桶键，旧的裸桶名当场抛（键是「后端/桶名」）')
+  check(throws(() => l8.hour('plugin', 'rest')).indexOf('backend/bucket') >= 0, 'hour 只认桶键，旧的裸桶名当场抛（键是「后端/桶名」）')
   check(l8.hourOf('plugin', 'markdown').requests === 0 && l8.hourOf('plugin', 'markdown').points === 0,
     '没有桶的后端合计是零，不是抛错（离网后端本来就不花）')
 

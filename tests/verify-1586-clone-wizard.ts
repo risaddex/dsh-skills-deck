@@ -279,7 +279,7 @@ async function main() {
   const localSrc = path.join(mkTmp('localsrc'), 'repo')
   const offlineLocal = await vc.handleGitCloneCheck({ cwd: repo, op: 'start', url: localSrc, dir: absent + '5', offline: true })
   check(offlineLocal.ok === true && offlineLocal.decision.verdict === 'warn' && offlineLocal.decision.reasons[0] === 'hardlink-source' && offlineLocal.confirmRequired === true, 'E14 离线克隆本机仓库只警告硬链接风险并要求确认（警告不拦人）')
-  check(offlineLocal.decision.notes && offlineLocal.decision.notes[0].indexOf('硬链接') >= 0, 'E15 警告里说清硬链接的后果（源仓库删改后这份可能读不出来）')
+  check(offlineLocal.decision.notes && offlineLocal.decision.notes[0].indexOf('hard links') >= 0, 'E15 警告里说清硬链接的后果（源仓库删改后这份可能读不出来）')
 
   // 凭票执行：成功一次只起一个 clone 进程
   const beforeClone = cloneSpawns(run.spawns).length

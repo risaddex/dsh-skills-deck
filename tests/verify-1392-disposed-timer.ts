@@ -188,7 +188,7 @@ async function scenarioC(): Promise<void> {
     await sleep(30)
     check(got.threw === false, 'C1 execProc 不抛错，失败以结果返回')
     check(got.threw === false && got.value.ok === false && typeof got.value.error === 'string', 'C2 返回 ok:false 且带错误正文（实得 ' + JSON.stringify(got.value) + '）')
-    check(got.threw === false && got.value.ok === false && got.value.error.indexOf('实例已销毁') >= 0, 'C3 错误正文说清是实例已销毁（实得 ' + (got.threw ? '抛错' : String(got.value && got.value.error)) + '）')
+    check(got.threw === false && got.value.ok === false && got.value.error.indexOf('instance was disposed') >= 0, 'C3 错误正文说清是实例已销毁（实得 ' + (got.threw ? '抛错' : String(got.value && got.value.error)) + '）')
     check(got.threw === false && got.value.ok === false && got.value.kind === undefined, 'C4 失败对象不新增 kind 字段（保持 ProcFail 原形状）')
     check(world.handles[0] && world.handles[0].terminated === 1, 'C5 子进程被终止（实得 ' + (world.handles[0] ? world.handles[0].terminated : '没起进程') + '）')
     check(unhandled.length === 0, 'C6 没有未处理的 Promise 拒绝（实得 ' + unhandled.length + ' 条）')

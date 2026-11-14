@@ -206,7 +206,7 @@ async function main() {
     h.state.reading = { known: true, kind: 'requests-only', requests: { remaining: 0, limit: 600 } }
     const exhausted = await opened.session.comment(REF, '5', '这条不该发出去')
     check(exhausted && exhausted.ok === false && exhausted.error && exhausted.error.kind === 'rate-limit', '请求额度真见底时推迟（rate-limit）')
-    check(exhausted && exhausted.error && /请求次数额度不够了/.test(exhausted.error.message), '推迟文案说清是请求额度不够（#1527 新口径：还剩多少、保底多少）')
+    check(exhausted && exhausted.error && /Requests quota is insufficient/.test(exhausted.error.message), '推迟文案说清是请求额度不够（#1527 新口径：还剩多少、保底多少）')
     check(ledger.view('gitlab', 'requests').used === usedBefore, '被推迟的调用不记账（没发生的事不记）')
     const callsBeforeHard = glab.box.calls
     const readOnly = await opener.openTracker({ cwd: '/ws-test-1447' }, {
@@ -214,7 +214,7 @@ async function main() {
     h.state.reading = { known: true, kind: 'requests-only', requests: { remaining: 500, limit: 600 } }
     const hardCap = await readOnly.session.comment(REF, '5', '没有写权限不该发出去')
     check(hardCap && hardCap.ok === false && hardCap.error && hardCap.error.kind === 'hard-cap', '没有写权限时写操作按硬顶拒绝')
-    check(hardCap && hardCap.error && /硬顶/.test(hardCap.error.message), '硬顶文案带「硬顶」二字（与读数无关）')
+    check(hardCap && hardCap.error && /Hard cap/.test(hardCap.error.message), '硬顶文案带「硬顶」二字（与读数无关）')
     check(glab.box.calls === callsBeforeHard, '硬顶拒绝时房间一次都没被调用')
     const readPasses = await readOnly.session.list(REF)
     check(readPasses && readPasses.ok === true, '没有写权限不影响读操作（硬顶只拦写）')

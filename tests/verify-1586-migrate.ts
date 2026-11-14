@@ -160,12 +160,12 @@ async function main(): Promise<void> {
 
   const initPlan = planOf('init', { path: NEW_REPO })
   check(initPlan.ok === true && initPlan.plan.branch === 'main' && initPlan.plan.initMode === 'initial-branch' && initPlan.plan.versionNeed === '2.28', 'P17 init 计划缺省 main 与 --initial-branch 产线，版本要求 2.28')
-  check(initPlan.plan.targetText.indexOf('初始分支 main') >= 0 && initPlan.plan.pathAbsent.length === 0, 'P18 init 计划点名初始分支；「目标不存在」由宿主写进票据绑定，共享层不重复登记')
+  check(initPlan.plan.targetText.indexOf('initial branch main') >= 0 && initPlan.plan.pathAbsent.length === 0, 'P18 init 计划点名初始分支；「目标不存在」由宿主写进票据绑定，共享层不重复登记')
   const renamePlan = planOf('init', { path: NEW_REPO, initMode: 'rename' })
   check(renamePlan.plan.initMode === 'rename' && renamePlan.plan.versionNeed === '2.11' && renamePlan.plan.versionNote.indexOf('symbolic-ref') >= 0, 'P19 init 改名产线要求 2.11 并在计划里写清改名做法')
   check(planOf('init', { path: 'rel' }).reason === 'bad-path' && planOf('init', { path: NEW_REPO, branch: 'a..b' }).reason === 'bad-branch', 'P20 init 参数守卫失败给出稳定 reason')
   const barePlan = planOf('init', { path: NEW_REPO, bare: true })
-  check(barePlan.plan.bare === true && barePlan.plan.targetText.indexOf('裸仓库') >= 0, 'P21 裸仓库初始化在计划与确认卡上都标出来')
+  check(barePlan.plan.bare === true && barePlan.plan.targetText.indexOf('bare repository') >= 0, 'P21 裸仓库初始化在计划与确认卡上都标出来')
 
   const archivePlan = planOf('archive', { outputPath: OUT })
   check(archivePlan.ok === true && archivePlan.plan.ref === 'HEAD' && archivePlan.plan.pathAbsent.join(',') === OUT, 'P22 archive 缺省 HEAD，输出路径登记为「预检时不存在」')

@@ -490,10 +490,10 @@ async function groupNav(page: any) {
   check(allHits === 162, 'B 命令面板：空词命中能力账本 162 条（实得 ' + allHits + ' 条）')
   check(!!m && m.palette.join(',') === rowsAll.join(','), 'B 命令面板：浮层行与 vcPaletteRowsOf 一致（' + (m && m.palette.length) + ' 行）')
   check(!!m && m.paletteText.indexOf('162') >= 0, 'B 命令面板：提示行写出总命中 162')
-  await page.fill('[data-vc-palette-input]', '暂存')
+  await page.fill('[data-vc-palette-input]', 'Stage')
   await page.waitForTimeout(220)
   m = await measure(page)
-  const rowsFiltered = await page.evaluate(() => window.__VC.vcPaletteRowsOf('暂存').map((r: any) => r.id))
+  const rowsFiltered = await page.evaluate(() => window.__VC.vcPaletteRowsOf('Stage').map((r: any) => r.id))
   check(!!m && m.palette.join(',') === rowsFiltered.join(','), 'B 命令面板：输入「暂存」后行数与 vcPaletteRowsOf 一致（' + (m && m.palette.length) + ' 行）')
   check(!!m && m.palette.length > 0 && m.palette.length <= rowsAll.length, 'B 命令面板：过滤之后仍有命中，且不多于不过滤时（' + (m && m.palette.length) + ' ≤ ' + rowsAll.length + '）')
   const pickId = m.palette[0]

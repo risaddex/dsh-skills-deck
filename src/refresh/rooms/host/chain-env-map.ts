@@ -288,7 +288,7 @@ export function probeChainEnv(deps: ChainEnvProbeDeps, probeCwd: string, opts?: 
   function openOnce(): Promise<OpenSessionReply> {
     if (!opened) {
       opened = (async function (): Promise<OpenSessionReply> {
-        if (typeof openSession !== 'function') return { ok: false, reason: '接线没有给 openSession' }
+        if (typeof openSession !== 'function') return { ok: false, reason: 'the wiring did not provide openSession' }
         try { return await openSession(probeCwd) } catch (e) { return { ok: false, reason: String((e && (e as CaughtError).message) || e) } }
       })()
     }
@@ -412,7 +412,7 @@ export function createRepoIdentityEvidence(deps: { getRepoKey(cwd: string): Prom
   }
   /** 两条谓词共用的失败话术：「没有远端」与「有多个、不猜」必须能区分，后者还要告诉人怎么收口。 */
   function failDetail(ev: RepoIdentityEvidence, zh: boolean) {
-    if (ev.kind === 'ambiguous') { const list = ev.candidates.map(function (c) { return c.owner + '/' + c.name }).join('、'); return zh ? '本地有多个不同的 GitHub 远端（' + list + '），无法确定用哪一个；请把主仓库的远端命名为 origin，或删掉多余的远端' : 'multiple GitHub remotes found (' + list + '); name the main repository remote origin, or remove the extra remotes' }
+    if (ev.kind === 'ambiguous') { const list = ev.candidates.map(function (c) { return c.owner + '/' + c.name }).join(zh ? '、' : ', '); return zh ? '本地有多个不同的 GitHub 远端（' + list + '），无法确定用哪一个；请把主仓库的远端命名为 origin，或删掉多余的远端' : 'multiple GitHub remotes found (' + list + '); name the main repository remote origin, or remove the extra remotes' }
     return zh ? '本地没有指向 GitHub 的远端（git remote 与 .git/config 都查过）' : 'no GitHub remote in this workspace (checked git remote and .git/config)'
   }
   /** 连远端列表都读不到时的待定话术：不冒充「没有」，也不冒充出站失败。 */

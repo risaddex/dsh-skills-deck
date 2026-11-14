@@ -77,7 +77,7 @@ export const LOG_EVENT_LIST: {
       level: 'info',
       kind: 'resident',
       fields: ['bucket', 'waitedMs', 'inflight', 'max', 'queued'],
-      guard: '排队放行时先看等了多久：三秒以上才记；同一只桶五分钟最多一行，风暴期间也不逐条刷',
+      guard: 'On queue admission, log only waits above three seconds; at most one line per bucket in five minutes, never one line per request during a storm',
     },
     // #1580：每次「在新会话打开」记一行决策链——入口、cwd 来源、工作区解析结果（查到的/新建的/没有）、
     //   复用还是新建、草稿写进哪条会话、最终成败。下次再出现「新会话没选中工作区」时，
@@ -97,7 +97,7 @@ export const LOG_EVENT_LIST: {
       level: 'info',
       kind: 'resident',
       fields: ['requests', 'points', 'estPoints', 'restRequests', 'aiPoints', 'pluginPoints', 'userPoints', 'failCount', 'limitCount', 'inflightPeak', 'inflightMax', 'queuedPeak', 'oldestWaitMs', 'allowUser', 'allowAi', 'softOver', 'allowBg', 'deferCount', 'gqlRemain', 'resetSec', 'syncAgeMs', 'tier', 'namingPages', 'namingPoints', 'suppressed'],
-      guard: '每分钟最多一行；只有真发生了事的分钟才写（跨分钟收尾时写上一分钟，空分钟零落行）',
+      guard: 'At most one line per minute, only when something happened (write the previous minute when the minute changes; no lines for empty minutes)',
     },
     // 事故当下的逐笔明细：事故期间每次限流失败或慢操作一行，回答「真配额还是二级限流、
     //   重试放大几倍」；每次事故最多 40 行，超限只在窗口行的 suppressed 上加一。

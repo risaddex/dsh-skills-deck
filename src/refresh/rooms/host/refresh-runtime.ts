@@ -185,7 +185,7 @@ export function createRefreshWiring(deps: any): any {
         })(),
         exec: function (): any {
           if (typeof d.detectionExec === 'function') { try { return d.detectionExec.apply(null, arguments) } catch (e: any) { return Promise.reject(e) } }
-          return Promise.resolve({ ok: false, kind: 'env', error: '这个宿主实例没有把起进程的出口（detectionExec）传进来，额度同步读不了数' })
+          return Promise.resolve({ ok: false, kind: 'env', error: 'this host instance did not pass its process launcher (detectionExec), so quota sync cannot read the quota' })
         },
         logEvent: function (level: any, event: any, fields: any): void { try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire(level, event, fields) } catch (e: any) {} },
         isEnabled: function (level: any): any { try { return logCtx ? logCtx.isEnabled(level) : (level === 'error' || level === 'warn') } catch (e: any) { return level === 'error' || level === 'warn' } },

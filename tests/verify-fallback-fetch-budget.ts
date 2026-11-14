@@ -294,7 +294,7 @@ async function run(): Promise<void> {
   check(listCalls === 16, '第 17 条请求根本没发出去：传输层只收到 16 条（实得 ' + listCalls + '）')
   check(enumBig && enumBig.budget && enumBig.budget.kind === 'enumerate' && enumBig.budget.limit === 16 && enumBig.budget.used === 16 && enumBig.budget.refused === 1,
     '枚举轮账本实记：kind=enumerate、上限 16、已用 16、被拒 1（账实一致）')
-  check(enumBig && enumBig.pages === 16 && /第 17 页未发出/.test(String(enumBig.error.error)) && /16/.test(String(enumBig.error.error)),
+  check(enumBig && enumBig.pages === 16 && /page 17 has not been requested/.test(String(enumBig.error.error)) && /16/.test(String(enumBig.error.error)),
     '被截断的位置可诊断：已取 16 页、第 17 页未发出、带上限 16（原文：' + String(enumBig && enumBig.error && enumBig.error.error).slice(0, 40) + '…）')
   check(!enumBig || enumBig.error.kind !== 'unchanged', '截断不会被当成「没变」推进水印（失败原样上抛由调用方处理）')
 

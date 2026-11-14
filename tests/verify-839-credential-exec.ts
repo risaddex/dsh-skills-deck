@@ -272,7 +272,7 @@ async function main() {
     check(got === want, '分类：' + want + '（实得 ' + got + '）')
   }
   check(['need-credentials', 'auth-rejected', 'no-permission', 'network', 'stalled', 'timeout', 'budget-exhausted', 'spawn-failed'].every((k) => typeof credMod.hintFor(k) === 'string' && credMod.hintFor(k).length > 10), '每一档都有能照做的话术')
-  check(credMod.hintFor('need-credentials').indexOf('命令行') >= 0 && credMod.hintFor('need-credentials').indexOf('侧栏终端') < 0, 'need-credentials 的话术指去命令行自己解决、不再提侧栏终端（不代替用户登录）')
+  check(credMod.hintFor('need-credentials').indexOf('in a terminal') >= 0 && credMod.hintFor('need-credentials').indexOf('sidebar terminal') < 0, 'need-credentials 的话术指去命令行自己解决、不再提侧栏终端（不代替用户登录）')
 
   // ---- C) 真跑三环境（全部打 127.0.0.1，离线可跑） ----
   const lab = makeLab()
@@ -293,7 +293,7 @@ async function main() {
     r = await run.safe.runOnce({ cwd: lab.dir, clearHelpers: true, args: ['ls-remote', srv.url] })
     check(r.ok === false && r.kind === 'need-credentials', '② 没有凭据：归类 need-credentials（实得 ' + r.kind + '）')
     check(r.elapsedMs < 5000, '② 快速失败，不挂在等输入上（' + r.elapsedMs + 'ms）')
-    check(typeof r.hint === 'string' && r.hint.indexOf('命令行') >= 0 && r.hint.indexOf('侧栏终端') < 0, '② 失败说明里带能照做的话（指去命令行自己解决，不提侧栏终端）')
+    check(typeof r.hint === 'string' && r.hint.indexOf('in a terminal') >= 0 && r.hint.indexOf('sidebar terminal') < 0, '② 失败说明里带能照做的话（指去命令行自己解决，不提侧栏终端）')
     await srv.close()
 
     // ③ 凭据不对 → auth-rejected；凭据对但服务端 403 → no-permission
@@ -313,7 +313,7 @@ async function main() {
     const fakeRun = credMod.createCredentialSafeGit({ runGit: async () => ({ kind: 'non-zero', exitCode: 128, stderr: longStderr }), getPlatform: async () => ({ resolveExecutable: async () => 'git' }), getEnv: () => null, DEFAULT_CWD: lab.dir })
     const rFake = await fakeRun.runOnce({ cwd: lab.dir, args: ['ls-remote', 'https://example.invalid/x.git'] })
     check(rFake.ok === false && /^fatal: the real reason/.test(rFake.message), '③b F2：失败说明取最后一条 fatal: 行，不吃前面的警告横幅（实得「' + String(rFake.message).slice(0, 60) + '」）')
-    check(typeof rFake.detail === 'string' && rFake.detail.indexOf('已截断') >= 0 && rFake.detail.length < 1700, '③b F1：信封带截断后的 stderr 尾巴并标注已截断（长度 ' + String(rFake.detail).length + '）')
+    check(typeof rFake.detail === 'string' && rFake.detail.indexOf('truncated') >= 0 && rFake.detail.length < 1700, '③b F1：信封带截断后的 stderr 尾巴并标注已截断（长度 ' + String(rFake.detail).length + '）')
     check(rFake.detail.indexOf('the real reason') >= 0, '③b F1：尾巴保留真原因那一行（写层读不到 stderr 时靠它）')
 
     // ④ 停顿判据：黑洞 + 低速阈值 → git 自己放弃（stalled）

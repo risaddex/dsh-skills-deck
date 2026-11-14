@@ -112,12 +112,12 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
 
   async function resolveContext(args: any): Promise<ResolvedContext | ReadFailure> {
     const raw = (args && typeof args.cwd === 'string') ? args.cwd : ''
-    if (!raw.trim()) return failureOf('这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。', 'env')
+    if (!raw.trim()) return failureOf('This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.', 'env')
     let cwd = ''
     try {
       cwd = String(await canonicalKey(raw))
     } catch (e) {
-      return failureOf('这个工作区还没就绪（目录归一失败），等面板认出工作区后再试。', 'env')
+      return failureOf('This workspace is not ready (directory normalization failed); retry after the panel recognizes it.', 'env')
     }
     let selection: any = null
     try {
@@ -126,14 +126,14 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
       selection = null
     }
     const backend = textOf(selection && selection.backendId)
-    if (!backend) return failureOf('这个工作区还没选后端，读不到本地快照库的版本。', 'env')
+    if (!backend) return failureOf('This workspace has no backend selected, so the local snapshot library version cannot be read.', 'env')
     let reg: any = null
     try {
       reg = await getTrackerRegistry()
     } catch (e) {
       reg = null
     }
-    if (!reg || typeof reg.describe !== 'function') return failureOf('认不出这个工作区的仓库身份，读不到本地快照库。', 'env')
+    if (!reg || typeof reg.describe !== 'function') return failureOf('This workspace\'s repository identity is unknown, so the local snapshot library cannot be read.', 'env')
     // 身份补齐只有一份实现（#1885 评审修复）：describe → 宿主本地 git 远程 → 本地 Markdown 目录 →
     // 会话。版本查询是五秒一拍的轮询，所以本地证据都排在开会话之前。
     let repoRef: RepositoryRef | null = null
@@ -148,14 +148,14 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     } catch (e) {
       repoRef = null
     }
-    if (!repoRef || !repoRef.refId) return failureOf('认不出这个工作区的仓库身份，读不到本地快照库。', 'env')
+    if (!repoRef || !repoRef.refId) return failureOf('This workspace\'s repository identity is unknown, so the local snapshot library cannot be read.', 'env')
     if (typeof getSnapshotLibrary !== 'function') {
-      return failureOf('本地快照库没有接上，读不到版本与变化集。', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
+      return failureOf('The local snapshot library is not connected, so its version and change set cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
     }
     let lib: SnapshotReadLibrary | null = null
     try { lib = await Promise.resolve(getSnapshotLibrary()) } catch (e) { lib = null }
     if (!lib || typeof lib.readLibraryVersion !== 'function' || typeof lib.readLibraryChangeSet !== 'function') {
-      return failureOf('本地快照库没有接上，读不到版本与变化集。', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
+      return failureOf('The local snapshot library is not connected, so its version and change set cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
     }
     return {
       cwd,
@@ -182,7 +182,7 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     if (typeof version !== 'number' || !Number.isFinite(version) || version < 0) {
       // 这一拍是五秒一次的轮询：这里不记日志（记了就是心跳），只把原因交给客户端；
       // 客户端在真正退回整份那一拍记一行 snapshot.degrade，只记一次。
-      return failureOf('本地快照库开不出来，读不到当前版本。', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
+      return failureOf('The local snapshot library cannot be opened, so its current version cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
     }
     return {
       version: Math.floor(version),
@@ -222,7 +222,7 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     if (!result || typeof result.mergeVersion !== 'number') {
       // 变化集只有版本推进时才问一次，低频，所以库这一侧读失败照实记一行退化（不节流也不刷）。
       noteLibraryFailure(logEvent, 'changes', resolved.workspaceKey)
-      return failureOf('本地快照库开不出来，读不到变化集。', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
+      return failureOf('The local snapshot library cannot be opened, so its change set cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
     }
     const head = {
       version: Math.floor(result.mergeVersion),
@@ -266,10 +266,10 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     if ((ctx as ReadFailure).ok === false) return ctx
     const resolved = ctx as ResolvedContext
     const key = (args && typeof args.key === 'string') ? args.key.trim() : ''
-    if (!key) return failureOf('没有给容器编号，取不到它的子票。', 'env')
+    if (!key) return failureOf('No container number was provided, so its child tickets cannot be fetched.', 'env')
     const effortId = (args && args.effortId !== undefined && args.effortId !== null) ? String(args.effortId) : ''
     if (typeof resolved.lib.readContainerProjection !== 'function') {
-      return failureOf('本地快照库没有接上，读不到这张容器的子票。', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
+      return failureOf('The local snapshot library is not connected, so this container\'s child tickets cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
     }
     let result: any = null
     const startedAt = Date.now()
@@ -281,10 +281,10 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     const projectionMs = Date.now() - startedAt
     if (!result || typeof result.mergeVersion !== 'number') {
       noteLibraryFailure(logEvent, 'containerProjection', resolved.workspaceKey)
-      return failureOf('本地快照库开不出来，读不到这张容器的子票。', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
+      return failureOf('The local snapshot library cannot be opened, so this container\'s child tickets cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
     }
     if (!result.container) {
-      return failureOf('本地快照库里还没有这张容器的行，等下一次刷新后再看。', 'library', 'container-not-in-library')
+      return failureOf('This container has no row in the local snapshot library yet; check after the next refresh.', 'library', 'container-not-in-library')
     }
     const reply = {
       ok: true,
@@ -311,7 +311,7 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     if ((ctx as ReadFailure).ok === false) return ctx
     const resolved = ctx as ResolvedContext
     if (typeof resolved.lib.readLibraryStorageStats !== 'function') {
-      return failureOf('本地快照库没有接上，读不到库文件大小与行数。', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
+      return failureOf('The local snapshot library is not connected, so its file size and row count cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryNotWired)
     }
     let stats: any = null
     try { stats = await Promise.resolve(resolved.lib.readLibraryStorageStats(keyOf(resolved))) } catch (e) { stats = null }
@@ -320,7 +320,7 @@ export function createSnapshotReadChannels(deps: SnapshotReadChannelsDeps): {
     const version = stats && typeof stats.version === 'number' ? stats.version : NaN
     if (!Number.isFinite(bytes) || bytes < 0 || !Number.isFinite(rows) || rows < 0
       || !Number.isFinite(version) || version < 0) {
-      return failureOf('本地快照库开不出来，读不到库文件大小与行数。', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
+      return failureOf('The local snapshot library cannot be opened, so its file size and row count cannot be read.', 'library', SNAPSHOT_DEGRADE.libraryCorrupt)
     }
     // 写模型三格（#1932）：本地多写者还是网络盘单写者回退、这个窗口现在能不能写、有没有旧租约挡着。
     // 它们是诊断读数的一部分，与字节数、行数一起回，界面上「写模型」那一行与它们同源。

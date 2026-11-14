@@ -214,8 +214,8 @@ async function main() {
       check(/may already have been created|may already have created the ticket/.test(String(res.error && res.error.message)) && /sent the create request only once/.test(String(res.error && res.error.message)),
         '场景「' + s.name + '」：如实说「票可能已经建出来、这次只发了一次写、不会再发第二次」', String(res.error && res.error.message).slice(0, 200))
     }
-    if (e.certainNoTicket) check(/确定没有建出票|definitely created no ticket/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「确定没有建出票」', String(res.error && res.error.message).slice(0, 200))
-    if (e.neverSent) check(/没能跑起来|没发出去|could not start|not a single byte/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「请求一个字节都没发出去」', String(res.error && res.error.message).slice(0, 200))
+    if (e.certainNoTicket) check(/definitely created no ticket/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「确定没有建出票」', String(res.error && res.error.message).slice(0, 200))
+    if (e.neverSent) check(/could not start|not a single byte/.test(String(res.error && res.error.message)), '场景「' + s.name + '」：如实说「请求一个字节都没发出去」', String(res.error && res.error.message).slice(0, 200))
   }
 
   console.log('\n— 断言二 · 写请求的 URL 与参数形状（不是随便哪条 glab 命令都算）—')

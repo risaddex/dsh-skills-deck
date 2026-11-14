@@ -261,8 +261,8 @@ export function createDetectChain(deps: DetectChainDeps) {
   //   逐条路各补一次一定会漏；现在内层只回答「这份回包是不是按本会话现算的」，凡不是就统一在这里补。
   //   补算失败时给回包副本打 sessionPatchFailed：客户端见到它就不写共享缓存（不能把别人的判定记成本会话产出）。
   async function handleChain(args: ChainArgs) {
-      const _rawChainCwd = (args && args.cwd) || ''; if (!String(_rawChainCwd).trim()) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }; const cwd = await canonicalKey(_rawChainCwd) // #1003 空目录闸
-      const chainLang = (args && args.lang === 'en') ? 'en' : 'zh'
+      const _rawChainCwd = (args && args.cwd) || ''; if (!String(_rawChainCwd).trim()) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }; const cwd = await canonicalKey(_rawChainCwd) // #1003 空目录闸
+      const chainLang = (args && args.lang === 'zh') ? 'zh' : 'en'
       const out = await evaluateChain(args, cwd, chainLang)
       let reply: any = out.reply
       let patched = 0

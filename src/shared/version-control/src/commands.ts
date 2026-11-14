@@ -188,7 +188,7 @@ export function pushArgs(plan: { mode: 'existing' | 'set-upstream' | 'recreate';
   // 自检（#841 第三批·安全级）：refspec 首字符 + 是强推标记。分支名正则已经拒前导 +，这里再兜一道，
   // 免得将来有人从别的路径拼 refspec 时把「普通推送」变成「覆盖远端」。
   if (spec.charAt(0) === '+' || plan.localBranch.charAt(0) === '+' || plan.branch.charAt(0) === '+') {
-    throw new Error('[version-control] refspec 不许以 + 开头（会被 git 当强推）：' + spec)
+    throw new Error('[version-control] refspec cannot start with + (git treats it as a force push): ' + spec)
   }
   // --no-follow-tags：用户配置里若开着 push.followTags=true，显式 refspec 仍会把可达的标注标签一起推出去；
   // 面板只推这一个分支，标签不替用户推（真机场景②的验收点：推完远端标签仍为空）。

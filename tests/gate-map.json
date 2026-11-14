@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-14T12:21:39.461Z",
+  "generatedAt": "2026-11-14T12:43:21.221Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 602,
-  "gateCount": 602,
-  "attributedGates": 546,
+  "chainLength": 603,
+  "gateCount": 603,
+  "attributedGates": 547,
   "unattributedGates": 56,
   "buildOutputOnlyGates": 21,
   "completionRecordedGates": 143,
@@ -10599,6 +10599,33 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 5 条"
     },
     {
+      "step": "node tests/verify-english-surface.ts",
+      "file": "tests/verify-english-surface.ts",
+      "guards": [
+        "src/refresh",
+        "src/shared",
+        "src/shared/naming-attribution.ts",
+        "src/shared/naming-titles.ts",
+        "src/shared/skill-probe-channels.ts",
+        "src/shared/version-control/src/capability-ledger.ts",
+        "src/shared/version-control/src/migrate-actions.ts",
+        "src/shared/version-control/src/stash-rules.ts",
+        "src/shared/version-control/src/sync-actions.ts",
+        "src/shared/version-control/src/undo-ops.ts",
+        "src/shared/version-control/src/worktree-ops.ts"
+      ],
+      "dirs": [
+        "src/refresh",
+        "src/shared",
+        "src/shared/version-control/src"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；源码里的路径字面量 10 条"
+    },
+    {
       "step": "node tests/verify-error-normalize-log.ts",
       "file": "tests/verify-error-normalize-log.ts",
       "guards": [
@@ -15372,6 +15399,7 @@
       "node tests/verify-contract-vocabulary.ts",
       "node tests/verify-dependency-rules.ts",
       "node tests/verify-1443-static-gate.ts",
+      "node tests/verify-english-surface.ts",
       "node tests/verify-log-count.ts",
       "node tests/verify-log-fields.ts"
     ],
@@ -15699,6 +15727,7 @@
       "node tests/verify-955-alignment.ts",
       "node tests/verify-968-skill-ondemand.ts",
       "node tests/verify-bundled-skills.ts",
+      "node tests/verify-english-surface.ts",
       "node tests/verify-host-log-slot-single-source.ts",
       "node tests/verify-naming-e2e.ts",
       "node tests/verify-naming-guardian.ts",
@@ -15855,6 +15884,7 @@
       "node tests/verify-841-write-phones.ts",
       "node tests/verify-842-version-control-write-view.ts",
       "node tests/verify-976-pull-dirty-warn.ts",
+      "node tests/verify-english-surface.ts",
       "node tests/verify-file-granularity.ts",
       "node tests/verify-time-config.ts",
       "node tests/verify-version-control-rules.ts"

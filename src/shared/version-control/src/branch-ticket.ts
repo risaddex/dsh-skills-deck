@@ -54,7 +54,7 @@ export function branchPlanOf(op: string, args: any): { ok: true; plan: any } | {
   const a: any = args || {}
   const s = function (v: any): string { return v === undefined || v === null ? '' : String(v) }
   const want: string = String(op || '')
-  if (BRANCH_TICKET_OPS.indexOf(want) < 0) return { ok: false, reason: 'bad-target', message: '不认识的分支写动作：' + want + '（允许：' + BRANCH_TICKET_OPS.join(' / ') + '）' }
+  if (BRANCH_TICKET_OPS.indexOf(want) < 0) return { ok: false, reason: 'bad-target', message: 'unknown branch write action: ' + want + ' (allowed: ' + BRANCH_TICKET_OPS.join(' / ') + ')' }
   if (want === 'create') return { ok: true, plan: { op: want, name: s(a.name), from: s(a.from) === '' ? null : s(a.from) } }
   if (want === 'switch') return { ok: true, plan: { op: want, name: s(a.name) } }
   if (want === 'detach') return { ok: true, plan: { op: want, rev: s(a.rev) } }

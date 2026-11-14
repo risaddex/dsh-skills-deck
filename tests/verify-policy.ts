@@ -83,10 +83,10 @@ function scenarios(api) {
         const p = overPoints.admitted === true && overPoints.reason === 'ai-tool-over-hour-soft' && overPoints.warnings.length === 1
         const q = overRequests.admitted === true && overRequests.reason === 'ai-tool-over-hour-soft' && overRequests.warnings.length === 1
         return p && q &&
-          overPoints.warnings[0].indexOf(String(limits.aiToolMaxPointsPerHour) + ' 点') >= 0 &&
-          overPoints.warnings[0].indexOf(String(limits.aiToolMaxRequestsPerHour) + ' 条') >= 0 &&
+          overPoints.warnings[0].indexOf(String(limits.aiToolMaxPointsPerHour) + ' points') >= 0 &&
+          overPoints.warnings[0].indexOf(String(limits.aiToolMaxRequestsPerHour) + ' requests') >= 0 &&
           // #1527：提醒里必须带服务端这一桶还剩多少，人才能判断「快见底」还是「还宽裕」。
-          overPoints.warnings[0].indexOf('服务端这一桶还剩 ' + plenty.remaining + ' 条') >= 0
+          overPoints.warnings[0].indexOf('remaining in this server bucket: ' + plenty.remaining + ' requests') >= 0
       },
     },
     {

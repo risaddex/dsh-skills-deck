@@ -181,7 +181,7 @@ async function main() {
   const NUL = String.fromCharCode(0)
   const sample = parsed.parseStashList('stash@{0}' + NUL + 'b'.repeat(40) + NUL + '1700000000' + NUL + 'On main: 第1条')
   check(sample.ok === true && sample.entries[0].selector === 'stash@{0}' && sample.entries[0].subject === 'On main: 第1条', '列表解析器与列表格式对得上（同一条四段 NUL 口径）')
-  check(rules.STASH_STAGED_ALTERNATIVE === '先做一次全量贮藏，再恢复未暂存的部分', '7.3 的低版本替代做法就是规格第 6 节那一句')
+  check(rules.STASH_STAGED_ALTERNATIVE === 'Stash everything first, then restore the unstaged part.', '7.3 的低版本替代做法就是规格第 6 节那一句')
   check(rules.STASH_RECENT_MAX === 20 && rules.STASH_MESSAGE_MAX === 200 && rules.STASH_BRANCH_MAX === 200, '最近丢弃与说明/分支名上限都有明确常量')
 
   // ---------- B 宿主真跑：十条动作在真仓库里各做一遍 ----------

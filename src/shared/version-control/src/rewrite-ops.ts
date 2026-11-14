@@ -31,11 +31,11 @@ export const REWRITE_PHONES = {
 
 /** 五张表单的元信息；needs 决定界面给哪种输入，command 是账本口径的命令原文。 */
 export const REWRITE_FORMS = [
-  { id: 'remove-paths', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'paths', labelKey: 'vc.rewrite.form.removePaths', command: 'git filter-repo --force --invert-paths --path <路径>' },
-  { id: 'rename-paths', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'renames', labelKey: 'vc.rewrite.form.renamePaths', command: 'git filter-repo --force --path-rename <旧路径>:<新路径>' },
-  { id: 'rewrite-authors', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'authors', labelKey: 'vc.rewrite.form.rewriteAuthors', command: 'git filter-repo --force --mailmap <面板生成的邮件映射文件>' },
-  { id: 'remove-large', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'threshold', labelKey: 'vc.rewrite.form.removeLarge', command: 'git filter-repo --force --strip-blobs-bigger-than <阈值>' },
-  { id: 'replace-text', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'replacements', labelKey: 'vc.rewrite.form.replaceText', command: 'git filter-repo --force --replace-text <面板生成的替换说明文件>' },
+  { id: 'remove-paths', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'paths', labelKey: 'vc.rewrite.form.removePaths', command: 'git filter-repo --force --invert-paths --path <path>' },
+  { id: 'rename-paths', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'renames', labelKey: 'vc.rewrite.form.renamePaths', command: 'git filter-repo --force --path-rename <old-path>:<new-path>' },
+  { id: 'rewrite-authors', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'authors', labelKey: 'vc.rewrite.form.rewriteAuthors', command: 'git filter-repo --force --mailmap <panel-generated-mailmap-file>' },
+  { id: 'remove-large', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'threshold', labelKey: 'vc.rewrite.form.removeLarge', command: 'git filter-repo --force --strip-blobs-bigger-than <threshold>' },
+  { id: 'replace-text', capId: '5.11', dangerous: true, confirm: true, reversible: false, needs: 'replacements', labelKey: 'vc.rewrite.form.replaceText', command: 'git filter-repo --force --replace-text <panel-generated-replacement-file>' },
 ]
 
 /** 按标识符取表单元信息；不认识回 null，调用方据此明确拒绝而不是落到某个默认表单。 */
@@ -309,9 +309,9 @@ export function rewriteDisplayCommandOf(form: any, plan: any): string {
     for (let i = 0; i < list.length; i += 1) parts.push('--path-rename', String(list[i].from) + ':' + String(list[i].to))
     return head + parts.join(' ')
   }
-  if (form === 'rewrite-authors') return head + '--mailmap ' + '<面板生成的邮件映射文件>'
+  if (form === 'rewrite-authors') return head + '--mailmap ' + '<panel-generated-mailmap-file>'
   if (form === 'remove-large') return head + '--strip-blobs-bigger-than ' + String(p.threshold || '')
-  if (form === 'replace-text') return head + '--replace-text ' + '<面板生成的替换说明文件>'
+  if (form === 'replace-text') return head + '--replace-text ' + '<panel-generated-replacement-file>'
   return ''
 }
 

@@ -312,7 +312,7 @@ async function main() {
     const kids = [];
     for (let i = 0; i < 400; i++) kids.push({ key: 'k' + i, title: '超顶' + i, kind: 'issue' });
     const over = await w.run('deck_map_plan_create', { planId: 'p1442-over', title: '超顶地图', effort: 'p1442-over', children: kids });
-    check(!over.threw && !!over.r && over.r.status === 'unsupported' && over.r.reason === 'ai-tool-refused' && String(over.r.text || '').indexOf('硬顶') >= 0,
+    check(!over.threw && !!over.r && over.r.status === 'unsupported' && over.r.reason === 'ai-tool-refused' && String(over.r.text || '').indexOf('hard cap') >= 0,
       '超单次硬顶仍是 ai-tool-refused 且带硬顶二字（实得 ' + (over.threw || JSON.stringify({ status: over.r && over.r.status, reason: over.r && over.r.reason })) + '）');
     const wb = await buildWorld('boom-1442', OFFLINE_READING, [boomModule]);
     const b = await wb.run('deck_issue_create', { title: '炸', kind: 'issue' });
@@ -352,14 +352,14 @@ async function main() {
     const hourCap = w.gate.admitAiTool({ points: 1, requests: 0 }, { backendId: 'gh-stub-1442', bucket: 'graphql' });
     check(!!hourCap && hourCap.admitted === true && hourCap.reason === 'ai-tool-over-hour-soft'
       && Array.isArray(hourCap.warnings) && hourCap.warnings.length === 1
-      && String(hourCap.warnings[0]).indexOf('2000 点') >= 0 && String(hourCap.warnings[0]).indexOf('1500 条') >= 0
+      && String(hourCap.warnings[0]).indexOf('2000 points') >= 0 && String(hourCap.warnings[0]).indexOf('1500 requests') >= 0
       // #1527：提醒要带服务端这一桶还剩多少（这里的读数来自 DUAL_SYNCED 那份桩）。
-      && String(hourCap.warnings[0]).indexOf('服务端这一桶还剩') >= 0,
+      && String(hourCap.warnings[0]).indexOf('remaining in this server bucket') >= 0,
       '越过每小时提醒线时照常放行，warnings 说清提醒线在哪、服务端还剩多少（实得 ' + JSON.stringify(hourCap && { admitted: hourCap.admitted, reason: hourCap.reason, warnings: hourCap.warnings }) + '）');
     const callCap = w.gate.admitAiTool({ points: 601, requests: 0 }, { backendId: 'gh-stub-1442', bucket: 'graphql' });
     check(!!callCap && callCap.admitted === false && callCap.reason === 'ai-tool-over-call-cap'
       // #1527 决定三：单次硬顶拒绝必须报出服务端还剩多少，否则 AI 会以为「没额度了」而不是「这一笔太大」。
-      && String(callCap.text).indexOf('服务端这一桶还剩') >= 0,
+      && String(callCap.text).indexOf('Remaining in this server bucket') >= 0,
       '单次超量仍被拒，报的是单次档、文案说明服务端还剩多少（实得 ' + JSON.stringify(callCap && { admitted: callCap.admitted, reason: callCap.reason, text: callCap.text }) + '）');
     // 会话级：本小时已越线，但会话照开，提醒挂在 admit.warnings 上（回执把这一段带出去）。
     const opened = await trackerSessionMod.openDeckSession({
@@ -387,10 +387,10 @@ async function main() {
       check(!threw && !!r && r.status === 'ok',
         name + ' 越过提醒线后照常成功（实得 ' + (threw ? threw : JSON.stringify({ status: r && r.status, reason: r && r.reason })) + '）');
       if (name === 'deck_issue_list') {
-        check(!!r && !!r.cost && Array.isArray(r.cost.warnings) && r.cost.warnings.length === 1 && String(r.cost.warnings[0]).indexOf('提醒线') >= 0,
+        check(!!r && !!r.cost && Array.isArray(r.cost.warnings) && r.cost.warnings.length === 1 && String(r.cost.warnings[0]).indexOf('warning line') >= 0,
           '读票回执的 cost.warnings 带着那句提醒（实得 ' + JSON.stringify(r && r.cost && r.cost.warnings) + '）');
         // #1527 票面第 5 条点名 cost.note：人先读 note，提醒也要写进那一格。
-        check(!!r && !!r.cost && typeof r.cost.note === 'string' && r.cost.note.indexOf('提醒线') >= 0,
+        check(!!r && !!r.cost && typeof r.cost.note === 'string' && r.cost.note.indexOf('warning line') >= 0,
           '读票回执的 cost.note 也写着那句提醒（实得 ' + JSON.stringify(r && r.cost && r.cost.note) + '）');
       }
     }

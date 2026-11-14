@@ -154,7 +154,7 @@ async function main() {
   check(markedWrote.ok === true, '带标记的那一份能写回去。', markedWrote.ok ? '' : markedWrote.message)
   const wroteText = markedWrote.ok ? markedWrote.text : ''
   check(wroteText.indexOf('    unopened: true') >= 0, '写出去的一份里出现 unopened: true。', wroteText.slice(0, 400))
-  check(wroteText.indexOf('# 这条记录暂时按设置页工作区名单上的路径记着') >= 0, '写出去的那一行上面有一句看得懂的注释。', wroteText.slice(0, 400))
+  check(wroteText.indexOf('# This entry temporarily uses the settings workspace-list path') >= 0, '写出去的那一行上面有一句看得懂的注释。', wroteText.slice(0, 400))
   check(wroteText.split('unopened: true').length === 2, '只有带标记的那一条记录写 unopened: true（另一条不写）。', wroteText.slice(0, 400))
   check(wroteText.indexOf('unopened: false') < 0, 'false 不写出去（缺省不写，文件里少一行杂音）。', wroteText.slice(0, 400))
   const markedBack = parseSettingsText(wroteText)

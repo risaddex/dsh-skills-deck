@@ -72,7 +72,7 @@ function main() {
   // —— E. 裁决纯函数的形状：导出、常量、不 import 额度数字 ——
   const admit = read(GUARDED[0])
   check(/export\s+function\s+decideByBudget\s*\(/.test(admit), 'budget-admission 导出 decideByBudget 纯函数')
-  check(admit.indexOf('硬顶：这次调用没有写权限，写操作直接拒绝。') >= 0, '硬顶文案与既有裁决逐字一致（调用方按同一句话说话）')
+  check(admit.indexOf('Hard cap: this call has no write permission, so writes are refused.') >= 0, '硬顶文案与既有裁决逐字一致（调用方按同一句话说话）')
   check(!/from\s+['"][^'"]*host-budget/.test(admit), 'budget-admission 不 import host-budget（额度数字由调用方注入）')
   check(!/0\.35|35\s*\/\s*100/.test(admit), 'budget-admission 不写 35% 保底数字（两桶算式只在第 e 步用注入的 writeReserve）')
   check(admit.indexOf('off-network-free') >= 0 && admit.indexOf('reading-unknown') >= 0 && admit.indexOf('requests-exhausted') >= 0, '裁决的三种新理由都在（离网/未知/请求用尽）')

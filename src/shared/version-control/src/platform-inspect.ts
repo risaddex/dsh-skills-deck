@@ -71,11 +71,11 @@ export const vcUpdateRefsOf = function (value: any): any {
 
 const vcArgProblemOf = function (value: any, what: string): string {
   const text = String(value === undefined || value === null ? '' : value)
-  if (text.trim() === '') return what + '不能为空'
-  if (text.length > PLATFORM_ARG_MAX) return what + '太长（最多 ' + PLATFORM_ARG_MAX + ' 个字符）'
-  if (text.indexOf('\u0000') >= 0) return what + '里不能有 NUL 字符'
-  if (/\s/.test(text)) return what + '里不能有空白字符'
-  if (text.charAt(0) === '-' || text.charAt(0) === '+') return what + '不能以短横线或加号开头'
+  if (text.trim() === '') return what + ' cannot be empty'
+  if (text.length > PLATFORM_ARG_MAX) return what + ' is too long (maximum ' + PLATFORM_ARG_MAX + ' characters)'
+  if (text.indexOf('\u0000') >= 0) return what + ' cannot contain NUL characters'
+  if (/\s/.test(text)) return what + ' cannot contain whitespace'
+  if (text.charAt(0) === '-' || text.charAt(0) === '+') return what + ' cannot start with a hyphen or plus sign'
   return ''
 }
 
@@ -89,11 +89,11 @@ export const vcRequestPullArgsOf = function (input: any): any {
   const start = String(args.start === undefined || args.start === null ? '' : args.start).trim()
   const url = String(args.url === undefined || args.url === null ? '' : args.url).trim()
   const end = String(args.end === undefined || args.end === null ? '' : args.end).trim()
-  const startProblem = vcArgProblemOf(start, '起点')
+  const startProblem = vcArgProblemOf(start, 'start')
   if (startProblem) return { ok: false, reason: 'bad-range', message: startProblem }
-  const urlProblem = vcArgProblemOf(url, '仓库地址')
+  const urlProblem = vcArgProblemOf(url, 'Repository address')
   if (urlProblem) return { ok: false, reason: 'bad-url', message: urlProblem }
-  const endProblem = end === '' ? '' : vcArgProblemOf(end, '终点')
+  const endProblem = end === '' ? '' : vcArgProblemOf(end, 'end')
   if (endProblem) return { ok: false, reason: 'bad-range', message: endProblem }
   return { ok: true, args: ['request-pull', '-p', start, url].concat(end === '' ? [] : [end]) }
 }

@@ -9,7 +9,7 @@
       "reads": 1,
       "requests": 3,
       "shards": 1,
-      "text": "这次 deck_issue_report 预计花 6 点、3 条出站请求，在硬顶之内。",
+      "text": "This deck_issue_report call is estimated to cost 6 points and 3 outbound requests, within the hard cap.",
       "tickets": 0,
       "tool": "deck_issue_report",
       "withinCallCap": true,

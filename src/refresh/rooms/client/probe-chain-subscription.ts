@@ -71,7 +71,7 @@ const _chainLatestByKey: Map<string, number> = new Map(); // Map<链共享键, �
 //   两次算的是同一把尺子，才能判出「这个会话现在要的是不是这条链」。自刷新那两个定时器也用它，不另抄一份。
 const _chainKeyOfState = function (state: any): string {
   const bid: string = (state && state.selection && state.selection.backendId) || '';
-  const lg: string = (typeof promptLang === 'function' ? promptLang() : 'zh');
+  const lg: string = (typeof promptLang === 'function' ? promptLang() : 'en');
   const ws: string = (typeof wsKeyOf === 'function' ? wsKeyOf(state && state.cwd) : String((state && state.cwd) || ''));
   return (typeof getChainCacheKey === 'function' ? getChainCacheKey(ws, bid, lg) : String(ws || '') + '|' + String(bid) + '|' + String(lg || ''));
 };
@@ -217,7 +217,7 @@ export const loadChain = function (st: any, force: any, trigger: any, opts?: any
   }
   // 链共享键 = 工作区键 + 后端 id + 语言（#324 按工作区单次求值按后端隔离；#529 加语言：host 明细按语言产出，中英快照分开缓存，切换语言即时重取）
   const _backendIdForChain: string = (st.selection && st.selection.backendId) || '';
-  const _langForChain: string = (typeof promptLang === 'function' ? promptLang() : 'zh');
+  const _langForChain: string = (typeof promptLang === 'function' ? promptLang() : 'en');
   const norm: string = _chainKeyOfState(st);
   // #1492：在途与序号两张表用「共享键 + 本会话号」；缓存仍用共享键（快照要跨会话复用）。
   const _scopedKey: string = _chainScopedKeyOf(st, norm);
@@ -491,7 +491,7 @@ export const openBlockers = (t: any, m: any): any[] => t.blockedBy.filter(functi
 export const blockerNames = (t: any, m: any): string => openBlockers(t, m).map(function (b: any): string {
   const bt: any = m.tickets.find(function (x: any): boolean { return x.number === b; });
   return bt ? bt.title : ('#' + b);
-}).join('；');
+}).join('; ');
 // v10：从会话快照探测当前工作目录（ConversationSnapshot 字段名多探几个）
 export const detectCwd = function (ss: any): string {
   try {

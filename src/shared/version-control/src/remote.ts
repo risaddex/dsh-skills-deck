@@ -224,36 +224,36 @@ export interface LsRemoteFailure {
 }
 
 const FAILURE_HINTS: Record<string, string> = {
-  timeout: '这次联网读取等太久没有回音，已经停下。可以在网络好一点的时候再点一次「联网查看」。',
-  'needs-credential': '远端要登录才能看。面板不弹密码框，也不保存令牌：请到右侧栏终端里登录一次（或者先登好凭据助手），再回来点一次「联网查看」。',
-  'no-network': '这台机器现在连不上那个远端（域名没解析出来、网络不通或被挡了）。检查网络或代理后再试一次。',
-  'remote-missing': '远端说没有这个仓库，或者这台机器没有访问权限。确认地址与仓库名，需要的话到终端里核实一次。',
-  truncated: '这次输出被截断了，读不全就不给你半份引用清单。请缩小引用范围（只看某个分支或标签）再试一次。',
-  other: '联网读取没有成功，git 的原话在上面。可以稍后再点一次；一直不行就去终端里手动跑一次看完整输出。',
+  timeout: 'This online read waited too long without a response and was stopped. Click "View online" again when the network improves.',
+  'needs-credential': 'The remote requires sign-in. The panel does not prompt for passwords or store tokens: sign in in the sidebar terminal (or through a credential helper), then click "View online" again.',
+  'no-network': 'This machine cannot reach that remote right now (DNS failed, the network is unavailable or access is blocked). Check the network or proxy, then retry.',
+  'remote-missing': 'The remote says this repository does not exist, or this machine has no access. Check the address and repository name, and verify in a terminal if needed.',
+  truncated: 'The output was truncated, so no partial ref list will be shown. Narrow the ref range (one branch or tag) and retry.',
+  other: 'The online read failed; the original git message is above. Retry later; if it keeps failing, run it manually in a terminal to see the full output.',
 }
 
 /** 把一次 ls-remote 的执行结果翻成失败的分类与话术；成功（kind 为 ok 且未截断）时返回 null。 */
 export function classifyLsRemoteFailure(input: unknown): LsRemoteFailure | null {
   const r: any = input || {}
-  if (r.truncated === true) return failureOf('truncated', '这次联网输出被截断了，读不全。')
-  if (r.kind === 'timeout') return failureOf('timeout', '这次联网读取超时了。')
-  if (r.kind === 'cancelled') return failureOf('other', '这次联网读取被取消了。')
-  if (r.kind === 'spawn-failed') return failureOf('other', '起不了 git 进程：' + String(r.message || ''))
+  if (r.truncated === true) return failureOf('truncated', 'The online output was truncated and is incomplete.')
+  if (r.kind === 'timeout') return failureOf('timeout', 'The online read timed out.')
+  if (r.kind === 'cancelled') return failureOf('other', 'The online read was cancelled.')
+  if (r.kind === 'spawn-failed') return failureOf('other', 'Cannot start the git process: ' + String(r.message || ''))
   if (r.kind !== 'non-zero') return null
   const stderr = scrubCredentialText(r.stderr)
   const low = stderr.toLowerCase()
   const line = firstLineOf(stderr)
-  const says = line ? '；git 说：' + line : ''
+  const says = line ? '; git says: ' + line : ''
   if (/could not read username|could not read password|terminal prompts disabled|authentication failed|permission denied \(publickey|invalid username or password|support for password authentication|access denied/.test(low)) {
-    return failureOf('needs-credential', '远端要凭据才能读取，面板这边不弹登录框。' + says)
+    return failureOf('needs-credential', 'The remote requires credentials to read; the panel does not show a sign-in dialog.' + says)
   }
   if (/could not resolve host|could not resolve hostname|network is unreachable|connection timed out|connection refused|failed to connect|connection reset|no route to host|temporary failure in name resolution/.test(low)) {
-    return failureOf('no-network', '这台机器连不上那个远端。' + says)
+    return failureOf('no-network', 'This machine cannot reach that remote.' + says)
   }
   if (/repository not found|not found|does not appear to be a git repository|no such remote|remote repository not found|project not found/.test(low)) {
-    return failureOf('remote-missing', '远端说没有这个仓库或没有访问权限。' + says)
+    return failureOf('remote-missing', 'The remote says the repository does not exist or access is denied.' + says)
   }
-  return failureOf('other', '联网读取没有成功。' + says)
+  return failureOf('other', 'The online read failed.' + says)
 }
 function failureOf(kind: LsRemoteFailure['kind'], message: string): LsRemoteFailure {
   return { kind: kind, reason: kind, message: message, hint: FAILURE_HINTS[kind] }

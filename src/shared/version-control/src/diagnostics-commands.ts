@@ -51,18 +51,18 @@ function isRev(v: string): boolean { return REV_PATTERN.test(v) }
 function isPath(v: string): boolean { return PATH_PATTERN.test(v) }
 function pathList(v: any): { ok: true; paths: string[] } | { ok: false; reason: string; message: string } {
   if (v === undefined || v === null || v === '') return { ok: true, paths: [] }
-  if (!Array.isArray(v)) return bad('bad-target', '路径清单必须是数组')
+  if (!Array.isArray(v)) return bad('bad-target', 'path list must be an array')
   const out: string[] = []
   for (let i: number = 0; i < v.length; i += 1) {
     const p: string = text(v[i])
-    if (!isPath(p)) return bad('bad-target', '路径里含有空白、换行或以 - 开头的段，不能交给 git：' + p.slice(0, 80))
+    if (!isPath(p)) return bad('bad-target', 'path contains whitespace, line breaks or segments starting with -, and cannot be passed to git: ' + p.slice(0, 80))
     out.push(p)
   }
   return { ok: true, paths: out }
 }
 function revField(params: any, key: string, fallback: string): { ok: true; value: string } | { ok: false; reason: string; message: string } {
   const v: string = text(params[key]).trim() === '' ? fallback : text(params[key]).trim()
-  if (!isRev(v)) return bad('bad-target', '版本名不合法（不能以 - 开头，不能含空白）：' + v.slice(0, 80))
+  if (!isRev(v)) return bad('bad-target', 'invalid revision name (cannot start with - or contain whitespace): ' + v.slice(0, 80))
   return { ok: true, value: v }
 }
 
@@ -71,11 +71,11 @@ function revField(params: any, key: string, fallback: string): { ok: true; value
 export function diagnosticsReadPlanOf(kind: any, params: any): { ok: true; plan: any } | { ok: false; reason: string; message: string } {
   const k: string = text(kind)
   const p: any = params || {}
-  if (DIAGNOSTICS_READ_KINDS.indexOf(k) < 0) return bad('bad-target', '不认识只读查询：' + k + '（允许：' + DIAGNOSTICS_READ_KINDS.join(' / ') + '）')
+  if (DIAGNOSTICS_READ_KINDS.indexOf(k) < 0) return bad('bad-target', 'unknown read-only query: ' + k + ' (allowed: ' + DIAGNOSTICS_READ_KINDS.join(' / ') + ')')
   if (k === 'bisect-status') return okPlan({ kind: k, args: ['bisect', 'log'], limit: LIMIT_MID })
   if (k === 'grep') {
     const pattern: string = text(p.pattern)
-    if (!SEARCH_PATTERN.test(pattern)) return bad('bad-target', '搜索关键词是空的或含有换行/NUL，不能交给 git grep')
+    if (!SEARCH_PATTERN.test(pattern)) return bad('bad-target', 'search term is empty or contains line breaks/NUL, and cannot be passed to git grep')
     const paths: any = pathList(p.paths)
     if (paths.ok !== true) return paths
     const args: string[] = ['grep', '-n', '-I', '--no-color', '-e', pattern]
@@ -109,7 +109,7 @@ export function diagnosticsReadPlanOf(kind: any, params: any): { ok: true; plan:
   }
   if (k === 'for-each-ref') {
     const prefix: string = text(p.prefix).trim()
-    if (prefix !== '' && !isPath(prefix)) return bad('bad-target', '引用的命名空间不合法：' + prefix.slice(0, 80))
+    if (prefix !== '' && !isPath(prefix)) return bad('bad-target', 'invalid ref namespace: ' + prefix.slice(0, 80))
     const args: string[] = ['for-each-ref', '--format=%(refname)%00%(objectname)%00%(subject)']
     if (prefix !== '') args.push(prefix)
     return okPlan({ kind: k, prefix: prefix, args: args, limit: LIMIT_MID })
@@ -140,8 +140,8 @@ export function diagnosticsReadPlanOf(kind: any, params: any): { ok: true; plan:
   }
   if (k === 'apply-check') {
     const patch: string = text(p.patch)
-    if (patch.trim() === '') return bad('bad-target', '补丁是空的：先把要预演的 diff 贴进来')
-    if (patch.length > PATCH_MAX) return bad('bad-target', '补丁太大（超过 ' + PATCH_MAX + ' 字节）：只预演一次改动，不要整库搬')
+    if (patch.trim() === '') return bad('bad-target', 'patch is empty: paste the diff to preview first')
+    if (patch.length > PATCH_MAX) return bad('bad-target', 'patch is too large (over ' + PATCH_MAX + ' bytes): preview one change, not the whole repository')
     return okPlan({ kind: k, patch: patch, limit: LIMIT_MID })
   }
   if (k === 'trailers') {
@@ -157,22 +157,22 @@ export function diagnosticsReadPlanOf(kind: any, params: any): { ok: true; plan:
 export function diagnosticsWritePlanOf(op: any, args: any): { ok: true; plan: any } | { ok: false; reason: string; message: string } {
   const a: any = args || {}
   const want: string = text(op)
-  if (DIAGNOSTICS_WRITE_OPS.indexOf(want) < 0) return bad('bad-target', '不认识诊断写动作：' + want + '（允许：' + DIAGNOSTICS_WRITE_OPS.join(' / ') + '）')
+  if (DIAGNOSTICS_WRITE_OPS.indexOf(want) < 0) return bad('bad-target', 'unknown diagnostic write action: ' + want + ' (allowed: ' + DIAGNOSTICS_WRITE_OPS.join(' / ') + ')')
   if (want === 'bisect-start') {
     const b: string = text(a.bad).trim()
     const g: string = text(a.good).trim()
-    if (!isRev(b) || !isRev(g)) return bad('bad-target', '开始二分必须同时给坏提交与好提交，且两个值都要是合法的版本名')
+    if (!isRev(b) || !isRev(g)) return bad('bad-target', 'starting bisect requires both a bad and a good commit, each a valid revision name')
     return okPlan({ op: want, bad: b, good: g })
   }
   if (want === 'bisect-bad' || want === 'bisect-good' || want === 'bisect-skip' || want === 'bisect-reset') return okPlan({ op: want })
   if (want === 'replace-create') {
     const from: string = text(a.from).trim()
     const to: string = text(a.to).trim()
-    if (!isRev(from) || !isRev(to)) return bad('bad-target', '替换对象必须同时给被替换对象与被指向对象，两个值都要是合法的版本名')
+    if (!isRev(from) || !isRev(to)) return bad('bad-target', 'replacing an object requires both the original and the target object, each a valid revision name')
     return okPlan({ op: want, from: from, to: to })
   }
   const object: string = text(a.object).trim()
-  if (!isRev(object)) return bad('bad-target', '撤销替换要说清撤销哪个对象的替换')
+  if (!isRev(object)) return bad('bad-target', 'removing a replacement requires the object whose replacement is to be removed')
   return okPlan({ op: want, object: object })
 }
 
@@ -263,10 +263,10 @@ export function diagnosticsConfirmOf(op: any, plan: any, facts: any): any {
   const o: string = text(op)
   const p: any = plan || {}
   const f: any = facts || {}
-  if (o === 'bisect-start') return { kind: o, target: text(p.bad) + ' → ' + text(p.good), verb: '开始二分查找：把最近的好提交与坏提交记下来，之后每次标记都会换一个待验提交' }
-  if (o === 'bisect-reset') return { kind: o, target: 'BISECT_HEAD', verb: '结束这趟二分：回到开始二分之前的分支与提交，二分记录没删' }
-  if (o === 'replace-create') return { kind: o, target: text(p.from) + ' → ' + text(p.to), verb: '建立替换：之后所有命令看到 ' + text(p.from) + ' 时，读到的其实是被指向对象 ' + text(p.to) }
-  return { kind: o, target: text(p.object), verb: '撤销替换：把 ' + text(p.object) + ' 的替换记录删掉，之后再看它回到它自己' }
+  if (o === 'bisect-start') return { kind: o, target: text(p.bad) + ' → ' + text(p.good), verb: 'start bisect: record the latest good and bad commits; each mark then selects another commit to test' }
+  if (o === 'bisect-reset') return { kind: o, target: 'BISECT_HEAD', verb: 'end this bisect: return to the branch and commit from before bisect; the bisect log is kept' }
+  if (o === 'replace-create') return { kind: o, target: text(p.from) + ' → ' + text(p.to), verb: 'create a replacement: all commands that see ' + text(p.from) + ' will read the target object instead: ' + text(p.to) }
+  return { kind: o, target: text(p.object), verb: 'remove replacement: delete the replacement for ' + text(p.object) + '; subsequent reads return the original object' }
 }
 
 /** 尾部行解析（13.13）：只认「最后一段连续的 键: 值 行」，每行一个 token。

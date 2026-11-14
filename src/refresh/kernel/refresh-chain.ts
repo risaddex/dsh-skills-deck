@@ -47,15 +47,15 @@ export const CHAIN_ACTIONS: readonly string[] = ['create', 'plan', 'comment', 'e
 
 /** 原因代号表：左边是代号（会被写进日志），右边是给第一次读的人看的一整句大白话。 */
 export const CHAIN_REASONS: Readonly<Record<string, string>> = {
-  'chain.record': '这是一次写（或明确的处理动作），且说的是哪一张票：记进链',
-  'chain.read-excluded': '这是一次读（顺手看一眼）：不进链，链上只留写与明确的处理动作',
-  'chain.no-ticket': '这次动作是写，但说不出是哪一张票：不记（记了也没法在界面上点名是哪张）',
-  'chain.not-succeeded': '这次调用没有成功：什么都没改，不记',
-  'chain.not-a-result': '这不是一次调用的结果（调用刚开始或认不出的形态）：不记',
-  'chain.unknown-source': '说不清这条线索是从哪来的（不是工具参数、命令行或票文件路径）：不记',
-  'chain.bad-shard': '这个会话的散列算不出来（会话 id 是空的）：不记，免得把不同会话的票记进同一格',
-  'chain.bad-root': '工作区根散列不像散列（长度或字符不对）：不记，宁可漏一次也不把原文写进键里',
-  'chain.bad-backend': '后端名不在三个后端里：不记，不同后端的票 key 不通用',
+  'chain.record': 'a write (or explicit work action) with an identified ticket: record in the chain',
+  'chain.read-excluded': 'a read (a glance): not recorded; the chain keeps only writes and explicit work actions',
+  'chain.no-ticket': 'a write without an identified ticket: not recorded (the interface could not name it)',
+  'chain.not-succeeded': 'the call failed: nothing changed, not recorded',
+  'chain.not-a-result': 'not a call result (just started or unrecognized shape): not recorded',
+  'chain.unknown-source': 'unknown evidence source (not tool arguments, a command line or a ticket file path): not recorded',
+  'chain.bad-shard': 'cannot hash this session (empty session id): not recorded, to avoid combining tickets from different sessions',
+  'chain.bad-root': 'invalid workspace-root hash (wrong length or characters): not recorded, rather than putting raw text in the key',
+  'chain.bad-backend': 'the backend is not one of the three known backends: not recorded, since ticket keys are not portable across backends',
 }
 
 /** 一句话解释一个原因代号；认不出就原样退回。 */

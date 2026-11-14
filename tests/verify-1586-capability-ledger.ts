@@ -50,11 +50,11 @@ const MIN_VERSIONS = {
 const PANEL_IDS = ['2.7', '5.11', '6.7', '6.9', '13.14']
 const KNOWN_COMMANDS = {
   '1.1': 'git status --porcelain=v2 --branch -z',
-  '1.2': 'git add -p（面板等价于读 diff 后 apply --cached）',
+  '1.2': 'git add -p (the panel equivalent reads the diff, then apply --cached)',
   '1.12': 'gitignore + git check-ignore -v',
-  '2.7': 'git commit（不带 -m）',
-  '6.7': '外部编辑器',
-  '6.11': '--continue（merge / rebase / cherry-pick / revert / am 共用）',
+  '2.7': 'git commit (without -m)',
+  '6.7': 'external editor',
+  '6.11': '--continue (shared by merge / rebase / cherry-pick / revert / am)',
   '8.12': 'git push --force-with-lease',
   '11.15': 'scalar',
   '12.5': 'githooks + core.hooksPath',
@@ -62,7 +62,7 @@ const KNOWN_COMMANDS = {
   '14.2': 'git send-email',
   '14.4': '',
 }
-const EXTERNAL_COMMAND_PREFIXES = ['gitignore ', '外部编辑器', 'scalar', 'githooks ', 'gitk', '--']
+const EXTERNAL_COMMAND_PREFIXES = ['gitignore ', 'external editor', 'scalar', 'githooks ', 'gitk', '--']
 
 const countBy = function (list, key) {
   const out = {}
@@ -113,9 +113,9 @@ const problemsOf = function (list, ledger) {
     const row = list.filter((c) => c.id === id)[0]
     if (!row || row.command !== KNOWN_COMMANDS[id]) problems.push('能力 ' + id + ' 的命令原文被改动')
   }
-  if (!list.every((c) => typeof c.researchBasis === 'string' && /^1588 §2-域\d+/.test(c.researchBasis))) problems.push('研究依据为空或形状不对')
+  if (!list.every((c) => typeof c.researchBasis === 'string' && /^1588 §2-domain \d+/.test(c.researchBasis))) problems.push('研究依据为空或形状不对')
   if (!list.every((c) => {
-    const m = typeof c.researchBasis === 'string' ? /^1588 §2-域(\d+)/.exec(c.researchBasis) : null
+    const m = typeof c.researchBasis === 'string' ? /^1588 §2-domain (\d+)/.exec(c.researchBasis) : null
     return m !== null && Number(m[1]) === c.domain
   })) problems.push('研究依据里的域号与能力域不一致')
   const panels = sortedCopy(list.filter((c) => c.panelPath !== null).map((c) => c.id))
@@ -188,11 +188,11 @@ async function main() {
     const row = list.filter((c) => c.id === id)[0]
     if (!row || row.command !== KNOWN_COMMANDS[id]) knownCommandsOk = false
   }
-  check(knownCommandsOk, '命令原文保留：抽查 12 条逐字相同（含 git commit（不带 -m）、外部编辑器、gitk、scalar 等特殊行）')
+  check(knownCommandsOk, '命令原文保留：抽查 12 条逐字相同（含 git commit (without -m)、外部编辑器、gitk、scalar 等特殊行）')
   check(list.every((c) => c.command === '' || c.command.indexOf('git ') === 0 || EXTERNAL_COMMAND_PREFIXES.some((p) => c.command.indexOf(p) === 0)),
     '非空命令要么以 git 开头，要么是已知的外部命令（不自造命令原文）')
-  check(list.every((c) => typeof c.researchBasis === 'string' && /^1588 §2-域\d+/.test(c.researchBasis)), '每条能力都有研究依据，形如 1588 §2-域N')
-  check(list.every((c) => Number(/^1588 §2-域(\d+)/.exec(c.researchBasis)[1]) === c.domain), '研究依据里的域号与该能力的域号一致')
+  check(list.every((c) => typeof c.researchBasis === 'string' && /^1588 §2-domain \d+/.test(c.researchBasis)), '每条能力都有研究依据，形如 1588 §2-domain N')
+  check(list.every((c) => Number(/^1588 §2-domain (\d+)/.exec(c.researchBasis)[1]) === c.domain), '研究依据里的域号与该能力的域号一致')
   check(sameJson(sortedCopy(list.filter((c) => c.panelPath !== null).map((c) => c.id)), sortedCopy(PANEL_IDS)), '面板替代路径恰好五条：2.7 / 5.11 / 6.7 / 6.9 / 13.14')
   check(list.filter((c) => c.panelPath !== null).every((c) => typeof c.panelPath === 'string' && c.panelPath.length > 0), '五条替代路径都写清了面板里的做法')
   check(list.every((c) => typeof c.minVersion === 'string' && /^\d+\.\d+(\.\d+)?$/.test(c.minVersion) && versionAtLeast(c.minVersion, FLOOR)),

@@ -127,7 +127,7 @@ if (await waitRoute()) {
   fakeRegistry.select = async () => null
   const nosel = unwrap(await callHandler('commentIssue', { number: 255, body: 'z', cwd: 'D:/work/repo' }))
   check(!!nosel && nosel.ok === false && nosel.error && nosel.error.kind === 'env', 'selection 为空 → kind:env（写会话没开成）')
-  check(!!nosel && !!nosel.error && /写会话没开成/.test(String(nosel.error.message || '')), '那一句文案说清是写会话没开成')
+  check(!!nosel && !!nosel.error && /write session did not open/.test(String(nosel.error.message || '')), '那一句文案说清是写会话没开成')
 } else {
   check(false, 'dispatch fn 未注册')
 }

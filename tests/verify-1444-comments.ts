@@ -220,10 +220,10 @@ check(sessionCalls.length === 0, '会话开不成：不再退回直调 gh（会�
 // pending 是还没定下来要等，其余（没认出工作区、没接上、开的当口抛了）保留原来的重试口径。
 // 详情与评论两条路共用同一句文案，这里两路各问一次，顺带钉住它们说的是同一句。
 for (const [reason, must, forbidden] of [
-  ['multi-match', ['面板', '多个后端'], []],
-  ['no-backend', ['面板', '还没有选定后端'], []],
-  ['pending', ['还在确认中'], ['面板']],
-  ['workspace-not-ready', ['等会话可用后再试'], ['面板']],
+  ['multi-match', ['panel', 'Several backends'], []],
+  ['no-backend', ['panel', 'no backend selected'], []],
+  ['pending', ['still being confirmed'], ['panel']],
+  ['workspace-not-ready', ['retry when the session is available'], ['panel']],
 ] as Array<[string, string[], string[]]>) {
   openFailReason = reason
   const d = await handlers.handleIssueDetail({ number: 5, cwd: CWD })
@@ -270,7 +270,7 @@ openMode = 'open-fail'
 writeCalls.length = 0
 const writeOpenFail = await handlers.handleCommentIssue({ number: 5, body: '你好', cwd: CWD })
 check(writeOpenFail && writeOpenFail.ok === false && writeOpenFail.error && writeOpenFail.error.kind === 'env', '写会话开不成：回 {ok:false,error.kind=env}')
-check(String(writeOpenFail && writeOpenFail.error && writeOpenFail.error.message).indexOf('写会话没开成') >= 0, '写会话开不成：消息说清是写会话没开成（不是票不存在）')
+check(String(writeOpenFail && writeOpenFail.error && writeOpenFail.error.message).indexOf('write session did not open') >= 0, '写会话开不成：消息说清是写会话没开成（不是票不存在）')
 check(writeCalls.length === 0, '写会话开不成：房间 comment 一次都没调')
 openMode = 'ok'
 writeRefMissing = true

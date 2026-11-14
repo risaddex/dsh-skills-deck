@@ -102,9 +102,9 @@ type FeedbackCombo = { cls: number; moment: string[]; process: string; detail: s
 // 非法输入诚实抛错，不猜默认值。
 export function feedbackComboOf(input: FeedbackInput | null | undefined): FeedbackCombo {
   const v = input || {}
-  if (!isOneOf(v.wait, WAITS)) throw new Error('feedback-map: 未知等待档位 ' + String(v.wait))
-  if (!isOneOf(v.cost, COSTS)) throw new Error('feedback-map: 未知代价档位 ' + String(v.cost))
-  if (!isOneOf(v.shape, SHAPES)) throw new Error('feedback-map: 未知控件形状 ' + String(v.shape))
+  if (!isOneOf(v.wait, WAITS)) throw new Error('feedback-map: unknown wait tier ' + String(v.wait))
+  if (!isOneOf(v.cost, COSTS)) throw new Error('feedback-map: unknown cost tier ' + String(v.cost))
+  if (!isOneOf(v.shape, SHAPES)) throw new Error('feedback-map: unknown control shape ' + String(v.shape))
   const cls = v.cost === 'high' ? 4 : (v.wait === 'long' ? 3 : (v.wait === 'short' ? 2 : 1))
   const moment = momentOf(v.shape, v.dialog)
   let process = 'none'
@@ -132,23 +132,23 @@ export function feedbackComboOf(input: FeedbackInput | null | undefined): Feedba
 //   js  列的键是调用点自己排的自退时间（setTimeout）。
 // 不编数字：某档真实耗时给不出证据时，那一格写 null 并在 why 里说明为什么不演示。
 export const FB_DURATIONS: FbDuration[] = [
-  { fx: 'ripple', css: '.55s', tier: 'instant', why: '按下瞬间的点缀，跟着手指走，与接口耗时无关（真实调用：点一下就到，没有等待）' },
-  { fx: 'ringout', css: '.6s', tier: 'instant', why: '小图标按下的外扩环，同上，属于按下那一瞬的确认' },
-  { fx: 'sheen', css: '.5s', tier: 'instant', why: '光泽扫过是备用效果，只在弹窗大按钮上手动演示' },
-  { fx: 'inkslide', css: '.24s', tier: 'instant', why: '选中块滑到下一颗的时长（页签行与三组筛选药丸共用这块底），换行折叠时的宽度另走 .16s，两者都在瞬间档 300 毫秒以内' },
-  { fx: 'pop', css: '.35s', tier: 'instant', why: '复制成功的轻弹，复制是本地动作（真实耗时约 0.2 秒，落在瞬间档）' },
-  { fx: 'success-ring', css: '.6s', tier: 'instant', why: '复制成功的成功圈，与轻弹同一次动作' },
-  { fx: 'dots', css: '.9s', tier: 'short', why: '圆点循环一轮的时长；当下没有落点（弹窗提交等待已改用转圈，见 #953），留作短等待的备用形态' },
-  { fx: 'okflash-errflash-warnflash', css: '.45s', tier: 'short', why: '结果闪光半秒内自退，强调一下就退场，不占等待时间' },
-  { fx: 'shake', css: '.4s', tier: 'short', why: '失败抖动一次，幅度小、只抖一遍' },
-  { fx: 'breath', css: '1.6s', tier: 'short', why: '呼吸循环一轮的时长，用在评论翻页加载（真实调用：翻页约 1 秒级）' },
-  { fx: 'skel', css: '1.1s', tier: 'medium', why: '骨架微光循环一轮的时长，用在面板列表首开（真实调用：列表首拉约 2 到 10 秒）' },
-  { fx: 'justSent', js: 1100, tier: 'short', why: '弹窗提交成功后「已提交」停留 1.1 秒再关窗（真实调用：提交向导约 1 秒级）' },
-  { fx: 'copyRetire', js: 1300, tier: 'instant', why: '复制成功对勾停留 1.3 秒（本地动作，留够看清的时间）' },
-  { fx: 'commentRetire', js: 1500, tier: 'short', why: '发评论成功对勾停留 1.5 秒（真实调用：发评论约 0.5 到 2 秒）' },
-  { fx: 'stageText', js: null, tier: 'medium', why: '阶段文字轮换按真实阶段推进，没有写死秒数（真实调用：提交、检查更新、版本读写约 2 到 10 秒）' },
-  { fx: 'countdown', js: null, tier: 'long', why: '倒计时只在有真实时间时显示（真实调用：限流重试可到 10 秒以上），秒数取自真实剩余时间' },
-  { fx: 'percent', js: null, tier: 'long', why: '百分比只在有真实进度时显示，数值取自真实进度' },
+  { fx: 'ripple', css: '.55s', tier: 'instant', why: 'Decoration at press time, following the finger, unrelated to API duration (actual call: immediate, no wait)' },
+  { fx: 'ringout', css: '.6s', tier: 'instant', why: 'Expanding ring on a small icon press; like the above, confirms the instant of pressing' },
+  { fx: 'sheen', css: '.5s', tier: 'instant', why: 'Shine sweep is a fallback effect, demonstrated manually only on large modal buttons' },
+  { fx: 'inkslide', css: '.24s', tier: 'instant', why: 'Duration of the selected block sliding to the next pill (shared by tabs and three filter groups); wrapping collapse width uses .16s separately, both within the instant tier of 300 ms' },
+  { fx: 'pop', css: '.35s', tier: 'instant', why: 'Bounce after a successful copy, a local action (actual duration about 0.2 seconds, in the instant tier)' },
+  { fx: 'success-ring', css: '.6s', tier: 'instant', why: 'Success ring after copying, part of the same action as the bounce' },
+  { fx: 'dots', css: '.9s', tier: 'short', why: 'One dot-loop duration; currently unused (modal submission now uses a spinner, see #953), kept as a fallback for short waits' },
+  { fx: 'okflash-errflash-warnflash', css: '.45s', tier: 'short', why: 'Result flash disappears within half a second, emphasizing then leaving without taking wait time' },
+  { fx: 'shake', css: '.4s', tier: 'short', why: 'One small shake on failure' },
+  { fx: 'breath', css: '1.6s', tier: 'short', why: 'One breathing cycle, used while loading comment pages (actual call: about one second per page)' },
+  { fx: 'skel', css: '1.1s', tier: 'medium', why: 'One skeleton shimmer cycle, used on first opening the panel list (actual call: first fetch about 2 to 10 seconds)' },
+  { fx: 'justSent', js: 1100, tier: 'short', why: 'After a modal submission succeeds, Submitted stays for 1.1 seconds before closing (actual call: submission wizard about one second)' },
+  { fx: 'copyRetire', js: 1300, tier: 'instant', why: 'Copy-success checkmark stays for 1.3 seconds (a local action; enough time to see it)' },
+  { fx: 'commentRetire', js: 1500, tier: 'short', why: 'Comment-success checkmark stays for 1.5 seconds (actual call: posting a comment about 0.5 to 2 seconds)' },
+  { fx: 'stageText', js: null, tier: 'medium', why: 'Stage text follows actual stages, not fixed seconds (actual calls: commit, update check and version reads/writes about 2 to 10 seconds)' },
+  { fx: 'countdown', js: null, tier: 'long', why: 'Countdown appears only with real timing (actual call: rate-limit retry may exceed 10 seconds); seconds come from actual remaining time' },
+  { fx: 'percent', js: null, tier: 'long', why: 'Percentage appears only with real progress, and its value comes from that progress' },
 ]
 
 // 演示秒数表里一行的形状：效果名、归属档位、为什么是这个数三项必有；时长只占一边，css 是叶子样式里的动画时长，js 是调用点自己排的自退毫秒数。
@@ -158,10 +158,10 @@ type FbDuration = { fx: string; css?: string; js?: number | null; tier: string; 
 // 二、结果三图标的尺寸表（叉号、三角与对勾同尺寸，一处一行）。
 // 尺寸指 Ic 的 size 参数（像素），同一条里的三个必须相等，门禁逐条核对。
 export const FB_ICON_SIZES: FbIconSize[] = [
-  { site: '发评论按钮', file: 'src/client/views/IssueDetailComments.js', size: 11, trio: ['check', 'x'] },
-  { site: '行内复制按钮', file: 'src/client/views/ListTabRow.js', size: 13, trio: ['check', 'x'] },
-  { site: '标签配色弹窗保存按钮', file: 'src/client/views/labels/LabelColorDialog.js', size: 12, trio: ['check', 'x', 'alert'] },
-  { site: '清空日志留痕横幅', file: 'src/client/statusbar/LogDangerConfirm.js', size: 12, trio: ['check', 'x'] },
+  { site: 'Post comment button', file: 'src/client/views/IssueDetailComments.js', size: 11, trio: ['check', 'x'] },
+  { site: 'Inline copy button', file: 'src/client/views/ListTabRow.js', size: 13, trio: ['check', 'x'] },
+  { site: 'Label colors modal save button', file: 'src/client/views/labels/LabelColorDialog.js', size: 12, trio: ['check', 'x', 'alert'] },
+  { site: 'Log clearing record banner', file: 'src/client/statusbar/LogDangerConfirm.js', size: 12, trio: ['check', 'x'] },
 ]
 
 // 结果三图标尺寸表里一行的形状：site 是界面位置，file 是画它的文件，size 是三个图标共用的像素尺寸，trio 是这一处实际用到的图标。
@@ -171,14 +171,14 @@ type FbIconSize = { site: string; file: string; size: number; trio: string[] }
 // 三、失败红逐路径清单（不设一个全局硬值：每一处用它所在界面的既有色调）。
 // 这份清单是「按路径逐处对齐」的证据，门禁核对每个色值在对应文件里真实存在。
 export const FB_FAIL_RED_PATHS: FbFailRedPath[] = [
-  { path: '失败横幅', file: 'src/client/kernel/styles.js', colors: ['#f87171', 'rgba(248,113,113,.12)', 'rgba(248,113,113,.45)'], note: '走到处：.dsws-banner.bad（清空日志留痕、仓库链失败横幅共用这一支）' },
-  { path: '失败红闪', file: 'src/client/views/feedback/feedback-styles.js', colors: ['rgba(248,113,113,.55)'], note: '结果闪光是 #f87171 的透明版，不另立色值' },
-  { path: '弹窗内联错误条', file: 'src/client/kernel/slotRenderer-modal-view.js', colors: ['#fca5a5', 'rgba(248,113,113,.45)', 'rgba(248,113,113,.10)'], note: '深底上用亮一档的红保证可读，底与边仍是 #f87171 的透明版' },
-  { path: '发评论失败提示', file: 'src/client/views/IssueDetailComments.js', colors: ['#f87171'], note: '限流那一档走琥珀 #f59e0b，与「网络失败」分开说' },
-  { path: '标签配色弹窗', file: 'src/client/views/labels/LabelColorDialog.js', colors: ['#f87171'], note: '标题、消息、提示、横幅四处同色' },
-  { path: '清空日志失败重试键', file: 'src/client/statusbar/LogDangerConfirm.js', colors: ['#fca5a5'], note: '横幅上的重试键文字用亮红，与横幅本体的 #f87171 同族' },
-  { path: '浮层小提示失败', file: 'src/refresh/rooms/client/snapshot-cache-store.js', colors: ['#fbbf24'], note: '浮层提示只有 ok/warn/info 三档，失败走 warn 琥珀（NOTICE_COLOR.warn），不自造红' },
-  { path: '原型占位红（不在反馈路径）', file: 'src/client/views/SubworkspaceMark.js', colors: ['#f85149'], note: '子工作区角标的既有红，保留原样；反馈路径一处都不用，也不许把它提成全局值' },
+  { path: 'Failure banner', file: 'src/client/kernel/styles.js', colors: ['#f87171', 'rgba(248,113,113,.12)', 'rgba(248,113,113,.45)'], note: 'Used at .dsws-banner.bad (shared by the log clearing record and repository-chain failure banners)' },
+  { path: 'Red failure flash', file: 'src/client/views/feedback/feedback-styles.js', colors: ['rgba(248,113,113,.55)'], note: 'The result flash uses transparent #f87171, not a separate color' },
+  { path: 'Inline modal error strip', file: 'src/client/kernel/slotRenderer-modal-view.js', colors: ['#fca5a5', 'rgba(248,113,113,.45)', 'rgba(248,113,113,.10)'], note: 'A brighter red keeps text readable on the dark background; fill and border remain transparent #f87171' },
+  { path: 'Comment failure message', file: 'src/client/views/IssueDetailComments.js', colors: ['#f87171'], note: 'Rate limiting uses amber #f59e0b, distinct from network failure' },
+  { path: 'Label colors modal', file: 'src/client/views/labels/LabelColorDialog.js', colors: ['#f87171'], note: 'Title, message, hint and banner use the same color' },
+  { path: 'Retry button after log clearing fails', file: 'src/client/statusbar/LogDangerConfirm.js', colors: ['#fca5a5'], note: 'The banner retry label uses bright red in the same family as the banner #f87171' },
+  { path: 'Popover notice failure', file: 'src/refresh/rooms/client/snapshot-cache-store.js', colors: ['#fbbf24'], note: 'Popover notices only have ok/warn/info; failure uses warn amber (NOTICE_COLOR.warn), not a new red' },
+  { path: 'Prototype placeholder red (outside the feedback path)', file: 'src/client/views/SubworkspaceMark.js', colors: ['#f85149'], note: 'The existing subworkspace badge red is unchanged; no feedback path uses it and it must not become a global value' },
 ]
 
 // 失败红清单里一行的形状：path 是界面位置，file 是色值真实存在的文件，colors 是那一处用到的全部红色，note 说明这处红与别处红的关系。

@@ -17,7 +17,7 @@
       "points": 7,
       "requests": 4,
       "shards": 1,
-      "text": "这次 deck_issue_create 预计花 7 点、4 条出站请求，在硬顶之内。",
+      "text": "This deck_issue_create call is estimated to cost 7 points and 4 outbound requests, within the hard cap.",
       "withinCallCap": true
     },
     "note": "This backend needs no quota (off-network rule)."

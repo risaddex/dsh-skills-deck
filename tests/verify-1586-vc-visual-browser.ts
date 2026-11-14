@@ -682,7 +682,7 @@ async function run(browser: any, env: any) {
         const m1314 = await renderAt(page, { page: 'search', width: width, skin: skin, seed: { query: '13.14' } })
         check(!!m1314 && m1314.searchRows.join(',') === '13.14', tag + '：按能力 id 搜 13.14 命中，结果显示所在页面')
         const byName = await page.evaluate(() => window.__VC.vcPaletteRowsOf(window.__VC.vcPageCapabilitiesOf('commits')[0].name).length)
-        const mName = await renderAt(page, { page: 'search', width: width, skin: skin, seed: { query: '提交' } })
+        const mName = await renderAt(page, { page: 'search', width: width, skin: skin, seed: { query: 'Commit' } })
         check(byName > 0 && !!mName && mName.searchRows.length > 0, tag + '：按名称 / 命令原文也能搜到（提交 命中 ' + (mName && mName.searchRows.length) + ' 行）')
         const mNone = await renderAt(page, { page: 'search', width: width, skin: skin, seed: { query: 'zzz-没有这个能力' } })
         check(!!mNone && mNone.searchEmpty === 'hit' && mNone.searchRows.length === 0, tag + '：搜不到时画「没有命中」空态（data-vc-search-empty=hit）')

@@ -66,12 +66,12 @@ export interface IdempotencyKeyCheck {
  */
 export function checkIdempotencyKey(raw: unknown): IdempotencyKeyCheck {
   const key = raw === null || raw === undefined ? '' : String(raw).trim()
-  if (!key) return { ok: false, key: '', reason: '幂等键是空的' }
+  if (!key) return { ok: false, key: '', reason: 'the idempotency key is empty' }
   if (key.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
-    return { ok: false, key: '', reason: '幂等键有 ' + key.length + ' 个字符，超过上限 ' + IDEMPOTENCY_KEY_MAX_LENGTH + '，请换一个短一点的键' }
+    return { ok: false, key: '', reason: 'the idempotency key has ' + key.length + ' characters, over the limit of ' + IDEMPOTENCY_KEY_MAX_LENGTH + '; use a shorter key' }
   }
   if (!ALLOWED_KEY_RE.test(key)) {
-    return { ok: false, key: '', reason: '幂等键里只能有字母、数字、点、下划线、连字符、冒号与斜杠（键会原样写进票面，换行与注释收尾符会把正文写坏）' }
+    return { ok: false, key: '', reason: 'the idempotency key may only hold letters, digits, dots, underscores, hyphens, colons and slashes (the key is written into the ticket body as is, and a line break or a comment terminator would break the body)' }
   }
   return { ok: true, key, reason: '' }
 }
@@ -178,7 +178,7 @@ export interface AnchorMatch {
 
 /** 「没命中」是一个正常的结论（这张票确实还没建），不是错误。 */
 export function anchorMiss(reason?: string): AnchorMatch {
-  return { status: 'miss', reason: reason || '按锚找遍了，没有找到写过这个锚的票' }
+  return { status: 'miss', reason: reason || 'searched by the anchor and found no ticket that carries it' }
 }
 
 /**
@@ -199,7 +199,7 @@ export function anchorMismatch(reason: string): AnchorMatch {
 
 /** 「就是它」这一档。 */
 export function anchorHit(key: string): AnchorMatch {
-  return { status: 'hit', reason: '这张票的票面上写着同一个锚，复用它（不再新建）', key: String(key) }
+  return { status: 'hit', reason: 'this ticket carries the same anchor; reusing it (no new ticket)', key: String(key) }
 }
 
 /**
@@ -220,23 +220,23 @@ export function anchorHit(key: string): AnchorMatch {
 export function matchAnchor(candidates: AnchorCandidate[] | unknown, refId: string | undefined, key: string): AnchorMatch {
   const list = Array.isArray(candidates) ? candidates : []
   const wanted = String(key === null || key === undefined ? '' : key).trim()
-  if (!wanted) return anchorUnsupported('没有给锚，无从回查')
+  if (!wanted) return anchorUnsupported('no anchor was given, so there is nothing to look up')
   if (list.length === 0) return anchorMiss()
   const mismatches: string[] = []
   for (let i = 0; i < list.length; i++) {
     const c = list[i] as AnchorCandidate | null | undefined
-    if (!c || typeof c !== 'object') { mismatches.push('第 ' + (i + 1) + ' 个候选不是一张票，忽略'); continue }
+    if (!c || typeof c !== 'object') { mismatches.push('candidate ' + (i + 1) + ' is not a ticket; ignored'); continue }
     const found = idempotencyKeyOf(c.body)
-    if (!found) { mismatches.push('候选 ' + String(c.key) + ' 的票面上没有锚那一行'); continue }
-    if (found !== wanted) { mismatches.push('候选 ' + String(c.key) + ' 的票面上写的是另一个锚（' + found + '）'); continue }
+    if (!found) { mismatches.push('candidate ' + String(c.key) + ' has no anchor line in its body'); continue }
+    if (found !== wanted) { mismatches.push('candidate ' + String(c.key) + ' carries a different anchor (' + found + ')'); continue }
     if (refId !== undefined && c.refId !== undefined && String(c.refId) !== String(refId)) {
-      mismatches.push('候选 ' + String(c.key) + ' 在另一个仓库（' + String(c.refId) + '）里')
+      mismatches.push('candidate ' + String(c.key) + ' is in another repository (' + String(c.refId) + ')')
       continue
     }
-    if (c.state === 'closed') { mismatches.push('候选 ' + String(c.key) + ' 已经关闭了，不算命中（该建一张新的）'); continue }
+    if (c.state === 'closed') { mismatches.push('candidate ' + String(c.key) + ' is already closed and does not count as a hit (a new ticket should be created)'); continue }
     return anchorHit(String(c.key))
   }
-  return anchorMismatch(mismatches.join('；'))
+  return anchorMismatch(mismatches.join('; '))
 }
 
 /** 这份回查结论是不是「找到了、可以复用」。后端据此决定是返回旧 key 还是继续建票。 */
@@ -253,8 +253,8 @@ export function isAnchorUnsupported(m: AnchorMatch | null | undefined): boolean 
  *  #1171：只陈述事实，不推荐调用面上不存在的做法 —— 「换用不带锚的创建」是工具那一层做不到的
  *  动作（工具恒自动生成锚，没有不带锚的入口）。能做什么由调用方补。 */
 export function describeAnchorFailure(m: AnchorMatch): string {
-  const why = m && typeof m.reason === 'string' && m.reason ? m.reason : '回查没有做成'
-  return '这次带锚创建没能做成回查，所以没有建票：' + why + '。这不是「已经建过」的意思。'
+  const why = m && typeof m.reason === 'string' && m.reason ? m.reason : 'the lookup could not be done'
+  return 'this anchored create could not run its lookup, so no ticket was created: ' + why + '. This does not mean "already created".'
 }
 
 // 这里原来有一行 `export const IDEMPOTENCY_SOURCE = 'src/shared/refresh/src/idempotency.ts'`。#719 把它删掉：

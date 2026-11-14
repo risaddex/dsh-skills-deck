@@ -53,7 +53,7 @@ export function clonePlanOf(op: string, args: any): { ok: true; plan: any } | { 
   const a: any = args || {}
   const s = function (v: any): string { return v === undefined || v === null ? '' : String(v).trim() }
   const want = String(op || '')
-  if (CLONE_TICKET_OPS.indexOf(want) < 0) return { ok: false, reason: 'bad-op', message: '不认识的克隆动作：' + want + '（允许：' + CLONE_TICKET_OPS.join(' / ') + '）' }
+  if (CLONE_TICKET_OPS.indexOf(want) < 0) return { ok: false, reason: 'bad-op', message: 'unknown clone action: ' + want + ' (allowed: ' + CLONE_TICKET_OPS.join(' / ') + ')' }
   if (want === 'start') {
     const depth = a.depth === undefined || a.depth === null || String(a.depth).trim() === '' ? null : Number(a.depth)
     return {

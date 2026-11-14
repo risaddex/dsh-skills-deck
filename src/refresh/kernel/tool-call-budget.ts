@@ -156,17 +156,17 @@ export function estimateToolCost(input: ToolCostInput, limits: ToolCostLimits): 
 
 /** 那一句给 AI 看的话。超顶时把「超的是哪一项、顶在哪」说明白，不笼统说「额度不够」。 */
 function estimateText(tool: string, points: number, requests: number, ok: boolean, over: string, hourOk: boolean, shards: number, perShard: number, tickets: number): string {
-  const head = '这次 ' + tool + ' 预计花 ' + points + ' 点、' + requests + ' 条出站请求'
+  const head = 'This ' + tool + ' call is estimated to cost ' + points + ' points and ' + requests + ' outbound requests'
   if (!ok) {
-    const which = over === 'points' ? '点数超了单次硬顶' : over === 'requests' ? '出站请求条数超了单次硬顶' : '同时超了点数与请求数两条单次硬顶'
-    const tail = tickets > 0 ? '。建议分 ' + shards + ' 次调用，每片不超过 ' + perShard + ' 张票' : '。请把这一笔拆小之后再调'
-    return head + '，' + which + tail + '。'
+    const which = over === 'points' ? 'points exceed the per-call hard cap' : over === 'requests' ? 'outbound requests exceed the per-call hard cap' : 'both points and requests exceed their per-call hard caps'
+    const tail = tickets > 0 ? '. Split into ' + shards + ' calls, each with at most ' + perShard + ' tickets' : '. Split this into smaller calls before retrying'
+    return head + ', ' + which + tail + '.'
   }
-  if (tickets > 0 && shards > 1) return head + '，在硬顶之内；不过这次要建 ' + tickets + ' 张票，建议分 ' + shards + ' 片、每片 ' + perShard + ' 张。'
+  if (tickets > 0 && shards > 1) return head + ', within the hard cap; however, this call creates ' + tickets + ' tickets, so split into ' + shards + ' batches of ' + perShard + ' tickets each.'
   // #1527：每小时线降到警告之后，这里不再说「快用满了」这种像拒绝的话，而是把事实与后果说清：
   //   这次照常执行，但这一小时的总量已经越过提醒线，接下来要省着点用。
-  if (!hourOk) return head + '，单次没超顶；但加上本小时已用，这一小时越过了 AI 工具的提醒线：这次照常执行，接下来请把大调用拆小。'
-  return head + '，在硬顶之内。'
+  if (!hourOk) return head + ', within the per-call cap, but including this hour\'s usage crosses the AI tool warning line: this call runs as usual; split large calls from here on.'
+  return head + ', within the hard cap.'
 }
 
 /**

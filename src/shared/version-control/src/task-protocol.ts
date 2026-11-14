@@ -44,7 +44,7 @@ function meta(id: any, labelKey: any, progress: any, extra?: any): TaskOpMeta {
     id, labelKey, progress,
     stdinFile: !!(extra && extra.stdinFile),
     requiresConfirm: !!(extra && extra.requiresConfirm),
-    residual: (extra && extra.residual) || '任务被取消，可能有未完成的产物留在工作区，请按提示核对后再重试',
+    residual: (extra && extra.residual) || 'The task was cancelled and may have left incomplete output in the working tree; check as instructed before retrying',
   }
 }
 
@@ -53,26 +53,26 @@ function meta(id: any, labelKey: any, progress: any, extra?: any): TaskOpMeta {
  * 这里刻意不接收任意命令名：命令名不在清单里就直接拒绝，避免把通道做成通用执行器。
  */
 export const TASK_OPS: TaskOpMeta[] = [
-  meta('clone', 'vc.task.op.clone', true, { residual: '目标目录可能只写了一半，删除该目录后可以重试' }),
-  meta('fetch', 'vc.task.op.fetch', true, { residual: '已经下载的对象留在本地对象库里，重新抓取会接着用，不会重复下载全部内容' }),
-  meta('pull', 'vc.task.op.pull', true, { residual: '工作区可能停在未完成的合并或变基状态，面板会如实显示冲突，处理完再重试' }),
-  meta('push', 'vc.task.op.push', true, { residual: '远端可能只收到了部分引用，重试前先核对该分支在远端的位置' }),
-  meta('submodule-init', 'vc.task.op.submoduleInit', true, { residual: '子模块目录可能只初始化了一半，重新执行会从断点继续' }),
-  meta('submodule-update', 'vc.task.op.submoduleUpdate', true, { residual: '子模块内容可能只更新了一半，重新执行会从断点继续' }),
-  meta('submodule-add', 'vc.task.op.submoduleAdd', true, { residual: '子模块目录可能只写了一半，删除这个目录后可以重试' }),
-  meta('submodule-fetch', 'vc.task.op.submoduleFetch', false, { residual: '抓取被取消时已有对象留在本地库里，重新抓取会接着用' }),
-  meta('submodule-remote-update', 'vc.task.op.submoduleRemoteUpdate', true, { residual: '子模块内容可能只更新了一半，重新执行会从断点继续' }),
-  meta('archive', 'vc.task.op.archive', false, { residual: '输出文件可能不完整，删除后重试' }),
-  meta('bundle', 'vc.task.op.bundle', false, { residual: '输出文件可能不完整，删除后重试' }),
-  meta('format-patch', 'vc.task.op.formatPatch', false, { residual: '输出目录里可能留下不完整的补丁文件，按日期核对后删掉重试' }),
-  meta('fast-export', 'vc.task.op.fastExport', false, { residual: '导出文件可能不完整，删除后重试' }),
-  meta('fast-import', 'vc.task.op.fastImport', false, { stdinFile: true, residual: '目标仓库可能已经写入了部分对象，导入前先备份或改用临时仓库核对' }),
-  meta('filter-repo', 'vc.task.op.filterRepo', false, { requiresConfirm: true, residual: '历史可能已经被改写了一半，先用 fsck 核对，必要时从备份恢复' }),
-  meta('svn-fetch', 'vc.task.op.svnFetch', false, { requiresConfirm: true, residual: '本地可能已经写入了部分提交，核对后再重试' }),
-  meta('gc', 'vc.task.op.gc', false, { requiresConfirm: true, residual: '清理可能被中断，仓库仍然可用，重新执行一遍即可' }),
-  meta('prune', 'vc.task.op.prune', false, { requiresConfirm: true, residual: '对象清理可能被中断，仓库仍然可用，但在核对之前不要执行其它写操作' }),
-  meta('fsck', 'vc.task.op.fsck', false, { residual: '核对本身不改仓库，取消后直接重试即可' }),
-  meta('maintenance-run', 'vc.task.op.maintenanceRun', false, { requiresConfirm: true, residual: '维护任务可能被中断，仓库仍然可用，重新执行一遍即可' }),
+  meta('clone', 'vc.task.op.clone', true, { residual: 'The target directory may be half-written; delete it, then retry' }),
+  meta('fetch', 'vc.task.op.fetch', true, { residual: 'Downloaded objects stay in the local object store and will be reused when fetching again, without downloading everything again' }),
+  meta('pull', 'vc.task.op.pull', true, { residual: 'The working tree may be left in an unfinished merge or rebase; the panel will show conflicts, and you can retry after handling them' }),
+  meta('push', 'vc.task.op.push', true, { residual: 'The remote may have received only some refs; check the branch position on the remote before retrying' }),
+  meta('submodule-init', 'vc.task.op.submoduleInit', true, { residual: 'The submodule directory may be half-initialized; running again resumes from that point' }),
+  meta('submodule-update', 'vc.task.op.submoduleUpdate', true, { residual: 'The submodule content may be half-updated; running again resumes from that point' }),
+  meta('submodule-add', 'vc.task.op.submoduleAdd', true, { residual: 'The submodule directory may be half-written; delete it, then retry' }),
+  meta('submodule-fetch', 'vc.task.op.submoduleFetch', false, { residual: 'Objects fetched before cancellation stay in the local store and are reused by the next fetch' }),
+  meta('submodule-remote-update', 'vc.task.op.submoduleRemoteUpdate', true, { residual: 'The submodule content may be half-updated; running again resumes from that point' }),
+  meta('archive', 'vc.task.op.archive', false, { residual: 'The output file may be incomplete; delete it and retry' }),
+  meta('bundle', 'vc.task.op.bundle', false, { residual: 'The output file may be incomplete; delete it and retry' }),
+  meta('format-patch', 'vc.task.op.formatPatch', false, { residual: 'The output directory may contain incomplete patch files; check by date, delete them, and retry' }),
+  meta('fast-export', 'vc.task.op.fastExport', false, { residual: 'The export file may be incomplete; delete it and retry' }),
+  meta('fast-import', 'vc.task.op.fastImport', false, { stdinFile: true, residual: 'The target repository may already contain some objects; back it up or verify with a temporary repository before importing' }),
+  meta('filter-repo', 'vc.task.op.filterRepo', false, { requiresConfirm: true, residual: 'History may be half-rewritten; check with fsck first and restore from backup if needed' }),
+  meta('svn-fetch', 'vc.task.op.svnFetch', false, { requiresConfirm: true, residual: 'Some commits may already be written locally; check before retrying' }),
+  meta('gc', 'vc.task.op.gc', false, { requiresConfirm: true, residual: 'Cleanup may have been interrupted; the repository remains usable, so run it again' }),
+  meta('prune', 'vc.task.op.prune', false, { requiresConfirm: true, residual: 'Object cleanup may have been interrupted; the repository remains usable, but run no other writes before checking' }),
+  meta('fsck', 'vc.task.op.fsck', false, { residual: 'The check itself does not modify the repository; retry directly after cancellation' }),
+  meta('maintenance-run', 'vc.task.op.maintenanceRun', false, { requiresConfirm: true, residual: 'The maintenance task may have been interrupted; the repository remains usable, so run it again' }),
 ]
 
 /**
@@ -102,7 +102,7 @@ export type TaskArgResult =
   | { ok: false; reason: string; message: string; hint: string }
 
 function badArg(reason: any, message: any, hint?: any): TaskArgResult {
-  return { ok: false, reason, message, hint: hint || '检查参数后重试；远程地址、分支名、路径都不许以短横线开头' }
+  return { ok: false, reason, message, hint: hint || 'Check the arguments and retry; remote addresses, branch names and paths cannot start with a hyphen' }
 }
 
 function textArg(value: any): boolean {
@@ -111,44 +111,44 @@ function textArg(value: any): boolean {
 
 /** 远程地址守卫：拒绝空值、空白、NUL 与短横线开头（后者会被 git 当成选项）。 */
 export function taskRemoteProblem(value: any): string | null {
-  if (!textArg(value)) return '远程地址必须是长度有限的非空文本'
-  if (/\s/.test(value)) return '远程地址里不许有空白字符'
-  if (value.charAt(0) === '-') return '远程地址不许以短横线开头'
+  if (!textArg(value)) return 'remote address must be bounded nonempty text'
+  if (/\s/.test(value)) return 'remote address cannot contain whitespace'
+  if (value.charAt(0) === '-') return 'remote address cannot start with a hyphen'
   return null
 }
 
 /** 分支与 refspec 单侧守卫：短横线、加号开头都拒，冒号与空白也不许出现在单侧里。 */
 export function taskRefProblem(value: any): string | null {
-  if (!textArg(value)) return '分支或引用必须是长度有限的非空文本'
-  if (/\s/.test(value)) return '分支或引用里不许有空白字符'
-  if (/^[-+]/.test(value)) return '分支或引用不许以短横线或加号开头'
-  if (value.indexOf(':') >= 0) return '单侧分支或引用里不许带冒号'
+  if (!textArg(value)) return 'branch or ref must be bounded nonempty text'
+  if (/\s/.test(value)) return 'branch or ref cannot contain whitespace'
+  if (/^[-+]/.test(value)) return 'branch or ref cannot start with a hyphen or plus sign'
+  if (value.indexOf(':') >= 0) return 'a one-sided branch or ref cannot contain a colon'
   return null
 }
 
 /** fetch 的 refspec 守卫：允许 main 这类短名与 refs/heads 长名，拒绝强制前导加号。 */
 export function taskRefspecProblem(value: any): string | null {
-  if (!textArg(value)) return 'refspec 必须是长度有限的非空文本'
-  if (/\s/.test(value)) return 'refspec 里不许有空白字符'
-  if (/^[-+]/.test(value)) return 'refspec 不许以短横线或加号开头'
+  if (!textArg(value)) return 'refspec must be bounded nonempty text'
+  if (/\s/.test(value)) return 'refspec cannot contain whitespace'
+  if (/^[-+]/.test(value)) return 'refspec cannot start with a hyphen or plus sign'
   return null
 }
 
 /** 路径守卫：拒绝空值、NUL、以短横线开头与含上跳段，允许相对或绝对路径。 */
 export function taskPathProblem(value: any): string | null {
-  if (!textArg(value)) return '路径必须是长度有限的非空文本'
-  if (value.indexOf('\u0000') >= 0) return '路径里不许有 NUL 字符'
-  if (/^[-+]/.test(value)) return '路径不许以短横线或加号开头'
+  if (!textArg(value)) return 'path must be bounded nonempty text'
+  if (value.indexOf('\u0000') >= 0) return 'path cannot contain NUL characters'
+  if (/^[-+]/.test(value)) return 'path cannot start with a hyphen or plus sign'
   const segments = String(value).split(/[\\/]/)
-  for (const seg of segments) if (seg === '..') return '路径里不许有上跳段（..）'
+  for (const seg of segments) if (seg === '..') return 'path cannot contain parent segments (..)'
   return null
 }
 
 /** 引用与区间守卫：允许 HEAD、HEAD~2..HEAD 这类写法，拒绝以短横线开头的选项注入。 */
 export function taskRevProblem(value: any): string | null {
-  if (!textArg(value)) return '引用必须是长度有限的非空文本'
-  if (/\s/.test(value)) return '引用里不许有空白字符'
-  if (/^[-+]/.test(value)) return '引用不许以短横线或加号开头'
+  if (!textArg(value)) return 'ref must be bounded nonempty text'
+  if (/\s/.test(value)) return 'ref cannot contain whitespace'
+  if (/^[-+]/.test(value)) return 'ref cannot start with a hyphen or plus sign'
   return null
 }
 
@@ -157,7 +157,7 @@ export function taskRevProblem(value: any): string | null {
  * 返回的数组每一项都是独立参数，调用方把整段直接交给 spawn，不经过 shell 拼接。
  */
 export function taskArgsFor(op: any, args: any): TaskArgResult {
-  if (!isTaskOp(op)) return badArg('unknown-op', '长任务清单里没有这个动作', '只接受票面点名的二十种动作')
+  if (!isTaskOp(op)) return badArg('unknown-op', 'this action is not on the long-task list', 'only the twenty actions named by the ticket are accepted')
   const a = args && typeof args === 'object' ? args : {}
   if (op === 'clone') {
     const urlProblem = taskRemoteProblem(a.url)
@@ -167,7 +167,7 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
     const out = ['clone', '--progress']
     if (a.depth !== undefined) {
       const depth = Number(a.depth)
-      if (!Number.isInteger(depth) || depth < 1 || depth > 100000) return badArg('bad-args', 'depth 必须是正整数')
+      if (!Number.isInteger(depth) || depth < 1 || depth > 100000) return badArg('bad-args', 'depth must be a positive integer')
       out.push('--depth', String(depth))
     }
     // #1756 T20 克隆向导：分支、递归子模块、浅克隆子模块三个可选开关，只在不给/给假时完全不出现在 argv 里
@@ -179,7 +179,7 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
       out.push('--branch', String(a.branch).trim())
     }
     if (a.shallowSubmodules === true) {
-      if (a.depth === undefined) return badArg('bad-args', '浅克隆子模块必须同时给深度（--shallow-submodules 要有 --depth 才有意义）')
+      if (a.depth === undefined) return badArg('bad-args', 'shallow submodules require depth too (--shallow-submodules only makes sense with --depth)')
       out.push('--shallow-submodules')
     }
     if (a.recurseSubmodules === true) out.push('--recurse-submodules')
@@ -194,8 +194,8 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
     if (a.prune === true) out.push('--prune')
     if (a.tags === true) out.push('--tags')
     const refspecs = a.refspecs === undefined ? [] : a.refspecs
-    if (!Array.isArray(refspecs)) return badArg('bad-args', 'refspecs 必须是数组')
-    if (all && refspecs.length > 0) return badArg('bad-args', '--all 与具体引用不能同时使用')
+    if (!Array.isArray(refspecs)) return badArg('bad-args', 'refspecs must be an array')
+    if (all && refspecs.length > 0) return badArg('bad-args', '--all and specific refs cannot be used together')
     for (const ref of refspecs) {
       const problem = taskRefspecProblem(ref)
       if (problem) return badArg('bad-refspec', problem)
@@ -215,14 +215,14 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
     if (remoteProblem) return badArg('bad-remote', remoteProblem)
     // #1755 T19：删除远端引用（8.11）只收完整引用名，避免把名字当选项传进去。
     if (a.deleteRef !== undefined) {
-      if (typeof a.deleteRef !== 'string' || !/^refs\/(heads|tags)\/[^\s\u0000]+$/.test(a.deleteRef)) return badArg('bad-ref', '删除的远端引用必须是 refs/heads/ 或 refs/tags/ 下的完整名字')
-      if (/^[-+]/.test(a.deleteRef) || a.deleteRef.indexOf('..') >= 0) return badArg('bad-ref', '删除的远端引用里不许有上跳段或以减号开头')
+      if (typeof a.deleteRef !== 'string' || !/^refs\/(heads|tags)\/[^\s\u0000]+$/.test(a.deleteRef)) return badArg('bad-ref', 'remote ref to delete must be a full name under refs/heads/ or refs/tags/')
+      if (/^[-+]/.test(a.deleteRef) || a.deleteRef.indexOf('..') >= 0) return badArg('bad-ref', 'remote ref to delete cannot contain parent segments or start with a minus sign')
       return { ok: true, args: ['push', '--progress', '--no-follow-tags', '--delete', a.remote || 'origin', a.deleteRef] }
     }
     // 推送标签（8.14）只有两种模式；这两种都不带 --no-follow-tags，否则标签根本不会被推上去。
     if (a.tags !== undefined) {
       const mode = a.tags === 'tags' ? '--tags' : a.tags === 'follow-tags' ? '--follow-tags' : ''
-      if (mode === '') return badArg('bad-args', '推送标签的模式只有 follow-tags 或 tags')
+      if (mode === '') return badArg('bad-args', 'tag push mode must be follow-tags or tags')
       return { ok: true, args: ['push', '--progress', mode, a.remote || 'origin'] }
     }
     const localProblem = taskRefProblem(a.localBranch)
@@ -236,10 +236,10 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
     // 强推（8.12）只接受显式租约：租约是「分支:提交号」，没有提交号的强推在这里就被拒绝。
     if (a.forceWithLease !== undefined) {
       const lease = a.forceWithLease
-      if (lease === null || typeof lease !== 'object') return badArg('bad-lease', '强推必须带租约对象')
+      if (lease === null || typeof lease !== 'object') return badArg('bad-lease', 'force push requires a lease object')
       const leaseBranchProblem = taskRefProblem(lease.branch)
       if (leaseBranchProblem) return badArg('bad-lease', leaseBranchProblem)
-      if (typeof lease.oid !== 'string' || !/^[0-9a-fA-F]{7,64}$/.test(lease.oid)) return badArg('bad-lease', '租约基准必须是完整的十六进制提交号')
+      if (typeof lease.oid !== 'string' || !/^[0-9a-fA-F]{7,64}$/.test(lease.oid)) return badArg('bad-lease', 'lease baseline must be a full hexadecimal commit id')
       out.push('--force-with-lease=' + lease.branch + ':' + lease.oid)
       if (a.forceIfIncludes === true) out.push('--force-if-includes')
     }
@@ -285,7 +285,7 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
     // mode 缺省是 create，此时 argv 与 T19 之前逐字一致；verify / unbundle 吃的是 filePath（已存在的包），
     // 两者的 argv 形状固定为 bundle <verify|unbundle> <文件>，没有别的选项可传。
     const mode = a.mode === undefined ? 'create' : String(a.mode)
-    if (mode !== 'create' && mode !== 'verify' && mode !== 'unbundle') return badArg('bad-mode', '离线包只支持 create、verify 与 unbundle 三种动作')
+    if (mode !== 'create' && mode !== 'verify' && mode !== 'unbundle') return badArg('bad-mode', 'bundles support only create, verify and unbundle')
     if (mode !== 'create') {
       const inputProblem = taskPathProblem(a.filePath)
       if (inputProblem) return badArg('bad-path', inputProblem)
@@ -339,13 +339,13 @@ export function taskArgsFor(op: any, args: any): TaskArgResult {
     // 维护页的完整性检查另一档是「找还能捞回来的对象」：追加 --unreachable 只列不可达对象。
     // --lost-found 会往 .git/lost-found 写文件，不在面板里跑；不认识的模式明确拒绝。
     const mode: any = (a.args && a.args.mode !== undefined) ? a.args.mode : a.mode;
-    if (mode !== undefined && mode !== null && mode !== 'default' && mode !== 'unreachable') return badArg('bad-mode', 'fsck 只接受 default 与 unreachable 两种模式');
+    if (mode !== undefined && mode !== null && mode !== 'default' && mode !== 'unreachable') return badArg('bad-mode', 'fsck accepts only default and unreachable modes');
     const args = ['fsck', '--no-progress'];
     if (mode === 'unreachable') args.push('--unreachable');
     return { ok: true, args: args };
   }
   if (op === 'maintenance-run') return { ok: true, args: ['maintenance', 'run'] }
-  return badArg('unknown-op', '长任务清单里没有这个动作')
+  return badArg('unknown-op', 'this action is not on the long-task list')
 }
 
 /** 按 1024 进制把人类可读的字节串转成字节数；读不出来回 null。 */
@@ -404,10 +404,10 @@ export function taskDedupeKey(op: any, cwdHash: any, args: any): string {
 /** 输入文件引用的形状校验：路径、非负整数大小、64 位十六进制摘要，三样缺一不可。
  *  这里只管形状；文件是否真是普通文件、大小与摘要是否对得上，由宿主打开文件时核对（那两个事实只有宿主知道）。 */
 export function stdinSpecProblem(spec: any): string | null {
-  if (!spec || typeof spec !== 'object') return '输入文件规格必须是对象'
-  if (typeof spec.path !== 'string' || spec.path.length === 0) return '输入文件缺少路径'
-  if (!Number.isInteger(spec.sizeBytes) || spec.sizeBytes < 0) return '输入文件大小必须是非负整数'
-  if (typeof spec.sha256 !== 'string' || !/^[0-9a-fA-F]{64}$/.test(spec.sha256)) return '输入文件摘要必须是 64 位十六进制'
+  if (!spec || typeof spec !== 'object') return 'input file spec must be an object'
+  if (typeof spec.path !== 'string' || spec.path.length === 0) return 'input file is missing a path'
+  if (!Number.isInteger(spec.sizeBytes) || spec.sizeBytes < 0) return 'input file size must be a nonnegative integer'
+  if (typeof spec.sha256 !== 'string' || !/^[0-9a-fA-F]{64}$/.test(spec.sha256)) return 'input file digest must be 64 hex digits'
   return null
 }
 

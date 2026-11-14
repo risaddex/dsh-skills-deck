@@ -67,15 +67,15 @@ type CatalogItem = {
 export const GENERIC_CATALOG: readonly CatalogItem[] = Object.freeze([
   {
     id: 'skill:wayfinder',
-    label: '技能 wayfinder 已安装',
+    label: 'Skill wayfinder is installed',
     scope: 'generic',
     backends: ['github','markdown','gitlab'],
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.SKILL_PROBE, skill: 'wayfinder' },
-    origin: 'host/index.js:SKILL_PROBE_NAMES (inventory 类别 8)',
+    origin: 'host/index.js:SKILL_PROBE_NAMES (inventory category 8)',
   },
   {
     id: 'skill:setup-matt-pocock-skills',
-    label: '技能 setup-matt-pocock-skills 已安装',
+    label: 'Skill setup-matt-pocock-skills is installed',
     scope: 'generic',
     backends: ['github','markdown','gitlab'],
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.SKILL_PROBE, skill: 'setup-matt-pocock-skills' },
@@ -83,7 +83,7 @@ export const GENERIC_CATALOG: readonly CatalogItem[] = Object.freeze([
   },
   {
     id: 'skill:ask-matt',
-    label: '技能 ask-matt 已安装',
+    label: 'Skill ask-matt is installed',
     scope: 'generic',
     backends: ['github','markdown','gitlab'],
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.SKILL_PROBE, skill: 'ask-matt' },
@@ -91,7 +91,7 @@ export const GENERIC_CATALOG: readonly CatalogItem[] = Object.freeze([
   },
   {
     id: 'env:home',
-    label: '用户主目录可解析',
+    label: 'Home directory resolves',
     scope: 'generic',
     backends: ['github','markdown','gitlab'],
     // /homeDir（2026-08-28 修复）：主目录判定只问平台层（#171：win32 不读 HOME，走 os.homedir→USERPROFILE；linux/mac 走 os.homedir）。
@@ -99,7 +99,7 @@ export const GENERIC_CATALOG: readonly CatalogItem[] = Object.freeze([
     //   为什么是通用检查：技能判装的单一根 ~/.agents/skills（#276/#281）由此解析，三后端共用同一用户级根，
     //   换后端期望结果不变 → 按 #217 形式化判据归入通用；失败 = 环境级异常（daemon/容器/服务账户），应诚实红牌而非把技能误判为未安装。
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.HOME_DIR },
-    origin: 'platform/getHome (inventory 类别 8) — #171 平台层统一',
+    origin: 'platform/getHome (inventory category 8) — #171 unified in the platform layer',
   },
   {
     // 2026-11-03：判据改回「根上有没有初始化产物 docs/agents/issue-tracker.md」。
@@ -111,11 +111,11 @@ export const GENERIC_CATALOG: readonly CatalogItem[] = Object.freeze([
     //   ⚠ 路径字面量与 src/shared/config-store/src/workspace.ts 的 WORKSPACE_TRACKER_DOC_REL 是同一件事：
     //   本文件是自包含目录（文件头 :3 的墙要求），不 import 那个常量，改一处必须两处一起改。
     id: 'tracker:initialized',
-    label: '工作区已初始化（有说明文件）',
+    label: 'Workspace initialized (instruction file present)',
     scope: 'generic',
     backends: ['github','markdown','gitlab'],
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.FILE_EXISTS, path: 'docs/agents/issue-tracker.md' },
-    origin: 'host/checkTracker (inventory 类别 8)',
+    origin: 'host/checkTracker (inventory category 8)',
   },
 ])
 
@@ -132,23 +132,23 @@ export const GITHUB_CATALOG: readonly CatalogItem[] = Object.freeze([
     // 2026-08-29 人话化（对抗式审查 S1）：标题 = 用户的任务语言（"已关联/已登录/可访问"），
     //   技术名（gh）只括注一次；原黑话（远端可解析 / origin / repoAccess）移入本注释存档。
     id: 'gh:remote',
-    label: '已关联 GitHub 仓库',
+    label: 'Linked to a GitHub repo',
     scope: 'backend',
     backends: ['github'],
     check: { kind: 'backend', id: 'repoRemote', backendId: 'github' },
-    origin: 'host/checkRepo→backends/github/index.js:parseGithubRepo (inventory 类别 8 c1)',
+    origin: 'host/checkRepo→backends/github/index.js:parseGithubRepo (inventory category 8 c1)',
   },
   {
     id: 'gh:installed',
-    label: 'GitHub 助手（gh cli）已安装',
+    label: 'GitHub helper (gh CLI) is installed',
     scope: 'backend',
     backends: ['github'],
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.COMMAND_EXISTS, command: 'gh' },
-    origin: 'host/index.js:checkGhCli / backends/github/preflight.js:1 (inventory 类别 8 c4)',
+    origin: 'host/index.js:checkGhCli / backends/github/preflight.js:1 (inventory category 8 c4)',
   },
   {
     id: 'gh:authed',
-    label: '已登录 GitHub',
+    label: 'Signed in to GitHub',
     scope: 'backend',
     backends: ['github'],
     check: { kind: 'preflight', id: 'ghAuth' },
@@ -156,11 +156,11 @@ export const GITHUB_CATALOG: readonly CatalogItem[] = Object.freeze([
   },
   {
     id: 'gh:repoAccess',
-    label: '仓库在 GitHub 上可访问',
+    label: 'Repo is reachable on GitHub',
     scope: 'backend',
     backends: ['github'],
     check: { kind: 'backend', id: 'repoAccess', backendId: 'github' },
-    origin: 'backends/github/preflight.js:3 / inventory 类别 8 c6',
+    origin: 'backends/github/preflight.js:3 / inventory category 8 c6',
   },
 ])
 
@@ -168,15 +168,15 @@ export const GITHUB_CATALOG: readonly CatalogItem[] = Object.freeze([
 export const GITLAB_CATALOG: readonly CatalogItem[] = Object.freeze([
   {
     id: 'glab:installed',
-    label: 'GitLab CLI (glab) 已安装',
+    label: 'GitLab CLI (glab) is installed',
     scope: 'backend',
     backends: ['gitlab'],
     check: { kind: 'primitive', primitive: PRIMITIVE_KIND.COMMAND_EXISTS, command: 'glab' },
-    origin: 'backends/gitlab/preflight.js:1 (inventory 类别 8 推导)',
+    origin: 'backends/gitlab/preflight.js:1 (derived from inventory category 8)',
   },
   {
     id: 'glab:authed',
-    label: 'glab 已登录',
+    label: 'Signed in to glab',
     scope: 'backend',
     backends: ['gitlab'],
     check: { kind: 'preflight', id: 'glabAuth' },
@@ -184,7 +184,7 @@ export const GITLAB_CATALOG: readonly CatalogItem[] = Object.freeze([
   },
   {
     id: 'glab:repoAccess',
-    label: 'GitLab 仓库可达',
+    label: 'GitLab repo is reachable',
     scope: 'backend',
     backends: ['gitlab'],
     check: { kind: 'backend', id: 'repoAccess', backendId: 'gitlab' },
@@ -207,7 +207,7 @@ export const GITLAB_CATALOG: readonly CatalogItem[] = Object.freeze([
 export const MARKDOWN_CATALOG: readonly CatalogItem[] = Object.freeze([
   {
     id: 'md:workspace',
-    label: '本地工作区可读取',
+    label: 'Local workspace is readable',
     scope: 'backend',
     backends: ['markdown'],
     check: { kind: 'backend', id: 'workspace', backendId: 'markdown' },
@@ -215,22 +215,22 @@ export const MARKDOWN_CATALOG: readonly CatalogItem[] = Object.freeze([
   },
   {
     id: 'md:scratchWritable',
-    label: '本地数据目录可读写',
+    label: 'Local data directory is readable and writable',
     scope: 'backend',
     backends: ['markdown'],
     check: { kind: 'backend', id: 'scratchWritable', backendId: 'markdown' },
-    origin: 'backends/markdown/preflight.js / inventory 类别 8 / research 2026-08-29',
+    origin: 'backends/markdown/preflight.js / inventory category 8 / research 2026-08-29',
     // #1483：这一项量的是「当前会话能不能往写」——同一工作区的只读会话与可写会话答案不同，
     //   所以链快照缓存命中时要按当前会话重算，不能沿用别的会话量出的结论（#1513 改成后端谓词后仍保留）。
     sessionScoped: true,
   },
   {
     id: 'md:containersReadable',
-    label: '本地地图与规格可读取',
+    label: 'Local map and spec files are readable',
     scope: 'backend',
     backends: ['markdown'],
     check: { kind: 'backend', id: 'containersReadable', backendId: 'markdown' },
-    origin: 'backends/markdown/parse.js / #1488 容器发现 / #1513',
+    origin: 'backends/markdown/parse.js / #1488 container discovery / #1513',
   },
 ])
 

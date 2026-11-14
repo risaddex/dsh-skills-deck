@@ -38,7 +38,7 @@ declare function closeFormModal(...args: any[]): any;
       let fb: string = ''
       try { fb = tr('panel.noRepoErr.half-created') } catch (e) { /* 兜底 */ }
       let base: string = bkText || mapped || rawMsg || ''
-      if (dispKind === 'half-created') { base = (bkText || mapped || fb || '') + (rawMsg ? '：' + String(rawMsg).slice(0, 120) : '') }
+      if (dispKind === 'half-created') { base = (bkText || mapped || fb || '') + (rawMsg ? ': ' + String(rawMsg).slice(0, 120) : '') }
       // #993：unknown 与 git-ownership 这两档正文里没有 git 原话时一定要补上它，文案承诺了附原话却不附就是名实不符。
       if (dispKind === 'unknown' || dispKind === 'git-ownership') {
         const rawFull: string = rawMsg ? String(rawMsg) : ''

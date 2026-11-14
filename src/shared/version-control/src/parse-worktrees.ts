@@ -26,12 +26,12 @@ function fail(detail: string): ParseFailure {
 }
 
 function parseRecord(lines: string[]): WorktreeRecord | ParseFailure {
-  if (lines.length === 0 || !lines[0].startsWith('worktree ')) return fail('记录首行不是 worktree')
+  if (lines.length === 0 || !lines[0].startsWith('worktree ')) return fail('the first line of the record is not worktree')
   const rec: WorktreeRecord = {
     path: lines[0].slice('worktree '.length), head: null, branch: null,
     bare: false, detached: false, locked: false, lockReason: null, prunable: false, prunableReason: null,
   }
-  if (!rec.path) return fail('worktree 路径为空')
+  if (!rec.path) return fail('worktree path is empty')
   for (const ln of lines.slice(1)) {
     if (ln.startsWith('HEAD ')) rec.head = ln.slice(5) || null
     else if (ln.startsWith('branch ')) rec.branch = ln.slice(7).replace(/^refs\/heads\//, '') || null

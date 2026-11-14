@@ -371,7 +371,7 @@ export async function run() {
     // 所以不替调用方开药方（那句「换用不带锚的创建」是工具做不到的动作）；能做什么由调用方那一层补。
     const failureText = describeAnchorFailure(anchorUnsupported('搜索接口报错（探针脚本）'))
     await assert('回查失败的话只陈述事实：没有建票、不是已经建过，不再推荐调用面没有的「不带锚的创建」',
-      failureText.indexOf('没有建票') >= 0 && failureText.indexOf('已经建过') >= 0 && failureText.indexOf('不带锚') < 0,
+      failureText.indexOf('no ticket was created') >= 0 && failureText.indexOf('already created') >= 0 && failureText.indexOf('without an anchor') < 0,
       failureText)
   }
 

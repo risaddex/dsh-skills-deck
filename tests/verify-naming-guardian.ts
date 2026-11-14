@@ -61,9 +61,9 @@ eq(m.placeholderTitleFor({ type: 'bug', lang: 'en' }), '[New] New Bug', '生成�
 eq(m.placeholderTitleFor({ type: 'diagnose', lang: 'zh' }), '[New] 诊断', '生成占位七动作')
 eq(m.composeDraftTitle({ hint: '', lang: 'zh', baselineTitle: '[New] 诊断' }), '[草稿][诊断]', '动作裸档 zh')
 check(!m.isPlaceholderTitle('[草稿][诊断]'), '非占位：动作草稿不算占位')
-eq(m.newSessionTitleNew('bug'), '[New] 新建 Bug', '兼容签名 (type) 默认 zh（Node 无 promptLang）')
+eq(m.newSessionTitleNew('bug'), '[New] New Bug', '兼容签名 (type) 默认 en（Node 无 promptLang）')
 eq(m.newSessionTitleNew('requirement', 'en'), '[New] New Requirement', '兼容签名 (type, lang=en)')
-eq(m.newSessionTitleNew('health'), '[New] 体检', '体检入口的占位（按钮入口逐个对齐：从前它拿整句提示语当标题）')
+eq(m.newSessionTitleNew('health'), '[New] Health check', '体检入口的占位（按钮入口逐个对齐：从前它拿整句提示语当标题）')
 check(m.isPlaceholderTitle('[New] 体检'), '体检占位在册')
 eq(m.composeDraftTitle({ hint: '', lang: 'zh', baselineTitle: '[New] 体检' }), '[草稿][体检]', '体检落草稿档')
 // 本地 Markdown 后端的地图编号是 00：编号原文要原样带走，别改写成 [0]

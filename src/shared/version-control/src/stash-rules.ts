@@ -69,7 +69,7 @@ export const stashNeedsTicketOf = function (op: any): boolean {
 }
 
 /** 账本里 7.3 的替代做法原文（规格 #1586 第 6 节），低版本界面上照着说，不自己编。 */
-export const STASH_STAGED_ALTERNATIVE = '先做一次全量贮藏，再恢复未暂存的部分'
+export const STASH_STAGED_ALTERNATIVE = 'Stash everything first, then restore the unstaged part.'
 /** git 硬底线：低于它所有贮藏能力都藏起来（与 capabilities.ts 的 VERSION_FLOOR 同一条线）。 */
 export const STASH_VERSION_FLOOR = '2.11.0'
 /** 只贮藏已暂存的文件（--staged）要求的最低版本（规格第 6 节）。 */
@@ -162,19 +162,19 @@ const argsFail = function (kind: string, message: string): StashArgsResult {
  */
 export const stashOperationArgs = function (op: any, payload: any): StashArgsResult {
   const def: StashOpDef | null = stashOpOf(op)
-  if (!def) return argsFail('usage', '不认识的贮藏动作：' + String(op || ''))
+  if (!def) return argsFail('usage', 'unknown stash action: ' + String(op || ''))
   const p = payload || {}
   const message = String(p.message === undefined || p.message === null ? '' : p.message)
   const selector = String(p.selector || '')
   const branch = String(p.branch || '')
   if (def.needsMessage) {
     const why: string = vcStashMessageError(message)
-    if (why !== '') return argsFail('message', '贮藏说明不合格（' + why + '）')
+    if (why !== '') return argsFail('message', 'invalid stash message (' + why + ')')
   }
-  if (def.needsSelector && !vcStashSelectorOk(selector)) return argsFail('selector', '贮藏选择器不合法：' + selector)
+  if (def.needsSelector && !vcStashSelectorOk(selector)) return argsFail('selector', 'invalid stash selector: ' + selector)
   if (def.needsBranch) {
     const why: string = vcStashBranchError(branch)
-    if (why !== '') return argsFail('branch', '分支名不合法（' + why + '）：' + branch)
+    if (why !== '') return argsFail('branch', 'invalid branch name (' + why + '): ' + branch)
   }
   if (def.op === 'push') return { ok: true, args: ['stash', 'push', '-m', message] }
   // 7.2 前面多带一个全局开关 --no-literal-pathspecs：宿主统一前缀里有 --literal-pathspecs（见 commands.fixedPrefix），
@@ -192,7 +192,7 @@ export const stashOperationArgs = function (op: any, payload: any): StashArgsRes
   if (def.op === 'branch') return { ok: true, args: ['stash', 'branch', branch, selector] }
   if (def.op === 'drop') return { ok: true, args: ['stash', 'drop', selector] }
   if (def.op === 'clear') return { ok: true, args: ['stash', 'clear'] }
-  return argsFail('usage', '贮藏动作没有对应的命令：' + def.op)
+  return argsFail('usage', 'no command for stash action: ' + def.op)
 }
 
 /**
@@ -202,7 +202,7 @@ export const stashOperationArgs = function (op: any, payload: any): StashArgsRes
  */
 export const stashRestoreArgs = function (subject: any, oid: any): StashArgsResult {
   const hash = String(oid || '')
-  if (!/^[0-9a-fA-F]{40}$|^[0-9a-fA-F]{64}$/.test(hash)) return argsFail('oid', '提交号不是 40 或 64 位十六进制：' + hash)
+  if (!/^[0-9a-fA-F]{40}$|^[0-9a-fA-F]{64}$/.test(hash)) return argsFail('oid', 'commit id is not 40 or 64 hex digits: ' + hash)
   const text = String(subject === undefined || subject === null ? '' : subject)
   const message = text.trim() === '' ? 'stash ' + hash.slice(0, 12) : text.slice(0, STASH_MESSAGE_MAX)
   return { ok: true, args: ['stash', 'store', '-m', message, hash] }

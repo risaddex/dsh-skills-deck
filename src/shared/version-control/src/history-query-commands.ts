@@ -71,11 +71,11 @@ function bad(detail: string): HistoryQueryCommand {
  *  为什么允许以 - 开头：它们要么排在 -- 之后、要么拼成 --grep= / -S 的同一个 argv 元素，
  *  不会被当成选项；真正危险的是「单独一个 argv 元素且以 - 开头」的引用名，那条在 revOk 里挡。 */
 function textOk(v: any, max: number, what: string): { ok: true; text: string } | { ok: false; detail: string } {
-  if (typeof v !== 'string') return { ok: false, detail: what + '必须是字符串' }
+  if (typeof v !== 'string') return { ok: false, detail: what + ' must be a string' }
   const text: string = v
-  if (text === '') return { ok: false, detail: what + '不能为空' }
-  if (text.length > max) return { ok: false, detail: what + '太长（最多 ' + String(max) + ' 个字符）' }
-  if (/[\n\r\u0000]/.test(text)) return { ok: false, detail: what + '里不许有换行或 NUL' }
+  if (text === '') return { ok: false, detail: what + ' cannot be empty' }
+  if (text.length > max) return { ok: false, detail: what + ' is too long (maximum ' + String(max) + ' characters)' }
+  if (/[\n\r\u0000]/.test(text)) return { ok: false, detail: what + ' cannot contain line breaks or NUL' }
   return { ok: true, text: text }
 }
 
@@ -84,20 +84,20 @@ function textOk(v: any, max: number, what: string): { ok: true; text: string } |
  *  挡掉前导 -（会被当选项）、空白与 NUL（会破坏 argv）、.. 与 ...（比较与对照的区间由本文件自己拼，
  *  不许用户塞进来一段区间把「两个引用」变成别的命令）、以及冒号（3.13 用 rev:path 拼接，冒号会造成歧义）。 */
 function revOk(v: any, what: string): { ok: true; rev: string } | { ok: false; detail: string } {
-  if (typeof v !== 'string') return { ok: false, detail: what + '必须是字符串' }
+  if (typeof v !== 'string') return { ok: false, detail: what + ' must be a string' }
   const rev: string = v
-  if (rev === '') return { ok: false, detail: what + '不能为空' }
-  if (rev.length > HISTORY_QUERY_REV_MAX) return { ok: false, detail: what + '太长（最多 ' + String(HISTORY_QUERY_REV_MAX) + ' 个字符）' }
-  if (rev.charAt(0) === '-') return { ok: false, detail: what + '不能以 - 开头（会被 git 当成选项）' }
-  if (/[\s\u0000]/.test(rev)) return { ok: false, detail: what + '里不许有空白或 NUL' }
-  if (rev.indexOf('..') >= 0) return { ok: false, detail: what + '里不许写区间（.. 或 ...），区间由面板自己拼' }
-  if (rev.indexOf(':') >= 0) return { ok: false, detail: what + '里不许有冒号' }
+  if (rev === '') return { ok: false, detail: what + ' cannot be empty' }
+  if (rev.length > HISTORY_QUERY_REV_MAX) return { ok: false, detail: what + ' is too long (maximum ' + String(HISTORY_QUERY_REV_MAX) + ' characters)' }
+  if (rev.charAt(0) === '-') return { ok: false, detail: what + ' cannot start with - (git treats it as an option)' }
+  if (/[\s\u0000]/.test(rev)) return { ok: false, detail: what + ' cannot contain whitespace or NUL' }
+  if (rev.indexOf('..') >= 0) return { ok: false, detail: what + ' cannot contain ranges (.. or ...); the panel builds the range' }
+  if (rev.indexOf(':') >= 0) return { ok: false, detail: what + ' cannot contain colons' }
   return { ok: true, rev: rev }
 }
 
 /** 「路径」这一类的输入：非空、有上限、不含换行与 NUL。路径里允许空格与中文（literal-pathspecs 挡住通配）。 */
 function pathOk(v: any): { ok: true; path: string } | { ok: false; detail: string } {
-  const t = textOk(v, HISTORY_QUERY_PATH_MAX, '路径')
+  const t = textOk(v, HISTORY_QUERY_PATH_MAX, 'path')
   return t.ok ? { ok: true, path: t.text } : t
 }
 
@@ -112,10 +112,10 @@ function countOf(v: any, fallback: number): number {
 function lineRangeOf(start: any, end: any): { ok: true; start: number; end: number } | { ok: false; detail: string } {
   const a: any = (typeof start === 'number' && isFinite(start)) ? Math.floor(start) : ((typeof start === 'string' && /^[0-9]+$/.test(start)) ? Number(start) : NaN)
   const b: any = (typeof end === 'number' && isFinite(end)) ? Math.floor(end) : ((typeof end === 'string' && /^[0-9]+$/.test(end)) ? Number(end) : NaN)
-  if (!isFinite(a) || !isFinite(b)) return { ok: false, detail: '行号必须是正整数' }
-  if (a < 1 || b < 1) return { ok: false, detail: '行号从 1 起算' }
-  if (b < a) return { ok: false, detail: '结束行不能小于起始行' }
-  if (b - a + 1 > HISTORY_QUERY_BLAME_LINES_MAX) return { ok: false, detail: '一次最多追溯 ' + String(HISTORY_QUERY_BLAME_LINES_MAX) + ' 行，请缩小范围' }
+  if (!isFinite(a) || !isFinite(b)) return { ok: false, detail: 'line numbers must be positive integers' }
+  if (a < 1 || b < 1) return { ok: false, detail: 'line numbers start at 1' }
+  if (b < a) return { ok: false, detail: 'end line cannot precede start line' }
+  if (b - a + 1 > HISTORY_QUERY_BLAME_LINES_MAX) return { ok: false, detail: 'blame can cover at most ' + String(HISTORY_QUERY_BLAME_LINES_MAX) + ' lines at once; narrow the range' }
   return { ok: true, start: a, end: b }
 }
 
@@ -147,7 +147,7 @@ function logArgsOf(count: number): string[] {
 export function historyQueryCommandFor(kind: any, params: any): HistoryQueryCommand {
   const p: any = params || {}
   const k: string = String(kind || '')
-  if (HISTORY_QUERY_KINDS.indexOf(k as HistoryQueryKind) < 0) return { ok: false, error: 'unknown-kind', detail: '不认识的历史查询：' + k }
+  if (HISTORY_QUERY_KINDS.indexOf(k as HistoryQueryKind) < 0) return { ok: false, error: 'unknown-kind', detail: 'unknown history query: ' + k }
   const count: number = countOf(p.count, HISTORY_QUERY_COUNT_DEFAULT)
   switch (k as HistoryQueryKind) {
     case 'file-history': {
@@ -158,14 +158,14 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
       return { ok: true, kind: 'file-history', subcommand: 'log', args: args }
     }
     case 'grep': {
-      const q = textOk(p.pattern, HISTORY_QUERY_TEXT_MAX, '搜索词')
+      const q = textOk(p.pattern, HISTORY_QUERY_TEXT_MAX, 'search term')
       if (!q.ok) return bad(q.detail)
       const args: string[] = logArgsOf(count)
       args.push('-i', '--grep=' + q.text)
       return { ok: true, kind: 'grep', subcommand: 'log', args: args }
     }
     case 'pickaxe': {
-      const q = textOk(p.text, HISTORY_QUERY_TEXT_MAX, '搜索文本')
+      const q = textOk(p.text, HISTORY_QUERY_TEXT_MAX, 'search text')
       if (!q.ok) return bad(q.detail)
       const mode: string = String(p.mode === 'change' ? 'change' : 'occurrence')
       const flag: string = (mode === 'change' ? '-G' : '-S') + q.text
@@ -174,9 +174,9 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
       return { ok: true, kind: 'pickaxe', subcommand: 'log', args: args }
     }
     case 'compare': {
-      const left = revOk(p.left, '左边的引用')
+      const left = revOk(p.left, 'left ref')
       if (!left.ok) return bad(left.detail)
-      const right = revOk(p.right, '右边的引用')
+      const right = revOk(p.right, 'right ref')
       if (!right.ok) return bad(right.detail)
       const mode: string = String(p.mode === 'three-dot' ? 'three-dot' : 'two-dot')
       const range: string = left.rev + (mode === 'three-dot' ? '...' : '..') + right.rev
@@ -184,11 +184,11 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
       return { ok: true, kind: 'compare', subcommand: 'diff', args: args }
     }
     case 'range-diff': {
-      const base = revOk(p.base, '基线')
+      const base = revOk(p.base, 'baseline')
       if (!base.ok) return bad(base.detail)
-      const left = revOk(p.left, '旧的一组端点')
+      const left = revOk(p.left, 'old range endpoint')
       if (!left.ok) return bad(left.detail)
-      const right = revOk(p.right, '新的一组端点')
+      const right = revOk(p.right, 'new range endpoint')
       if (!right.ok) return bad(right.detail)
       const args: string[] = ['range-diff', base.rev + '..' + left.rev, base.rev + '..' + right.rev]
       return { ok: true, kind: 'range-diff', subcommand: 'range-diff', args: args }
@@ -198,7 +198,7 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
     case 'reflog': {
       const args: string[] = ['reflog', 'show', '--date=iso-strict', '--format=%H%x00%h%x00%gd%x00%gn%x00%gs%x00', '-n', String(count)]
       if (p.ref !== undefined && p.ref !== null && p.ref !== '') {
-        const ref = revOk(p.ref, '引用')
+        const ref = revOk(p.ref, 'ref')
         if (!ref.ok) return bad(ref.detail)
         args.push(ref.rev)
       }
@@ -207,19 +207,19 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
     case 'notes': {
       let rev: string = 'HEAD'
       if (p.rev !== undefined && p.rev !== null && p.rev !== '') {
-        const r = revOk(p.rev, '提交')
+        const r = revOk(p.rev, 'commit')
         if (!r.ok) return bad(r.detail)
         rev = r.rev
       }
       return { ok: true, kind: 'notes', subcommand: 'notes', args: ['notes', 'show', rev] }
     }
     case 'show-file': {
-      const rev = revOk(p.rev, '版本')
+      const rev = revOk(p.rev, 'revision')
       if (!rev.ok) return bad(rev.detail)
       const path = pathOk(p.path)
       if (!path.ok) return bad(path.detail)
-      if (path.path.indexOf(':') >= 0) return bad('路径里不许有冒号（版本与路径用冒号拼接，会有歧义）')
-      if (path.path.charAt(0) === ':') return bad('路径不能以冒号开头')
+      if (path.path.indexOf(':') >= 0) return bad('path cannot contain a colon (revision and path are joined by a colon, so it would be ambiguous)')
+      if (path.path.charAt(0) === ':') return bad('path cannot start with a colon')
       return { ok: true, kind: 'show-file', subcommand: 'show', args: ['show', rev.rev + ':' + path.path] }
     }
     case 'blame': {
@@ -229,7 +229,7 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
       if (!range.ok) return bad(range.detail)
       const args: string[] = ['blame', '--line-porcelain', '-L', String(range.start) + ',' + String(range.end)]
       if (p.rev !== undefined && p.rev !== null && p.rev !== '') {
-        const r = revOk(p.rev, '提交')
+        const r = revOk(p.rev, 'commit')
         if (!r.ok) return bad(r.detail)
         args.push(r.rev)
       }
@@ -237,7 +237,7 @@ export function historyQueryCommandFor(kind: any, params: any): HistoryQueryComm
       return { ok: true, kind: 'blame', subcommand: 'blame', args: args }
     }
   }
-  return { ok: false, error: 'unknown-kind', detail: '不认识的历史查询：' + k }
+  return { ok: false, error: 'unknown-kind', detail: 'unknown history query: ' + k }
 }
 
 export const HISTORY_QUERY_COMMANDS_SOURCE = 'src/shared/version-control/src/history-query-commands.ts'
