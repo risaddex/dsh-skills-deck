@@ -191,17 +191,32 @@ function issueBrief(issue: Record<string, unknown> | null | undefined) {
   }
 }
 
+/**
+ * Section titles the plugin itself writes, in both languages (#10): new tickets carry the English title,
+ * older ones the Chinese title. Asking for either name finds the section in either kind of ticket. Only an
+ * exact name expands to its pair; a short substring such as "p" keeps the plain substring match, so it
+ * does not suddenly also match the Chinese sections.
+ */
+const SECTION_TITLE_PAIRS: readonly (readonly string[])[] = [
+  ['progress', '进度'],
+  ["maintainer's words", "the maintainer's own words", '维护者原话'],
+  ['purpose', '目的'],
+]
+
 /** 按 ## 标题子串取正文节：找到就回节内文本，找不到回空（调用方如实注记，不猜）。 */
 function sectionOf(body: unknown, want: unknown): { found: boolean; name: string; text: string } {
   const src = typeof body === 'string' ? body : ''
-  const q = String(want === undefined || want === null ? '' : want).trim().toLowerCase()
+  const q = String(want === undefined || want === null ? '' : want).trim().toLowerCase().replace(/\u2019/g, "'")
   if (!q) return { found: false, name: '', text: '' }
+  const pair = SECTION_TITLE_PAIRS.find((names) => names.indexOf(q) >= 0)
+  const wanted: readonly string[] = pair || [q]
   const lines = src.split('\n')
   let start = -1
   let name = ''
   for (let i = 0; i < lines.length; i++) {
     const m = /^\s*##\s*(.+?)\s*$/.exec(lines[i])
-    if (m && String(m[1]).toLowerCase().indexOf(q) >= 0) { start = i; name = String(m[1]).trim(); break }
+    const title = m ? String(m[1]).toLowerCase().replace(/\u2019/g, "'") : ''
+    if (m && wanted.some((one) => title.indexOf(one) >= 0)) { start = i; name = String(m[1]).trim(); break }
   }
   if (start < 0) return { found: false, name: '', text: '' }
   let end = lines.length

@@ -77,7 +77,7 @@ function writeText(file: string, text: string): void {
 function progressIsLastSection(text: string): boolean {
   const all = text.split('\n')
   let at = -1
-  for (let i = 0; i < all.length; i += 1) if (/^##\s*进度\s*$/.test(all[i])) at = i
+  for (let i = 0; i < all.length; i += 1) if (/^## Progress$/.test(all[i])) at = i
   if (at < 0) return false
   for (let i = at + 1; i < all.length; i += 1) {
     if (/^##\s+/.test(all[i])) return false
@@ -116,12 +116,12 @@ async function main(): Promise<void> {
   const w1 = await writeProgressLikeDeck(ctx, featureRepo, '01', 60, '写了一半')
   check(w1.ok && w1.why === '', '② 走 deck 的进度写法回 ok 且写后核对通过：' + (w1.ok ? w1.why : w1.why))
   const after1 = readText(implPath)
-  check(after1.indexOf('## 进度') >= 0, '② 文件里出现了 ## 进度 区')
+  check(after1.indexOf('## Progress') >= 0, '② 文件里出现了 ## Progress 区')
   check(progressIsLastSection(after1), '② 进度区是文件最后一段（正文末尾 = 文件末尾）')
-  check(/^-\s*进度：60%（\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}）：写了一半$/m.test(after1), '② 记录写法是共享机制的「- 进度：N%（ISO 时间）：说明」：' + JSON.stringify(after1.split('\n').filter((l) => l.indexOf('进度：60%') >= 0)))
+  check(/^- Progress: 60% \(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}\): 写了一半$/m.test(after1), '② 记录写法是共享机制的「- Progress: N% (ISO time): note」：' + JSON.stringify(after1.split('\n').filter((l) => l.indexOf('Progress: 60%') >= 0)))
   check(after1.indexOf('## Answer') < 0, '② 实施票写进度不会多出 ## Answer')
   check(after1.indexOf('## Comments') < 0, '② 新布局文件没被塞进原文没有的 ## Comments 骨架')
-  const stripped = after1.replace(/\n+## 进度[\s\S]*$/, '').replace(/\s+$/, '')
+  const stripped = after1.replace(/\n+## Progress[\s\S]*$/, '').replace(/\s+$/, '')
   check(stripped === before.replace(/\s+$/, ''), '② 去掉进度区后文件其余部分逐字未动')
   const wev = writeEvents(ctx, 'update')
   check(wev.length === 1 && wev[0].fields.ok === true && wev[0].fields.route === 'file', '⑤ 写进度这一趟记了 issue.write（kind=update、route=file）：' + JSON.stringify(wev))
@@ -131,13 +131,13 @@ async function main(): Promise<void> {
   check(!!(c1 && c1.ok), '前置：追加评论回 ok')
   const after2 = readText(implPath)
   check(after2.indexOf('第一条评论') >= 0, '② 评论按既有写法落进文件：' + JSON.stringify(after2.split('\n').filter((l) => l.indexOf('第一条评论') >= 0)))
-  check(after2.indexOf('## Comments') >= 0 && after2.indexOf('## Comments') < after2.indexOf('## 进度'), '② 评论段在进度区之上（进度仍长在最后）')
+  check(after2.indexOf('## Comments') >= 0 && after2.indexOf('## Comments') < after2.indexOf('## Progress'), '② 评论段在进度区之上（进度仍长在最后）')
   check(after2.indexOf('## Answer') < 0, '② 实施票追加评论不会多出 ## Answer')
   check(progressIsLastSection(after2), '② 追加评论以后进度区仍是最后一段')
   const w2 = await writeProgressLikeDeck(ctx, featureRepo, '01', 80, '快写完了')
   check(w2.ok && w2.why === '', '② 评论之后再写一条进度，写后核对通过：' + (w2.ok ? w2.why : w2.why))
   const after3 = readText(implPath)
-  check(after3.indexOf('- 进度：80%') >= 0 && after3.indexOf('- 进度：60%') >= 0, '② 两条进度记录都在（最新在最上）')
+  check(after3.indexOf('- Progress: 80%') >= 0 && after3.indexOf('- Progress: 60%') >= 0, '② 两条进度记录都在（最新在最上）')
   check(after3.indexOf('第一条评论') >= 0 && progressIsLastSection(after3), '② 评论原样保留、进度区仍在最后')
 
   // ══ 第二段：手写原文文件（没有 DSH-FORMAT）—— 进度同样加在末尾，不塞插件骨架 ══
@@ -148,10 +148,10 @@ async function main(): Promise<void> {
   const wh = await writeProgressLikeDeck(ctx, handRepo, '01', 40, '手写票第一次记进度')
   check(wh.ok && wh.why === '', '② 手写原文文件写进度回 ok 且写后核对通过：' + (wh.ok ? wh.why : wh.why))
   const handAfter = readText(handPath)
-  check(handAfter.indexOf('## 进度') >= 0 && progressIsLastSection(handAfter), '② 手写原文文件的进度区也在文件末尾')
+  check(handAfter.indexOf('## Progress') >= 0 && progressIsLastSection(handAfter), '② 手写原文文件的进度区也在文件末尾')
   check(handAfter.indexOf('## Answer') < 0, '② 手写实施票写进度没有被塞进 ## Answer')
   check(handAfter.indexOf('## Comments') < 0, '② 手写实施票写进度没有被塞进 ## Comments 骨架')
-  check(handAfter.replace(/\n+## 进度[\s\S]*$/, '').replace(/\s+$/, '') === handText.replace(/\s+$/, ''), '② 手写原文文件除进度区外逐字未动')
+  check(handAfter.replace(/\n+## Progress[\s\S]*$/, '').replace(/\s+$/, '') === handText.replace(/\s+$/, ''), '② 手写原文文件除进度区外逐字未动')
 
   // ══ 第三段：老插件格式文件（裸字段、自带骨架）—— 行为不变，进度加在文末 ══
   const legacyPath = path.join(tmp, '.scratch', '老目录', 'issues', '01-老票.md')
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
   const wl = await writeProgressLikeDeck(ctx, legacyRepo, '01', 30, '老票第一次记进度')
   check(wl.ok && wl.why === '', '② 老插件格式文件写进度回 ok 且写后核对通过：' + (wl.ok ? wl.why : wl.why))
   const legacyAfter = readText(legacyPath)
-  check(legacyAfter.indexOf('## 进度') >= 0 && progressIsLastSection(legacyAfter), '② 老插件格式文件的进度区加在文末')
+  check(legacyAfter.indexOf('## Progress') >= 0 && progressIsLastSection(legacyAfter), '② 老插件格式文件的进度区加在文末')
   check(legacyAfter.indexOf('## Comments') >= 0 && legacyAfter.indexOf('## Answer') >= 0 && legacyAfter.indexOf('正文一段。') >= 0, '② 老文件的正文与骨架原样保留')
 
   // ══ 第四段：手写原文的地图子票 —— 进度也加在末尾，不塞骨架 ══
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   const wc = await writeProgressLikeDeck(ctx, wfRepo, '01', 20, '查了一点')
   check(wc.ok && wc.why === '', '② 手写地图子票写进度回 ok 且写后核对通过：' + (wc.ok ? wc.why : wc.why))
   const childAfter = readText(childPath)
-  check(childAfter.indexOf('## 进度') >= 0 && progressIsLastSection(childAfter), '② 手写地图子票的进度区加在末尾')
+  check(childAfter.indexOf('## Progress') >= 0 && progressIsLastSection(childAfter), '② 手写地图子票的进度区加在末尾')
   check(childAfter.indexOf('## Comments') < 0 && childAfter.indexOf('## Answer') < 0, '② 手写地图子票没有被塞进 Comments/Answer 骨架')
   check(childAfter.indexOf('## Question') >= 0 && childAfter.indexOf('要查什么。') >= 0, '② 手写地图子票的 Question 原样保留')
 

@@ -110,10 +110,10 @@ export function ensureBody(body: unknown, kind: string): { body: string; added: 
   // 进度区所有位置值都补（含规格与实施票）；已有同一判据的标题不重复补。
   // 2026-10-22 维护者决定：进度区不再带「做到哪一步了，在这里一行一行记」这行占位注释。
   // 它在页面上看不见，用工具写完进度后还会留在正文里，读原始正文的人会分不清哪句是格式、哪句是原话；
-  // 票面只需要「## 进度」这一行标题，写进度的规则看 docs/agents/issue-tracker.md。
+  // 票面只需要「## Progress」这一行标题（#10 起写英文；旧票的「## 进度」照样认，不再补第二段），写进度的规则看 docs/agents/issue-tracker.md。
   if (!hasProgressHeading(text)) {
-    out = (out.replace(/\s*$/, '') + '\n\n## 进度\n').replace(/^\n+/, '')
-    added.push('## 进度')
+    out = (out.replace(/\s*$/, '') + '\n\n## Progress\n').replace(/^\n+/, '')
+    added.push('## Progress')
   }
   return { body: out, added: added }
 }

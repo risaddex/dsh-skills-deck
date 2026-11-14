@@ -9,7 +9,7 @@
 //
 // 五段：
 //   一、正例：地图 + 四种地图工单 + 缺陷票 + 普通票，一次建成；
-//   二、盘上：地图五节与 ## 进度；每张子票的父票注释都指地图；类型标签与 Type 行按位置表；
+//   二、盘上：地图五节与 ## Progress；每张子票的父票注释都指地图；类型标签与 Type 行按位置表；
 //   三、读回：地图读得回来是地图、子票读得回来父票是地图、阻塞边落在了票面上；幂等重跑不再建票；
 //   四、拒绝例：缺 kind、旧值、在地图骨架里要 map/spec、label 误用与非法值，文案点明合法值，盘上一张不动。
 //
@@ -117,7 +117,8 @@ async function main() {
     return line.replace(/^(Labels[：:]|<!--\s*DSH-LABELS[：:])\s*/, '').replace(/\s*-->\s*$/, '').split(/\s*[,，]\s*/).map((s) => s.trim()).filter(Boolean)
   }
   const typeLabelCount = (text: string) => labelsOf(text).filter((n) => kindRules.isTypeLabel(n)).length
-  const hasProgress = (text: string) => /^##\s*进度\s*$/m.test(text)
+  // #10：建票补的是英文标题；老票的中文标题由读侧兼容，这里只验写侧。
+  const hasProgress = (text: string) => /^## Progress$/m.test(text)
   // #1790 缺陷 A：triage 状态住在可见 Status 行，不再写进 DSH-LABELS。
   const statusOf = (text: string): string => (text.match(/^\*\*Status:\*\*[ \t]*(\S+)[ \t]*$/m) || [])[1] || ''
   const parentComment = (key: string) => new RegExp('^<!-- (?:parentKey|DSH-PARENT): ' + key + ' -->', 'm')
@@ -154,13 +155,13 @@ async function main() {
   const keyOf = (planKey: string) => childKeyOf.get(planKey) || ''
 
   // ── 二、盘上：地图与六张子票 ──
-  console.log('— 二、盘上：地图五节与 ## 进度；子票父票、类型标签、Type 行按位置表')
+  console.log('— 二、盘上：地图五节与 ## Progress；子票父票、类型标签、Type 行按位置表')
   if (mapKey) {
     const text = mapText()
     const heads = ['## Destination', '## Notes', '## Decisions so far', '## Not yet specified', '## Out of scope']
     const positions = heads.map((h) => text.indexOf(h))
     check(positions.every((i) => i >= 0), '地图五节都在（缺的：' + heads.filter((h, i) => positions[i] < 0).join('、') + '）')
-    check(hasProgress(text) && text.indexOf('## 进度') > Math.max.apply(null, positions), '地图补了 ## 进度，且排在五节之后')
+    check(hasProgress(text) && text.indexOf('## Progress') > Math.max.apply(null, positions), '地图补了 ## Progress，且排在五节之后')
     check(text.indexOf('保留这句原有的话。') >= 0, '地图正文里原有的内容一个字没动')
     check(text.indexOf('把两层词表落到地图工具上') >= 0, '地图原有的 Destination 内容保留')
     check(typeLines(text).length === 0, '地图不写 Type 行（尤其没有 Type: map）')
@@ -185,7 +186,7 @@ async function main() {
       check(new RegExp('^Type: ' + bare + '$', 'm').test(text), label + ' 的 Type 行是去前缀的 ' + bare + '（实得 ' + JSON.stringify(typeLines(text)) + '）')
       check(typeLabelCount(text) === 1 && labelsOf(text).indexOf(label) >= 0, label + ' 只有选中的这一枚类型标签，不补第二枚（实得 ' + JSON.stringify(labelsOf(text)) + '）')
       check(!/DSH-ISSUE-KIND/.test(text), label + ' 不写正文文件头标记')
-      check(hasProgress(text), label + ' 的正文补了 ## 进度')
+      check(hasProgress(text), label + ' 的正文补了 ## Progress')
     }
     const bugKey = keyOf('bug')
     if (bugKey) {
@@ -194,7 +195,7 @@ async function main() {
       check(labelsOf(text).indexOf('bug') >= 0 && statusOf(text) === 'needs-triage', '缺陷票的标签是 bug、可见状态行是 needs-triage（实得 ' + JSON.stringify(labelsOf(text)) + ' / ' + JSON.stringify(statusOf(text)) + '）')
       check(typeLabelCount(text) === 1 && labelsOf(text).filter((n) => kindRules.isTypeLabel(n))[0] === 'bug', '缺陷票只有一枚类型标签 bug')
       check(typeLines(text).length === 0, '缺陷票不写 Type 行')
-      check(hasProgress(text), '缺陷票的正文补了 ## 进度')
+      check(hasProgress(text), '缺陷票的正文补了 ## Progress')
     }
     const issueKey = keyOf('issue')
     if (issueKey) {
@@ -203,7 +204,7 @@ async function main() {
       check(labelsOf(text).indexOf('docs') >= 0, '普通票保留调用方给的 docs 标签')
       check(typeLabelCount(text) === 1 && labelsOf(text).indexOf('wayfinder:research') >= 0, '普通票原样保留调用方给的类型标签（labels 原样传递，实得 ' + JSON.stringify(labelsOf(text)) + '）')
       check(typeLines(text).length === 0, '普通票不写 Type 行')
-      check(hasProgress(text), '普通票的正文补了 ## 进度')
+      check(hasProgress(text), '普通票的正文补了 ## Progress')
     }
   }
 

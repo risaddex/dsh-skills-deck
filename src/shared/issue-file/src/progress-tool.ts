@@ -31,24 +31,24 @@ export function stampNow(ms: number): string {
  * 收口 progress 参数：只认 {percent: 0..100 整数, note: 非空一行}。
  *
  * 为什么不再收自由文字（#1090）：以前传字符串时，工具把它原样塞进区里，读的人按
- * 「- 进度：N%（时间）：说明」的写法解析——写进去的是「90%」，读回来对不上，成了 null。
+ * 「- Progress: N% (time): note」的写法解析——写进去的是「90%」，读回来对不上，成了 null。
  * 现在写读共用同一套写法，参数也按同一套收；收不成时回一句能照着改的话，整笔不动。
  */
 export function progressEntryFromArg(arg: unknown): { entry: ProgressEntryLike | null; problem: string } {
   if (typeof arg !== 'object' || arg === null || Array.isArray(arg)) {
-    return { entry: null, problem: 'progress 要写成 {percent, note} 对象（#1090 起不再收一段自由文字）：percent 是 0..100 的整数，note 是必填的一句话说明。' }
+    return { entry: null, problem: 'progress must be a {percent, note} object (a free-form paragraph is no longer accepted since #1090): percent is an integer from 0 to 100, note is a required one-sentence description.' }
   }
   const obj = arg as Record<string, unknown>
   const percent = obj.percent
   const note = obj.note
   if (typeof percent !== 'number' || !isFinite(percent) || Math.floor(percent) !== percent || percent < 0 || percent > 100) {
-    return { entry: null, problem: 'progress.percent 要是 0..100 的整数，这次收到的是 ' + String(percent) + '。' }
+    return { entry: null, problem: 'progress.percent must be an integer from 0 to 100; this call passed ' + String(percent) + '.' }
   }
   if (typeof note !== 'string' || note.trim() === '') {
-    return { entry: null, problem: 'progress.note 必填：用一句话写清做到哪一步了，不能为空。' }
+    return { entry: null, problem: 'progress.note is required: say in one sentence how far the work has got; it cannot be empty.' }
   }
   if (note.indexOf('\n') >= 0 || note.indexOf('\r') >= 0) {
-    return { entry: null, problem: 'progress.note 只能是一行：进度区一条一行，带换行会把区里的写法打乱。' }
+    return { entry: null, problem: 'progress.note must be a single line: the progress section holds one entry per line, and a line break would break its format.' }
   }
   return { entry: { percent: percent, note: note.trim(), updatedAt: null }, problem: '' }
 }

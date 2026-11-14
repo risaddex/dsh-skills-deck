@@ -29,7 +29,8 @@ function countProgressHeaders(s: string): number {
 }
 const FENCE = String.fromCharCode(96).repeat(3)
 const NEW = { percent: 90, note: '新内容', updatedAt: '2026-10-21T20:00:00+08:00' }
-const NEW_LINE = '- 进度：90%（2026-10-21T20:00:00+08:00）：新内容'
+// #10：写侧只写英文条目；下面的旧中文条目是老票原样，必须继续读得懂、搬得回。
+const NEW_LINE = '- Progress: 90% (2026-10-21T20:00:00+08:00): 新内容'
 
 async function main() {
   console.log('#908 / #1090 写进度替换回归')
@@ -72,16 +73,16 @@ async function main() {
   check(countProgressHeaders(outC) === 1, 'C CRLF 正文：进度标题恰好一条')
 
   const outD = replaceProgressSection(D, NEW)
-  check(outD.includes(NEW_LINE) && outD.includes('- 进度：80%（时间未记录）'), 'D 标题带百分比：旧百分比搬成一条「时间未记录」的记录')
+  check(outD.includes(NEW_LINE) && outD.includes('- Progress: 80% (time not recorded)'), 'D 标题带百分比：旧百分比搬成一条「time not recorded」的英文记录')
   check(outD.includes('old'), 'D 标题带百分比：区里旧文字原样保留')
   check(countProgressHeaders(outD) === 1, 'D 标题带百分比：进度标题恰好一条，不再另起一段')
 
   const outE = replaceProgressSection(E, NEW)
-  check(outE.includes(NEW_LINE) && outE.includes('## 进度'), 'E 无进度段：追加一段进度而不是报错')
+  check(outE.includes(NEW_LINE) && outE.includes('## Progress'), 'E 无进度段：追加一段进度而不是报错')
   check(countProgressHeaders(outE) === 1, 'E 无进度段：进度标题恰好一条')
 
   const outF = replaceProgressSection(F, NEW)
-  check(outF.includes(NEW_LINE) && outF.includes('## 进度'), 'F 空正文：追加一段进度而不是报错')
+  check(outF.includes(NEW_LINE) && outF.includes('## Progress'), 'F 空正文：追加一段进度而不是报错')
   check(countProgressHeaders(outF) === 1, 'F 空正文：进度标题恰好一条')
 
   // 历史教训 1：补正文也要认带百分比的标题，否则先补一段再换一段，越修越多。
@@ -89,11 +90,15 @@ async function main() {
   check(ensured.added.length === 0, '补正文认带百分比的标题：不再重复追加进度区')
   check(countProgressHeaders(ensured.body) === 1, '补正文认带百分比的标题：正文里进度标题仍是一条')
 
-  // 历史教训 2：英文 Progress 标题也要认，认出来后统一写成中文标题，避免中英两段并存。
+  // 历史教训 2（#10 起反过来）：中英两种标题都要认，认出来后统一写成英文标题，避免中英两段并存。
   const outEn = replaceProgressSection('## Progress: 40%\n\nold\n', NEW)
-  check(outEn.includes(NEW_LINE) && outEn.includes('- 进度：40%（时间未记录）'), '英文标题：旧百分比保留成记录')
+  check(outEn.includes(NEW_LINE) && outEn.includes('- Progress: 40% (time not recorded)'), '英文标题：旧百分比保留成记录')
   check(countProgressHeaders(outEn) === 1, '英文标题：进度标题恰好一条')
-  check(!/^##\s*Progress/m.test(outEn), '英文标题：写回统一成中文「## 进度」')
+  check(/^## Progress$/m.test(outEn), '英文标题：写回是规范的「## Progress」')
+  const outZh = replaceProgressSection('## 进度：40%\n\nold\n', NEW)
+  check(outZh.includes(NEW_LINE) && countProgressHeaders(outZh) === 1 && !/^##\s*进度/m.test(outZh), '中文旧标题：写回统一成英文「## Progress」，不留两段')
+  const mixed = replaceProgressSection('## Progress\n\n- Progress: 20% (2026-01-01T00:00:00+08:00): english old\n\n## 进度\n\n- 进度：10%（时间未记录）：中文旧\n', NEW)
+  check(mixed.includes(NEW_LINE) && mixed.includes('english old') && mixed.includes('- 进度：10%（时间未记录）：中文旧') && countProgressHeaders(mixed) === 1, '中英两段并存的脏数据：合成一段英文标题，两种旧条目都原样保留')
 
   // 历史教训 3：之前写坏留下的双进度区，一次写进度就清干净，不用人工再删一段。
   const outDouble = replaceProgressSection('## Question\nx\n\n## 进度\n\n- 进度：30%（时间未记录）：old1\n\n## 进度\n\n- 进度：20%（时间未记录）：old2\n', NEW)
@@ -109,8 +114,8 @@ async function main() {
   const fencedOnly = '## Question\n\n' + FENCE + '\n## 进度：90%\n' + FENCE + '\n'
   const outFenced = replaceProgressSection(fencedOnly, NEW)
   check(outFenced.includes(FENCE + '\n## 进度：90%\n' + FENCE), '代码块示例：示例标题原样保留')
-  check(outFenced.includes('## 进度\n\n' + NEW_LINE), '代码块示例：真正的进度区追加在文末')
-  check(parseProgressDetail(outFenced).percent === 90 && outFenced.split('\n').filter((l: string) => l === '## 进度').length === 1, '代码块示例：真进度区只有一个（示例那个不算）')
+  check(outFenced.includes('## Progress\n\n' + NEW_LINE), '代码块示例：真正的进度区追加在文末')
+  check(parseProgressDetail(outFenced).percent === 90 && outFenced.split('\n').filter((l: string) => l === '## Progress').length === 1, '代码块示例：真进度区只有一个（示例那个不算）')
   const fencedBeforeReal = '## 进度\n\n' + FENCE + '\n## 进度\n\n- 进度：30%（时间未记录）：示例里的旧行\n' + FENCE + '\n'
   const outFencedBeforeReal = replaceProgressSection(fencedBeforeReal, NEW)
   check(outFencedBeforeReal.includes(FENCE + '\n## 进度\n\n- 进度：30%（时间未记录）：示例里的旧行\n' + FENCE), '代码块示例：真区前面的围栏内容不被当记录搬走')
@@ -127,7 +132,7 @@ async function main() {
   const fullWithout = '<!-- DSH-IDEMPOTENCY-KEY: h -->\n# 标题\n\n## Question\n\nx\n\nStatus: ready-for-agent\nBlocked by:\nLabels: bug\n\n## Comments\n\n\n## Answer\n\n'
   const outH = replaceProgressSection(fullWithout, NEW)
   check(outH.includes(NEW_LINE) && countProgressHeaders(outH) === 1, 'H 整份无进度：追加一段进度')
-  check(outH.indexOf('## 进度') < outH.indexOf('Status:'), 'H 整份无进度：进度插在字段行之前（落到 Answer 之后就失败）')
+  check(outH.indexOf('## Progress') < outH.indexOf('Status:'), 'H 整份无进度：进度插在字段行之前（落到 Answer 之后就失败）')
   check(outH.indexOf('Status:') < outH.indexOf('## Answer'), 'H 整份无进度：字段行还在 Answer 之前')
 
   // #1090：写后核对靠 stripProgressSections —— 剥掉进度区，其余正文与写前逐字相同。

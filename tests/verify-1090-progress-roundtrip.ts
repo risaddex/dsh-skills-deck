@@ -119,16 +119,20 @@ async function main() {
   check(!!p1 && Array.isArray(p1.entries) && p1.entries.length === 1 && p1.entries[0].percent === 90
     && p1.entries[0].note === '写完了' && p1.entries[0].updatedAt === p1.updatedAt, '第一条记录就是刚写的这条（实得 ' + JSON.stringify(p1 && p1.entries) + '）')
   const g1body = bodyOf(g1)
-  check(g1body.indexOf('- 进度：90%') >= 0, '正文里写出了规范条目（实得含 = ' + (g1body.indexOf('- 进度：90%') >= 0) + '）')
+  check(g1body.indexOf('- Progress: 90%') >= 0, '正文里写出了规范的英文条目（实得含 = ' + (g1body.indexOf('- Progress: 90%') >= 0) + '）')
 
   // ⑧ 只动进度区：去掉进度区以后，正文其余部分与写前逐字相同。
   check(stripProgressSections(beforeBody).trim() === stripProgressSections(g1body).trim(), '写进度只动进度区，正文其他部分逐字未动')
 
-  // 读工具的 section 参数能直接取进度区。
+  // 读工具的 section 参数能直接取进度区；#10 起英文名与中文旧名都认（新票写英文标题）。
   const gsection = await getTool.run(execA, { key: childKey, section: '进度' })
   const section = (gsection.data && gsection.data.section) || null
-  check(!!section && String(section.name).indexOf('进度') >= 0 && String(section.text).indexOf('- 进度：90%') >= 0,
-    'section=进度 能直接取到进度区（实得 ' + JSON.stringify(section) + '）')
+  check(!!section && String(section.name) === 'Progress' && String(section.text).indexOf('- Progress: 90%') >= 0,
+    'section=进度（中文旧名）能取到英文进度区（实得 ' + JSON.stringify(section) + '）')
+  const gsectionEn = await getTool.run(execA, { key: childKey, section: 'Progress' })
+  const sectionEn = (gsectionEn.data && gsectionEn.data.section) || null
+  check(!!sectionEn && String(sectionEn.name) === 'Progress' && String(sectionEn.text).indexOf('- Progress: 90%') >= 0,
+    'section=Progress 能直接取到进度区（实得 ' + JSON.stringify(sectionEn) + '）')
 
   // ═══ ② 地图快照 full 行与数字进度同源，薄行不带进度 ═══
   const snap = await snapTool.run(execA, { key: mapKey })
@@ -175,7 +179,7 @@ async function main() {
   check(!!lp && lp.percent === 70 && lp.entries.length === 2, '老格式票读回新记录在先、旧记录在后（实得 ' + JSON.stringify(lp) + '）')
   check(!!lp && lp.entries.length === 2 && lp.entries[1].percent === 90 && lp.entries[1].updatedAt === null && lp.entries[1].note === '',
     '旧标题里的百分比搬成「时间未记录」一条、说明为空（实得 ' + JSON.stringify(lp && lp.entries) + '）')
-  check(lgbody.indexOf('时间未记录') >= 0, '旧百分比那条写明了「时间未记录」')
+  check(lgbody.indexOf('(time not recorded)') >= 0, '旧百分比那条写明了「time not recorded」')
   check(lgbody.indexOf('以前随手写的一段旧文字。') >= 0, '旧自由文字原样保留')
 
   // ═══ ⑥ 重复进度区合成一个、记录一条不丢 ═══
@@ -190,7 +194,7 @@ async function main() {
   const dgbody = bodyOf(dg)
   check(!!dp && dp.percent === 50 && dp.entries.length === 3, '重复进度区的三条记录都在（实得 ' + JSON.stringify(dp) + '）')
   check(!!dp && dp.entries.map((e) => e.percent).join(',') === '50,30,40', '顺序是新的最上、两段旧记录按出现顺序（实得 ' + (dp && dp.entries.map((e) => e.percent).join(',')) + '）')
-  const headingCount = dgbody.split(/\r?\n/).filter((l) => /^##\s*进度/.test(l)).length
+  const headingCount = dgbody.split(/\r?\n/).filter((l) => /^##\s*(?:进度|Progress)/.test(l)).length
   check(headingCount === 1, '重复进度区只剩一个标题（实得 ' + headingCount + ' 个）')
 
   // ═══ ④ 代码块里的示例标题不算真的进度区、也不被改写 ═══
@@ -216,7 +220,7 @@ async function main() {
   const bw = await patchTool.run(execA, { key: bigKey, progress: { percent: 10, note: '想写但超长' } })
   check(bw && bw.status !== 'ok', '超过 60KB 时明确拒绝写入（实得 ' + (bw && bw.status) + '）')
   const bwReasons = ((bw && bw.items) || []).map((i) => String((i.error && i.error.message) || i.reason || '')).join(' ')
-  check(bwReasons.indexOf('硬顶') >= 0 && bwReasons.indexOf('一个字没动') >= 0,
+  check(bwReasons.indexOf('-character limit') >= 0 && bwReasons.indexOf('the body was not touched') >= 0,
     '拒绝说明里讲了 60KB 这条硬顶、也说了正文没动（实得：' + bwReasons.slice(0, 220) + '）')
   const bAfter = await getTool.run(execA, { key: bigKey, body: 'full' })
   check(bodyOf(bAfter) === bBeforeBody, '被拒以后正文一个字没动')

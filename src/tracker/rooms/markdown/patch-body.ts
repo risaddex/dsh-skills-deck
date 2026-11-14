@@ -93,8 +93,8 @@ export function checkNoWorseForPatch(oldText: string, newText: string): string{
   if(countRe(o, /^##\s*Answer\s*$/gim)>=1&&countRe(n, /^##\s*Answer\s*$/gim)===0) return 'Answer 骨架丢了'
   // #1091：维护者原话区与 Comments/Answer 同一条纪律 —— 变多算写坏（重复标题），盘上有的被改丢也算写坏。
   // 这一条是「整份替换时到底有没有保住原话」的直接判据：下面的 merge 会搬回，搬不回来时就不许落盘。
-  if(worse(countRe(o, /^##\s*维护者原话\s*$/gim), countRe(n, /^##\s*维护者原话\s*$/gim))) return '维护者原话区变多了'
-  if(countRe(o, /^##\s*维护者原话\s*$/gim)>=1&&countRe(n, /^##\s*维护者原话\s*$/gim)===0) return '维护者原话区丢了'
+  if(worse(countRe(o, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim), countRe(n, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim))) return "more Maintainer's words sections than before"
+  if(countRe(o, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim)>=1&&countRe(n, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim)===0) return "the Maintainer's words section was lost"
   // 认领人那一行（#1174 决策 12）：与 Status 同样按行数核对，翻倍才算坏。
   if(worse(countRe(of, /^\s*(?:\*\*)?Assignees(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Assignees(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Assignees 行变多了'
   // 关票原因那一行（#1174 复核 P1-1）：同上。它是 close 之后才出现的一行，改正文时必须按字段保住。

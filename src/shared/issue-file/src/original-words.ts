@@ -29,16 +29,40 @@
  * 都把正文交给它，读回来的原话逐字不变（引用块逐行去掉一个 `>` 前缀，单独一行 `>` 还原成空行，
  * 不做 trim、不改行内空白），出处与记录时间随条目一起返回。读的规则和写侧共用同一份按行扫描，
  * 不另写一套正则——这正是这张票要的「写入与读回逐字相同」。
+ *
+ * Since #10 (dsh-skills-deck, English first) the writer produces only the English shape:
+ *
+ *   ## Maintainer's words
+ *
+ *   Source: https://github.com/risaddex/dsh-skills-deck/issues/10
+ *   > first line of the words
+ *
+ * The reader accepts both languages, because tickets already on GitHub, GitLab and in `.scratch/`
+ * carry the Chinese shape above: the section title may be `维护者原话`, `Maintainer's words`, or the `The maintainer's own words` wording an earlier English doc used,
+ * the purpose section may be `目的` or `Purpose`, and a source line may start with `出处` or
+ * `Source` followed by a half-width or full-width colon. An existing Chinese section is never
+ * renamed: a new entry is appended under whatever heading the ticket already has, because this
+ * section is append-only and its heading belongs to the words already recorded under it.
  */
 
-/** 维护者原话区的标题文字（拼上 `## ` 才是完整标题行）。不导出：读写都在这份文件里，外面不需要这个字面量。 */
-const ORIGINAL_WORDS_TITLE = '维护者原话'
-/** 目的区的标题文字：新原话区要紧跟在它后面。 */
-const PURPOSE_TITLE = '目的'
-/** 写新原话区时固定写这一行标题。 */
+/**
+ * Title of the maintainer's-words section that the writer produces (prefix `## ` for the full line).
+ * Not exported: reading and writing both live in this file.
+ */
+const ORIGINAL_WORDS_TITLE = "Maintainer's words"
+/** Accepted titles of the maintainer's-words section: the English one written today, the Chinese one older tickets carry. */
+const ORIGINAL_WORDS_TITLE_RE = /^(?:(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words|维护者原话)$/i
+/** Accepted titles of the purpose section: a new maintainer's-words section goes right after it. */
+const PURPOSE_TITLE_RE = /^(?:Purpose|目的)$/i
+/** The heading line the writer produces for a new section. */
 const SECTION_HEADING = '## ' + ORIGINAL_WORDS_TITLE
-/** 出处行的前缀：写侧固定用全角冒号，读侧两种冒号都认（老票可能写半角）。 */
-const SOURCE_LINE_RE = /^\s*出处\s*[:：]\s*(.*)$/
+/** Prefix the writer puts in front of the source of one entry. */
+const SOURCE_PREFIX = 'Source: '
+/**
+ * A source line: `Source:` (written today) or `出处：` (older tickets), with either a half-width or a
+ * full-width colon, because hand-edited tickets carry both.
+ */
+const SOURCE_LINE_RE = /^\s*(?:Source|出处)\s*[:：]\s*(.*)$/i
 /** 引用块的一行：`>` 后面最多去掉一个空格才是原话本身（写侧正是加了一个空格）。 */
 const QUOTE_LINE_RE = /^\s*>(.*)$/
 /** 文件头注释行：写正文最前时跳过它们（幂等锚、类型标记、父票与建票时间）。 */
@@ -192,11 +216,11 @@ function analyzeLines(lines: readonly BodyLine[]): LineMark[] {
  * 找出所有顶层二级区块：标题文字逐字等于 target；区结束于下一个顶层标题（一、二级都算）、
  * 顶层字段行或正文末尾。三处读者（读回核对、追加、整份替换搬回）共用这一份边界判定。
  */
-function findSections(lines: readonly BodyLine[], marks: readonly LineMark[], target: string): Section[] {
+function findSections(lines: readonly BodyLine[], marks: readonly LineMark[], target: RegExp): Section[] {
   const out: Section[] = []
   for (let i = 0; i < lines.length; i++) {
     const head = marks[i].heading
-    if (!head || head.level !== 2 || head.title !== target) continue
+    if (!head || head.level !== 2 || !target.test(head.title)) continue
     let end = lines.length
     for (let j = i + 1; j < lines.length; j++) {
       if (marks[j].fenced || marks[j].inComment) continue
@@ -230,7 +254,7 @@ function quoteLines(text: string): string[] {
  * 不导出：写入口是 replaceOriginalWordsSection / applyOriginalWordsEntry，外面不需要自己拼。
  */
 function formatOriginalWordsEntry(entry: OriginalWordsEntry): string {
-  return '出处：' + normalizeSource(entry.source) + '\n' + quoteLines(entry.text).join('\n')
+  return SOURCE_PREFIX + normalizeSource(entry.source) + '\n' + quoteLines(entry.text).join('\n')
 }
 
 /** 把读到的出处与引用块行收成一条读侧条目：正文逐字保留，记录时间从出处里认。 */
@@ -249,7 +273,7 @@ function detailEntryOf(source: string, contentLines: readonly string[]): Origina
 export function parseOriginalWords(body: unknown): OriginalWordsDetailEntry[] {
   const lines = splitBodyLines(body == null ? '' : String(body))
   const marks = analyzeLines(lines)
-  const sections = findSections(lines, marks, ORIGINAL_WORDS_TITLE)
+  const sections = findSections(lines, marks, ORIGINAL_WORDS_TITLE_RE)
   const out: OriginalWordsDetailEntry[] = []
   sections.forEach((section) => {
     let current: { source: string; lines: string[] } | null = null
@@ -287,7 +311,7 @@ export function parseOriginalWords(body: unknown): OriginalWordsDetailEntry[] {
  *   3. 都没有 → 正文第 0 行。
  */
 function originalWordsInsertIndex(lines: readonly BodyLine[], marks: readonly LineMark[]): number {
-  const purpose = findSections(lines, marks, PURPOSE_TITLE)[0]
+  const purpose = findSections(lines, marks, PURPOSE_TITLE_RE)[0]
   if (purpose) {
     let at = purpose.end
     while (at > purpose.contentStart && lines[at - 1].text.trim() === '') at--
@@ -331,7 +355,7 @@ export function replaceOriginalWordsSection(body: unknown, entry: OriginalWordsE
   const tailEol = lines.length ? lines[lines.length - 1].eol : '\n'
   const marks = analyzeLines(lines)
   const entryLines = formatOriginalWordsEntry(entry).split('\n')
-  const sections = findSections(lines, marks, ORIGINAL_WORDS_TITLE)
+  const sections = findSections(lines, marks, ORIGINAL_WORDS_TITLE_RE)
   if (sections.length > 0) {
     const section = sections[0]
     let at = section.end
@@ -354,14 +378,14 @@ export function replaceOriginalWordsSection(body: unknown, entry: OriginalWordsE
 export function applyOriginalWordsEntry(body: string, entry: OriginalWordsEntry, limit: number): { next: string | null; problem: string; skipped: boolean } {
   const want: OriginalWordsEntry = { text: normalizeText(entry.text), source: normalizeSource(entry.source) }
   if (body.length > limit) {
-    return { next: null, skipped: false, problem: '正文已经 ' + body.length + ' 个字符，超过原话写入的硬顶 ' + limit + ' 个字符（GitHub 正文上限 65536，留了余量）：这次原话没写、正文一个字没动。要写请先把正文缩短。' }
+    return { next: null, skipped: false, problem: 'The body is already ' + body.length + ' characters, over the ' + limit + '-character limit for writing maintainer\'s words (GitHub caps a body at 65536; this leaves a margin): the words were not written and the body was not touched. Shorten the body first.' }
   }
   const have = parseOriginalWords(body)
   const duplicated = have.some((one) => one.source === want.source && one.text === want.text)
   if (duplicated) return { next: body, skipped: true, problem: '' }
   const next = replaceOriginalWordsSection(body, want)
   if (next.length > limit) {
-    return { next: null, skipped: false, problem: '写进这条原话后正文会到 ' + next.length + ' 个字符，超过硬顶 ' + limit + ' 个字符：这次原话没写、正文一个字没动。要写请先缩短正文。' }
+    return { next: null, skipped: false, problem: 'Writing these words would make the body ' + next.length + ' characters, over the ' + limit + '-character limit: the words were not written and the body was not touched. Shorten the body first.' }
   }
   return { next: next, skipped: false, problem: '' }
 }
@@ -381,7 +405,7 @@ export function originalWordsPresenceProblem(want: OriginalWordsEntry, body: str
   const have = parseOriginalWords(body)
   const got = have.some((one) => one.source === source && one.text === text)
   if (got) return ''
-  return '写了原话，但读回来的正文里找不到这一条（出处：' + (source || '空') + '）：别当成已经写好，先读一次现状复核。'
+  return 'The maintainer\'s words were written, but the body read back does not contain this entry (source: ' + (source || 'empty') + '): do not treat it as written; read the ticket again to check its current state.'
 }
 
 /**
@@ -397,7 +421,7 @@ export function originalWordsReadbackProblem(want: OriginalWordsEntry, body: str
   const presence = originalWordsPresenceProblem(want, body)
   if (presence) return presence
   if (body.trim() !== String(expected == null ? '' : expected).trim()) {
-    return '原话写进去了，但读回来的整份正文与「写前正文 + 这一条」不逐字相同：这次可能顺手动到了别的区块，或后端改写了格式，别当成已经写好，先读一次现状复核。'
+    return 'The maintainer\'s words were written, but the whole body read back is not character-for-character the body before plus this entry: another section may have been changed too, or the backend rewrote the format. Do not treat it as written; read the ticket again to check its current state.'
   }
   return ''
 }
@@ -414,10 +438,10 @@ export function restoreOriginalWordsSection(incoming: unknown, diskText: unknown
   if (!disk) return body
   const lines = splitBodyLines(body)
   const marks = analyzeLines(lines)
-  if (findSections(lines, marks, ORIGINAL_WORDS_TITLE).length > 0) return body
+  if (findSections(lines, marks, ORIGINAL_WORDS_TITLE_RE).length > 0) return body
   const diskLines = splitBodyLines(disk)
   const diskMarks = analyzeLines(diskLines)
-  const section = findSections(diskLines, diskMarks, ORIGINAL_WORDS_TITLE)[0]
+  const section = findSections(diskLines, diskMarks, ORIGINAL_WORDS_TITLE_RE)[0]
   if (!section) return body
   const blockTexts = diskLines.slice(section.heading, section.end).map((line) => line.text)
   while (blockTexts.length > 1 && blockTexts[blockTexts.length - 1].trim() === '') blockTexts.pop()

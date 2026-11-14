@@ -16,7 +16,7 @@
  *   - 进度：40%（时间未记录）：老票第一次被写入时搬过来的旧百分比
  *
  * 一条记录一行，最新在最上，第一条就是当前值；每条都必须带说明（老记录可能没有）。
- * 标题固定写 `## 进度`、不带百分比；老票标题里带的百分比在第一次写入时搬成一条「时间未记录」的记录，
+ * 标题固定写 `## Progress`、不带百分比（读侧继续认中文旧标题）；老票标题里带的百分比在第一次写入时搬成一条「时间未记录」的记录，
  * 旧自由文字原样保留——不批量迁移、不改老票的位置。
  * 本区只认顶层区块：代码块、引用块、HTML 注释里出现的同名标题不算（今天踩过的坑：正文里贴了一段
  * 示例 `## 进度`，写入时把示例当成真的进度区替换掉了）。
@@ -27,7 +27,7 @@
  * 不外传：读、写两侧都在本文件里用它，外面的调用方不需要这个字面量；
  * 共享层的字符串型常量若没有生产侧读者会被 tests/verify-contract-vocabulary.ts 判成「死了的常量」。
  */
-const PROGRESS_HEADING = '## 进度'
+const PROGRESS_HEADING = '## Progress'
 
 /**
  * 正文长度硬顶（按字符数算）：GitHub 的票正文上限是 65536 字符，这里留一点余量。
@@ -35,8 +35,8 @@ const PROGRESS_HEADING = '## 进度'
  */
 export const PROGRESS_BODY_LIMIT = 60 * 1024
 
-/** 老记录没有写时间时，时间那一格固定写这四个字，读回来 updatedAt 为 null。 */
-const PROGRESS_TIME_UNRECORDED = '时间未记录'
+/** 老记录没有写时间时，新记录写英文占位，旧中文占位仍可读；两者的 updatedAt 都是 null。 */
+const PROGRESS_TIME_UNRECORDED = 'time not recorded'
 
 /** 一条进度记录。 */
 export interface ProgressEntry {
@@ -150,7 +150,7 @@ function parseHeading(text: string): { level: number; title: string } | null {
 
 /** 进度标题：`进度` / `Progress`，可带「：90%」这种老写法；`## 进度计划` 不算。 */
 function parseProgressTitle(title: string): { percent: number | null } | null {
-  const m = /^(?:进度|Progress)(?:\s*[：:]\s*(\d{1,3})\s*%?)?$/.exec(title)
+  const m = /^(?:进度|Progress)(?:\s*[：:]\s*(\d{1,3})\s*%?)?$/i.exec(title)
   if (!m) return null
   if (m[1] === undefined) return { percent: null }
   return { percent: clampPercent(m[1]) }
@@ -227,7 +227,7 @@ function parseEntryTail(rawPercent: string, restText: string): ProgressEntry | n
     if (/^\d{4}-\d{2}-\d{2}[T ]/.test(inner)) {
       updatedAt = inner
       rest = paren[2]
-    } else if (inner === PROGRESS_TIME_UNRECORDED) {
+    } else if (inner.toLowerCase() === PROGRESS_TIME_UNRECORDED || inner === '时间未记录') {
       updatedAt = null
       rest = paren[2]
     }
@@ -237,8 +237,8 @@ function parseEntryTail(rawPercent: string, restText: string): ProgressEntry | n
   return { percent, note, updatedAt }
 }
 
-const ENTRY_BULLET_RE = /^\s*[-*+]\s+(?:进度|Progress)\s*[：:]\s*(\d{1,3})\s*%([\s\S]*)$/
-const ENTRY_LINE_RE = /^\s*(?:进度|Progress)\s*[：:]\s*(\d{1,3})\s*%([\s\S]*)$/
+const ENTRY_BULLET_RE = /^\s*[-*+]\s+(?:进度|Progress)\s*[：:]\s*(\d{1,3})\s*%([\s\S]*)$/i
+const ENTRY_LINE_RE = /^\s*(?:进度|Progress)\s*[：:]\s*(\d{1,3})\s*%([\s\S]*)$/i
 const ENTRY_BARE_RE = /^\s*(\d{1,3})\s*%\s*$/
 
 /**
@@ -340,13 +340,13 @@ export function parseProgress(body: unknown): number | null {
 
 // ——— 写：把一条新记录放到区首，旧记录与自由文字原样保留 ———
 
-/** 把一条记录拼成固定写法：`- 进度：90%（时间）：说明`；说明为空时省略冒号那一段。 */
+/** 新记录固定写英文标签与半角标点；说明是用户内容，不翻译。旧记录搬回时保留原文。 */
 export function formatProgressEntry(entry: ProgressEntry): string {
   const raw = Number(entry.percent)
   const percent = Math.max(0, Math.min(100, isNaN(raw) ? 0 : Math.round(raw)))
   const time = entry.updatedAt ? String(entry.updatedAt) : PROGRESS_TIME_UNRECORDED
   const note = entry.note == null ? '' : String(entry.note).trim()
-  return note ? `- 进度：${percent}%（${time}）：${note}` : `- 进度：${percent}%（${time}）`
+  return note ? `- Progress: ${percent}% (${time}): ${note}` : `- Progress: ${percent}% (${time})`
 }
 
 /** 没有进度区时，新块插到哪一行之前：第一个顶层字段行 → ## Comments / ## Answer → 文末。 */
@@ -471,11 +471,11 @@ export function stripProgressSections(body: unknown): string {
  */
 export function applyProgressEntry(body: string, entry: ProgressEntry, limit: number = PROGRESS_BODY_LIMIT): { next: string | null; problem: string } {
   if (body.length > limit) {
-    return { next: null, problem: '正文已经 ' + body.length + ' 个字符，超过进度写入的硬顶 ' + limit + ' 个字符（GitHub 正文上限 65536，留了余量）：这次进度没写、正文一个字没动。要写请先把旧记录或正文缩短——工具不会自动搬走旧记录。' }
+    return { next: null, problem: 'The body is already ' + body.length + ' characters, over the ' + limit + '-character limit for writing progress (GitHub caps a body at 65536; this leaves a margin): the progress was not written and the body was not touched. Shorten the old entries or the body first; the tool never moves old entries away by itself.' }
   }
   const next = replaceProgressSection(body, entry)
   if (next.length > limit) {
-    return { next: null, problem: '写进这条进度后正文会到 ' + next.length + ' 个字符，超过硬顶 ' + limit + '：这次进度没写、正文一个字没动。要写请先缩短正文——工具不会自动搬走旧记录。' }
+    return { next: null, problem: 'Writing this progress entry would make the body ' + next.length + ' characters, over the ' + limit + '-character limit: the progress was not written and the body was not touched. Shorten the body first; the tool never moves old entries away by itself.' }
   }
   return { next: next, problem: '' }
 }
@@ -490,9 +490,9 @@ export function progressReadbackProblem(want: ProgressEntry, body: string, befor
   const got = parseProgressDetail(body)
   const first = got.entries.length > 0 ? got.entries[0] : null
   const sameProgress = !!first && first.percent === want.percent && first.note === want.note && first.updatedAt === want.updatedAt
-  if (!sameProgress) return '写了进度，但读回来对不上：想写 ' + JSON.stringify(want) + '，读回第一条是 ' + JSON.stringify(first) + '：别当成已经写好。'
+  if (!sameProgress) return 'The progress was written, but the read-back does not match: wanted ' + JSON.stringify(want) + ', the first entry read back is ' + JSON.stringify(first) + '. Do not treat it as written.'
   if (before !== null && stripProgressSections(before).trim() !== stripProgressSections(body).trim()) {
-    return '进度写进去了，但进度区以外的正文跟写前对不上：这次可能顺手动到了别的区块，别当成已经写好，先读一次复核。'
+    return 'The progress was written, but the body outside the progress section differs from before the write: another section may have been changed too. Do not treat it as written; read the ticket again to check.'
   }
   return ''
 }

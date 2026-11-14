@@ -111,7 +111,7 @@ async function main() {
   check(!/^#[ \t]+\S/m.test(mapText), '地图不写可见一级标题（原文模板没有标题行）：' + JSON.stringify(mapText.slice(0, 80)))
   check(mapText.indexOf('<!-- DSH-TITLE: 探索地图乙 -->') >= 0, '地图标题写进 DSH-TITLE 隐藏注释：' + JSON.stringify(mapText.slice(0, 200)))
   check(mapText.indexOf('## Destination') >= 0 && mapText.indexOf('## Notes') >= 0 && mapText.indexOf('## Decisions so far') >= 0 && mapText.indexOf('## Not yet specified') >= 0 && mapText.indexOf('## Out of scope') >= 0, '地图五区块齐（原文模板）')
-  check(mapText.indexOf('## 进度') >= 0, '地图有 ## 进度（原文件末尾追加）')
+  check(mapText.indexOf('## Progress') >= 0, '地图有 ## Progress（原文件末尾追加）')
   check(/<!--\s*DSH-STATUS\s*:/.test(mapText), '地图的状态写在隐藏注释里，没有可见 Status 行：' + JSON.stringify(mapText.split('\n').slice(0, 8)))
 
   const issuesDir = path.join(effortDir, 'issues')
@@ -127,7 +127,7 @@ async function main() {
   check(/^Status:\s*(claimed|resolved)\s*$/m.test(childOne) || childOne.indexOf('Status:') < 0, '子票的 Status 行要么写可见裸行，要么不写（没有别的写法）')
   check(childOne.indexOf('## Question') >= 0, '子票正文落在 ## Question 段下')
   check(/<!--\s*DSH-PARENT\s*:\s*00\s*-->/.test(childOne), '子票文件头写明父票是 00：' + JSON.stringify(childOne.split('\n').slice(0, 7)))
-  check(childOne.indexOf('## 进度') >= 0, '子票有 ## 进度（原文件末尾追加）')
+  check(childOne.indexOf('## Progress') >= 0, '子票有 ## Progress（原文件末尾追加）')
   const childTwo = fs.existsSync(path.join(issuesDir, childTwoName)) ? fs.readFileSync(path.join(issuesDir, childTwoName), 'utf8') : ''
   check(/^Type:\s*grilling\s*$/m.test(childTwo), '第二张子票的 Type 行是 grilling')
 

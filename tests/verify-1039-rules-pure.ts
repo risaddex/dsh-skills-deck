@@ -53,19 +53,19 @@ async function minimalSpec() {
 
   // 进度区：没有就补一段；已经有了（含带百分比的标题）就不再补。
   const added = ms.ensureBody('## Question\n\nx\n', 'map-ticket')
-  check(added.added.includes('## 进度') && countProgressHeaders(added.body) === 1, '地图工单没有进度区时补一段')
+  check(added.added.includes('## Progress') && countProgressHeaders(added.body) === 1, '地图工单没有进度区时补一段')
   const kept = ms.ensureBody('## 进度：80%\nold\n', 'map-ticket')
   check(kept.added.length === 0 && countProgressHeaders(kept.body) === 1, '已经有带百分比的进度标题时不再补')
   const empty = ms.ensureBody('', 'map-ticket')
-  check(countProgressHeaders(empty.body) === 1 && empty.body.indexOf('## 进度') === 0, '空正文也补一段进度，且不留下开头的空行')
+  check(countProgressHeaders(empty.body) === 1 && empty.body.indexOf('## Progress') === 0, '空正文也补一段进度，且不留下开头的空行')
 
   // 地图：五个区块缺哪个补哪个，进度区随后补在五节之后（#1403 起所有位置值都补进度）。
   const mapBody = ms.ensureBody('## Destination\n\n去哪\n', 'map')
-  check(mapBody.added.length === 5 && mapBody.added[4] === '## 进度',
+  check(mapBody.added.length === 5 && mapBody.added[4] === '## Progress',
     '地图缺四个区块时补四个，再补一段进度（实际 ' + mapBody.added.length + '）')
   const allFive = '## Destination\n\nx\n\n## Notes\n\nx\n\n## Decisions so far\n\nx\n\n## Not yet specified\n\nx\n\n## Out of scope\n\nx\n'
   const allFiveDone = ms.ensureBody(allFive, 'map')
-  check(allFiveDone.added.length === 1 && allFiveDone.added[0] === '## 进度',
+  check(allFiveDone.added.length === 1 && allFiveDone.added[0] === '## Progress',
     '五个区块都在时不重复补区块，只补进度区（判据按区块标题原文判）')
 
   // 整份/片段：两条写路径共用同一条判据，四种形态都算整份。
@@ -299,7 +299,7 @@ async function objectKind() {
     check(countProgressHeaders(b.body) === 1, kind + ' 的正文补且只补一段进度区')
   }
   const mapBody = ms.ensureBody('', 'map').body
-  check(countProgressHeaders(mapBody) === 1 && mapBody.indexOf('## Out of scope') < mapBody.indexOf('## 进度'),
+  check(countProgressHeaders(mapBody) === 1 && mapBody.indexOf('## Out of scope') < mapBody.indexOf('## Progress'),
     '地图的五节在前、进度区在五节之后')
   check(ms.ensureBody('## 进度：80%\n', 'spec-ticket').added.length === 0, '规格实施票已经有进度标题时不再补')
 

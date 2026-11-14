@@ -128,7 +128,7 @@ async function main() {
   check(w1[0] && w1[0].recordedAt === null, '出处里没有时间时 recordedAt 是 null（实得 ' + String(w1[0] && w1[0].recordedAt) + '）')
   // #1828：正文只在 data.body.text（摘要档），票面不再带正文。
   const body1 = String((g1.data && g1.data.body && g1.data.body.text) || '')
-  check(body1.indexOf('出处：' + e1.source) >= 0 && body1.indexOf('> ' + TRICKY_LINES[0]) >= 0 && body1.indexOf('> > 这一行') >= 0,
+  check(body1.indexOf('Source: ' + e1.source) >= 0 && body1.indexOf('> ' + TRICKY_LINES[0]) >= 0 && body1.indexOf('> > 这一行') >= 0,
     '正文里写出的是「出处行 + 引用块」规范写法（含 > 开头的行再加一层引用）')
   check(body1.split('\n').some((l: string) => l.indexOf('> 出处：这一行看起来像出处') === 0),
     '看起来像出处的原话行被包在引用块里，不会被误当出处')
@@ -153,8 +153,8 @@ async function main() {
   // ═══ ③ section='维护者原话' 直接取整区原文 ═══
   const gs = await getTool.run(execA, { key: cKey, feature: '原话读回票', section: '维护者原话' })
   const section = (gs.data && gs.data.section) || null
-  check(!!section && String(section.name).indexOf('维护者原话') >= 0, 'section 参数按标题找到原话区（实得 ' + JSON.stringify(section && section.name) + '）')
-  check(String(section.text).indexOf('出处：' + e1.source) >= 0 && String(section.text).indexOf('> ' + TRICKY_LINES[2]) >= 0,
+  check(!!section && String(section.name) === "Maintainer's words", 'section 参数按标题找到原话区（实得 ' + JSON.stringify(section && section.name) + '）')
+  check(String(section.text).indexOf('Source: ' + e1.source) >= 0 && String(section.text).indexOf('> ' + TRICKY_LINES[2]) >= 0,
     'section 原文里出处行与引用块都在（引用块的 > 前缀原样，不替读的人剥掉）')
 
   // ═══ ⑥ 重复提交同一段原话 + 同一出处：幂等跳过，读回来仍是一条 ═══

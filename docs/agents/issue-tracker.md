@@ -71,30 +71,32 @@ Order the body as follows. The sections near the top are rarely touched once wri
 
 | Order | Section | What goes in it |
 | --- | --- | --- |
-| 1 | `## Purpose`（`## 目的`） | What problem this ticket solves and what change it brings to whom. One sentence, no implementation plan. |
-| 2 | `## The maintainer's own words`（`## 维护者原话`） | The words the maintainer themselves said, verbatim (only when there are some; otherwise the whole section does not appear). How to write it: see "How to write the original-words section" below. |
+| 1 | `## Purpose` (older tickets: `## 目的`) | What problem this ticket solves and what change it brings to whom. One sentence, no implementation plan. |
+| 2 | `## Maintainer's words` (older tickets: `## 维护者原话`) | The words the maintainer themselves said, verbatim (only when there are some; otherwise the whole section does not appear). How to write it: see "How to write the original-words section" below. |
 | 3 | `## Boundaries`（`## 边界`） | How far this goes and what it does not do; say up front what could easily sprawl past the line. |
 | 4 | `## Done when`（`## 做完`） | How we know it is done: acceptance conditions that can be checked one by one. |
 | 5 | On-demand sections | Investigation, discussion conclusions, wrap-up steps and the like, only when needed; each `##` heading gets a line of its own. |
-| 6 | `## Progress`（`## 进度`） | The log of how far it has got; always the last section of the body, with no other section after it. How to write it: see "How to write the progress section" below. |
+| 6 | `## Progress` (older tickets: `## 进度`) | The log of how far it has got; always the last section of the body, with no other section after it. How to write it: see "How to write the progress section" below. |
 
 **How to write the progress section**
 
-The heading is always written as `## Progress`（`## 进度`）, with no percentage in the heading. One record per line, **the newest one on top**, so a reader looks at the first line and knows how far this ticket has got right now.
+The heading is always written as `## Progress`, with no percentage in the heading. Tickets written before the English-first fork carry `## 进度`; the tools still read that heading and its records, and the next progress write turns the heading into `## Progress` while keeping every old record exactly as it was (#10). One record per line, **the newest one on top**, so a reader looks at the first line and knows how far this ticket has got right now.
 
-A record is always written like this (the line begins with the literal prefix `进度：`, "progress:"):
+A record is always written like this:
 
-- 进度：{percentage}%（{ISO 8601 time, with time zone}）：{one sentence saying how far it got}
+- Progress: {percentage}% ({ISO 8601 time, with time zone}): {one sentence saying how far it got}
 
 For example:
 
-- 进度：90%（2026-10-21T20:15:32+08:00）：finished the read side, running the gates now
-- 进度：40%（时间未记录）：the percentage carried over from the old ticket's heading
+- Progress: 90% (2026-10-21T20:15:32+08:00): finished the read side, running the gates now
+- Progress: 40% (time not recorded): the percentage carried over from the old ticket's heading
+
+Older records written as `- 进度：90%（2026-10-21T20:15:32+08:00）：…` and `（时间未记录）` are read the same way and are never rewritten.
 
 A few rules:
 
 - **The note is required**; an update that gives only a percentage is refused and not written: the percentage answers "how much is done", while the note answers "how far it got", and the latter is what the reader wants.
-- **The tool stamps the time**; the person writing does not make one up. When an old record has no time, write `时间未记录` ("time not recorded") instead of guessing.
+- **The tool stamps the time**; the person writing does not make one up. When an old record has no time, write `time not recorded` instead of guessing.
 - The number of records is unlimited; old records stay exactly as they are, neither deleted nor moved away.
 - When the whole ticket body goes past 60KB, writing progress is refused, and the tool will not move old records away on its own; a person decides how to shorten the body first, and only then does the write happen.
 - Old tickets are not migrated in bulk; they switch to the new form naturally the next time progress is written into them.
@@ -103,22 +105,22 @@ To write progress, use the `progress: {percent, note}` parameter of `deck_issue_
 
 **How to write the original-words section**
 
-The heading is always written as `## The maintainer's own words`（`## 维护者原话`）, right after `## Purpose`（`## 目的`） (when there is no purpose section, it goes at the very front of the body). It is part of the body, not a comment.
+The heading is always written as `## Maintainer's words`, right after `## Purpose` (when there is no purpose section, it goes at the very front of the body). Older tickets carry `## 维护者原话` after `## 目的`; the tools read both, and a new entry is appended under whichever heading the ticket already has, because this section is append-only (#10). It is part of the body, not a comment.
 
 One set of original words is made of two parts, a source line and a quote block:
 
-- **The source line**: a line of its own outside the quote block, starting with `出处：` ("source:"), saying where this sentence came from, so that a reader can go and check it. For something said on a ticket, write the full link; for something said in this session, write `本会话（时间）` ("this session (the time)"); for something written in a file, write `path:line`; for something said in a commit, write the short hash.
+- **The source line**: a line of its own outside the quote block, starting with `Source: ` (older entries start with `出处：`, and are still read), saying where this sentence came from, so that a reader can go and check it. For something said on a ticket, write the full link; for something said in this session, write `this session (the time)`; for something written in a file, write `path:line`; for something said in a commit, write the short hash.
 - **The quote block**: right below the source line, holding the words themselves: every line gets a `>` in front, and a blank line inside the original words becomes a line of its own holding just `>`.
 
 For example (write the whole block into the body in the shape below):
 
 ```text
-## 维护者原话
+## Maintainer's words
 
-出处：本会话（2026-10-21T20:05+08:00）
-> 第一段原话，一个字都不改地抄在这里。
+Source: this session (2026-10-21T20:05+08:00)
+> The first passage of the words, copied here without changing a character.
 >
-> 第二段原话；原话里本来有空行的地方，保留成单独一行 `>`。
+> The second passage; where the words had a blank line, it stays as a line holding just `>`.
 ```
 
 A few rules:
@@ -133,7 +135,7 @@ To write this section, use the `originalWords: {text, source}` parameter of `dec
 
 There are two entry points for reading this section (#1092 landed them):
 
-- `deck_issue_get` returns `originalWords: [{text, source, recordedAt}]`: `text` is character-for-character the same as the quote block (only the one `>` prefix on each line is removed; blank lines inside the original words stay blank lines, with no trim); `source` is the source line as written; `recordedAt` only recognises an ISO 8601 time containing a `T` inside the source text and returns it as-is, and is `null` when the source gives no time (the ticket's modification time is not used as a stand-in). When there are original words, `notes` adds one reminder: the original words are the highest requirement on this ticket. When you only want the raw text of the whole section (with the `>` prefixes), pass `section: '维护者原话'` ("the maintainer's own words") to the same tool.
+- `deck_issue_get` returns `originalWords: [{text, source, recordedAt}]`: `text` is character-for-character the same as the quote block (only the one `>` prefix on each line is removed; blank lines inside the original words stay blank lines, with no trim); `source` is the source line as written; `recordedAt` only recognises an ISO 8601 time containing a `T` inside the source text and returns it as-is, and is `null` when the source gives no time (the ticket's modification time is not used as a stand-in). When there are original words, `notes` adds one reminder: the original words are the highest requirement on this ticket. When you only want the raw text of the whole section (with the `>` prefixes), pass `section: "Maintainer's words"` to the same tool (the Chinese name `维护者原话` finds the same section, in old and new tickets alike).
 - The thin rows of `deck_issue_list` do not read the body, but a ticket that has original words carries `hasOriginalWords: true` on its row, so you can tell in a list which tickets hold words the user typed themselves, and then read `deck_issue_get` ticket by ticket for the raw text.
 - The full rows of `deck_map_snapshot` carry the same `originalWords`, while the thin rows deliberately do not (anyone who wants the original words reads `deck_issue_get` ticket by ticket).
 

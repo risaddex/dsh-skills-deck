@@ -69,7 +69,7 @@
     }
   ],
   "notes": [
-    "The read-back check after building passed: the five map sections and ## 进度 are all present; 2 sub-issues: the parent, the type labels and ## 进度 and the Type line all match."
+    "The read-back check after building passed: the five map sections and ## Progress are all present; 2 sub-issues: the parent, the type labels and ## Progress and the Type line all match."
   ],
   "ok": true,
   "readBack": null,
