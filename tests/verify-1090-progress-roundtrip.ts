@@ -225,6 +225,23 @@ async function main() {
   const bAfter = await getTool.run(execA, { key: bigKey, body: 'full' })
   check(bodyOf(bAfter) === bBeforeBody, '被拒以后正文一个字没动')
 
+  // #10 复核：建票只补缺少的进度区，读侧认可的大小写不能再触发第二段。
+  // 走真实 deck 建票与 Markdown 读回，标题原文、已有中英记录和目的段都必须保留。
+  for (const heading of ['progress', 'PROGRESS', 'PrOgReSs', 'Progress', '进度', 'progress: 40%', 'PROGRESS：40%', '进度：40%']) {
+    const records = '- Progress: 60% (2026-11-14T09:00:00-03:00): keep English\n- 进度：40%（时间未记录）：保留中文'
+    const supplied = '## Purpose\n\nKeep this purpose.\n\n## ' + heading + '\n\n' + records + '\n'
+    const created = await createTool.run(execA, { title: 'Heading case ' + heading, kind: 'issue', body: supplied })
+    check(created && created.status === 'ok', 'case-preserving creation succeeds: ' + heading)
+    const key = String((created.data && created.data.ticket && created.data.ticket.key) || '')
+    const readback = await getTool.run(execA, { key, body: 'full' })
+    const text = bodyOf(readback)
+    const heads = text.split(/\r?\n/).filter((line: string) => /^##\s*(?:进度|progress)(?:\s*[:：]\s*\d{1,3}\s*%?)?\s*$/i.test(line))
+    check(heads.length === 1 && heads[0] === '## ' + heading, 'creation keeps exactly the existing heading: ' + heading + ' (got ' + JSON.stringify(heads) + ')')
+    check(text.indexOf(supplied.trimEnd()) >= 0, 'creation preserves purpose, heading case and both existing records: ' + heading)
+    const detail = readback.data && readback.data.ticket && readback.data.ticket.progress
+    check(!!detail && detail.percent === 60 && detail.entries[0].note === 'keep English' && detail.entries[1].note === '保留中文', 'creation preserves the mixed records and their order: ' + heading)
+  }
+
   try { dispose.dispose() } catch (e) {}
   try { fs.rmSync(rootA, { recursive: true, force: true }) } catch (e) {}
   console.log('\n' + (failed ? '存在失败' : '全部通过 — #1090（' + total + ' 条）'))
