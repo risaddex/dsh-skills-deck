@@ -74,11 +74,10 @@ function pickLang(value: LangValue, lang: string): string | undefined {
   if (value == null) return undefined
   if (typeof value === 'string') return value
   if (typeof value === 'object') {
-    // English is the default and fallback locale (#4); zh is chosen only when asked for explicitly.
+    // #4/#7：只在显式选择 zh 时取中文；英文缺席就返回 undefined，不反向回退到中文或伪造翻译。
     const l = lang === 'zh' ? 'zh' : 'en'
     if (typeof value[l] === 'string') return value[l]
     if (l === 'zh' && typeof value.en === 'string') return value.en
-    if (l === 'en' && typeof value.zh === 'string') return value.zh
   }
   return undefined
 }
@@ -100,7 +99,7 @@ function resolvePrompt(promptValue: unknown, mod: FixSourceModule | null | undef
  * 把修复契约附到检查项序列（后端目录项；未声明 fixes 的项保持原样）。
  * @param items 检查项数组（不是数组就原样返回；元素形状不设防，坏元素原样透传）
  * @param mod 后端模块（fixes/prompts 单源；缺席或形状不对就原样返回）
- * @param lang 语言（只认 'en'，其余一律按中文取）
+ * @param lang 语言（显式 zh 先取中文、缺席再取英文；省略或其它值只取英文，缺英文就不补文案）
  * @param opts cwd 供 form 动作注入：submitAction.params.cwd + 仓库名字段 placeholder；
  *   owner = 当前 GitHub 登录用户名（host 预解析），用于替换 preview 模板 {owner}——避免 UI 层显示占位字面量
  */
