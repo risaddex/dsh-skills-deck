@@ -218,7 +218,7 @@ async function main(): Promise<void> {
     rejectedFail.message.indexOf('**Status:**') >= 0,
     '① 报错给出了本地模板的三条字段行：' + JSON.stringify(rejectedFail.message),
   )
-  check(rejectedFail.message.indexOf('# NN: 标题') >= 0, '① 报错说清本地标题写成「# NN: 标题」：' + JSON.stringify(rejectedFail.message))
+  check(rejectedFail.message.indexOf('# NN: title') >= 0, '① 报错说清本地标题写成「# NN: 标题」：' + JSON.stringify(rejectedFail.message))
   check(rejectedFail.message.indexOf('- [ ]') >= 0, '① 报错给出了本地验收项的写法：' + JSON.stringify(rejectedFail.message))
   check(readText(guardFile) === guardBefore, '① 拒绝后盘上这份票一个字节都没变')
   check(namesIn(guardDir) === guardNamesBefore, '① 拒绝后目录里没有多出半份文件或临时文件')

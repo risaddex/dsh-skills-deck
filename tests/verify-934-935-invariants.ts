@@ -160,12 +160,12 @@ async function main() {
     let errNoPolicy = null
     try { await writeMod.writeTextFile(ctxNoPolicy, '/ws/x.md', 'hi', undefined) } catch (e) { errNoPolicy = e }
     check(!!errNoPolicy && errNoPolicy.kind === 'env', 'I4 缺许可写被拒（env 档）', String((errNoPolicy && errNoPolicy.message) || errNoPolicy).slice(0, 200))
-    check(/没有拿到.*写许可/.test(String((errNoPolicy && errNoPolicy.message) || '')), 'I4 缺许可文案说清没有拿到写许可', String((errNoPolicy && errNoPolicy.message) || '').slice(0, 300))
+    check(/did not get the write permission/.test(String((errNoPolicy && errNoPolicy.message) || '')), 'I4 缺许可文案说清没有拿到写许可', String((errNoPolicy && errNoPolicy.message) || '').slice(0, 300))
     const ctxWithPolicy = { platform: { path: path.posix }, fs: denyFs, sandboxPolicy: { test: 1 } }
     let errWithPolicy = null
     try { await writeMod.writeTextFile(ctxWithPolicy, '/ws/x.md', 'hi', { test: 1 }) } catch (e) { errWithPolicy = e }
     check(!!errWithPolicy && errWithPolicy.kind === 'env', 'I4 有许可仍被拒同样 env 档', String((errWithPolicy && errWithPolicy.message) || '').slice(0, 200))
-    check(/带上了.*仍然拒绝/.test(String((errWithPolicy && errWithPolicy.message) || '')), 'I4 有许可文案说清带上了许可仍被拒（与缺许可不同档）', String((errWithPolicy && errWithPolicy.message) || '').slice(0, 300))
+    check(/carried the write permission.*still refused/.test(String((errWithPolicy && errWithPolicy.message) || '')), 'I4 有许可文案说清带上了许可仍被拒（与缺许可不同档）', String((errWithPolicy && errWithPolicy.message) || '').slice(0, 300))
   }
 
   // —— I4b：探针透传许可（有许可按许可量，无许可判灰说量不出） ——

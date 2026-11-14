@@ -172,7 +172,7 @@ const SEED = [
   const rMany = await tracker.listLabels(REF, many.ctx)
   check(rMany.ok === false, '标签数到上限时整条失败（不许退回残缺清单），实得 ok=' + JSON.stringify(rMany.ok))
   check(rMany.ok === false && (rMany.error.kind === 'env' || rMany.error.kind === 'network'), '取不全落环境档或网络档（实得 ' + JSON.stringify(rMany.ok === false ? rMany.error.kind : '') + '）')
-  check(rMany.ok === false && String(rMany.error.message).includes('未能获取全部标签'), '取不全的文案说清「未能获取全部标签」（实得 ' + JSON.stringify(rMany.ok === false ? rMany.error.message : '') + '）')
+  check(rMany.ok === false && String(rMany.error.message).includes('Could not fetch all labels'), '取不全的文案说清「未能获取全部标签」（实得 ' + JSON.stringify(rMany.ok === false ? rMany.error.message : '') + '）')
   // 反面：这一条要是实现只回前 30 条、还报成功，完整性检查器必须逮住它
   const truncated = makeGh({ listOmitLimit: true })
   const rCut = await tracker.listLabels(REF, truncated.ctx)
@@ -306,7 +306,7 @@ const SEED = [
   const cantAsk = makeGh({ labels: SEED, viewFails: 'HTTP 401: Bad credentials' })
   const r6 = await tracker.setLabelColors(REF, one('不知道是哪种'), cantAsk.ctx)
   const m6 = r6.ok === true ? String(reasonOf(r6, '不知道是哪种').message) : ''
-  check(r6.ok === true && reasonOf(r6, '不知道是哪种').kind === 'not-found' && m6.includes('无法确认当前账号在'), '权限问不出来时如实说「无法确认当前账号在这个仓库上的权限」，不瞎猜成权限不足（实得 ' + JSON.stringify(reasonOf(r6, '不知道是哪种')) + '）')
+  check(r6.ok === true && reasonOf(r6, '不知道是哪种').kind === 'not-found' && m6.includes('cannot confirm the permissions of the current account on'), '权限问不出来时如实说「无法确认当前账号在这个仓库上的权限」，不瞎猜成权限不足（实得 ' + JSON.stringify(reasonOf(r6, '不知道是哪种')) + '）')
 
   // ⑦ 次限速（官方文档：403/429 都可能，文案里带 secondary rate limit）
   const limited = makeGh({ labels: SEED, editFails: 'HTTP 403: You have exceeded a secondary rate limit. Please wait a few minutes before you try again. (https://api.github.com/repos/acme/demo/labels/bug)' })
@@ -322,12 +322,12 @@ const SEED = [
   const noGh = makeGh({ labels: SEED, noGh: true })
   const r9 = await tracker.setLabelColors(REF, one(), noGh.ctx)
   check(r9.ok === true && reasonOf(r9, 'bug').kind === 'env', '本机没有 gh → 环境档，不许误判成「标签不存在」（实得 ' + JSON.stringify(r9.ok === true ? reasonOf(r9, 'bug').kind : '') + '）')
-  check(r9.ok === true && String(reasonOf(r9, 'bug').message).includes('这是插件运行环境的问题，不是你的操作有误'), '环境档的文案说清责任在插件这边（实得 ' + JSON.stringify(r9.ok === true ? reasonOf(r9, 'bug').message : '') + '）')
+  check(r9.ok === true && String(reasonOf(r9, 'bug').message).includes('This is a problem with the plugin runtime environment, not a mistake on your side'), '环境档的文案说清责任在插件这边（实得 ' + JSON.stringify(r9.ok === true ? reasonOf(r9, 'bug').message : '') + '）')
 
   // 列标签这一路的分档：连不通时要说清「未能获取全部标签」，没登录时要说清去登录
   const listOffline = makeGh({ labels: SEED, listFails: 'could not resolve host: api.github.com' })
   const rl1 = await tracker.listLabels(REF, listOffline.ctx)
-  check(rl1.ok === false && rl1.error.kind === 'network' && String(rl1.error.message).includes('未能获取全部标签'), '列标签连不通 → 网络档且说清「未能获取全部标签」（实得 ' + JSON.stringify(rl1) + '）')
+  check(rl1.ok === false && rl1.error.kind === 'network' && String(rl1.error.message).includes('Could not fetch all labels'), '列标签连不通 → 网络档且说清「未能获取全部标签」（实得 ' + JSON.stringify(rl1) + '）')
   const listNoLogin = makeGh({ labels: SEED, listFails: 'please run gh auth login', listFailsCode: 4 })
   const rl2 = await tracker.listLabels(REF, listNoLogin.ctx)
   check(rl2.ok === false && rl2.error.kind === 'auth', '列标签没登录 → 鉴权档（实得 ' + JSON.stringify(rl2.ok === false ? rl2.error.kind : rl2) + '）')
@@ -373,7 +373,7 @@ const SEED = [
   const rNoCode = await tracker.setLabelColors(REF, [{ name: 'bug', color: '0b7285' }], noCode.ctx)
   check(rNoCode.ok === true && rNoCode.data.applied.length === 0 && rNoCode.data.failed.length === 1, '拿不到退出码 → 记成失败，不许记成成功（实得 ' + JSON.stringify(rNoCode.ok === true ? { a: rNoCode.data.applied, f: rNoCode.data.failed.length } : rNoCode) + '）')
   const whyNoCode = rNoCode.ok === true ? reasonOf(rNoCode, 'bug') : null
-  check(!!whyNoCode && whyNoCode.kind === 'env' && String(whyNoCode.message).includes('这是插件运行环境的问题，不是你的操作有误'), '拿不到退出码时落环境档并说清责任在插件这边（实得 ' + JSON.stringify(whyNoCode) + '）')
+  check(!!whyNoCode && whyNoCode.kind === 'env' && String(whyNoCode.message).includes('This is a problem with the plugin runtime environment, not a mistake on your side'), '拿不到退出码时落环境档并说清责任在插件这边（实得 ' + JSON.stringify(whyNoCode) + '）')
   check(gh0NoCode(noCode), '拿不到退出码那次确实发过命令、也确实没改到东西（假仓库里 bug 还是老色）')
   function gh0NoCode(gh) { return edits(gh).length === 1 && gh.labels.find((x) => x.name === 'bug').color === 'D73A4A' }
   // #1007：这一笔没拿到退出码，按 transport 级失败（被杀）给写桶设了冷却；冷却挂在进程级单例闸上，
@@ -406,7 +406,7 @@ const SEED = [
   check(rBoom.ok === true && labelBatchCheck(three, rBoom.data).length === 0, '某一条抛意外异常时逐条记账仍然成立（' + (rBoom.ok === true ? labelBatchCheck(three, rBoom.data).join('；') : JSON.stringify(rBoom)) + '）')
   check(rBoom.ok === true && rBoom.data.applied.length === 1 && rBoom.data.failed.length === 2, '已经改好的那条照样记进 applied，抛异常的两条记进 failed（实得 ' + JSON.stringify(rBoom.ok === true ? { a: rBoom.data.applied.length, f: rBoom.data.failed.length } : rBoom) + '）')
   const boomReason = rBoom.ok === true ? (rBoom.data.failed[0] || {}).reason : null
-  check(!!boomReason && boomReason.kind === 'env' && String(boomReason.message).includes('这是插件运行环境的问题，不是你的操作有误'), '意外异常落环境档并说清责任在插件这边（实得 ' + JSON.stringify(boomReason) + '）')
+  check(!!boomReason && boomReason.kind === 'env' && String(boomReason.message).includes('This is a problem with the plugin runtime environment, not a mistake on your side'), '意外异常落环境档并说清责任在插件这边（实得 ' + JSON.stringify(boomReason) + '）')
 
   // D6：两类误判（用真机上实测的报错原文）
   const realRepoMissing = 'GraphQL: Could not resolve to a Repository with the name \'FeatherHunter/no-such-repo-xyz\'. (repository)'
@@ -419,7 +419,7 @@ const SEED = [
   check(rDns.ok === true && reasonOf(rDns, 'bug').kind === 'network', 'DNS 失败（实测原文 getaddrinfo ENOTFOUND）落网络档，不许说成「标签不存在」（实得 ' + JSON.stringify(rDns.ok === true ? reasonOf(rDns, 'bug').kind : rDns) + '）')
   const ghDnsList = makeGh({ labels: SEED, listFails: realDns })
   const rDnsList = await tracker.listLabels(REF, ghDnsList.ctx)
-  check(rDnsList.ok === false && rDnsList.error.kind === 'network' && String(rDnsList.error.message).includes('未能获取全部标签'), '列标签时 DNS 失败同样落网络档并说清「未能获取全部标签」（实得 ' + JSON.stringify(rDnsList) + '）')
+  check(rDnsList.ok === false && rDnsList.error.kind === 'network' && String(rDnsList.error.message).includes('Could not fetch all labels'), '列标签时 DNS 失败同样落网络档并说清「未能获取全部标签」（实得 ' + JSON.stringify(rDnsList) + '）')
   const ghNoHost = makeGh({ labels: SEED, editFails: 'Get "https://api.github.com/repos/acme/demo/labels": dial tcp: lookup api.github.com on 8.8.8.8:53: no such host' })
   const rNoHost = await tracker.setLabelColors(REF, [{ name: 'bug', color: '0b7285' }], ghNoHost.ctx)
   check(rNoHost.ok === true && reasonOf(rNoHost, 'bug').kind === 'network', 'DNS 失败（no such host 家族）也落网络档（实得 ' + JSON.stringify(rNoHost.ok === true ? reasonOf(rNoHost, 'bug').kind : rNoHost) + '）')
@@ -542,7 +542,7 @@ function fakeSessionOpener(deps) {
   }))
   const host2 = createWorkspaceCwd(Object.assign({}, host2Deps, { openSession: fakeSessionOpener(host2Deps) }))
   const rNoRepo = await host2.handleListLabels({ cwd: '/ws/no-repo' })
-  check(rNoRepo.ok === false && rNoRepo.error.kind === 'not-found' && String(rNoRepo.error.message).includes('未能确定这个工作区属于哪个 GitHub 仓库'), '认不出仓库时如实失败，并说清先配远端或先选定仓库（实得 ' + JSON.stringify(rNoRepo) + '）')
+  check(rNoRepo.ok === false && rNoRepo.error.kind === 'not-found' && String(rNoRepo.error.message).includes('could not determine which GitHub repository this workspace belongs to'), '认不出仓库时如实失败，并说清先配远端或先选定仓库（实得 ' + JSON.stringify(rNoRepo) + '）')
   d.dispose()
   d2.dispose()
 }

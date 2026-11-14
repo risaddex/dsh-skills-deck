@@ -257,7 +257,7 @@ export const RAW_HEAD = 600
 export const RAW_TAIL = 200
 
 /** 凭据样式的遮蔽标记。原文要给人看懂发生了什么，但不等于能把凭证粘进 issue。 */
-const MASKED = '***（凭据已遮蔽）'
+const MASKED = '*** (credential masked)'
 
 /**
  * 遮蔽已知的凭据样式：GitHub 令牌（`ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`/`github_pat_`）、
@@ -281,11 +281,11 @@ export function maskSecrets(input: string): string {
 /** 头尾截断（中间裁掉）。已经是截断过的文本原样返回，不会挨第二刀。 */
 export function clipRaw(input: string): string {
   const s = String(input == null ? '' : input)
-  if (s.indexOf('（原文中间省略') >= 0) return s
+  if (s.indexOf('(middle of the original omitted') >= 0) return s
   if (s.length <= RAW_HEAD + RAW_TAIL) return s
   const cut = s.length - RAW_HEAD - RAW_TAIL
   return s.slice(0, RAW_HEAD)
-    + '\n……（原文中间省略 ' + cut + ' 个字符；这里保留开头 ' + RAW_HEAD + ' 与结尾 ' + RAW_TAIL + ' 字）……\n'
+    + '\n...... (middle of the original omitted: ' + cut + ' characters; the first ' + RAW_HEAD + ' and the last ' + RAW_TAIL + ' characters are kept here) ......\n'
     + s.slice(s.length - RAW_TAIL)
 }
 
@@ -421,10 +421,10 @@ export interface Judged {
  * 判不出来时的通用提示（票面实现决定第 11 条：兜底与「不支持」两档的 message 必须说清
  * 「插件未能识别」并指引看原文，而不是各写各的）。原文另在失败结果的 `raw` 里，界面能展开。
  */
-export const HINT_UNRECOGNIZED = '插件未能识别这次失败的具体原因，请展开下面的原文自己判断'
+export const HINT_UNRECOGNIZED = 'The plugin could not recognize the specific cause of this failure; expand the original text below and judge for yourself'
 
 /** 「这个后端没有这项能力」的通用提示（同上，offer 换路而不是让人重试）。 */
-export const HINT_UNSUPPORTED = '这个后端没有这项能力，所以这次操作没有执行；细节见下面的原文'
+export const HINT_UNSUPPORTED = 'This backend does not have this capability, so the operation was not carried out; see the original text below for details'
 
 /**
  * 按「先各家前置扩展、再通用表」的顺序找出命中的那一条规则。

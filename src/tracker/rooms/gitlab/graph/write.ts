@@ -168,7 +168,7 @@ async function writeNativeBlockedBy(
     const res = await requestLinkCreate(effective, id, key, id, w, 'is_blocked_by', GITLAB_READ_TIMEOUT_MS)
     if (res.code !== 0) {
       if (!isNativeCapabilityError(res)) {
-        return { ok: false, fallback: false, message: `阻塞真写：原生边 POST #${w} 失败（盘上是中间态，已加的不回滚）`, raw: res }
+        return { ok: false, fallback: false, message: `Writing blocking edges: POST of native edge #${w} failed (the remote is in an intermediate state; edges already added are not rolled back)`, raw: res }
       }
       // 能力错误：滚回本轮刚加的，删干净才能回退。
       for (const a of added) {
@@ -187,10 +187,10 @@ async function writeNativeBlockedBy(
       // 也当成读回失败，导致免费档（GET 通、POST 403）永远滑不进回退（#1599 真机探针查实）。
       const verifyRows = verify.probeFailed ? null : (verify.native || [])
       const leftovers = verifyRows === null
-        ? ['读回失败']
+        ? ['read-back failed']
         : verifyRows.map(keyOf).filter((kk) => wanted.includes(kk) && !currentKeys.includes(kk))
       if (leftovers.length > 0) {
-        return { ok: false, fallback: false, message: `阻塞真写：原生边加上又滚不干净（残留 ${leftovers.join(', ')}），不敢再写正文行`, raw: res }
+        return { ok: false, fallback: false, message: `Writing blocking edges: native edges were added and could not be cleanly rolled back (left over: ${leftovers.join(', ')}), so the body lines are not written`, raw: res }
       }
       return { ok: false, fallback: true, message: '', raw: res }
     }
@@ -200,14 +200,14 @@ async function writeNativeBlockedBy(
     if (wanted.includes(cur)) continue
     const linkId = linkIdOf(cur)
     if (!linkId) {
-      return { ok: false, fallback: false, message: `阻塞真写：原生边 #${cur} 在回包里没有 link id，删不掉（盘上是中间态，加边已成功）`, raw: current }
+      return { ok: false, fallback: false, message: `Writing blocking edges: native edge #${cur} has no link id in the response, so it cannot be removed (the remote is in an intermediate state; adding edges succeeded)`, raw: current }
     }
     const res = await requestLinkDelete(effective, id, key, linkId, GITLAB_READ_TIMEOUT_MS)
     if (res.code !== 0) {
       if (isNativeCapabilityError(res)) {
-        return { ok: false, fallback: false, message: `阻塞真写：删原生边 #${cur} 时远端说没能力，但加边可能已成功，不敢滑进正文行`, raw: res }
+        return { ok: false, fallback: false, message: `Writing blocking edges: removing native edge #${cur} the remote reported no capability, but adding edges may already have succeeded, so this does not slide into body lines`, raw: res }
       }
-      return { ok: false, fallback: false, message: `阻塞真写：删原生边 #${cur} 失败（盘上是中间态，加边已成功）`, raw: res }
+      return { ok: false, fallback: false, message: `Writing blocking edges: removing native edge #${cur} failed (the remote is in an intermediate state; adding edges succeeded)`, raw: res }
     }
   }
   return { ok: true }
@@ -290,7 +290,7 @@ export async function setBlockedBy(
         const missing = wanted.filter((w) => !backKeys.includes(w))
         const extra = backKeys.filter((b) => !wanted.includes(b))
         if (missing.length > 0 || extra.length > 0) {
-          return fail(ERROR_KIND.CONFLICT as ErrorKind, `conflict: native write readback mismatch (missing ${missing.join(', ') || '无'}, extra ${extra.join(', ') || '无'})`, JSON.stringify({ key: k, wanted, backKeys }))
+          return fail(ERROR_KIND.CONFLICT as ErrorKind, `conflict: native write readback mismatch (missing ${missing.join(', ') || 'none'}, extra ${extra.join(', ') || 'none'})`, JSON.stringify({ key: k, wanted, backKeys }))
         }
         // 读回对上了：返回票面，对端状态逐张落实（上限路径的返回与读路径同一条纪律，不硬写 open）。
         const refreshed = (await fetchRawIssue(effective, id, k)) as unknown as RawBag
@@ -348,7 +348,7 @@ export async function setBlockedBy(
     const lost = wanted.filter((w) => !written.includes(w))
     const extra = written.filter((w) => !wanted.includes(w))
     if (lost.length > 0 || extra.length > 0) {
-      return fail(ERROR_KIND.CONFLICT as ErrorKind, `conflict: fallback write readback mismatch (missing ${lost.join(', ') || '无'}, extra ${extra.join(', ') || '无'})`, JSON.stringify({ key: k, wanted, written }))
+      return fail(ERROR_KIND.CONFLICT as ErrorKind, `conflict: fallback write readback mismatch (missing ${lost.join(', ') || 'none'}, extra ${extra.join(', ') || 'none'})`, JSON.stringify({ key: k, wanted, written }))
     }
     return { ok: true, data: issue }
   } catch (err: unknown) {

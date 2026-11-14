@@ -30,7 +30,7 @@ import { IMPL_TICKET_FIELD_LABELS, WAYFINDER_TOP_LINE_LABELS } from './format/fi
 const REMOTE_SECTIONS: readonly string[] = ['Parent', 'What to build', 'Acceptance criteria', 'Blocked by']
 
 /** 两种本地模板拒绝语的共同结尾：围栏里贴反例不算错。 */
-const FENCE_EXAMPLE_NOTE = '如果这些段只是写在 ``` 代码块里举例，不算错。'
+const FENCE_EXAMPLE_NOTE = 'If these sections are only examples inside a ``` code block, that is fine.'
 
 /**
  * 正文里出现的远端四段模板标题，按出现顺序去重；没有就返回空数组。
@@ -60,9 +60,9 @@ export function remoteTemplateSections(body: unknown): string[] {
  * 字段行名字从 IMPL_TICKET_FIELD_LABELS 派生——原文改了字段名，这句人话跟着变，不会各说各话。
  */
 function implTicketRefusal(quoted: string): string {
-  const fields = IMPL_TICKET_FIELD_LABELS.map((label) => '「**' + label + ':** …」').join('')
-  return '正文里有远端跟踪器的模板段落' + quoted + '，本地 Markdown 票不收这种写法。'
-    + '本地票要写成「# NN: 标题」，下面依次写' + fields + '，验收项写成「- [ ] …」；'
+  const fields = IMPL_TICKET_FIELD_LABELS.map((label) => ' "**' + label + ':** ..."').join('')
+  return 'The body contains template sections of a remote tracker' + quoted + ', and a local Markdown ticket does not accept that form. '
+    + 'A local ticket is written as "# NN: title" followed by' + fields + ', with acceptance items written as "- [ ] ..."; '
     + FENCE_EXAMPLE_NOTE
 }
 
@@ -71,9 +71,9 @@ function implTicketRefusal(quoted: string): string {
  * 三条裸行名字从 WAYFINDER_TOP_LINE_LABELS 派生，理由同上。
  */
 function mapTicketRefusal(quoted: string): string {
-  const lines = WAYFINDER_TOP_LINE_LABELS.map((label) => '「' + label + ': …」').join('')
-  return '正文里有远端跟踪器的模板段落' + quoted + '，本地地图子票不收这种写法。'
-    + '本地地图子票要写成「# NN: 问题」，标题下用' + lines + '记类型与关系，正文只有一段「## Question」；'
+  const lines = WAYFINDER_TOP_LINE_LABELS.map((label) => ' "' + label + ': ..."').join('')
+  return 'The body contains template sections of a remote tracker' + quoted + ', and a local map ticket does not accept that form. '
+    + 'A local map ticket is written as "# NN: question", with' + lines + ' under the heading for its type and relations, and the body has only one "## Question" section; '
     + FENCE_EXAMPLE_NOTE
 }
 
@@ -99,7 +99,7 @@ export function remoteTemplateRefusalFor(kind: OriginalKind, sections: readonly 
   if (!sections.length) return ''
   const build = REFUSAL_BUILDERS[kind]
   if (!build) return ''
-  return build(sections.map((name) => '「## ' + name + '」').join('、'))
+  return build(sections.map((name) => ' "## ' + name + '"').join(','))
 }
 
 /**

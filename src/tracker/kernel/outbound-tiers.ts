@@ -375,9 +375,9 @@ export function transportFailureReasonOf(text: unknown): OutboundTransportReason
  */
 export function transportFailureReasonLabel(reason: unknown): string {
   const r = String(reason == null ? '' : reason)
-  if (r === 'timeout') return '超时'
-  if (r === 'killed') return '被杀'
-  if (r === 'spawn-failed') return '进程没起来'
+  if (r === 'timeout') return 'timed out'
+  if (r === 'killed') return 'killed'
+  if (r === 'spawn-failed') return 'process did not start'
   return ''
 }
 
@@ -389,8 +389,8 @@ export function transportFailureReasonLabel(reason: unknown): string {
  */
 export function outboundFollowUpAdvice(bucket: unknown): string {
   return String(bucket == null ? '' : bucket) === 'write'
-    ? '这一笔写操作没有确认结果，先核对票面现状再决定怎么续做，不要直接重放。'
-    : '这一笔读操作没有拿到数据，可以直接重试。'
+    ? 'This write has no confirmed result; check the current state of the ticket before deciding how to continue, and do not simply replay it.'
+    : 'This read got no data; it can be retried directly.'
 }
 
 // ---------------------------------------------------------------------------
@@ -418,7 +418,7 @@ export function ghCooldownReply(err: unknown, cmd: string): string {
   if (!cool) return ''
   const remainSec = Math.max(1, Math.round(cool.remainingMs / 1000))
   const reasonLabel = transportFailureReasonLabel(cool.reason)
-  return '到 GitHub 的通路现在不通：命令 ' + (cmd || 'gh') + ' 没有起进程（上一笔连续第 ' + cool.failStreak + ' 次' + (reasonLabel ? reasonLabel + '失败' : '通路失败') + '，冷却还剩约 ' + remainSec + ' 秒）。这一笔没有执行。' + outboundFollowUpAdvice(cool.bucket)
+  return 'The path to GitHub is down right now: the command ' + (cmd || 'gh') + ' did not start a process (the previous calls failed ' + cool.failStreak + ' times in a row' + (reasonLabel ? ' (' + reasonLabel + ')' : ' (path failure)') + ', about ' + remainSec + ' s of cool-down left). This call was not carried out. ' + outboundFollowUpAdvice(cool.bucket)
 }
 
 /**
@@ -429,7 +429,7 @@ export function ghCooldownReply(err: unknown, cmd: string): string {
 export function ghQueueTimeoutReply(err: unknown, cmd: string): string {
   const q = outboundQueueTimeoutOf(err)
   if (!q) return ''
-  return (cmd || 'gh') + ' 在 ' + q.limitMs + ' 毫秒内没等到出站名额（到点时还在排队，一次都没有跑起来）。可重试。'
+  return (cmd || 'gh') + ' did not get an outbound slot within ' + q.limitMs + ' ms (still queued at the deadline, never ran). Safe to retry.'
 }
 
 /** 进程根本没起来也是 transport 级失败（spawn-failed）：同一只桶进入冷却，随后调用立刻回「通路不通」。 */

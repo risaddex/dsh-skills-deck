@@ -372,7 +372,7 @@ try {
 } catch (e: any) {
   buildThrew = String((e && e.message) || e)
 }
-check(buildThrew.includes('read provenance 不合法（listMaps）'), '非法来源会让 buildReadProvenance 直接抛错（不静默降级）', buildThrew)
+check(buildThrew.includes('read provenance is invalid (listMaps)'), '非法来源会让 buildReadProvenance 直接抛错（不静默降级）', buildThrew)
 
 // =============================================================================================
 // C. 负例：十二种坏来源都必须判红
@@ -404,23 +404,23 @@ expectProblem(
   'C1 来源不在渠道计划里判红',
   'listMaps',
   baseProvenance('listMaps', { source: 'rest', fieldGroups: { row: 'complete', labels: 'complete' } }),
-  '渠道计划',
+  'channel plan',
 )
 expectProblem(
   'C2 缺声明字段组判红',
   'get',
   baseProvenance('get', { fieldGroups: { row: 'complete' }, completeness: 'complete' }),
-  '缺声明字段组',
+  'declared field group missing',
 )
 expectProblem(
   'C3 截断了却标 complete 判红',
   'list',
   baseProvenance('list', { fieldGroups: { row: 'truncated', labels: 'truncated' }, completeness: 'complete' }),
-  '总体完整度',
+  'overall completeness',
 )
 expectProblem('C4 开始版本不合形判红', 'list', baseProvenance('list', { startVersion: 'v1' }), 'startVersion')
 expectProblem('C5 耗时为负判红', 'list', baseProvenance('list', { durationMs: -3 }), 'durationMs')
-expectProblem('C6 降级来源与来源相同判红', 'list', baseProvenance('list', { source: 'graphql', degradedFrom: 'graphql' }), '降级来源不能')
+expectProblem('C6 降级来源与来源相同判红', 'list', baseProvenance('list', { source: 'graphql', degradedFrom: 'graphql' }), 'fallback source cannot')
 expectProblem(
   'C7 缺失清单顺序不对判红',
   'get',
@@ -432,24 +432,24 @@ expectProblem(
   'missingFieldGroups',
 )
 expectProblem('C8 operation 与校验入参不一致判红', 'get', baseProvenance('list'), 'operation')
-expectProblem('C9 未知来源渠道判红', 'list', baseProvenance('list', { source: 'ftp' }), '读来源词表')
+expectProblem('C9 未知来源渠道判红', 'list', baseProvenance('list', { source: 'ftp' }), 'read source vocabulary')
 expectProblem(
   'C10 未知字段组判红',
   'list',
   baseProvenance('list', { fieldGroups: { row: 'complete', cdn: 'complete' } }),
-  '字段组',
+  'field group',
 )
 expectProblem(
   'C11 完整度取值是魔法值判红',
   'list',
   baseProvenance('list', { fieldGroups: { row: 'full', labels: 'complete' } }),
-  '不合法',
+  'invalid',
 )
 expectProblem(
   'C12 mixed 用在单渠道操作上判红',
   'listMaps',
   baseProvenance('listMaps', { source: 'mixed', fieldGroups: { row: 'complete', labels: 'complete' } }),
-  '两个渠道',
+  'two channels',
 )
 
 // 渠道公式的几个边角也钉住：via 名称到来源的换算、词表本身。

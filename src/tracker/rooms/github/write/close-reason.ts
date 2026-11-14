@@ -59,8 +59,8 @@ export async function planCloseReason(
   const cr = await addComment(repo, key, raw, ctx)
   if (!cr.ok) {
     const kind = (cr.error && cr.error.kind) || ERROR_KIND.NETWORK
-    const msg = String((cr.error && cr.error.message) || '没给出原因').slice(0, 300)
-    return fail(kind, 'close: 关闭原因评论没发出去，这次没关票（原因没地方落，不敢静默丢掉）：' + msg, cr.error)
+    const msg = String((cr.error && cr.error.message) || 'no reason given').slice(0, 300)
+    return fail(kind, 'close: the close-reason comment was not posted, so the ticket was not closed this time (the reason would have nowhere to land, and dropping it silently is not allowed): ' + msg, cr.error)
   }
   return { ok: true, data: { args: ['--reason', 'completed'], raw } }
 }

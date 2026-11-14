@@ -71,10 +71,10 @@ async function listSubIssuesInner(repo: RepositoryRef, mapKey: unknown, opts: un
     // 形状不对的入参本身就是这一处的原文（这之前还没跑过任何外部命令）；它取出来可能是空串，那是如实交代。
     if (!parsed) {
       emitReadDegraded(ctx, 'subIssues', 'subIssues:repo-ref', Date.now() - t0)
-      return fail(ERROR_KIND.NOTFOUND, `子票取数：repo.refId 缺失或形状不对：${repoId(repo)}`, repo)
+      return fail(ERROR_KIND.NOTFOUND, `Fetching child tickets: repo.refId is missing or has the wrong shape: ${repoId(repo)}`, repo)
     }
     const num = Number(String(mapKey == null ? '' : mapKey).trim())
-    if (!Number.isFinite(num)) return fail(ERROR_KIND.PARSE, `子票取数：GitHub 的地图编号必须是数字：${mapKey}`, mapKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+    if (!Number.isFinite(num)) return fail(ERROR_KIND.PARSE, `Fetching child tickets: a GitHub map number must be numeric: ${mapKey}`, mapKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     const c = ghClient(ctx)
     const items: Issue[] = []
     // 为什么显式标：空值起手再在分支里赋值，编译器会判成隐式 any；标成契约的形状才过得了严格模式，运行时还是原来那几个值。
@@ -97,7 +97,7 @@ async function listSubIssuesInner(repo: RepositoryRef, mapKey: unknown, opts: un
       // 这一支是「执行器连失败形状都没交回」的兜底，没有原文可交（空串是如实交代，不是漏填）。
       if (!r.ok) {
         emitReadDegraded(ctx, 'subIssues', 'subIssues:page-fail', Date.now() - t0)
-        return { ok: false, error: (r && r.error) || { kind: ERROR_KIND.NETWORK, message: '子票取数：这一页没取回来', raw: '' } }
+        return { ok: false, error: (r && r.error) || { kind: ERROR_KIND.NETWORK, message: 'Fetching child tickets: this page was not fetched', raw: '' } }
       }
       // 为什么把回包定成这个形状：只读到本函数实际用的四层（errors/data.repository.issue.subIssues），
       // 更深的节点按 unknown 读；定宽了以后加字段要改两处，定窄了读不到，当前四层正好够用。
@@ -107,10 +107,10 @@ async function listSubIssuesInner(repo: RepositoryRef, mapKey: unknown, opts: un
         const eb = e as { message?: unknown } | null;
         // 没能解析成 JSON 的那份回包就是这里的原文（交的是这次 gh 的完整产出，不只 stdout 一截）。
         emitReadDegraded(ctx, 'subIssues', 'subIssues:json', Date.now() - t0)
-        return fail(ERROR_KIND.PARSE, `子票取数：回包不是合法 JSON：${String((eb && eb.message) || e).slice(0, 200)}`, r.data)
+        return fail(ERROR_KIND.PARSE, `Fetching child tickets: the response is not valid JSON: ${String((eb && eb.message) || e).slice(0, 200)}`, r.data)
       }
       if (j.errors) {
-        const msg = `子票取数：${JSON.stringify(j.errors).slice(0, 800)}`
+        const msg = `Fetching child tickets: ${JSON.stringify(j.errors).slice(0, 800)}`
         // 原文交的是 GitHub 回的那份 errors 负载本身（msg 只是给它加了个操作名前缀，不算原文）。
         // 判档与话术都走本房唯一的出口：档位由规则表判、message 按票面实现决定第 11 条挑。
         const verdict = ghVerdictOf({ message: msg, stderr: msg }, ctx)
@@ -120,12 +120,12 @@ async function listSubIssuesInner(repo: RepositoryRef, mapKey: unknown, opts: un
       const issue = j.data && j.data.repository && j.data.repository.issue
       if (!issue) {
         emitReadDegraded(ctx, 'subIssues', 'subIssues:notfound', Date.now() - t0)
-        return fail(ERROR_KIND.NOTFOUND, `子票取数：地图 #${num} 没找到（或没有权限看它）`, r.data)
+        return fail(ERROR_KIND.NOTFOUND, `Fetching child tickets: map #${num} was not found (or you lack permission to see it)`, r.data)
       }
       const conn = issue.subIssues
       if (!conn || !Array.isArray(conn.nodes)) {
         emitReadDegraded(ctx, 'subIssues', 'subIssues:shape', Date.now() - t0)
-        return fail(ERROR_KIND.PARSE, '子票取数：回包里没有 subIssues.nodes（形状不对，不猜）', r.data)
+        return fail(ERROR_KIND.PARSE, 'Fetching child tickets: the response has no subIssues.nodes (wrong shape, not guessing)', r.data)
       }
       if (total === null) {
         const tc = Number(conn.totalCount)

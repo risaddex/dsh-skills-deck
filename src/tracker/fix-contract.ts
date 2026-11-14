@@ -74,8 +74,10 @@ function pickLang(value: LangValue, lang: string): string | undefined {
   if (value == null) return undefined
   if (typeof value === 'string') return value
   if (typeof value === 'object') {
-    const l = lang === 'en' ? 'en' : 'zh'
+    // English is the default and fallback locale (#4); zh is chosen only when asked for explicitly.
+    const l = lang === 'zh' ? 'zh' : 'en'
     if (typeof value[l] === 'string') return value[l]
+    if (l === 'zh' && typeof value.en === 'string') return value.en
     if (l === 'en' && typeof value.zh === 'string') return value.zh
   }
   return undefined

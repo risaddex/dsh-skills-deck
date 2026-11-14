@@ -73,32 +73,32 @@ export function checkNoWorseForPatch(oldText: string, newText: string): string{
   // 标题、幂等锚、骨架区仍按整份原文计数：那几处读的就是原文，与围栏无关。
   const of=stripFencedCode(o), nf=stripFencedCode(n)
   const worse=function(oldC: number, newC: number): boolean{ return newC>1&&newC>oldC }
-  if(worse(countRe(o, /^#[ \t]+\S.*/gm), countRe(n, /^#[ \t]+\S.*/gm))) return '一级标题变多了'
-  if(worse(countRe(o, /DSH-IDEMPOTENCY-KEY/g), countRe(n, /DSH-IDEMPOTENCY-KEY/g))) return '幂等锚变多了'
-  if(countRe(o, /DSH-IDEMPOTENCY-KEY/g)>=1&&countRe(n, /DSH-IDEMPOTENCY-KEY/g)===0) return '幂等锚丢了'
+  if(worse(countRe(o, /^#[ \t]+\S.*/gm), countRe(n, /^#[ \t]+\S.*/gm))) return 'more level-1 headings than before'
+  if(worse(countRe(o, /DSH-IDEMPOTENCY-KEY/g), countRe(n, /DSH-IDEMPOTENCY-KEY/g))) return 'more idempotency anchors than before'
+  if(countRe(o, /DSH-IDEMPOTENCY-KEY/g)>=1&&countRe(n, /DSH-IDEMPOTENCY-KEY/g)===0) return 'the idempotency anchor was lost'
   // #1277：对象类型标记与幂等锚同一条纪律 —— 变多、或者盘上有的标记被改丢，都算写坏，
   // 因为标记是「这张票是哪一种对象」的唯一真源（ADR 2.5），丢了规格就降级成普通票。
   // 数的是整行标记（共享包判据），正文里引用一句标记写法不算数。
-  if(worse(countMarkerLines(o), countMarkerLines(n))) return '类型标记行变多了'
-  if(countMarkerLines(o)>=1&&countMarkerLines(n)===0) return '类型标记丢了'
+  if(worse(countMarkerLines(o), countMarkerLines(n))) return 'more type marker lines than before'
+  if(countMarkerLines(o)>=1&&countMarkerLines(n)===0) return 'the type marker was lost'
   // #1489：原文布局的字段行是加粗的（名字前一对星号、冒号后一对星号），计数必须与 parse.ts 同一把尺子；
   // 只数裸写法的话，一张加粗字段被改丢也判不出「写坏了」。
-  if(worse(countRe(of, /^\s*(?:\*\*)?Status(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Status(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Status 行变多了'
-  if(worse(countRe(of, /^\s*(?:\*\*)?Type(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Type(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Type 行变多了'
-  if(worse(countRe(of, /^\s*(?:\*\*)?Blocked\s+by(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Blocked\s+by(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Blocked by 行变多了'
-  if(worse(countRe(of, /^\s*(?:\*\*)?Labels(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Labels(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Labels 行变多了'
-  if(worse(countRe(o, /^##\s*Comments\s*$/gim), countRe(n, /^##\s*Comments\s*$/gim))) return 'Comments 骨架变多了'
-  if(worse(countRe(o, /^##\s*Answer\s*$/gim), countRe(n, /^##\s*Answer\s*$/gim))) return 'Answer 骨架变多了'
-  if(countRe(o, /^##\s*Comments\s*$/gim)>=1&&countRe(n, /^##\s*Comments\s*$/gim)===0) return 'Comments 骨架丢了'
-  if(countRe(o, /^##\s*Answer\s*$/gim)>=1&&countRe(n, /^##\s*Answer\s*$/gim)===0) return 'Answer 骨架丢了'
+  if(worse(countRe(of, /^\s*(?:\*\*)?Status(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Status(?:\*\*)?\s*[:\uFF1A]/gim))) return 'more Status lines than before'
+  if(worse(countRe(of, /^\s*(?:\*\*)?Type(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Type(?:\*\*)?\s*[:\uFF1A]/gim))) return 'more Type lines than before'
+  if(worse(countRe(of, /^\s*(?:\*\*)?Blocked\s+by(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Blocked\s+by(?:\*\*)?\s*[:\uFF1A]/gim))) return 'more Blocked by lines than before'
+  if(worse(countRe(of, /^\s*(?:\*\*)?Labels(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Labels(?:\*\*)?\s*[:\uFF1A]/gim))) return 'more Labels lines than before'
+  if(worse(countRe(o, /^##\s*Comments\s*$/gim), countRe(n, /^##\s*Comments\s*$/gim))) return 'more Comments skeletons than before'
+  if(worse(countRe(o, /^##\s*Answer\s*$/gim), countRe(n, /^##\s*Answer\s*$/gim))) return 'more Answer skeletons than before'
+  if(countRe(o, /^##\s*Comments\s*$/gim)>=1&&countRe(n, /^##\s*Comments\s*$/gim)===0) return 'the Comments skeleton was lost'
+  if(countRe(o, /^##\s*Answer\s*$/gim)>=1&&countRe(n, /^##\s*Answer\s*$/gim)===0) return 'the Answer skeleton was lost'
   // #1091：维护者原话区与 Comments/Answer 同一条纪律 —— 变多算写坏（重复标题），盘上有的被改丢也算写坏。
   // 这一条是「整份替换时到底有没有保住原话」的直接判据：下面的 merge 会搬回，搬不回来时就不许落盘。
   if(worse(countRe(o, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim), countRe(n, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim))) return "more Maintainer's words sections than before"
   if(countRe(o, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim)>=1&&countRe(n, /^##\s*(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)\s*$/gim)===0) return "the Maintainer's words section was lost"
   // 认领人那一行（#1174 决策 12）：与 Status 同样按行数核对，翻倍才算坏。
-  if(worse(countRe(of, /^\s*(?:\*\*)?Assignees(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Assignees(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Assignees 行变多了'
+  if(worse(countRe(of, /^\s*(?:\*\*)?Assignees(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Assignees(?:\*\*)?\s*[:\uFF1A]/gim))) return 'more Assignees lines than before'
   // 关票原因那一行（#1174 复核 P1-1）：同上。它是 close 之后才出现的一行，改正文时必须按字段保住。
-  if(worse(countRe(of, /^\s*(?:\*\*)?Close\s+reason(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Close\s+reason(?:\*\*)?\s*[:\uFF1A]/gim))) return 'Close reason 行变多了'
+  if(worse(countRe(of, /^\s*(?:\*\*)?Close\s+reason(?:\*\*)?\s*[:\uFF1A]/gim), countRe(nf, /^\s*(?:\*\*)?Close\s+reason(?:\*\*)?\s*[:\uFF1A]/gim))) return 'more Close reason lines than before'
   return ''
 }
 /** 整份正文合并：锚一律用盘上旧的，缺一级标题用盘上旧标题补回，缺字段行与骨架区从盘上旧文件搬回（字段插在骨架之前）。 */

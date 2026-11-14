@@ -75,12 +75,12 @@ function startIndexOf(cursor: string, total: number): { ok: true; start: number 
   if (!/^\d+$/.test(cursor)) {
     // 原文 = 收到的那段游标本身（本地就能定论：它不是一个下标数字）。
     // 游标不是数字是调用方给错了参数（越界另有一条），改游标重试即可，标成输入被拒。
-    return { ok: false, reason: 'listPage:cursor', error: failAs(ERROR_KIND.PARSE, '游标已失效，请重新加载（这个后端的游标是排好序的票行列表里的下标，收到的不是数字：' + cursor.slice(0, 32) + '）', cursor.slice(0, 120), TRACKER_ERROR_STAGE.INPUT_REFUSED).error }
+    return { ok: false, reason: 'listPage:cursor', error: failAs(ERROR_KIND.PARSE, 'The cursor is no longer valid, please reload (the cursor of this backend is an index into the sorted list of ticket rows, and what arrived is not a number: ' + cursor.slice(0, 32) + ')', cursor.slice(0, 120), TRACKER_ERROR_STAGE.INPUT_REFUSED).error }
   }
   const start = parseInt(cursor, 10)
   if (start >= total) {
     // 原文给这次的下标与总行数（本地就能定论：游标越过了现有数据）。
-    return { ok: false, reason: 'listPage:cursor-stale', error: failAs(ERROR_KIND.NOTFOUND, '游标已失效，请重新加载（下标 ' + start + ' 越过了现在这 ' + total + ' 行）', JSON.stringify({ start: start, total: total })).error }
+    return { ok: false, reason: 'listPage:cursor-stale', error: failAs(ERROR_KIND.NOTFOUND, 'The cursor is no longer valid, please reload (index ' + start + ' is beyond the current ' + total + ' rows)', JSON.stringify({ start: start, total: total })).error }
   }
   return { ok: true, start: start }
 }
@@ -127,7 +127,7 @@ export async function listIssuesPage(ctx: OpContext, repo: RepoWithPath, filter:
   } catch (e) {
     // 枚举这一层之外冒上来的故障：整条失败，日志留一行「停在哪条操作」。
     emitReadDegraded(ctx, 'listPage', 'listPage:fs-fail', Date.now() - t0)
-    return failFromError(e, ctx, '给这个工作区的票分页时出错')
+    return failFromError(e, ctx, 'error while paging the tickets of this workspace')
   }
 }
 

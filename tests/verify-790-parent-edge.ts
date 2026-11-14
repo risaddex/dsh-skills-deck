@@ -141,7 +141,7 @@ async function main() {
     const f = strictExecFactory({ readFailsAfterWrite: true })
     const r = await graph.setParent(repo, '90', '78', {}, ghCtxFor(f))
     check(r.ok === false, 'G1 写成功但写后读回失败 → 如实回失败，不装成功（实得 ok=' + r.ok + '）')
-    check(String((r.error && r.error.message) || '').includes('读回'), 'G2 失败原话里说清是写后读回没成功（实得：' + String((r.error && r.error.message) || '').slice(0, 120) + '）')
+    check(String((r.error && r.error.message) || '').includes('read-back after the write failed'), 'G2 失败原话里说清是写后读回没成功（实得：' + String((r.error && r.error.message) || '').slice(0, 120) + '）')
     check(!(r.data && String(r.data.parentKey || '') === '78'), 'G3 返回值里不许出现「父票已挂上」的拼票（实得 parentKey=' + String((r.data && r.data.parentKey) || '(无 data)') + '）')
     check(f.parents.get('90') === '78', 'G4 写动作本身确实发出去了（读回失败不改变「写过」这个事实）')
   }

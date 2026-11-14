@@ -224,8 +224,8 @@ async function setParentInner(repo: RepositoryRef, key: string, parentKey: strin
     } else {
       // 设置父子：先走原生旗 `gh issue edit --parent`（按票号；裸接口要数据库编号且用 -F，-f 传票号必 422，见 #790）。
       // 说「编号必须是数字」的原文就是调用方给的那个值本身。
-      if (!/^\d+$/.test(wantParent)) return fail(ERROR_KIND.PARSE, `setParent: parentKey 必须是数字编号：${wantParent}`, String(wantParent), TRACKER_ERROR_STAGE.INPUT_REFUSED)
-      if (!/^\d+$/.test(k)) return fail(ERROR_KIND.PARSE, `setParent: key 必须是数字编号：${k}`, String(k), TRACKER_ERROR_STAGE.INPUT_REFUSED)
+      if (!/^\d+$/.test(wantParent)) return fail(ERROR_KIND.PARSE, `setParent: parentKey must be a numeric ticket number: ${wantParent}`, String(wantParent), TRACKER_ERROR_STAGE.INPUT_REFUSED)
+      if (!/^\d+$/.test(k)) return fail(ERROR_KIND.PARSE, `setParent: key must be a numeric ticket number: ${k}`, String(k), TRACKER_ERROR_STAGE.INPUT_REFUSED)
       let set = await c.execGh(['issue', 'edit', k, '--repo', slug, '--parent', wantParent], { cwd: ctx && ctx.cwd })
       if (!set.ok) {
         const m = errMessageOrStderr(set.error)
@@ -279,10 +279,10 @@ async function setParentInner(repo: RepositoryRef, key: string, parentKey: strin
     // 并把「写已回成功、读没读回来」这件事说清楚，让上层按「没确认」处理（既不算成功，也不说没落上）。
     const finalRes = await getIssue(repo, k, {}, ctx)
     if (finalRes.ok) return finalRes
-    const readMsg = String((finalRes.error && finalRes.error.message) || '后端没给出原因')
+    const readMsg = String((finalRes.error && finalRes.error.message) || 'the backend gave no reason')
     return fail(
       (finalRes.error && finalRes.error.kind) || ERROR_KIND.NETWORK,
-      `setParent: 写动作已回成功（route=${trail.route}），但写后读回失败：${readMsg}；这条父子边可能已建成但没确认`,
+      `setParent: the write reported success (route=${trail.route}), but the read-back after the write failed: ${readMsg}; this parent-child edge may exist but is not confirmed`,
       finalRes
     )
   } catch (e) {

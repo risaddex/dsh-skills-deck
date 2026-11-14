@@ -103,7 +103,7 @@ async function readParseWrite(ctx: OpContext,repo: RepoWithPath | null,r: Resolv
         if(onWritten)onWritten()
       }
       return{ok:true,txt:next}
-    }catch(e){return failFromError(e,ctx,'读—改—写这张票的文件时出错')}
+    }catch(e){return failFromError(e,ctx,'error while reading, changing and writing the file of this ticket')}
   })
 }
 
@@ -193,22 +193,22 @@ async function updateIssueInner(ctx: OpContext,repo: RepoWithPath | null,key: st
       // （#1174 复核 P1-2：这里早先只读 `title`，于是契约自己的形状 `{name:'v1'}` 反而被静默丢掉还回一句成功。）
       const ms=(patch as { milestone?: unknown }).milestone
       const msLabel=typeof ms==='string'?ms:String((ms as { name?: unknown })?.name||(ms as { title?: unknown })?.title||(ms as { number?: unknown })?.number||'')
-      throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (milestone'+(msLabel.trim()?' '+msLabel.trim():'')+')：本地票文件里没有放里程碑的地方'}
+      throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (milestone'+(msLabel.trim()?' '+msLabel.trim():'')+'): a local ticket file has no place for a milestone'}
     }
     if(patch&&Array.isArray(patch.customFields)){
       // #1174：契约里的自定义字段是开放形状（一个名字加一个值），本地票只有 `Type:` 这一行能放。
       // 以前是把不认识的字段悄悄丢掉、照样回成功。现在只认 Type，其余如实回不支持。
       const unknown=patch.customFields.filter(cf=>!(cf&&cf.name==='Type'&&typeof cf.value==='string'&&cf.value.trim()))
-      if(unknown.length) throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (customFields '+unknown.map(cf=>String(cf&&cf.name)).join(', ')+')：本地票只有地图子票的 Type 这一行能放，其余字段没有地方存'}
+      if(unknown.length) throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (customFields '+unknown.map(cf=>String(cf&&cf.name)).join(', ')+'): a local ticket has only the Type line of a map ticket, and other fields have nowhere to go'}
       // #1788 复核：原文里 Type 只属于探索地图子票（wayfinder-child 的裸行 Type: research|prototype|grilling|task）；
       // 实施票、普通票与规格/地图容器都没有这个字段。对它们写 Type 会在标题下面插出一行原文布局不认的
       // 字段，所以按票所在目录判出的写路线如实拒绝，一个字节都不写。
-      if(r.container||r.route!=='map') throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (customFields Type)：原文里 Type 只属于探索地图子票；实施票、普通票与规格/地图容器都没有这一行，这次没写'}
+      if(r.container||r.route!=='map') throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (customFields Type): in the original format Type belongs only to exploration map tickets; implementation tickets, plain tickets and spec/map containers have no such line, so nothing was written'}
       for(const cf of patch.customFields){
         if(cf&&cf.name==='Type'&&typeof cf.value==='string'&&cf.value.trim()){
           const value=String(cf.value).trim().toLowerCase()
           // 地图子票的 Type 只有原文那四个词；写进别的值，读路径就不再认这张票是地图子票了。
-          if(MAP_TICKET_TYPES.indexOf(value)<0) throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (customFields Type)：地图子票的 Type 只能是 '+MAP_TICKET_TYPES.join(' / ')+'，这次没写：'+value}
+          if(MAP_TICKET_TYPES.indexOf(value)<0) throw {kind:ERROR_KIND.UNSUPPORTED,message:'markdown update unsupported (customFields Type): the Type of a map ticket can only be '+MAP_TICKET_TYPES.join(' / ')+', so nothing was written: '+value}
           // 按票面已有样式改：原文地图子票是裸行；手写票若用了加粗行，就维持这份文件自己的写法，不再多插一行裸行。
           txt=writeFieldByStyle(txt,'Type',value,'bare');changed=true
         }
@@ -236,7 +236,7 @@ async function updateIssueInner(ctx: OpContext,repo: RepoWithPath | null,key: st
     // #1002：落盘前核对不许写坏，变坏就抛错转成如实失败（读改写队列里抛错不会落盘）。
     if(changed){
       const worse=checkNoWorseForPatch(fnOldText, txt)
-      if(worse) throw {kind:ERROR_KIND.UNSUPPORTED,message:'改正文核对没过（'+worse+'），这次没写：请换一种正文形态再试。'}
+      if(worse) throw {kind:ERROR_KIND.UNSUPPORTED,message:'The body check after the change failed ('+worse+'), so nothing was written: try a different body shape.'}
     }
     return changed?txt:undefined
   },opts,trail)
@@ -245,7 +245,7 @@ async function updateIssueInner(ctx: OpContext,repo: RepoWithPath | null,key: st
     const iss=parseMd(res.txt,{key:norm,parentKey: norm==='00'?null:'00',isMap: r.container==='map',kind: r.container==='spec'?'spec':undefined,effortId:r.effortId,url:r.path})
     applyLabelColors(iss, colorMap)
     return{ok:true,data:iss}
-  }catch(e){return failFromError(e,ctx,'改这张票的字段时出错')}
+  }catch(e){return failFromError(e,ctx,'error while changing the fields of this ticket')}
 }
 /** 一条边在「读回来的形状」里长什么样：读路径把它补成了 `{key,title,state}` 三格，写路径拿到的却是裸编号。
  *  对账要在同一把尺子上比，就先统一取那一格 key —— 照着对象去比，两边永远不相等，差集会把每条边都算成「新挂」。 */
@@ -294,7 +294,7 @@ async function setBlockedByInner(ctx: OpContext,repo: RepoWithPath | null,key: s
   // 为什么在这里如实拒绝：容器的原文布局只有正文段与隐藏的 DSH-STATUS / DSH-TITLE，没有可见字段块；
   // 硬把可见行插进去只能塞进正文段，下一次按「标题到第一个字段行之间都算正文」整段重建时，
   // 这一行会被当成正文吞掉（读回来的边与盘上的形状对不上）。要支持也须另立隐藏注释，而原文没有这种约定。
-  if(r.container)return failAs(ERROR_KIND.UNSUPPORTED,'容器（map.md 或 spec.md 文件本身）在原文布局里没有 Blocked by 字段：阻塞边只能挂在票上，这次没写。容器编号是 00；请改对某一张票（例如 01）再试。',norm)
+  if(r.container)return failAs(ERROR_KIND.UNSUPPORTED,'A container (the map.md or spec.md file itself) has no Blocked by field in the original layout: blocking edges can only be attached to tickets, so nothing was written. The container number is 00; target one of the tickets (for example 01) and try again.',norm)
   const arr=Array.isArray(blockers)?blockers:[]
   // 全图环检（#1174；契约 operations.ts 的 setBlockedBy 一段写着「环检是写路径的一部分，不许省」）。
   // 放在写者队列里面：判环要读整张图，读完到落盘之间不许有本进程的别的写插进来。
@@ -332,7 +332,7 @@ async function setBlockedByInner(ctx: OpContext,repo: RepoWithPath | null,key: s
     const iss=parseMd(res.txt,{key:norm,parentKey:'00',isMap:false,effortId:r.effortId,url:r.path})
     applyLabelColors(iss, colorMap)
     return{ok:true,data:iss}
-  }catch(e){return failFromError(e,ctx,'改这张票的阻塞关系时出错')}
+  }catch(e){return failFromError(e,ctx,'error while changing the blocking relations of this ticket')}
 }
 /** 在某个字段行的下一行插入一行；找不到那个字段就退回「插在标题下面」的通用写法。
  *
@@ -445,7 +445,7 @@ async function writeParentLink(ctx: OpContext,repo: RepoWithPath | null,r: Param
     const iss=parseMd(res.txt,{key:norm,parentKey:'00',isMap:false,effortId:childEffort,url:r.path})
     applyLabelColors(iss, colorMap)
     return{ok:true,data:iss}
-  }catch(e){return failFromError(e,ctx,'改这张票的父子关系时出错')}
+  }catch(e){return failFromError(e,ctx,'error while changing the parent-child relation of this ticket')}
 }
 async function setParentInner(ctx: OpContext,repo: RepoWithPath | null,key: string,parentKey: string | null,opts?: SetOpts,trail?: EdgeTrail): Promise<{ ok: true; data: Issue } | PatchFailure>{
   const norm=String(key).padStart(2,'0')
@@ -461,7 +461,7 @@ async function setParentInner(ctx: OpContext,repo: RepoWithPath | null,key: stri
         const iss=parseMd(txt,{key:'00',parentKey:null,isMap:true,effortId:r.effortId,url:r.path})
         applyLabelColors(iss, colorMap)
         return{ok:true,data:iss}
-      }catch(e){return failFromError(e,ctx,'改这张票的父子关系时出错')}
+      }catch(e){return failFromError(e,ctx,'error while changing the parent-child relation of this ticket')}
     }
     // 原文给空串：这一支一个文件都没写出去（地图票的父是结构上没有的东西）。
     return failAs(ERROR_KIND.UNSUPPORTED,'markdown setParent unsupported (map has no parent)','')
@@ -479,7 +479,7 @@ async function setParentInner(ctx: OpContext,repo: RepoWithPath | null,key: stri
   if(want==='00'){
     const mr=await resolveMapFile(ctx,repo,{effortId:childEffort,mode:'read'})
     // 原文 = 这次请求的入参与目标工作单元（本地就能定论：这个单元里没有地图文件，父票无从查起）。
-    if(!mr.ok)return failAs(ERROR_KIND.NOTFOUND,'parent 00 not-found in effort「'+childEffort+'」',JSON.stringify({key:norm,parentKey:String(parentKey),effortId:childEffort}))
+    if(!mr.ok)return failAs(ERROR_KIND.NOTFOUND,'parent 00 not-found in effort "'+childEffort+'"',JSON.stringify({key:norm,parentKey:String(parentKey),effortId:childEffort}))
     return writeParentLink(ctx,repo,r,norm,childEffort,want,opts,colorMap,trail)
   }
   const pr=await resolveIssueFile(ctx,repo,want,{effortId:childEffort,mode:'read'})

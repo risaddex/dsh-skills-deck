@@ -274,7 +274,7 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
       try {
         emitGhExec(ctx, ERROR_KIND.ENV, -1, t0, cwd, 0, opts.via, cmdLabel, NOT_ACCOUNTED, 'warn', '')
       } catch {}
-      return { ok: false, error: { kind: ERROR_KIND.ENV, message: '出站控制面没有接上：名额闸、取消判定与搭车账本都拿不到，这一笔不发出去。宿主接线要给两处：装配点造房时的上下文（生产里是 src/host/platformChannel.ts 的 backendCtxForRooms 与 src/refresh/rooms/host/refresh-runtime.js 的 backendObj），以及当次操作的上下文（ctx.outbound，门禁夹具走这一条）。', code: -1, raw: '' } }
+      return { ok: false, error: { kind: ERROR_KIND.ENV, message: 'The outbound control plane is not wired up: the slot gate, the cancellation check and the piggyback ledger are all unavailable, so this call is not sent. The host must wire two places: the context the assembly point passes when it builds the room (in production, backendCtxForRooms in src/host/platformChannel.ts and backendObj in src/refresh/rooms/host/refresh-runtime.js), and the context of the current operation (ctx.outbound, which the gate fixtures use).', code: -1, raw: '' } }
     }
     // #969：默认超时按读写探活分档（调用方显式 timeout 优先）；#965 读写分桶拿名额。
     const bucket = isWriteGhArgs(args) ? 'write' : 'read'
@@ -336,8 +336,8 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
       const waitedMs = Date.now() - t0
       // #1560（Q3）：排队与拿到名额之后分开写，不把后一段叫成命令运行时长；排队上限先到的那一笔没有后一段。
       const queuePart = phase === 'queue'
-        ? '排队 ' + slotWaitedMs + ' 毫秒，到点时还没拿到名额'
-        : '排队 ' + slotWaitedMs + ' 毫秒，拿到名额后又等了 ' + Math.max(0, waitedMs - slotWaitedMs) + ' 毫秒'
+        ? 'queued ' + slotWaitedMs + ' ms and had not got a slot by the deadline'
+        : 'queued ' + slotWaitedMs + ' ms, then waited another ' + Math.max(0, waitedMs - slotWaitedMs) + ' ms after getting a slot'
       // #1007：只有真的尝试起过进程的到点才算 transport 级失败。还在排队、或在解析执行器的到点
       // 说明不了 GitHub 通不通，给它设冷却会让随后调用误以为「路断了」，其实只是名额挤。
       // #1560：被排队挤占过的到点同样不设 —— 排队吃掉了部分预算，执行段没跑满本档，
@@ -351,9 +351,9 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
       // 房内到点时执行器还没有交回任何输出，这一处没有原文可交（空串是如实交代，不是漏填）。
       // 括号里那三档按当前档位值现算（毫秒换秒）、不手抄：手抄的数字会在有人调 YAML 之后悄悄变成错的。
       const where = phase === 'queue'
-        ? '到点时命令还排在名额队列里，一次都没跑起来（排队上限 ' + queueLimit + ' 毫秒，本档预算 ' + timeout + ' 毫秒；排队已中止，名额没有被占）'
-        : '到点掐断这一笔的是房内分档表，不是外层调用钳制，也不是调用方取消'
-      return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: 'gh 在 ' + timeout + ' 毫秒内没有回话（命令 ' + (cmdLabel || 'gh') + '；' + where + '；' + queuePart + '；房内分档：读 ' + Math.round(READ_TIMEOUT_MS / 1000) + ' 秒 / 写 ' + Math.round(WRITE_TIMEOUT_MS / 1000) + ' 秒 / 探活 ' + Math.round(PROBE_TIMEOUT_MS / 1000) + ' 秒）。这一笔已经中止。' + outboundFollowUpAdvice(bucket), code: -1, timedOut: true, raw: '' } }
+        ? 'at the deadline the command was still queued for a slot and never ran (queue limit ' + queueLimit + ' ms, budget for this tier ' + timeout + ' ms; the queueing was aborted and no slot was taken)'
+        : 'the call was cut off at the deadline by the room tier table, not by the outer call clamp and not by a caller cancellation'
+      return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: 'gh did not answer within ' + timeout + ' ms (command ' + (cmdLabel || 'gh') + '; ' + where + '; ' + queuePart + '; room tiers: read ' + Math.round(READ_TIMEOUT_MS / 1000) + ' s / write ' + Math.round(WRITE_TIMEOUT_MS / 1000) + ' s / probe ' + Math.round(PROBE_TIMEOUT_MS / 1000) + ' s). This call was aborted. ' + outboundFollowUpAdvice(bucket), code: -1, timedOut: true, raw: '' } }
     }
     // #965：先拿名额再起进程，满了就排队等（等不是失败）；排队中被调用方取消则按取消返回，不算失败。
     // #1570：排队「最多等多久」交给准入闸自己管 —— 这里只传预算（queueLimit），不再自己起第二只表，
@@ -381,7 +381,7 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
         return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: ghCooldownReply(eAcquire, cmdLabel), code: -1, raw: rawText(eAcquire) } }
       }
       emitGhExec(ctx, 'cancelled', -1, t0, cwd, slotWaitedMs, opts.via, cmdLabel, NOT_ACCOUNTED, '')
-      return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: '已取消排队（出站准入等待中被取消），没有发出请求，可重试', code: -1, cancelled: true, raw: rawText(eAcquire) } }
+      return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: 'Queueing was cancelled (cancelled while waiting for outbound admission); no request was sent, safe to retry', code: -1, cancelled: true, raw: rawText(eAcquire) } }
     }
     try {
     const resolved = await raceDeadline(resolveGh(cwd))
@@ -419,7 +419,7 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
       const stdout = result && typeof result.stdout === 'string' ? result.stdout : (result && result.text ? result.text : '')
       const stderr = result && typeof result.stderr === 'string' ? result.stderr : ''
       if (code !== 0) {
-        const note = code === -1 ? 'gh 这一次没拿到退出码（命令可能被中断，或者根本没起来）' : `gh exit ${code}`
+        const note = code === -1 ? 'gh returned no exit code this time (the command may have been interrupted, or never started)' : `gh exit ${code}`
         // 事实对象在执行处就整理好再交给判档：退出码是执行器原样交回的机器事实（#620：gh 的
         // 「需要登录 = 4」就靠它判），原文两路（stderr 与 stdout）都在手里、都要带上。
         // 这里不再自己写「看起来像哪一档」的分支 —— 档位只由 `error-rules.ts` 那张表判：
@@ -430,7 +430,7 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
         const elapsedMs = Date.now() - t0
         const looksTimeout = isTimeoutText(stderr) || isTimeoutText(stdout) || (code === -1 && elapsedMs >= timeout - 50)
         let factsText = rawText({ stderr: stderr, stdout: stdout })
-        if (!factsText && looksTimeout) factsText = 'gh timeout: 房内等到本地超时（' + timeout + ' 毫秒）也没有收到任何回话'
+        if (!factsText && looksTimeout) factsText = 'gh timeout: the room waited until the local timeout (' + timeout + ' ms) without receiving any answer'
         // 交给表的这份事实按「执行结果」的形状写：退出码在那个形状里叫 `code`（`factsFromError` 只认这个键，
         // 写 `exitCode` 会被丢掉，规则就看不着了）。
         const verdict = ghVerdictOf({ code: code, text: factsText }, ctx)
@@ -465,7 +465,7 @@ export function ghClient(ctx: OpContext): { execGh: (args: string[], opts?: GhEx
       // #969：调用方取消（排队/在飞中被杀）按取消返回，不算失败；其余照旧归一。
       if (control.isCancelled(e) || (signal && signal.aborted === true)) {
         emitGhExec(ctx, 'cancelled', -1, t0, cwd, slotWaitedMs, opts.via, cmdLabel, ghPointNoteOf(args), '')
-        return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: '已取消（没有发出有效请求，可重试）', code: -1, cancelled: true, raw: rawText(e) } }
+        return { ok: false, error: { kind: ERROR_KIND.NETWORK, message: 'Cancelled (no effective request was sent, safe to retry)', code: -1, cancelled: true, raw: rawText(e) } }
       }
       // 抛出来的错误同样只交给规则表判：ctx.exec 抛的 Error 里可能带着 `code`（例如 ENOTFOUND），
       // 那是错误码层认得出的事实，房里不再自己写第二份「像不像网络问题」的说法。

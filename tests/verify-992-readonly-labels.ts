@@ -116,7 +116,7 @@ async function main(): Promise<void> {
     const pn = await readRepoPermissions({ execGh: async (a, o) => { const r = await bad.ctx.exec('gh', a, o); return r.code === 0 ? { ok: true, data: { stdout: r.stdout } } : { ok: false, error: { kind: 'network', message: r.stderr } } } }, 'acme/demo', bad.ctx, new Map())
     check(pn === null, 'B4 问不出来回 null（调用方走“分不清”分支，不瞎猜；实得 ' + JSON.stringify(pn) + '）')
     const msg = readonlyMessage('acme/demo', ['bug', 'needs-triage'])
-    check(msg.includes('acme/demo') && msg.includes('读权限') && msg.includes('bug'), 'B5 统一说法带仓库名、读权限与标签名：' + msg.slice(0, 60) + '…')
+    check(msg.includes('acme/demo') && msg.includes('only read access') && msg.includes('bug'), 'B5 统一说法带仓库名、读权限与标签名：' + msg.slice(0, 60) + '…')
   }
 
   // ── C) setLabels 归因 ──
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
     check(r.ok === false, 'C1 只读仓库上打标如实失败（ok=false，实得 ok=' + r.ok + '）')
     check(r.ok === false && r.error.kind === 'auth', 'C2 失败归鉴权档，不再是网络错误（实得 ' + (r.ok === false ? r.error.kind : '') + '）')
     const m = r.ok === false ? String(r.error.message) : ''
-    check(m.includes('acme/demo') && (m.includes('读权限') || m.includes('写权限')), 'C3 原因里带仓库 owner/name 与权限说法（实得：' + m.slice(0, 80) + '…）')
+    check(m.includes('acme/demo') && (m.includes('read access') || m.includes('write access')), 'C3 原因里带仓库 owner/name 与权限说法（实得：' + m.slice(0, 80) + '…）')
     check(!/HTTP 404/.test(m), 'C4 不再是 404 原文（实得：' + m.slice(0, 80) + '…）')
     // 有写权限时原样返回（标签真不存在，不瞎说成没权限）
     const f2 = makeCtx({ perms: { push: true, triage: true, admin: false, maintain: false, pull: true } })

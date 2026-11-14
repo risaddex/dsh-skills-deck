@@ -63,10 +63,10 @@ export async function checkExpectedUpdatedAt(ctx: OpContext, fullPath: string, o
   if(!want)return{ok:true}
   const cur=await currentUpdatedAt(ctx,fullPath)
   if(cur===null){
-    return failAs(ERROR_KIND.UNSUPPORTED,'这个后端取不到这张票的更新时间，写前版本校验做不成，所以这次一个字都没写',fullPath)
+    return failAs(ERROR_KIND.UNSUPPORTED,'This backend cannot get the update time of this ticket, so the version check before writing cannot be done, and not a single character was written',fullPath)
   }
   if(cur!==want){
-    return failAs(ERROR_KIND.CONFLICT,'expectedUpdatedAt mismatch（这张票在你读到它之后已经被改过，所以这次一个字都没写）',JSON.stringify({expected:want,actual:cur}))
+    return failAs(ERROR_KIND.CONFLICT,'expectedUpdatedAt mismatch (this ticket was changed after you read it, so not a single character was written)',JSON.stringify({expected:want,actual:cur}))
   }
   return{ok:true}
 }
@@ -95,5 +95,5 @@ export async function cycleVerdictFor(ctx: OpContext, repo: RepoWithPath | null,
   }
   emitEdgeCycle(ctx,EDGE_CYCLE_VERDICT.CYCLE,graph.size,blockers.length,t0)
   // 成环是这批入参自己把图写成了环，改入参才能继续；重试同一批边不会变好。
-  return failAs(ERROR_KIND.CONFLICT,'这条依赖写下去会成环（'+cycle.join(' → ')+'），所以这次一个字都没写',JSON.stringify({key:key,blockers:blockers,cycle:cycle}),TRACKER_ERROR_STAGE.INPUT_REFUSED)
+  return failAs(ERROR_KIND.CONFLICT,'Writing this dependency would create a cycle ('+cycle.join(' → ')+'), so not a single character was written',JSON.stringify({key:key,blockers:blockers,cycle:cycle}),TRACKER_ERROR_STAGE.INPUT_REFUSED)
 }

@@ -78,14 +78,14 @@ async function readNativeDependencies(parsed: ParsedRepo, k: string, ctx: MemoCo
   }
   if (edges.blockingTruncated || edges.blockedByTruncated) {
     // 人话：不写 GraphQL 术语（连接、字段、上限之外的词），只说「后端一次最多给多少、这次到了顶」。
-    let note = '这次读到的反向边来自后端自带的「我挡住了谁」，一次就取回来了'
+    let note = 'The reverse edges read this time come from the backend built-in "who am I blocking" list, fetched in one call'
     if (edges.blockingTruncated) {
-      note += '；但它一次最多给 ' + DEPS_MAX + ' 条，反向边这次到了上限，可能不全（' + DEPS_MAX + ' 条是后端一次能给的上限，不是「没有阻塞别人」）'
+      note += '; but it returns at most ' + DEPS_MAX + ' entries per call and the reverse edges hit that cap this time, so they may be incomplete (' + DEPS_MAX + ' is the most the backend returns in one call, not "blocks nobody")'
     }
     if (edges.blockedByTruncated) {
-      note += '；「被谁阻塞」这一侧也到了 ' + DEPS_MAX + ' 条上限，可能不全'
+      note += '; the "blocked by" side also hit the ' + DEPS_MAX + '-entry cap and may be incomplete'
     }
-    data.blockingNote = note + '。'
+    data.blockingNote = note + '.'
     emitReadDegraded(ctx, 'deps', 'deps:truncated', Date.now() - started)
   }
   return data
@@ -136,8 +136,8 @@ async function readScanDependencies(repo: RepositoryRef, k: string, ctx: MemoCon
     blockingComplete: !incomplete,
   }
   data.blockingNote = incomplete
-    ? '这次没能直接读到后端自带的「我挡住了谁」，只好退回整仓列表反推（把票单拉回来，逐张看谁挡住了谁）；那份清单可能不全（整仓超过后端一次能给的条数、走了别的通道，或这次没读回来），所以「阻塞别人」可能不全 —— 不是「没有阻塞别人」。'
-    : '这次没能直接读到后端自带的「我挡住了谁」，只好退回整仓列表反推；结果是完整的，但票越多越慢。'
+    ? 'The backend built-in "who am I blocking" list could not be read directly this time, so the tool fell back to working it out from the whole-repository ticket list (pulling the tickets back and checking one by one who blocks whom); that list may be incomplete (the repository has more tickets than the backend returns in one call, another channel was used, or it was not read back this time), so "blocking others" may be incomplete, which is not the same as "blocks nobody".'
+    : 'The backend built-in "who am I blocking" list could not be read directly this time, so the tool fell back to working it out from the whole-repository ticket list; the result is complete, but it gets slower as tickets grow.'
   // 一趟只落一行：兜底已走完，按最终完整性挑原因（列表被截断优先归为 truncated）。
   emitReadDegraded(ctx, 'deps', incomplete ? (listTruncated ? 'deps:truncated' : 'deps:scan') : 'deps:shape', Date.now() - started)
   // 来源按反推那份整仓列表实际走的通道记：走 REST 时同时记「GraphQL 没成、降级过来」。

@@ -108,17 +108,17 @@ export function createWriteFailureMessage(
 ): string {
   const key = String(idempotencyKey || '')
   const sent = Array.isArray(argvs) ? argvs.length : 0
-  const reason = judgement && judgement.reason ? judgement.reason : '原因不明'
+  const reason = judgement && judgement.reason ? judgement.reason : 'unknown reason'
   if (judgement && judgement.verdict === 'never-sent') {
-    return '建票没发出去：' + reason + '。这个调用一共试了 ' + sent + ' 次，两次都没有把请求送出去，远端不会有这张票；请先修好 glab 再重试。'
+    return 'The ticket creation was not sent: ' + reason + '. This call tried ' + sent + ' times and neither attempt got the request out, so the remote will not have this ticket; fix glab first, then retry.'
   }
   if (judgement && judgement.verdict === 'endpoint-absent') {
-    return '建票没能做成：' + reason + '。这个调用只发了 1 次建票写请求，没有拿到票也不会再发第二次；请先核对仓库路径与 glab 版本，再重试。'
+    return 'The ticket could not be created: ' + reason + '. This call sent the create request only once, got no ticket back and will not send a second one; check the repository path and the glab version first, then retry.'
   }
   const advice = key
-    ? '请带同一个幂等键（' + key + '）重试：重试会先按票面上的锚回查，找到就复用那张票、不会重复建。'
-    : '这次调用没带幂等键，重试之前请先给一个（input.idempotencyKey），否则可能再建一张重复的票。'
-  return '建票没有拿到确定的结果：' + reason + '。这个调用只发了 1 次建票写请求，它有可能已经把票建出来了 —— 本间房不会再发第二次写，免得远端多出一张重复的票。' + advice
+    ? 'Retry with the same idempotency key (' + key + '): the retry first looks the ticket up by the anchor on the ticket and reuses it if found, so no duplicate is created.'
+    : 'This call carried no idempotency key; give one (input.idempotencyKey) before retrying, otherwise a duplicate ticket may be created.'
+  return 'The ticket creation got no definite result: ' + reason + '. This call sent the create request only once and it may already have created the ticket; this room will not send a second write, so the remote does not end up with a duplicate ticket. ' + advice
 }
 
 export default { writeNewIssue, createWriteFailureKind, createWriteFailureMessage }

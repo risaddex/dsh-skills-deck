@@ -145,7 +145,7 @@ console.log('== 一、本地 Markdown 房：模板守卫拒绝，且拒绝发生
   check(refused.ok === false, '正文带远端四段模板：建票如实失败 → ' + (refused.ok ? '竟然成功' : kindText(refused)))
   check(kindText(refused) === ERROR_KIND.PARSE, '模板守卫拒绝归 parse 档（输入不合规，不是后端能力不足）→ ' + kindText(refused))
   check(stageText(refused) === TRACKER_ERROR_STAGE.INPUT_REFUSED, '模板守卫拒绝带 stage=input-refused（下一步是改正文）→ 实得 ' + stageText(refused))
-  check(messageText(refused).indexOf('模板') >= 0, '拒绝语说清是模板问题（人能照着改）→ ' + messageText(refused))
+  check(messageText(refused).indexOf('template') >= 0, '拒绝语说清是模板问题（人能照着改）→ ' + messageText(refused))
   check(ctx.writes.length === writesBefore, '模板守卫拒绝发生在写盘之前：一份文件都没写 → 实得 ' + (ctx.writes.length - writesBefore) + ' 次写')
 }
 

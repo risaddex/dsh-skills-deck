@@ -232,8 +232,8 @@ async function main() {
       const clash = await callTool('deck_issue_create', { title: '硬闯地图目录', kind: 'spec', feature: 'demo', body: '## 问题陈述\n\n硬闯。\n' })
       const clashText = String((clash && clash.text) || '')
       check(!!(clash && clash.ok === false && clash.status === 'unsupported'), '建规格撞上地图目录被拒绝（实得 ' + (clash && clash.status) + '）')
-      check(clashText.indexOf('一种容器') >= 0 && clashText.indexOf('map.md') >= 0, '拒绝说清一个目录只能放一种容器、对方是 map.md')
-      check(clashText.indexOf('新目录') >= 0, '拒绝指到新目录')
+      check(clashText.indexOf('only one kind of container') >= 0 && clashText.indexOf('map.md') >= 0, '拒绝说清一个目录只能放一种容器、对方是 map.md')
+      check(clashText.indexOf('new directory') >= 0, '拒绝指到新目录')
       check(ws.readSpec('demo') === '', '拒绝后地图目录里没有多出 spec.md（零副作用）')
     }
     // 列表：type=issue 不把规格票混进来。规格票在 list 里的身份（与 map.md 同为 00）归 #1488 统一处理，本票不锁。

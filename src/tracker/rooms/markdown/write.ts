@@ -26,7 +26,7 @@ export async function ensureDir(ctx: OpContext, dirPath: string): Promise<void> 
  *  政策里少写 workspaceRoot 时 DSH 会抛一个没有错误码的内部错误，那不是沙箱拒绝，别当权限问题报。 */
 function isSandboxDeny(e: unknown): boolean { const f=e as Record<string, unknown> | null | undefined; const m=String((e&&f&&(f.message||f.stderr||f.stdout))||e||''); return /file access denied|workspace-write|read-only mode|FS_SANDBOX_DENIED/i.test(m) }
 function sandboxDenyError(e: unknown, hasPolicy: boolean): TaggedError {
-  const err=new Error(hasPolicy ? '写不进工作区里的票文件：插件这次带上了本次调用的写许可，但文件服务仍然拒绝了这次写入（可能是会话是只读，或目录本身不可写）。请换一个允许写入的会话，或检查目录权限，然后重试。' : '写不进工作区里的票文件：插件这次没有拿到本次调用的写许可（没有找到归属会话），所以文件服务按默认政策拒绝了这次写入。这不是目录权限问题，改文件权限没有帮助。请换一个允许写入的会话，然后重试。') as TaggedError;
+  const err=new Error(hasPolicy ? 'Cannot write the ticket file in the workspace: the plugin carried the write permission of this call, but the file service still refused this write (the session may be read-only, or the directory itself is not writable). Switch to a session that allows writing, or check the directory permissions, then retry.' : 'Cannot write the ticket file in the workspace: the plugin did not get the write permission of this call (no owning session was found), so the file service refused this write under the default policy. This is not a directory permission problem, and changing file permissions will not help. Switch to a session that allows writing, then retry.') as TaggedError;
   err.kind=ERROR_KIND.ENV; try{ err.cause=e }catch{}
   return err
 }

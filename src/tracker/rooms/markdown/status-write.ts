@@ -105,13 +105,13 @@ function isLegalFor(kind: IssueFileKind, value: string): boolean {
 
 /** 说清这个票型允许哪些状态值；非法值拒绝时原样讲给调用方看，不让人去猜。 */
 function kindRuleText(kind: IssueFileKind): string {
-  if (kind === 'map-ticket') return '地图子票只认 ' + WAYFINDER_STATUS_VALUES.join(' / ')
+  if (kind === 'map-ticket') return 'a map ticket accepts only ' + WAYFINDER_STATUS_VALUES.join(' / ')
   return (
-    '只能是五个 triage 角色（' +
+    'it can only be one of the five triage roles (' +
     TRIAGE_STATUS_ROLES.join(' / ') +
-    '）或完成值（' +
+    ') or a completion value (' +
     COMPLETED_STATUS_VALUES.join(' / ') +
-    '）'
+    ')'
   )
 }
 
@@ -157,7 +157,7 @@ export function triageRefusalOf(triage: string[], names: string[]): StatusWriteF
   if (triage.length <= 1) return null
   return failAs(
     ERROR_KIND.PARSE,
-    '这次给了多枚 triage 状态标签（' + triage.join('、') + '）：可见 Status 行只能写一个状态，请只留一枚。',
+    'Several triage status labels were given this time (' + triage.join(', ') + '): the visible Status line can hold only one status, so keep only one.',
     JSON.stringify(names),
   )
 }
@@ -178,7 +178,7 @@ export function labelsChoiceText(
   if (triage.length === 1 && bodyStatus && bodyStatus !== triage[0]) {
     return failAs(
       ERROR_KIND.PARSE,
-      '正文里的 Status 行写的是「' + bodyStatus + '」，标签里的 triage 是「' + triage[0] + '」：两处不一致，请只留一处。',
+      'The Status line in the body says "' + bodyStatus + '", while the triage label says "' + triage[0] + '": the two disagree, so keep only one.',
       JSON.stringify({ bodyStatus, triage }),
     )
   }
@@ -187,14 +187,14 @@ export function labelsChoiceText(
   if (statusOpt && triage.length === 1 && statusOpt !== triage[0]) {
     return failAs(
       ERROR_KIND.PARSE,
-      '这次要落的状态是「' + statusOpt + '」，但标签里的 triage 是「' + triage[0] + '」：两处不一致，请只留一处。',
+      'The status to write this time is "' + statusOpt + '", but the triage label says "' + triage[0] + '": the two disagree, so keep only one.',
       JSON.stringify({ status: statusOpt, triage }),
     )
   }
   if (statusOpt && bodyStatus && bodyStatus !== statusOpt) {
     return failAs(
       ERROR_KIND.PARSE,
-      '这次要落的状态是「' + statusOpt + '」，但正文里的 Status 行写的是「' + bodyStatus + '」：两处不一致，请只留一处。',
+      'The status to write this time is "' + statusOpt + '", but the Status line in the body says "' + bodyStatus + '": the two disagree, so keep only one.',
       JSON.stringify({ status: statusOpt, bodyStatus }),
     )
   }
@@ -236,7 +236,7 @@ export function normalizeIssueStatusText(
     if (wanted === null || !isLegalFor(read.kind, wanted)) {
       return failAs(
         ERROR_KIND.PARSE,
-        '状态值「' + String(pick.status) + '」不能用：' + kindRuleText(read.kind) + '。',
+        'The status value "' + String(pick.status) + '" cannot be used: ' + kindRuleText(read.kind) + '.',
         String(pick.status),
       )
     }
@@ -247,12 +247,12 @@ export function normalizeIssueStatusText(
     const hidden: string = conflict.hidden.length ? conflict.hidden[0] : ''
     return failAs(
       ERROR_KIND.PARSE,
-      '这张票的可见 Status 行写的是「' +
+      'The visible Status line of this ticket says "' +
         conflict.visible +
-        '」，隐藏 DSH-LABELS 里的 triage 标签写的是「' +
+        '", while the triage label in the hidden DSH-LABELS says "' +
         hidden +
-        '」：两处冲突，这次一个字都没写。请显式给一个状态，或先用 setLabels 把两处归一' +
-        '（deck 的 issue-patch 回执会带 retry 参数，按它重试即可）。',
+        '": the two conflict, so not a single character was written. Give a status explicitly, or first use setLabels to make the two agree' +
+        ' (the deck issue-patch receipt carries retry arguments; retry with them).',
       JSON.stringify(conflict),
     )
   }

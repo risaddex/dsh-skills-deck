@@ -57,13 +57,13 @@ export function decodeLabelsParsed(parsed: unknown): DecodedLabels {
   const p = parsed as ParsedLabels | null | undefined
   if (!p || p.ok !== true) {
     const reason = ((p && p.reason) || 'bad-shape') as string
-    const message = ((p && p.message) || '这个文件里的内容不对。') as string
+    const message = ((p && p.message) || 'The content of this file is wrong.') as string
     if (reason === 'oversize') {
       return {
         ok: false,
         reason: 'oversize',
         why: message,
-        action: '请确认这份文件是不是放错了位置，然后重新保存。',
+        action: 'Check whether this file was put in the wrong place, then save again.',
         detail: '',
       }
     }
@@ -72,7 +72,7 @@ export function decodeLabelsParsed(parsed: unknown): DecodedLabels {
         ok: false,
         reason: 'aliases',
         why: message,
-        action: '请检查这份文件是不是被别的工具改过，然后重新保存。',
+        action: 'Check whether this file was changed by another tool, then save again.',
         detail: '',
       }
     }
@@ -80,8 +80,8 @@ export function decodeLabelsParsed(parsed: unknown): DecodedLabels {
       return {
         ok: false,
         reason: 'yaml-error',
-        why: '这个文件里的内容不是合法的文字格式。这一档只可能是内容本身写坏了，与权限、被别的程序占用都无关',
-        action: '请手工把内容改成「标签名 → 颜色」的写法、每个标签一行，例如 "bug": "d73a4a"，然后重新保存。',
+        why: 'The content of this file is not in a valid text format. This case can only mean the content itself is malformed; it has nothing to do with permissions or another program holding the file',
+        action: 'Rewrite the content by hand as "label name → color", one label per line, for example "bug": "d73a4a", then save again.',
         detail: '',
       }
     }
@@ -89,8 +89,8 @@ export function decodeLabelsParsed(parsed: unknown): DecodedLabels {
       return {
         ok: false,
         reason: 'unknown-keys',
-        why: '这个文件里有多出来的名字，核不认识它们：' + (((p && p.keys) as string[]) || []).join('、'),
-        action: '请删掉这些多出来的名字，只留标签与颜色，然后重新保存。',
+        why: 'This file has extra names the core does not recognize: ' + (((p && p.keys) as string[]) || []).join(', '),
+        action: 'Delete these extra names, keep only labels and colors, then save again.',
         detail: '',
       }
     }
@@ -98,7 +98,7 @@ export function decodeLabelsParsed(parsed: unknown): DecodedLabels {
       ok: false,
       reason: 'bad-shape',
       why: message,
-      action: '请把这个文件改成一个标签与颜色的对应表：每个标签写一行，例如 "bug": "d73a4a"，然后重新保存。',
+      action: 'Turn this file into a table from labels to colors: one label per line, for example "bug": "d73a4a", then save again.',
       detail: '',
     }
   }
@@ -140,7 +140,7 @@ export function encodeLabelsTable(table: Record<string, unknown>): EncodedLabels
     // 断言只收类型视野，返回的还是原来那个对象。
     return stringifyLabelColors(table) as EncodedLabelsOk | EncodedLabelsFail
   } catch (e) {
-    return { ok: false, reason: 'bad-shape', message: String((e && (e as Record<string, unknown>).message) || e || '拼装失败') }
+    return { ok: false, reason: 'bad-shape', message: String((e && (e as Record<string, unknown>).message) || e || 'assembly failed') }
   }
   // 注：stringifyLabelColors 从不抛错（任何输入都按档位回），上面这支 catch 只是防御。
 }

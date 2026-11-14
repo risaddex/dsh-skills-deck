@@ -154,7 +154,7 @@ async function setLabelsInner(repo: RepositoryRef, key: string, labels: LabelInp
     const finalRes = await getIssue(repo, k, {}, ctx)
     if (!finalRes.ok) {
       const readMsg = String((finalRes.error && finalRes.error.message) || '').slice(0, 300)
-      return fail((finalRes.error && finalRes.error.kind) || ERROR_KIND.NETWORK, 'setLabels: 写命令已回成功，但写后读回失败：' + (readMsg || '没给出原因') + '；标签改成没改成没确认', finalRes)
+      return fail((finalRes.error && finalRes.error.kind) || ERROR_KIND.NETWORK, 'setLabels: the write command reported success, but the read-back after the write failed: ' + (readMsg || 'no reason given') + '; whether the labels were changed is not confirmed', finalRes)
     }
     return finalRes
   } catch (err) {

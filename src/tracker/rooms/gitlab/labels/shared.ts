@@ -35,7 +35,7 @@ export function errText(err: unknown): string {
       // 循环引用的对象 JSON 化会抛。这里只是想把原文打出来，不该因为「打不出来」让整条操作崩掉，
       // 所以吞掉异常、落到下面那句如实的兜底。
     }
-    return '（原始输出无法转成文字）'
+    return '(the raw output could not be turned into text)'
   }
   return String(err)
 }
@@ -49,6 +49,6 @@ export function errText(err: unknown): string {
 export function withRawHint(nativeMessage: string, err: unknown): string {
   const text = errText(err).trim().replace(/\s+/g, ' ')
   if (!text) return nativeMessage
-  const hint = text.length > 160 ? text.slice(0, 160) + '…（已截断）' : text
-  return nativeMessage + '（glab 返回的说明：' + hint + '）'
+  const hint = text.length > 160 ? text.slice(0, 160) + '... (truncated)' : text
+  return nativeMessage + ' (glab said: ' + hint + ')'
 }

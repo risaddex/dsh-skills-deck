@@ -82,7 +82,7 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<O
     // 连进程都没起，这一步就是这一趟读没读成的原因。
     const raw = String((repo && repo.refId) || '')
     emitReadDegraded(ctx, 'labels', 'labels:repo-ref', Date.now() - t0)
-    return fail(ERROR_KIND.NOTFOUND, '未能获取全部标签：这个工作区没有可用的 GitLab 项目标识（形如 group/sub/project），因此无法向 GitLab 查询标签。请先在面板中选定这个工作区对应的 GitLab 仓库，然后重试。', raw)
+    return fail(ERROR_KIND.NOTFOUND, 'Could not fetch all labels: this workspace has no usable GitLab project identifier (shaped like group/sub/project), so labels cannot be queried from GitLab. Select the GitLab repository for this workspace in the panel, then retry.', raw)
   }
   const all: LabelColor[] = []
   let page = 1
@@ -95,7 +95,7 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<O
     if (res.code !== 0) {
       // 这一档是「房间这层没拿到任何回包」，原文是这一次 glab 调用的完整进程结果。
       emitReadDegraded(ctx, 'labels', 'labels:transport', Date.now() - t0)
-      return failGlab(res, '未能获取全部标签：' + withRawHint('向 GitLab 查询标签时命令没有跑成。这是插件运行环境的问题，不是你的操作有误。这次没有拿到任何标签，请稍后重试。', res.stderr || res.stdout || errText(res)), res, ctx)
+      return failGlab(res, 'Could not fetch all labels: ' + withRawHint('The command that queries labels from GitLab did not run. This is a problem with the plugin runtime environment, not a mistake on your side. No labels were fetched this time; please retry later.', res.stderr || res.stdout || errText(res)), res, ctx)
     }
     const text = typeof res.stdout === 'string' ? res.stdout : ''
     // 为什么标成 unknown：回包是 glab 回的任意形状，数组检查通过前不敢当数组用；检查通过后 Array.isArray 会收窄。
@@ -103,11 +103,11 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<O
     try { arr = JSON.parse(text) } catch {
       // 原文交的是这一趟 glab 的完整产出（不是解析失败那句话）：人自己就能看出回包里到底是什么。
       emitReadDegraded(ctx, 'labels', 'labels:json', Date.now() - t0)
-      return fail(ERROR_KIND.ENV, '未能获取全部标签：插件没有读懂 GitLab 助手（glab）返回的内容。这是插件运行环境的问题，不是你的操作有误。请稍后重试。', text)
+      return fail(ERROR_KIND.ENV, 'Could not fetch all labels: the plugin could not understand what the GitLab helper (glab) returned. This is a problem with the plugin runtime environment, not a mistake on your side. Please retry later.', text)
     }
     if (!Array.isArray(arr)) {
       emitReadDegraded(ctx, 'labels', 'labels:shape', Date.now() - t0)
-      return fail(ERROR_KIND.ENV, '未能获取全部标签：GitLab 返回的标签清单不是插件预期的形状。这是插件运行环境的问题，不是你的操作有误。请稍后重试。', text)
+      return fail(ERROR_KIND.ENV, 'Could not fetch all labels: the label list GitLab returned is not in the shape the plugin expects. This is a problem with the plugin runtime environment, not a mistake on your side. Please retry later.', text)
     }
     // 为什么断言：上面刚验过它是数组；断言只为让 TS 认这件事实，交出去还是原来那个数组，运行时不变。
     const rows = arr as unknown[]
@@ -117,7 +117,7 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<O
       const item = toLabelColor(row)
       if (!item) {
         emitReadDegraded(ctx, 'labels', 'labels:shape', Date.now() - t0)
-        return fail(ERROR_KIND.ENV, '未能获取全部标签：GitLab 返回的标签清单里有一条缺少标签名，插件无法确认这份清单是否完整。这是插件运行环境的问题，不是你的操作有误。请稍后重试。', text)
+        return fail(ERROR_KIND.ENV, 'Could not fetch all labels: an entry in the label list GitLab returned has no label name, so the plugin cannot confirm the list is complete. This is a problem with the plugin runtime environment, not a mistake on your side. Please retry later.', text)
       }
       all.push(item)
     }
@@ -134,7 +134,7 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<O
     // 每多翻一页都要有上限兜底，见 LABEL_LIST_MAX_PAGES 的说明。
     if (page >= LABEL_LIST_MAX_PAGES) {
       emitReadDegraded(ctx, 'labels', 'labels:partial', Date.now() - t0)
-      return fail(ERROR_KIND.ENV, '未能获取全部标签：这个仓库的标签数量超过了插件一次能读取的上限（' + String(LABEL_LIST_MAX_PAGES * LABEL_LIST_PER_PAGE) + ' 条），无法确认是否读全。请先在 GitLab 的仓库页面里整理不再需要的标签，然后重试。', text)
+      return fail(ERROR_KIND.ENV, 'Could not fetch all labels: this repository has more labels than the plugin can read in one call (' + String(LABEL_LIST_MAX_PAGES * LABEL_LIST_PER_PAGE) + '), so it cannot confirm it read them all. Clean up the labels you no longer need on the GitLab repository page, then retry.', text)
     }
     page += 1
   }

@@ -118,7 +118,7 @@ export async function openTracker(handle: RepoHandle, options: OpenTrackerOption
   try {
     if (!handle || typeof handle.cwd !== 'string' || handle.cwd.trim() === '') {
       // 工作区还没就绪：连目录都不知道，选后端无从选起，直接回结局，不碰注册表。
-      return { ok: false, reason: 'workspace-not-ready', detail: '调用方没给工作区目录，选后端无从选起' }
+      return { ok: false, reason: 'workspace-not-ready', detail: 'The caller gave no workspace directory, so there is nothing to choose a backend for' }
     }
     const ctx = Object.assign({}, options.matchContext || {}, { cwd: handle.cwd }) as OpContext
     const resolve = options.resolveSelection
@@ -128,26 +128,26 @@ export async function openTracker(handle: RepoHandle, options: OpenTrackerOption
     if (!selection || selection.backendId == null) {
       // 没选出来只有两种诚实说法：未决（还有没回来的认领，不许报成无后端），其余才是无后端。
       if (selection && selection.pending === true) {
-        return { ok: false, reason: 'pending', detail: '认领超时未决：有后端还没回话，不报无后端' }
+        return { ok: false, reason: 'pending', detail: 'Claiming timed out and is undecided: some backend has not answered yet, so this is not reported as no backend' }
       }
-      return { ok: false, reason: 'no-backend', detail: '本地认领问过一圈，没有后端认这个工作区' }
+      return { ok: false, reason: 'no-backend', detail: 'The local claiming round went through every backend and none claimed this workspace' }
     }
     if (selection.multiHit && selection.multiHit.length > 1) {
       // 多家都认：入口不替人选，报多命中，由人定。
-      return { ok: false, reason: 'multi-match', detail: '多家后端同时认领：' + selection.multiHit.join('、') }
+      return { ok: false, reason: 'multi-match', detail: 'Several backends claimed it at once: ' + selection.multiHit.join(', ') }
     }
     if (selection.pending === true) {
       // 选出来了但仲裁没完：会话不能建在没完的仲裁上，报未决。
-      return { ok: false, reason: 'pending', detail: '仲裁未完成就拿到了结论，会话不能建在没完的仲裁上' }
+      return { ok: false, reason: 'pending', detail: 'A conclusion arrived before the arbitration finished, and a session cannot be built on an unfinished arbitration' }
     }
     const tracker = options.registry.get(selection.backendId)
     if (!tracker) {
-      return { ok: false, reason: 'pending', detail: '选中的后端不在注册表里（可能刚被卸载），按未决处理' }
+      return { ok: false, reason: 'pending', detail: 'The selected backend is not in the registry (it may have just been uninstalled), treated as undecided' }
     }
     const mod = options.registry.modules().filter((m) => m.id === selection.backendId)[0]
     if (!mod || !mod.budget) {
       // 预算必填：注册表那道校验应当已经拦过，到这里说明装配时绕过了校验，会话拒绝建在没口径的后端上。
-      return { ok: false, reason: 'pending', detail: '后端 ' + selection.backendId + ' 没有预算声明，会话拒绝建在没口径的后端上' }
+      return { ok: false, reason: 'pending', detail: 'Backend ' + selection.backendId + ' has no budget declaration, and the session refuses to be built on a backend without one' }
     }
     // 写权限的两种来源：调用方显式给的结论优先；调用方说「按判定出口回答」时才读出口那一路。
     // 出口的结论对象在契约类型上只写到 Selection，canWrite 与 reason 是判定出口多带的两格，
@@ -158,8 +158,8 @@ export async function openTracker(handle: RepoHandle, options: OpenTrackerOption
     const canWriteReason = typeof options.canWriteReason === 'string' && options.canWriteReason
       ? options.canWriteReason
       : (fromSelection
-        ? (typeof selRecord.reason === 'string' && selRecord.reason ? String(selRecord.reason) : '判定出口没给写权限：要先让人在工作区里选一次后端（needs-generate）')
-        : '调用方没给写权限结论，默认按没就绪（硬顶收紧）')
+        ? (typeof selRecord.reason === 'string' && selRecord.reason ? String(selRecord.reason) : 'The decision outlet gave no write permission: a person must first pick a backend in the workspace (needs-generate)')
+        : 'The caller gave no write permission conclusion, so it defaults to not ready (the hard cap is tightened)')
     const deps = {
       tracker,
       budget: mod.budget,
@@ -219,6 +219,6 @@ export async function openTracker(handle: RepoHandle, options: OpenTrackerOption
     return { ok: true, session: session as unknown as TrackerSession, repoRef: repoRef }
   } catch (err) {
     // 入口的承诺：这一支之上没有 try 能接，所以这里不能再抛——炸了就是未决，理由写清。
-    return { ok: false, reason: 'pending', detail: '开会话中途炸了（' + String((err as Error)?.message || err) + '），按未决处理' }
+    return { ok: false, reason: 'pending', detail: 'Opening the session blew up midway (' + String((err as Error)?.message || err) + '), treated as undecided' }
   }
 }

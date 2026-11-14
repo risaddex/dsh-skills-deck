@@ -173,7 +173,7 @@ async function main(): Promise<void> {
     }),
   ]
   check(badTickets.every((r: any) => r && r.ok === false), '父号不是 00 / 目录里没有规格的实施票都建不出来', badTickets.map((r: any) => r && (r.ok === false ? r.error.message : 'ok')))
-  check(badTickets.some((r: any) => r && r.ok === false && String(r.error.message || '').indexOf('规格') >= 0), '失败原因说清父必须是规格票', badTickets.map((r: any) => r && (r.ok === false ? r.error.message : '')))
+  check(badTickets.some((r: any) => r && r.ok === false && String(r.error.message || '').indexOf('spec') >= 0), '失败原因说清父必须是规格票', badTickets.map((r: any) => r && (r.ok === false ? r.error.message : '')))
 
   // 父注释插入顺序（ADR 2.5 第三处落点）：补父时 parentKey 必须排在锚与已有标记之后。
   // 规格是与地图同级的顶层容器、不能有父票，所以这里改用一张普通票（issue）验证插入顺序：
@@ -260,7 +260,7 @@ async function main(): Promise<void> {
     check(checkNoWorseForPatch(SPEC_FILE, merged) === '', '搬回标记后的正文通过核对', checkNoWorseForPatch(SPEC_FILE, merged))
     check(parseMd(merged, { key: '02', parentKey: null, isMap: false }).type === 'spec', '整份替换后读回来还是 spec')
     const bad = checkNoWorseForPatch('<!-- DSH-ISSUE-KIND: spec -->\n# 标题\n\nStatus: open\nBlocked by:\nLabels:\n', '# 标题\n\nStatus: open\nBlocked by:\nLabels:\n')
-    check(bad === '类型标记丢了', '整份替换丢掉标记会被核对判坏', bad)
+    check(bad === 'the type marker was lost', '整份替换丢掉标记会被核对判坏', bad)
     const doubled = merged.replace('## Comments', '<!-- DSH-ISSUE-KIND: spec -->\n\n## Comments')
     check(checkNoWorseForPatch(merged, doubled) !== '', '标记翻倍会被核对判坏')
   }

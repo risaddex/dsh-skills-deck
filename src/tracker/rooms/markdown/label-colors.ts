@@ -114,8 +114,8 @@ function readFailure(why: string, action: string, detail: string, raw: unknown):
   // 第四段是原文：读这个文件时抛上来的那个错误本身（或译码失败时的那份文件内容）。
   // 提示语里只放一句「错误原文 …」的摘要，完整原文放在 raw 里，人展开就能看到全貌。
   return failAs(ERROR_KIND.PARSE,
-    '工作区里的标签配色文件（' + LABEL_COLORS_REL_PATH + '）没有读出标签颜色。原因：' + why +
-      '。这个文件不会被覆盖，你写的内容还在。' + action + (detail ? '（' + detail + '）' : ''),
+    'The label colors could not be read from the label color file in the workspace (' + LABEL_COLORS_REL_PATH + '). Reason: ' + why +
+      '. This file will not be overwritten; what you wrote is still there. ' + action + (detail ? ' (' + detail + ')' : ''),
     raw === undefined ? '' : raw)
 }
 
@@ -175,9 +175,9 @@ export async function readLabelColors(ctx: CtxWithPolicy, repo?: RepositoryRef |
     // 这一档只接「读这个动作本身出错」（明确的「文件不在」在上一支就走开了），所以不列举「可能是文件不在」
     // 这类不成立的猜测；也不把责任写成用户的动作——只如实说插件没读到，再给出两条能查的方向。
     return readFailure(
-      '插件按这个位置去读，读这个文件这一步出错了（不是文件里的内容不合法）。可能是当前账号读不到它，也可能是它正被别的程序占用；插件分不出是哪一种',
-      '请检查这个文件当前账号能不能读取、有没有别的程序正打开着它，然后重新保存。',
-      '错误原文 ' + String((yamlError && (yamlError as Record<string, unknown>).message) || yamlError).slice(0, 120), yamlError)
+      'The plugin read this location and the read step itself failed (the content of the file is not the problem). The current account may not be able to read it, or another program may hold it; the plugin cannot tell which',
+      'Check whether the current account can read this file and whether another program has it open, then save again.',
+      'original error ' + String((yamlError && (yamlError as Record<string, unknown>).message) || yamlError).slice(0, 120), yamlError)
   }
   if (typeof yamlText === 'string') return finishLabelsRead(ctx, where, yamlText, 'yaml')
   // 新文件确实不在：读老文件（兼容；读到就由放置与保存迁走）。
@@ -189,9 +189,9 @@ export async function readLabelColors(ctx: CtxWithPolicy, repo?: RepositoryRef |
     }
     logRead(ctx, () => ({ cwdHash: where(), present: true, count: 0, ok: false, reason: 'read-fail' }))
     return readFailure(
-      '插件按这个位置去读，读这个文件这一步出错了（不是文件里的内容不合法）。可能是当前账号读不到它，也可能是它正被别的程序占用；插件分不出是哪一种',
-      '请检查这个文件当前账号能不能读取、有没有别的程序正打开着它，然后重新保存。',
-      '错误原文 ' + String((e && (e as Record<string, unknown>).message) || e).slice(0, 120), e)
+      'The plugin read this location and the read step itself failed (the content of the file is not the problem). The current account may not be able to read it, or another program may hold it; the plugin cannot tell which',
+      'Check whether the current account can read this file and whether another program has it open, then save again.',
+      'original error ' + String((e && (e as Record<string, unknown>).message) || e).slice(0, 120), e)
   }
   return finishLabelsRead(ctx, where, jsonText, 'json')
 }

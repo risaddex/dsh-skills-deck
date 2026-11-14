@@ -62,7 +62,7 @@ async function createIssueInner(ctx: OpContext,repo: RepoWithPath | null,input: 
   // 绝不能落到票面上 —— 落下去会把正文写坏，而且第二次提交的键与第一次不是同一个串，「幂等」就成了运气。
   const keyCheck=input.idempotencyKey===undefined||input.idempotencyKey===null?null:checkIdempotencyKey(input.idempotencyKey)
   // 原文 = 这次用不了的那个键本身（判据不成立的原因在 message 里，原文让人看见实际给的是什么）。
-  if(keyCheck&&!keyCheck.ok)return failAs(ERROR_KIND.PARSE,'idempotencyKey 不能用：'+keyCheck.reason,String(input.idempotencyKey),TRACKER_ERROR_STAGE.INPUT_REFUSED)
+  if(keyCheck&&!keyCheck.ok)return failAs(ERROR_KIND.PARSE,'idempotencyKey cannot be used: '+keyCheck.reason,String(input.idempotencyKey),TRACKER_ERROR_STAGE.INPUT_REFUSED)
   const idemKey=keyCheck?keyCheck.key:''
   try{
     // #1486/#1487：六种票全部走原文布局（#1500 S4 起 originalKindOf 不再回空，旧的自拼分支已删）。
@@ -121,6 +121,6 @@ async function createIssueInner(ctx: OpContext,repo: RepoWithPath | null,input: 
   }catch(e){
     // 状态标签自相矛盾是调用方输入问题，要让它看见具体是哪几枚，不能被统一话术盖掉。
     if(e instanceof RenderStatusConflict)return failAs(ERROR_KIND.PARSE,e.message,'')
-    return failFromError(e,ctx,'建这张票时出错')
+    return failFromError(e,ctx,'error while creating this ticket')
   }
 }

@@ -221,7 +221,7 @@ export function buildReadProvenance(
   }
   const problems = readProvenanceProblems(operation, provenance)
   if (problems.length > 0) {
-    throw new Error('read provenance 不合法（' + operation + '）：' + problems.join('；'))
+    throw new Error('read provenance is invalid (' + operation + '): ' + problems.join('; '))
   }
   return provenance
 }
@@ -253,60 +253,60 @@ export function readProvenanceProblems(operation: ReadOperationName, provenance:
   const fieldGroups = (provenance.fieldGroups ?? {}) as Partial<Record<FieldGroup, FieldGroupCompleteness>>
 
   if (provenance.operation !== operation) {
-    problems.push('operation 与校验入参不一致：' + String(provenance.operation) + ' ≠ ' + operation)
+    problems.push('operation does not match the validation input: ' + String(provenance.operation) + ' ≠ ' + operation)
   }
 
   const source = provenance.source
   if (!isKnownSource(source)) {
-    problems.push('来源 ' + String(source) + ' 不在 GitHub 读来源词表（' + GITHUB_READ_SOURCES.join('/') + '）里')
+    problems.push('source ' + String(source) + ' is not in the GitHub read source vocabulary (' + GITHUB_READ_SOURCES.join('/') + ')')
   } else if (source === 'mixed') {
-    if (plan.length < 2) problems.push('来源 mixed 要求这条操作有两个渠道，' + operation + ' 的渠道计划只有一个')
+    if (plan.length < 2) problems.push('source mixed requires two channels for this operation, but the channel plan of ' + operation + ' has only one')
   } else if (!plan.includes(source)) {
-    problems.push('来源 ' + source + ' 不在 ' + operation + ' 的渠道计划（' + plan.join(' → ') + '）里')
+    problems.push('source ' + source + ' is not in the channel plan of ' + operation + ' (' + plan.join(' → ') + ')')
   }
 
   if (provenance.degradedFrom !== undefined) {
     const from = provenance.degradedFrom
     if (!isKnownSource(from)) {
-      problems.push('降级来源 ' + String(from) + ' 不在 GitHub 读来源词表里')
+      problems.push('fallback source ' + String(from) + ' is not in the GitHub read source vocabulary')
     } else if (!plan.includes(from)) {
-      problems.push('降级来源 ' + from + ' 不在 ' + operation + ' 的渠道计划里')
+      problems.push('fallback source ' + from + ' is not in the channel plan of ' + operation)
     }
-    if (from === source) problems.push('降级来源不能与实际来源相同（' + from + '）')
-    if (source === 'mixed') problems.push('来源 mixed 不许带降级来源（mixed 没有唯一主路）')
+    if (from === source) problems.push('the fallback source cannot equal the actual source (' + from + ')')
+    if (source === 'mixed') problems.push('source mixed must not carry a fallback source (mixed has no single main path)')
   }
 
   const declaredKeys = Object.keys(fieldGroups) as FieldGroup[]
   for (const group of declaredKeys) {
-    if (!FIELD_GROUPS.includes(group)) problems.push('字段组 ' + group + ' 不在契约词表 FIELD_GROUPS 里')
+    if (!FIELD_GROUPS.includes(group)) problems.push('field group ' + group + ' is not in the contract vocabulary FIELD_GROUPS')
   }
   for (const group of declared) {
-    if (!(group in fieldGroups)) problems.push('缺声明字段组 ' + group)
+    if (!(group in fieldGroups)) problems.push('declared field group missing: ' + group)
   }
   for (const group of declaredKeys) {
     const value = fieldGroups[group]
     if (!isKnownFieldGroupCompleteness(value)) {
-      problems.push('字段组 ' + group + ' 的完整度取值 ' + String(value) + ' 不合法')
+      problems.push('field group ' + group + ' has an invalid completeness value ' + String(value))
     }
   }
 
   const expectedMissing = missingFieldGroupsOf(declared, fieldGroups)
   const missing: readonly FieldGroup[] = Array.isArray(provenance.missingFieldGroups) ? provenance.missingFieldGroups : []
   if (missing.length !== expectedMissing.length || missing.some((group, index) => group !== expectedMissing[index])) {
-    problems.push('missingFieldGroups 与字段组事实不一致：期望 ['
-      + expectedMissing.join(', ') + ']，实际给出 [' + missing.join(', ') + ']')
+    problems.push('missingFieldGroups does not match the field group facts: expected ['
+      + expectedMissing.join(', ') + '], got [' + missing.join(', ') + ']')
   }
 
   const expectedOverall = overallCompleteness(declared, fieldGroups)
   if (provenance.completeness !== expectedOverall) {
-    problems.push('总体完整度 ' + String(provenance.completeness) + ' 与字段组事实不一致：按字段组应为 ' + expectedOverall)
+    problems.push('overall completeness ' + String(provenance.completeness) + ' does not match the field group facts: by field group it should be ' + expectedOverall)
   }
 
   if (!Number.isInteger(provenance.durationMs) || provenance.durationMs < 0) {
-    problems.push('durationMs 必须是非负整数，实际 ' + String(provenance.durationMs))
+    problems.push('durationMs must be a non-negative integer, got ' + String(provenance.durationMs))
   }
   if (typeof provenance.startVersion !== 'string' || !/^read-v1-\d+-\d{6}$/.test(provenance.startVersion)) {
-    problems.push('startVersion 必须是 read-v1-<毫秒时间戳>-<六位序号> 形，实际 ' + String(provenance.startVersion))
+    problems.push('startVersion must have the shape read-v1-<millisecond timestamp>-<six-digit sequence>, got ' + String(provenance.startVersion))
   }
   return problems
 }

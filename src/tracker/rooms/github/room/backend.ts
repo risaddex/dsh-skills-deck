@@ -208,7 +208,7 @@ export function createGithubBackend(ctx: OpContext) {
       // 这一条没有上游原文可交（readRepoPermissions 只回 null，原因在它自己的日志里），留空串表示如实没有。
       if (idx <= 0) return fail(ERROR_KIND.NOTFOUND, 'getRepoPermissions: repo.refId missing', refId)
       const perms = await readRepoPermissions(c, refId, opCtx || ctx)
-      if (!perms) return fail(ERROR_KIND.NETWORK, 'getRepoPermissions: 仓库权限问不出来（网络或仓库不可达），按未知处理', '')
+      if (!perms) return fail(ERROR_KIND.NETWORK, 'getRepoPermissions: could not get the repository permissions (network or repository unreachable), treating them as unknown', '')
       return { ok: true, data: perms }
     },
   } satisfies GithubBackendShape

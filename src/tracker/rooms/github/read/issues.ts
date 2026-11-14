@@ -250,7 +250,7 @@ export async function listIssues(repo: RepositoryRef, filter: ListFilter | undef
       // 也不在这里自己判额度 —— 计划就是这次放行的完整授权，计划外一次都不试。
       if (!channels.rest) {
         emitReadDegraded(ctx, 'list', 'list:degraded', Date.now() - tList)
-        return toOpResultError(firstRestCause || { message: '读渠道计划只允许 GraphQL，GraphQL 没读到列表后不降级 REST' }, ctx)
+        return toOpResultError(firstRestCause || { message: 'The read channel plan allows GraphQL only, so after GraphQL failed to read the list it does not fall back to REST' }, ctx)
       }
       // 降级这一趟先记一行：从入口到这里花了多久、主路是折在哪一步（回包坏 / 缺东西 / 起不了进程）。
       emitReadDegraded(ctx, 'list', String(needRestWhy), Date.now() - tList)
@@ -430,7 +430,7 @@ export async function getIssue(repo: RepositoryRef, key: string, opts: GetOpts |
       // 计划就是这次放行的完整授权，计划外的渠道一次都不试；额度判断只有额度闸一处，这里不重问。
       if (!channels.rest) {
         emitReadDegraded(ctx, 'get', 'get:degraded', Date.now() - tGet)
-        return toOpResultError(getCause || (graphqlResult && !graphqlResult.ok ? graphqlResult.error : graphqlResult) || { message: '读渠道计划只允许 GraphQL，GraphQL 没读到这张票后不降级 REST' }, ctx)
+        return toOpResultError(getCause || (graphqlResult && !graphqlResult.ok ? graphqlResult.error : graphqlResult) || { message: 'The read channel plan allows GraphQL only, so after GraphQL failed to read this ticket it does not fall back to REST' }, ctx)
       }
       // REST 降级（与 list 同一背景：GraphQL POST 偶发 unexpected EOF，REST 稳定；原因分类与列表同口径，不恒写 graphql-error）
       // 为什么用收窄式：GraphQL 那一趟可能成功、失败或这次没走（计划不许），直接读 error 编译器不认；失败分支读 error、成功分支用回包本身。

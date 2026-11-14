@@ -161,6 +161,13 @@ async function main() {
   const installGiven = installAction ? String(installAction.prompt) : ''
   ok(installGiven === INSTALL_TEXT || installGiven === INSTALL_PROMPT_KEY, '检查页 gh:installed 那一行的按钮指向的仍是同一份说明（实得「' + installGiven.slice(0, 60) + '」）')
   ok(!!installAction && String(installAction.prompt).indexOf('winget') < 0 && String(installAction.prompt).indexOf('brew') < 0, '不是那段按系统分平台的安装长文')
+  // #7: English is the default locale. A missing or unknown language must resolve to the English half; zh is used only when asked for explicitly.
+  const defaultRows = fixMod.attachFixContract(ghMod.GITHUB_CHECKS, ghMod.githubModule, undefined, { cwd: '/w/demo' })
+  const defaultInstallRow = defaultRows.find((x: any) => x && x.id === 'gh:installed')
+  const defaultHint = String((defaultInstallRow && defaultInstallRow.onFail && defaultInstallRow.onFail.show && defaultInstallRow.onFail.show.hint) || '')
+  const defaultAction = (defaultInstallRow && defaultInstallRow.onFail && Array.isArray(defaultInstallRow.onFail.actions)) ? defaultInstallRow.onFail.actions.find((a: any) => a && a.type === 'inject-prompt') : null
+  ok(defaultHint === ghMod.fixes['gh:installed'].hint.en, '没有指定语言时 gh:installed 的提示取英文（实得「' + defaultHint.slice(0, 60) + '」）')
+  ok(!!defaultAction && (String(defaultAction.prompt) === ghPrompts[INSTALL_PROMPT_KEY].en || String(defaultAction.prompt) === INSTALL_PROMPT_KEY), '没有指定语言时按钮注入英文指引或提示词键名')
 
   console.log(failed ? 'FAIL ' + total + ' 项检查里有 ' + failedN + ' 项未过' : 'PASS 全部 ' + total + ' 项检查通过')
   process.exit(failed ? 1 : 0)

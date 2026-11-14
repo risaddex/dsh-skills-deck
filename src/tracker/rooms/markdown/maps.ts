@@ -39,10 +39,10 @@ function hasMapLabel(labels: Issue['labels']): boolean {
 
 /** 把“读不动的票文件 / 读不动的票目录”清单拼成一句人看得懂的话（counts.ts 同款句式，名词换成清单）。 */
 function mapReadFailureMessage(errors: RowReadError[]): string {
-  const parts = errors.map(function (e) { return (e.key ? String(e.key) : '票目录') + '（' + String(e.path) + '）' })
+  const parts = errors.map(function (e) { return (e.key ? String(e.key) : 'ticket directory') + ' (' + String(e.path) + ')' })
   const first = errors[0] as RowReadError | undefined
-  return '本地 Markdown 有票文件或票目录读不动，清单不完整，拒绝回缺行的清单：' + parts.join('、') +
-    '（' + String((first && first.kind) || '') + '：' + String((first && first.message) || '') + '）'
+  return 'Some local Markdown ticket files or ticket directories cannot be read, so the list is incomplete; refusing to return a list with missing rows: ' + parts.join(', ') +
+    ' (' + String((first && first.kind) || '') + ': ' + String((first && first.message) || '') + ')'
 }
 
 /**
@@ -96,7 +96,7 @@ export async function listMaps(
     // 枚举这一层之外冒上来的故障（列工作单元、读目录……）：整条失败，日志留一行“停在哪条操作”。
     emitReadDegraded(ctx, 'list', 'list:fs-fail', Date.now() - t0)
     // 房里 failAs 家族回的是宽 kind（string），运行时值就是自家判据定的档位，转成契约要的窄类型不断言不改值。
-    return failFromError(e, ctx, '拉这个工作区的地图清单时出错') as OpResult<MapListResult>
+    return failFromError(e, ctx, 'error while fetching the map list of this workspace') as OpResult<MapListResult>
   }
 }
 

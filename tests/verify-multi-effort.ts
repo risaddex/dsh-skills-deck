@@ -153,7 +153,7 @@ console.log('== ⑥ 单 effort / 扁平布局行为不变 ==')
   const flatBefore = fs.readFileSync(path.join(tmp, '.scratch', 'issues', '01-ticket.md'), 'utf8')
   const cm = await addComment(ctx, repo, '01', '扁平布局评论')
   check(cm.ok === false && cm.error.kind === 'unsupported', '扁平布局的票不能写：addComment 如实失败（' + (cm.ok ? '竟然成功' : cm.error.kind) + '）')
-  check(!cm.ok && /旧布局/.test(cm.error.message) && /只读/.test(cm.error.message), '失败话说清旧布局的票只读，迁移另行处理')
+  check(!cm.ok && /old layout/.test(cm.error.message) && /read-only/.test(cm.error.message), '失败话说清旧布局的票只读，迁移另行处理')
   check(fs.readFileSync(path.join(tmp, '.scratch', 'issues', '01-ticket.md'), 'utf8') === flatBefore, '拒绝后扁平布局文件逐字节未变')
 
   console.log('== 身份函数自检 ==')

@@ -58,7 +58,7 @@ async function dirOccupied(ctx: OpContext, dir: string): Promise<{ ok: true; occ
   if (!listed.ok) {
     // 目录不存在就是空的（全新工作区），不是故障。
     if (listed.missing) return { ok: true, occupied: false, names: [] }
-    return failAs(ERROR_KIND.ENV, '建票要列目录，但目录读不出来：' + dir + '（' + String((listed.error as Error)?.message || listed.error) + '）', String((listed.error as Error)?.message || listed.error))
+    return failAs(ERROR_KIND.ENV, 'Creating the ticket needs to list a directory, but the directory cannot be read: ' + dir + ' (' + String((listed.error as Error)?.message || listed.error) + ')', String((listed.error as Error)?.message || listed.error))
   }
   const names = listed.names
   if (names.length === 0) return { ok: true, occupied: false, names: [] }
@@ -114,7 +114,7 @@ async function generatedFeatureDir(ctx: OpContext, title: string, idempotencyKey
       }
     }
   }
-  return failAs(ERROR_KIND.CONFLICT, '标题「' + title + '」生成的前 50 个目录名都已经被别的票占用，这次没建：请给 feature 指定一个目录名。', title)
+  return failAs(ERROR_KIND.CONFLICT, 'The first 50 directory names generated from the title "' + title + '" are all taken by other tickets, so nothing was created: give feature a directory name.', title)
 }
 
 /** 扫描 `.scratch` 下所有含 spec.md 的目录（没有 feature 时，实施票要先找到唯一的规格）。 */
@@ -124,7 +124,7 @@ async function specDirs(ctx: OpContext): Promise<{ ok: true; dirs: Array<{ root:
   const listed = await listDir(ctx, scratch)
   if (!listed.ok) {
     if (listed.missing) return { ok: true, dirs: [] }
-    return failAs(ERROR_KIND.ENV, '要列 .scratch 找规格目录，但列不出来（' + String((listed.error as Error)?.message || listed.error) + '）', String((listed.error as Error)?.message || listed.error))
+    return failAs(ERROR_KIND.ENV, 'Listing .scratch to find the spec directory failed (' + String((listed.error as Error)?.message || listed.error) + ')', String((listed.error as Error)?.message || listed.error))
   }
   const dirs: Array<{ root: string; dirName: string }> = []
   for (const name of listed.names) {
@@ -188,10 +188,10 @@ async function resolveTarget(ctx: OpContext, repo: RepoWithPath, kind: OriginalK
     if (!found.ok) return found
     if (found.dirs.length === 1) return { ok: true, root: found.dirs[0].root, dirName: found.dirs[0].dirName, explicit: true }
     if (found.dirs.length === 0) {
-      return failAs(ERROR_KIND.NOTFOUND, '实施票必须挂在规格票下：这个工作区里还没有 spec.md。先建规格，或者用 feature 指定规格所在的目录。', '')
+      return failAs(ERROR_KIND.NOTFOUND, 'An implementation ticket must sit under a spec: this workspace has no spec.md yet. Create the spec first, or use feature to name the directory the spec is in.', '')
     }
     // 缺的是调用方该给的 feature（目录选择参数），不是后端故障：标成输入被拒，下一步才是补上这个参数。
-    return failAs(ERROR_KIND.CONFLICT, '这个工作区里有 ' + found.dirs.length + ' 个规格目录（' + found.dirs.map((d) => d.dirName).join('、') + '），没法判断实施票该落哪一个：请用 feature 指定目录名。', JSON.stringify(found.dirs.map((d) => d.dirName)), TRACKER_ERROR_STAGE.INPUT_REFUSED)
+    return failAs(ERROR_KIND.CONFLICT, 'This workspace has ' + found.dirs.length + ' spec directories (' + found.dirs.map((d) => d.dirName).join(', ') + '), so it cannot tell which one the implementation ticket belongs in: name the directory with feature.', JSON.stringify(found.dirs.map((d) => d.dirName)), TRACKER_ERROR_STAGE.INPUT_REFUSED)
   }
 
   // 地图子票没给 effort：必须挂在某张地图下，就落在那张 map.md 所在的目录（与普通票挂地图同一口径）。
@@ -200,7 +200,7 @@ async function resolveTarget(ctx: OpContext, repo: RepoWithPath, kind: OriginalK
     const map = await resolveMapFile(ctx, repo, { mode: 'read' })
     if (!map.ok) {
       if (map.error.kind === ERROR_KIND.NOTFOUND) {
-        return failAs(ERROR_KIND.NOTFOUND, '地图子票必须挂在一张探索地图下：这个工作区里还没有 map.md。先建地图，或者用 effort 指定地图所在的目录。', '')
+        return failAs(ERROR_KIND.NOTFOUND, 'A map ticket must sit under an exploration map: this workspace has no map.md yet. Create the map first, or use effort to name the directory the map is in.', '')
       }
       return { ok: false, error: map.error }
     }
@@ -219,7 +219,7 @@ async function resolveTarget(ctx: OpContext, repo: RepoWithPath, kind: OriginalK
   // 父子关系只在同一个 effort 内成立，按标题另起一个目录会让父票指向一张不在同一目录的票。
   if ((kind === 'issue' || kind === 'bug') && parentKey) {
     const map = await resolveMapFile(ctx, repo, { mode: 'read' })
-    if (!map.ok) return failAs(ERROR_KIND.NOTFOUND, '父票 #' + parentKey + ' 找不到对应的地图文件：普通票和缺陷票要挂在地图下时，必须先有那张地图。', '')
+    if (!map.ok) return failAs(ERROR_KIND.NOTFOUND, 'Parent #' + parentKey + ' has no matching map file: a plain ticket or bug ticket placed under a map needs that map to exist first.', '')
     const parts = map.path.split(/[\\/]/).filter(Boolean)
     const parentDir = parts.length >= 2 ? parts[parts.length - 2] : ''
     return { ok: true, root: map.path.replace(/[\\/][^\\/]+$/, ''), dirName: parentDir, explicit: true }
@@ -238,14 +238,14 @@ async function findAnchor(ctx: OpContext, issuesDir: string, key: string): Promi
   const listed = await listDir(ctx, issuesDir)
   if (!listed.ok) {
     if (listed.missing) return { ok: true, hit: null }
-    return failAs(ERROR_KIND.ENV, '回查幂等键要列票目录，但目录读不出来：' + issuesDir + '（' + String((listed.error as Error)?.message || listed.error) + '）', String((listed.error as Error)?.message || listed.error))
+    return failAs(ERROR_KIND.ENV, 'Looking up the idempotency key needs to list the ticket directory, but it cannot be read: ' + issuesDir + ' (' + String((listed.error as Error)?.message || listed.error) + ')', String((listed.error as Error)?.message || listed.error))
   }
   for (const name of listed.names) {
     if (!name || !name.endsWith('.md')) continue
     const full = plat.join(issuesDir, name)
     let text = ''
     try { text = await readTextFile(ctx, full) } catch (e) {
-      return failAs(ERROR_KIND.UNSUPPORTED, '回查幂等键要读票文件，但读不出来：' + full + '（' + String((e as Error)?.message || e) + '）。这次没建新票，免得重复。', '')
+      return failAs(ERROR_KIND.UNSUPPORTED, 'Looking up the idempotency key needs to read a ticket file, but it cannot be read: ' + full + ' (' + String((e as Error)?.message || e) + '). No new ticket was created, to avoid a duplicate.', '')
     }
     if (idempotencyKeyOf(text) === key) return { ok: true, hit: { path: full, name: name } }
   }
@@ -257,7 +257,7 @@ async function nextNumber(ctx: OpContext, issuesDir: string): Promise<{ ok: true
   const listed = await listDir(ctx, issuesDir)
   if (!listed.ok) {
     if (listed.missing) return { ok: true, number: '01', max: 0 }
-    return failAs(ERROR_KIND.ENV, '取号要列票目录，但目录读不出来：' + issuesDir + '（' + String((listed.error as Error)?.message || listed.error) + '）', String((listed.error as Error)?.message || listed.error))
+    return failAs(ERROR_KIND.ENV, 'Assigning a number needs to list the ticket directory, but it cannot be read: ' + issuesDir + ' (' + String((listed.error as Error)?.message || listed.error) + ')', String((listed.error as Error)?.message || listed.error))
   }
   let max = 0
   for (const name of listed.names) {
@@ -275,14 +275,14 @@ async function requireSpec(ctx: OpContext, root: string): Promise<{ ok: true; pa
   const specPath = plat.join(root, 'spec.md')
   let text = ''
   try { text = await readTextFile(ctx, specPath) } catch {
-    return failAs(ERROR_KIND.NOTFOUND, '实施票必须挂在规格票下：目录「' + root + '」里没有 spec.md。先在那个目录建规格，或者用 feature 指定规格所在的目录。', specPath)
+    return failAs(ERROR_KIND.NOTFOUND, 'An implementation ticket must sit under a spec: the directory "' + root + '" has no spec.md. Create the spec in that directory first, or use feature to name the directory the spec is in.', specPath)
   }
   // 下面两处是本地容器文件形状不对（空文件、类型标记写错）：调用方要换目录或先修文件，属于输入被拒。
-  if (!text.trim()) return failAs(ERROR_KIND.PARSE, '目录「' + root + '」里的 spec.md 是空的，没法确认它是不是规格：这次没建实施票。', specPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+  if (!text.trim()) return failAs(ERROR_KIND.PARSE, 'The spec.md in the directory "' + root + '" is empty, so it cannot be confirmed to be a spec: no implementation ticket was created.', specPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
   // 老文件可能还带 DSH-ISSUE-KIND；写着别的类型就拒绝，避免把实施票挂到地图或普通票下面。
   const marked = markerKindInHeader(text)
   if (marked && marked !== 'spec') {
-    return failAs(ERROR_KIND.PARSE, '目录「' + root + '」里的 spec.md 写着「' + marked + '」标记，不是规格容器：这次没建实施票。', specPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+    return failAs(ERROR_KIND.PARSE, 'The spec.md in the directory "' + root + '" carries the "' + marked + '" marker, so it is not a spec container: no implementation ticket was created.', specPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
   }
   return { ok: true, path: specPath, text: text }
 }
@@ -293,14 +293,14 @@ async function requireMap(ctx: OpContext, root: string): Promise<{ ok: true; pat
   const mapPath = plat.join(root, 'map.md')
   let text = ''
   try { text = await readTextFile(ctx, mapPath) } catch {
-    return failAs(ERROR_KIND.NOTFOUND, '地图子票必须挂在一张探索地图下：目录「' + root + '」里没有 map.md。先在那个目录建地图，或者用 effort 指定地图所在的目录。', mapPath)
+    return failAs(ERROR_KIND.NOTFOUND, 'A map ticket must sit under an exploration map: the directory "' + root + '" has no map.md. Create the map in that directory first, or use effort to name the directory the map is in.', mapPath)
   }
   // 与上面 spec.md 同理：容器文件形状不对，改输入（换目录或先修文件）才能继续。
-  if (!text.trim()) return failAs(ERROR_KIND.PARSE, '目录「' + root + '」里的 map.md 是空的，没法确认它是不是地图：这次没建地图子票。', mapPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+  if (!text.trim()) return failAs(ERROR_KIND.PARSE, 'The map.md in the directory "' + root + '" is empty, so it cannot be confirmed to be a map: no map ticket was created.', mapPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
   // 老文件可能还带 DSH-ISSUE-KIND；写着别的类型就拒绝，避免把子票挂到规格或普通票下面。
   const marked = markerKindInHeader(text)
   if (marked && marked !== 'map') {
-    return failAs(ERROR_KIND.PARSE, '目录「' + root + '」里的 map.md 写着「' + marked + '」标记，不是地图容器：这次没建地图子票。', mapPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+    return failAs(ERROR_KIND.PARSE, 'The map.md in the directory "' + root + '" carries the "' + marked + '" marker, so it is not a map container: no map ticket was created.', mapPath, TRACKER_ERROR_STAGE.INPUT_REFUSED)
   }
   return { ok: true, path: mapPath, text: text }
 }
@@ -337,15 +337,15 @@ export async function createInOriginalLayout(ctx: OpContext, repo: RepoWithPath 
       if (occupied.names.indexOf('spec.md') >= 0) {
         // 给了 feature 时不允许改名：这是调用方指定的目录，覆盖别人的规格比失败更贵。
         if (target.explicit && String(repo && repo.effortId || '').trim()) {
-          return failAs(ERROR_KIND.CONFLICT, '目录「' + dirName + '」里已经有一份 spec.md（不是这次这个幂等键建的）：这次没建，免得覆盖它。换一个 feature，或先用新目录。', specPath)
+          return failAs(ERROR_KIND.CONFLICT, 'The directory "' + dirName + '" already has a spec.md (not created with this idempotency key): nothing was created, to avoid overwriting it. Use another feature, or a new directory.', specPath)
         }
         // 按标题生成的目录在占用时已经换成 -2/-3 了；走到这里说明是显式目录，同上拒绝。
-        return failAs(ERROR_KIND.CONFLICT, '目录「' + dirName + '」里已经有一份 spec.md（不是这次这个幂等键建的）：这次没建，免得覆盖它。', specPath)
+        return failAs(ERROR_KIND.CONFLICT, 'The directory "' + dirName + '" already has a spec.md (not created with this idempotency key): nothing was created, to avoid overwriting it.', specPath)
       }
       // 建规格处的拦点（与建地图、初始化共用 counterpartFile 判据）：点名的目录里已经有探索地图，
       // 再把规格写进去会造出双容器目录。调用方点名的是这个目录，不擅自换地方，直接拒绝并指到新目录。
       if (occupied.names.indexOf('map.md') >= 0) {
-        return failAs(ERROR_KIND.CONFLICT, '目录「' + dirName + '」里已经有一份探索地图（map.md）：一个目录只能放一种容器，这次没建规格，免得和地图挤在一个目录里。换一个 feature（例如「' + dirName + '-2」），或先用新目录。', specPath)
+        return failAs(ERROR_KIND.CONFLICT, 'The directory "' + dirName + '" already has an exploration map (map.md): a directory holds only one kind of container, so no spec was created next to the map. Use another feature (for example "' + dirName + '-2"), or a new directory.', specPath)
       }
       const text = renderSpec(view, { createdAt: createdAt, idempotencyKey: idempotencyKey, labels: labels, assignees: assignees })
       await publishTextFile(ctx, specPath, text, ctx && (ctx as { sandboxPolicy?: unknown }).sandboxPolicy)
@@ -365,12 +365,12 @@ export async function createInOriginalLayout(ctx: OpContext, repo: RepoWithPath 
       const occupied = await dirOccupied(ctx, root)
       if (!occupied.ok) return occupied
       if (occupied.names.indexOf('map.md') >= 0) {
-        return failAs(ERROR_KIND.CONFLICT, '目录「' + dirName + '」里已经有一份 map.md（不是这次这个幂等键建的）：这次没建，免得覆盖它。换一个 effort，或先用新目录。', mapPath)
+        return failAs(ERROR_KIND.CONFLICT, 'The directory "' + dirName + '" already has a map.md (not created with this idempotency key): nothing was created, to avoid overwriting it. Use another effort, or a new directory.', mapPath)
       }
       // 建地图处的拦点（与建规格、初始化共用 counterpartFile 判据）：点名的目录里已经有规格，
       // 再把地图写进去会造出双容器目录。调用方点名的是这个目录，不擅自换地方，直接拒绝并指到新目录。
       if (occupied.names.indexOf('spec.md') >= 0) {
-        return failAs(ERROR_KIND.CONFLICT, '目录「' + dirName + '」里已经有一份规格（spec.md）：一个目录只能放一种容器，这次没建地图，免得和规格挤在一个目录里。换一个 effort（例如「' + dirName + '-2」），或先用新目录。', mapPath)
+        return failAs(ERROR_KIND.CONFLICT, 'The directory "' + dirName + '" already has a spec (spec.md): a directory holds only one kind of container, so no map was created next to the spec. Use another effort (for example "' + dirName + '-2"), or a new directory.', mapPath)
       }
       const text = renderMap(view, { createdAt: createdAt, idempotencyKey: idempotencyKey, labels: labels, assignees: assignees })
       await publishTextFile(ctx, mapPath, text, ctx && (ctx as { sandboxPolicy?: unknown }).sandboxPolicy)
@@ -381,7 +381,7 @@ export async function createInOriginalLayout(ctx: OpContext, repo: RepoWithPath 
     if (kind === 'spec-ticket') {
       if (parentKey && parentKey !== '00') {
         // 父票编号形状不合规（只能填 00）：改入参才能继续，标成输入被拒。
-        return failAs(ERROR_KIND.PARSE, '实施票的父票要填 00（一个目录里只有一份规格容器），收到的是「' + parentKey + '」：这次没建。', parentKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+        return failAs(ERROR_KIND.PARSE, 'The parent of an implementation ticket must be 00 (a directory holds only one spec container), but got "' + parentKey + '": nothing was created.', parentKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
       }
       const spec = await requireSpec(ctx, root)
       if (!spec.ok) return spec
@@ -390,7 +390,7 @@ export async function createInOriginalLayout(ctx: OpContext, repo: RepoWithPath 
     // 地图子票：父票只能是同一目录的地图（00）；目录里必须有 map.md，否则不知道挂哪张地图。
     if (kind === 'map-ticket') {
       if (parentKey && parentKey !== '00') {
-        return failAs(ERROR_KIND.PARSE, '地图子票的父票要填 00（一个目录里只有一张地图容器），收到的是「' + parentKey + '」：这次没建。', parentKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+        return failAs(ERROR_KIND.PARSE, 'The parent of a map ticket must be 00 (a directory holds only one map container), but got "' + parentKey + '": nothing was created.', parentKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
       }
       const map = await requireMap(ctx, root)
       if (!map.ok) return map

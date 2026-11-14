@@ -123,9 +123,9 @@ async function queryPermissions(c: GhClient, spec: string, ctx: OpContext): Prom
  */
 export function readonlyMessage(spec: string, names: string[]): string {
   const list = (Array.isArray(names) ? names : []).map((n) => String(n || '').trim()).filter(Boolean)
-  const suffix = list.length ? '这次没挂上的标签（' + list.join('、') + '）' : '这次要加的标签'
-  return '你在「' + String(spec || '') + '」上只有读权限，没有给票打标签的权限（打标签要 triage 及以上，新建标签要 push）——'
-    + suffix + '没写进去，票本身不受影响。请换有写权限的账号，或请仓库管理员授予权限后补打。'
+  const suffix = list.length ? 'the labels not attached this time (' + list.join(', ') + ')' : 'the labels to add this time'
+  return 'You have only read access on "' + String(spec || '') + '" and no permission to label tickets (labelling needs triage or above, creating labels needs push), so '
+    + suffix + ' were not written; the ticket itself is unaffected. Switch to an account with write access, or ask a repository admin to grant it, and then add them.'
 }
 
 export default { readRepoPermissions, readonlyMessage }

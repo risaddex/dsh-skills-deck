@@ -194,14 +194,14 @@ async function main(): Promise<void> {
     const a = await decideBackend(CWD, { fs: fA.fs, registry: fakeRegistry(['github'], async () => ({ backendId: null, source: 'fallback' })) })
     ok(a.state === 'no-backend' && a.backendId === null && a.reason === 'no-backend',
       '两个文件都没有 + 各房问过没人认领 → no-backend（确实没有）', JSON.stringify({ state: a.state, reason: a.reason }))
-    ok(a.gap !== null && a.gap.id === 'no-claim' && a.gap.fix.indexOf('面板上选定') >= 0,
+    ok(a.gap !== null && a.gap.id === 'no-claim' && a.gap.fix.indexOf('pick a backend in the panel') >= 0,
       '这一档说清「补什么就能确定」', a.gap ? a.gap.id + ' / ' + a.gap.fix : '(没有档位)')
 
     // 同一个场景，但这一次没问各房（调用方自己关了这一层）—— 只能说没定下来。
     const b = await decideBackend(CWD, { fs: fA.fs, registry: fakeRegistry(['github']), skipAutodetect: true })
     ok(b.state === 'undetermined' && b.backendId === null && b.reason === 'no-backend',
       '没问过各房 → undetermined（对外 reason 照旧不变）', JSON.stringify({ state: b.state, reason: b.reason }))
-    ok(b.gap !== null && b.gap.id === 'autodetect-unavailable' && b.missing.indexOf('这次没问') >= 0,
+    ok(b.gap !== null && b.gap.id === 'autodetect-unavailable' && b.missing.indexOf('was not asked this time') >= 0,
       '这一档如实说「这一层没问成」，不说成没人认领', b.gap ? b.gap.id + ' / ' + b.gap.text : '(没有档位)')
     ok(a.reason === b.reason && a.source === b.source && a.origin === b.origin,
       '两种情况对外可见的那几格完全一样（三态只在内部说实话）', JSON.stringify({ sourceA: a.source, originA: a.origin }))

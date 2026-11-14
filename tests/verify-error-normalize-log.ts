@@ -259,7 +259,7 @@ async function main() {
 
   const raw = rawText(secretInput)
   const rawLeaks = findLeaks(raw, [['令牌内容', GH_TOKEN], ['URL 里的口令', URL_PASSWORD], ['令牌样式 ghp_', 'ghp_']])
-  check(rawLeaks.length === 0 && raw.indexOf('凭据已遮蔽') >= 0,
+  check(rawLeaks.length === 0 && raw.indexOf('credential masked') >= 0,
     'E3 交给人的原文先遮蔽再截断：明文不在、遮蔽标记在' + (rawLeaks.length ? ' —— 明文仍在：' + rawLeaks.map(([n]) => n).join('、') : ''))
 
   // ── F 三条埋点纪律 ───────────────────────────────────────────────────────

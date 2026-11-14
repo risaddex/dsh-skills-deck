@@ -89,19 +89,19 @@ export async function probeRuntimeServer (ctx: OpContext): Promise<RuntimeServer
   try {
     const r: any = await ghClient(ctx).execGh(['api', 'meta'], { cwd: ctx && ctx.cwd, via: 'repo.meta', timeout: GITHUB_REST_READ_TIMEOUT_MS })
     if (!r || r.ok !== true) {
-      const msg = r && r.error && (r.error.message || r.error.raw) ? String(r.error.message || r.error.raw) : '没有回包'
-      return failed('探测服务端版本失败：' + msg.slice(0, 300))
+      const msg = r && r.error && (r.error.message || r.error.raw) ? String(r.error.message || r.error.raw) : 'no response'
+      return failed('Probing the server version failed: ' + msg.slice(0, 300))
     }
     let j: any = null
     try { j = JSON.parse((r.data && r.data.stdout) || '') } catch {}
-    if (!j || typeof j !== 'object') return failed('探测服务端版本失败：回包不是能读的 JSON 对象')
+    if (!j || typeof j !== 'object') return failed('Probing the server version failed: the response is not a readable JSON object')
     const version = (j as any).installed_version
     if (typeof version === 'string' && version.trim()) {
       return { ok: true, hostKind: 'ghes', serverVersion: version.trim(), probedAtMs: probedAtMs, reason: '' }
     }
     return { ok: true, hostKind: 'github.com', serverVersion: null, probedAtMs: probedAtMs, reason: '' }
   } catch (e) {
-    return failed('探测服务端版本时出错：' + String((e && (e as any).message) || e).slice(0, 300))
+    return failed('Probing the server version threw an error: ' + String((e && (e as any).message) || e).slice(0, 300))
   }
 }
 
@@ -115,20 +115,20 @@ export function runtimeCapabilityAnswerFor (operation: RuntimeCapabilityOperatio
   if (!probe || probe.ok !== true) return null
   const base: any = { operation: operation, ticket: CAPABILITY_TICKET, hostKind: probe.hostKind, serverVersion: probe.serverVersion, probedAtMs: probe.probedAtMs, source: 'runtime-probe' }
   if (probe.hostKind === 'github.com') {
-    return Object.assign(base, { support: 'supported', reason: '服务端是 github.com：这条读接口全量可用' })
+    return Object.assign(base, { support: 'supported', reason: 'The server is github.com: this read API is fully available' })
   }
   if (probe.hostKind !== 'ghes') return null
   if (operation === 'listSubIssues') {
-    return Object.assign(base, { support: 'unsupported', reason: '企业版没有子票接口：父票与子票树只在 github.com 提供（GraphQL 与 REST 都没有），所以这里按「不支持」回答，不当成空列表' })
+    return Object.assign(base, { support: 'unsupported', reason: 'GitHub Enterprise has no sub-issue API: the parent and child ticket tree exists only on github.com (neither GraphQL nor REST has it), so this answers "unsupported" rather than treating it as an empty list' })
   }
   const has = hasDependencyEndpoint(probe.serverVersion)
   if (has === false) {
-    return Object.assign(base, { support: 'unsupported', reason: '企业版的依赖边端点从 3.19 才有：这台服务端是 ' + String(probe.serverVersion) + '，依赖读不到，按「不支持」回答，不当成没有依赖' })
+    return Object.assign(base, { support: 'unsupported', reason: 'GitHub Enterprise has the dependency edge endpoint only from 3.19 on: this server is ' + String(probe.serverVersion) + ', so dependencies cannot be read; this answers "unsupported" rather than treating it as "no dependencies"' })
   }
   if (has === true) {
-    return Object.assign(base, { support: 'partial', reason: '企业版 3.19 起才有依赖边端点：这台服务端是 ' + String(probe.serverVersion) + '，能补一部分；GraphQL 主路在部分版本上不可用，降级时以 REST 为准' })
+    return Object.assign(base, { support: 'partial', reason: 'GitHub Enterprise has the dependency edge endpoint from 3.19 on: this server is ' + String(probe.serverVersion) + ', so part of it can be filled in; the GraphQL main path is unavailable on some versions, and REST is authoritative when falling back' })
   }
-  return Object.assign(base, { support: 'partial', reason: '认出是企业版但读不出服务端版本：依赖边按「部分支持」回答，不当成不支持也不冒充支持' })
+  return Object.assign(base, { support: 'partial', reason: 'Recognized GitHub Enterprise but could not read the server version: dependency edges answer "partially supported", neither "unsupported" nor pretending to be supported' })
 }
 
 /**
