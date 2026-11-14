@@ -120,7 +120,7 @@ function blockedLines(text: string): { visible: string; hidden: string } {
 }
 
 function countProgress(text: string): number {
-  const m = text.match(/^## 进度[ \t]*$/gm)
+  const m = text.match(/^## Progress[ \t]*$/gm)
   return m ? m.length : 0
 }
 
@@ -423,7 +423,7 @@ async function main(): Promise<void> {
   check(emptyMap.body.indexOf('<!--') < 0, '⑤ 空地图正文里没有任何注释')
   check(emptyMap.body.replace(/^\s+/, '').indexOf('## Destination') === 0, '⑤ 空地图正文以原文第一段「## Destination」开头')
   check(countProgress(emptyMap.body) === 1, '⑤ 空地图正文只补一段进度')
-  check(emptyMap.body.indexOf('## Destination') < emptyMap.body.indexOf('## 进度'), '⑤ 五个区块都在进度区之前')
+  check(emptyMap.body.indexOf('## Destination') < emptyMap.body.indexOf('## Progress'), '⑤ 五个区块都在进度区之前')
   const renderedMap = renderMap({
     title: '空地图',
     body: emptyMap.body,
@@ -435,7 +435,7 @@ async function main(): Promise<void> {
     assignees: [],
   })
   check(renderedMap.indexOf('这张地图的正文由') < 0, '⑤ 渲染出来的地图正文也没有占位注释')
-  check(renderedMap.indexOf('## Destination') > 0 && renderedMap.indexOf('## Destination') < renderedMap.indexOf('## 进度'), '⑤ 渲染后第一段是 Destination、进度在最后')
+  check(renderedMap.indexOf('## Destination') > 0 && renderedMap.indexOf('## Destination') < renderedMap.indexOf('## Progress'), '⑤ 渲染后第一段是 Destination、进度在最后')
 
   // ══ 回归：旁边已有的旧格式票不影响新票（守卫只看这次请求的正文，不去读别人的文件） ══
   const legacyTmp = tmpDir('md-1507-legacy-')

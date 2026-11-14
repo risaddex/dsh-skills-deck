@@ -48,7 +48,7 @@ function makeCtx(opts: any) {
       return { code: 0, stdout: JSON.stringify(perms), stderr: '' }
     }
     if (list[0] === 'api' && list[1] === 'graphql') {
-      const row = { number: 7, title: 't7', state: 'OPEN', body: 'hello', url: '', createdAt: '', updatedAt: '', closedAt: null, author: { login: 'a' }, assignees: { nodes: [] }, labels: { nodes: [] }, milestone: null, comments: { nodes: [] }, parent: null, blockedBy: { nodes: [] } }
+      const row = { number: 7, title: 't7', state: 'OPEN', body: o.body || 'hello', url: '', createdAt: '', updatedAt: '', closedAt: null, author: { login: 'a' }, assignees: { nodes: [] }, labels: { nodes: [] }, milestone: null, comments: { nodes: [] }, parent: null, blockedBy: { nodes: [] } }
       return { code: 0, stdout: JSON.stringify({ data: { repository: { issue: row } } }), stderr: '' }
     }
     if (list[0] === 'issue' && list[1] === 'edit' && line.includes('--add-label')) {
@@ -63,7 +63,7 @@ function makeCtx(opts: any) {
       return { code: 0, stdout: JSON.stringify({ number: 7, title: 't7', state: 'open', body: 'hello\n\n## 待补标签（只读未落盘）\n\n以下标签这次没确认挂上', url: '', created_at: '', updated_at: '', closed_at: null, labels: [], assignees: [] }), stderr: '' }
     }
     if (list[0] === 'api' && String(list[1]).indexOf('repos/') === 0 && line.includes('--method POST')) {
-      return { code: 0, stdout: JSON.stringify({ number: 7, title: 't7', body: 'hello', state: 'open', html_url: '', created_at: '', updated_at: '', labels: [], assignees: [] }), stderr: '' }
+      return { code: 0, stdout: JSON.stringify({ number: 7, title: 't7', body: o.body || 'hello', state: 'open', html_url: '', created_at: '', updated_at: '', labels: [], assignees: [] }), stderr: '' }
     }
     return { code: 1, stdout: '', stderr: 'verify-992 假 gh 没脚本化这条命令: ' + line }
   }
@@ -151,8 +151,17 @@ async function main(): Promise<void> {
     check(r.ok === true && !!r.data.labelError, 'D2 票上记了 labelError（不再吞错；实得 ' + JSON.stringify(r.ok === true ? r.data.labelError : r) + '）')
     check(r.ok === true && r.data.labelError && r.data.labelError.kind === 'auth', 'D3 labelError 落鉴权档（实得 ' + (r.ok === true ? r.data.labelError.kind : '') + '）')
     const bodySent = f.calls.find((l) => l.includes('issue edit') && l.includes('--body'))
-    check(!!bodySent && bodySent.includes('待补标签') && bodySent.includes('未落盘'), 'D4 尽力把“待补标签（只读未落盘）”区写进正文（实发：' + String(bodySent || '(none)').slice(0, 100) + '…）')
+    check(!!bodySent && bodySent.includes('## Labels still to add (read-only, not written)'), 'D4 尽力把“待补标签（只读未落盘）”区写进正文（实发：' + String(bodySent || '(none)').slice(0, 100) + '…）')
     check(!!bodySent && bodySent.includes('acme/demo') && bodySent.includes('bug'), 'D5 正文区带仓库名与待补标签名，话术含 fork 指路（实发含 origin=' + String(!!bodySent && bodySent.includes('origin')) + '）')
+    // #10：现有的中英两种区都应原地替换，后面的其它区不动，也不追加第二段。
+    for (const heading of ['待补标签（只读未落盘）', 'Labels still to add (read-only, not written)']) {
+      const oldBody = 'hello\n\n## ' + heading + '\n\nold warning\n\n## Keep\n\nuser prose\n'
+      const old = makeCtx({ body: oldBody })
+      await createIssue(repo, { title: 't', body: oldBody, type: 'issue', labels: ['bug'] }, old.ctx)
+      const sent = old.calls.find((l) => l.includes('issue edit') && l.includes('--body')) || ''
+      check(sent.split('## Labels still to add (read-only, not written)').length === 2 && !sent.includes('old warning') && !sent.includes('## 待补标签'), 'D4 bilingual: ' + heading + ' is replaced by exactly one English section')
+      check(sent.includes('## Keep\n\nuser prose'), 'D4 bilingual: the section after ' + heading + ' stays unchanged')
+    }
     // 改正文也没权限时：建票仍成，labelError 仍在
     const fb = makeCtx({ bodyFails: true })
     const rb = await createIssue(repo, { title: '只读库建票', body: 'hello', type: 'issue', labels: ['bug'] }, fb.ctx)

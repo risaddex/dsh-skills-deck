@@ -28,18 +28,18 @@ export interface OriginalWordsEntryLike {
  */
 export function originalWordsFromArg(arg: unknown): { entry: OriginalWordsEntryLike | null; problem: string } {
   if (!arg || typeof arg !== 'object' || Array.isArray(arg)) {
-    return { entry: null, problem: 'originalWords 要写成一个对象：{text, source} 两个字段。' }
+    return { entry: null, problem: 'originalWords must be an object with two fields: {text, source}.' }
   }
   const a = arg as Record<string, unknown>
   if (typeof a.text !== 'string' || a.text.trim() === '') {
-    return { entry: null, problem: '原话正文 text 必填：把维护者的原话一字不改地放进来（不能是空字符串）。' }
+    return { entry: null, problem: 'text is required: put the maintainer\'s words in verbatim (it cannot be an empty string).' }
   }
   if (typeof a.source !== 'string' || a.source.trim() === '') {
-    return { entry: null, problem: '出处 source 必填：票面写完整链接，本会话答复写「本会话（时间）」，文件写「路径:行号」，提交写短哈希。' }
+    return { entry: null, problem: 'source is required: a ticket gets its full link, a reply in this session gets "this session (time)", a file gets "path:line", a commit gets its short hash.' }
   }
   const source = a.source.trim()
   if (/[\r\n]/.test(source)) {
-    return { entry: null, problem: '出处 source 要写成一行：把换行去掉（票面写完整链接，本会话写「本会话（时间）」）。' }
+    return { entry: null, problem: 'source must be a single line: remove the line breaks (a ticket gets its full link, this session gets "this session (time)").' }
   }
   return { entry: { text: a.text.replace(/\r\n?/g, '\n'), source: source }, problem: '' }
 }

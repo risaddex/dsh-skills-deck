@@ -54,29 +54,29 @@ async function main() {
   const e1 = { text: '第一行原话\n\n第三行原话（中间的空行照原样保留）', source: 'https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1091' }
   const purposeBody = '## 目的\n\n把这件事做完。\n\n## 边界\n\n只动原话区。\n'
   const placed = words.replaceOriginalWordsSection(purposeBody, e1)
-  const placedHeading = placed.indexOf('## 维护者原话')
+  const placedHeading = placed.indexOf("## Maintainer's words")
   check(placedHeading > placed.indexOf('## 目的'), '有目的区时：原话区排在目的区后面')
   check(placedHeading >= 0 && placedHeading < placed.indexOf('## 边界'), '原话区排在目的区与下一节之间，不是甩到文末')
-  check(placed.indexOf('只动原话区。') > placed.indexOf('## 维护者原话'), '下一节的内容排在原话区后面、一个字没被挪动')
-  const quoteBlock = '出处：' + e1.source + '\n> 第一行原话\n>\n> 第三行原话（中间的空行照原样保留）'
+  check(placed.indexOf('只动原话区。') > placed.indexOf("## Maintainer's words"), '下一节的内容排在原话区后面、一个字没被挪动')
+  const quoteBlock = 'Source: ' + e1.source + '\n> 第一行原话\n>\n> 第三行原话（中间的空行照原样保留）'
   check(placed.indexOf(quoteBlock) >= 0, '原话逐字写成「出处行 + 引用块」，空行写成单独一行 >')
   const placedLines = placed.split('\n')
-  check(placedLines.some((l: string) => l === '出处：' + e1.source), '出处行在引用块外面单独一行')
-  check(!placedLines.some((l: string) => l.indexOf('> 出处：') === 0), '出处行没有被塞进引用块里')
+  check(placedLines.some((l: string) => l === 'Source: ' + e1.source), '出处行在引用块外面单独一行')
+  check(!placedLines.some((l: string) => l.indexOf('> Source: ') === 0), '出处行没有被塞进引用块里')
 
   // 没有目的区时放正文最前，但跳过文件头注释与一级标题。
   const headerBody = '<!-- DSH-IDEMPOTENCY-KEY: abc123 -->\n# 票标题\n\n正文内容。\n'
   const headerPlaced = words.replaceOriginalWordsSection(headerBody, e1)
   check(headerPlaced.indexOf('<!-- DSH-IDEMPOTENCY-KEY') === 0, '没有目的区时：文件头注释仍在最前面（不会被原话区挤走）')
-  check(headerPlaced.indexOf('# 票标题') < headerPlaced.indexOf('## 维护者原话'), '没有目的区时：一级标题之后才是原话区')
-  check(headerPlaced.indexOf('## 维护者原话') < headerPlaced.indexOf('正文内容。'), '原话区在正文内容之前（正文最前）')
+  check(headerPlaced.indexOf('# 票标题') < headerPlaced.indexOf("## Maintainer's words"), '没有目的区时：一级标题之后才是原话区')
+  check(headerPlaced.indexOf("## Maintainer's words") < headerPlaced.indexOf('正文内容。'), '原话区在正文内容之前（正文最前）')
   const barePlaced = words.replaceOriginalWordsSection('正文内容。\n', e1)
-  check(barePlaced.indexOf('## 维护者原话') === 0, '既没有目的区也没有标题时：原话区就是正文第一行')
+  check(barePlaced.indexOf("## Maintainer's words") === 0, '既没有目的区也没有标题时：原话区就是正文第一行')
 
   // 已有区时只追加：旧条目原样保留、顺序不重排、标题不重复。
   const e2 = { text: '另一段原话', source: '本会话（2026-10-21T22:00+08:00）' }
   const appended = words.replaceOriginalWordsSection(placed, e2)
-  check(appended.split(/\r?\n/).filter((l: string) => /^##\s*维护者原话\s*$/.test(l)).length === 1, '追加后仍然只有一个维护者原话标题')
+  check(appended.split(/\r?\n/).filter((l: string) => /^## Maintainer's words$/.test(l)).length === 1, '追加后仍然只有一个维护者原话标题')
   check(appended.indexOf('> 第一行原话') >= 0 && appended.indexOf('> 第一行原话') < appended.indexOf('> ' + e2.text), '旧原话在前、新原话在后，旧的原样保留')
   check(words.replaceOriginalWordsSection(purposeBody, e1).indexOf('## 目的\n\n把这件事做完。') >= 0, '写原话区不会顺手改目的区的内容')
 
@@ -90,17 +90,17 @@ async function main() {
   const fenceBody = '## 目的\n\n目的内容。\n\n' + FENCE + '\n## 维护者原话\n\n出处：示例出处\n> ' + e1.text.split('\n')[0] + '\n' + FENCE + '\n'
   const fencePlaced = words.replaceOriginalWordsSection(fenceBody, e1)
   check(fencePlaced.indexOf(FENCE + '\n## 维护者原话\n\n出处：示例出处') >= 0, '代码块里的示例原话区原样保留、一个字没被改写')
-  check(fencePlaced.indexOf('出处：' + e1.source) > fencePlaced.indexOf(FENCE), '真的原话区另起在示例之后（目的区一直延伸到文末，新原话追加在区末），没有把示例当成已有区')
+  check(fencePlaced.indexOf('Source: ' + e1.source) > fencePlaced.indexOf(FENCE), '真的原话区另起在示例之后（目的区一直延伸到文末，新原话追加在区末），没有把示例当成已有区')
   const fenceDup = words.applyOriginalWordsEntry(fenceBody, e1, LIMIT)
   check(fenceDup.skipped === false && fenceDup.next !== null, '示例里的文字不算「已经写过」，不会被误判成幂等跳过')
 
   // 60KB 硬顶：写前就超、和写进去才超，两种都拒绝且正文一个字不动。
   const bigBase = '## 目的\n\n' + 'x'.repeat(62000)
   const big = words.applyOriginalWordsEntry(bigBase, e1, LIMIT)
-  check(big.next === null && big.problem.indexOf('硬顶') >= 0 && big.problem.indexOf('一个字没动') >= 0, '正文本来就超过 60KB 时拒绝写入、说清硬顶且正文没动')
+  check(big.next === null && big.problem.indexOf('-character limit') >= 0 && big.problem.indexOf('the body was not touched') >= 0, '正文本来就超过 60KB 时拒绝写入、说清硬顶且正文没动')
   const nearBase = 'x'.repeat(LIMIT - 20)
   const near = words.applyOriginalWordsEntry(nearBase, e1, LIMIT)
-  check(near.next === null && near.problem.indexOf('写进这条原话后') >= 0, '写进去才会超 60KB 时同样拒绝（不写半截）')
+  check(near.next === null && near.problem.indexOf('Writing these words would make the body') >= 0, '写进去才会超 60KB 时同样拒绝（不写半截）')
   const okLong = words.applyOriginalWordsEntry('## 目的\n\n短正文。\n', e1, LIMIT)
   check(okLong.next !== null && okLong.problem === '', '正常长度时照常写入')
 
@@ -126,9 +126,9 @@ async function main() {
   // 整份正文改写时搬回：递进来的新正文没有这一区时，按原位置（目的区后面）搬回、内容原样。
   const wholeIncoming = '# 票标题\n\n## 目的\n\n改写后的目的。\n\nStatus: open\n\n## Comments\n\n## Answer\n'
   const merged = words.restoreOriginalWordsSection(wholeIncoming, placed)
-  check(merged.indexOf('## 维护者原话') > merged.indexOf('改写后的目的。'), '整份替换：盘上的原话区按原位置搬回来（仍在目的区后面）')
-  check(merged.indexOf('## 维护者原话') < merged.indexOf('Status: open'), '整份替换：原话区在字段行之前（没有甩到文末）')
-  check(merged.indexOf('出处：' + e1.source) >= 0 && merged.indexOf('> 第一行原话') >= 0 && merged.indexOf('> 第三行原话（中间的空行照原样保留）') >= 0, '整份替换：搬回来的原话逐字没变')
+  check(merged.indexOf("## Maintainer's words") > merged.indexOf('改写后的目的。'), '整份替换：盘上的原话区按原位置搬回来（仍在目的区后面）')
+  check(merged.indexOf("## Maintainer's words") < merged.indexOf('Status: open'), '整份替换：原话区在字段行之前（没有甩到文末）')
+  check(merged.indexOf('Source: ' + e1.source) >= 0 && merged.indexOf('> 第一行原话') >= 0 && merged.indexOf('> 第三行原话（中间的空行照原样保留）') >= 0, '整份替换：搬回来的原话逐字没变')
   check(words.restoreOriginalWordsSection(placed, purposeBody) === placed, '整份替换：新正文里已经有原话区时原样不动（不合并、不重排）')
 
   // ═══ 二、真工具层：建票带原话、改票追加、重复跳过、缺出处拒绝、进度一起写、整份改写保住 ═══
@@ -174,10 +174,10 @@ async function main() {
   check(cItem.status === 'ok' && !!cItem.originalWords && cItem.originalWords.source === e1.source, '建票写后核对那一步回 ok、记了写的是哪一条原话')
   const g0 = await getTool.run(execA, { key: cKey })
   const body0 = readBody(g0)
-  check(body0.indexOf('## 目的') >= 0 && body0.indexOf('## 维护者原话') > body0.indexOf('## 目的'), '读回正文：原话区在建出来的票上、排在目的区后面')
-  check(body0.indexOf('## 维护者原话') < body0.indexOf('## 边界'), '读回正文：原话区夹在目的区与下一节之间')
+  check(body0.indexOf('## 目的') >= 0 && body0.indexOf("## Maintainer's words") > body0.indexOf('## 目的'), '读回正文：原话区在建出来的票上、排在目的区后面')
+  check(body0.indexOf("## Maintainer's words") < body0.indexOf('## 边界'), '读回正文：原话区夹在目的区与下一节之间')
   check(body0.indexOf(quoteBlock) >= 0, '读回正文：原话逐字读得回来（出处行 + 引用块，空行保留）')
-  check(body0.split('\n').some((l: string) => l.indexOf('> 出处：') === 0) === false, '读回正文：出处行没有被写进引用块里')
+  check(body0.split('\n').some((l: string) => l.indexOf('> Source: ') === 0) === false, '读回正文：出处行没有被写进引用块里')
 
   // ② 改票追加第二条：只追加、不重排、标题不重复。
   const w1 = await patchTool.run(execA, { key: cKey, originalWords: e2 })
@@ -187,7 +187,7 @@ async function main() {
   const g1 = await getTool.run(execA, { key: cKey })
   const body1 = readBody(g1)
   check(body1.indexOf('> 第一行原话') >= 0 && body1.indexOf('> 第一行原话') < body1.indexOf('> ' + e2.text), '读回正文：第一条在前、第二条在后，旧的原样保留')
-  check(body1.split(/\r?\n/).filter((l: string) => /^##\s*维护者原话\s*$/.test(l)).length === 1, '读回正文：追加以后仍然只有一个维护者原话标题')
+  check(body1.split(/\r?\n/).filter((l: string) => /^## Maintainer's words$/.test(l)).length === 1, '读回正文：追加以后仍然只有一个维护者原话标题')
 
   // ③ 同一段原话 + 同一出处再写一次：幂等跳过，正文一个字不改。
   const w2 = await patchTool.run(execA, { key: cKey, originalWords: e2 })
@@ -199,7 +199,7 @@ async function main() {
   // ④ 缺出处拒绝：整笔拒绝、正文一个字不动（原话是一字不改的东西，不替调用方编出处）。
   const w3 = await patchTool.run(execA, { key: cKey, originalWords: { text: '没有出处的原话' } })
   check(!!w3 && w3.status !== 'ok', '缺出处的原话被整笔拒绝（实得 ' + String(w3 && w3.status) + '）')
-  check(String((w3 && w3.text) || '').indexOf('出处') >= 0 && String((w3 && w3.text) || '').indexOf('Nothing was changed this time') >= 0, '拒绝说明里讲清出处必填、也说了一个字都没动')
+  check(String((w3 && w3.text) || '').indexOf('source is required') >= 0 && String((w3 && w3.text) || '').indexOf('Nothing was changed this time') >= 0, '拒绝说明里讲清出处必填、也说了一个字都没动')
   const g3 = await getTool.run(execA, { key: cKey })
   check(readBody(g3) === body1, '被拒以后正文一个字没动')
 
@@ -226,8 +226,8 @@ async function main() {
   const bothBody = readBody(gBoth)
   const bothProgress = (gBoth.data && gBoth.data.ticket && gBoth.data.ticket.progress) || null
   check(!!bothProgress && bothProgress.percent === 50 && bothProgress.note === '一半', '一起写时进度读回来是 50%（实得 ' + JSON.stringify(bothProgress) + '）')
-  check(bothBody.indexOf('- 进度：50%') >= 0 && bothBody.indexOf(e3.text) >= 0, '一起写时正文里进度与原话都在')
-  check(bothBody.indexOf('## 维护者原话') > bothBody.indexOf('## 目的') && bothBody.indexOf('## 维护者原话') < bothBody.indexOf('## 进度'), '一起写时原话区仍在目的区后面、进度区之前')
+  check(bothBody.indexOf('- Progress: 50%') >= 0 && bothBody.indexOf(e3.text) >= 0, '一起写时正文里进度与原话都在')
+  check(bothBody.indexOf("## Maintainer's words") > bothBody.indexOf('## 目的') && bothBody.indexOf("## Maintainer's words") < bothBody.indexOf('## Progress'), '一起写时原话区仍在目的区后面、进度区之前')
 
   // ⑧ 整份正文改写（自带一级标题）不丢原话区：搬回来时按原位置放。
   // 整段替换要带正文指纹（#1311 的正文指纹锁，docs/agents/issue-tracker.md 第 56 行）：先用
@@ -240,8 +240,8 @@ async function main() {
   check(!!w4 && w4.status === 'ok', '整份正文改写回 ok（实得 ' + String(w4 && w4.status) + '，说明 ' + String((w4 && w4.text) || '').slice(0, 160) + '）')
   const g4 = await getTool.run(execA, { key: cKey })
   const body4 = readBody(g4)
-  check(body4.indexOf('## 维护者原话') >= 0, '整份正文改写以后维护者原话区还在（没有被整份覆盖丢掉）')
-  check(body4.indexOf('## 维护者原话') > body4.indexOf('改写后的目的。'), '搬回来的原话区仍跟在目的区后面')
+  check(body4.indexOf("## Maintainer's words") >= 0, '整份正文改写以后维护者原话区还在（没有被整份覆盖丢掉）')
+  check(body4.indexOf("## Maintainer's words") > body4.indexOf('改写后的目的。'), '搬回来的原话区仍跟在目的区后面')
   check(body4.indexOf(quoteBlock) >= 0 && body4.indexOf(e2.text) >= 0, '搬回来的原话逐字没变（两条都在）')
 
   try { dispose.dispose() } catch (e) {}

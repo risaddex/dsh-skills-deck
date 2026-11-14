@@ -25,9 +25,9 @@
   "data": {
     "body": {
       "digest": "<DIGEST>",
-      "length": 215,
+      "length": 221,
       "mode": "excerpt",
-      "text": "<!-- DSH-FORMAT: md-v1 -->\n<!-- DSH-IDEMPOTENCY-KEY: deck-dafdda6d-5666666 -->\n<!-- DSH-CREATED: <TIME> -->\n# 01: 金标准演示票\n\n**What to build:** 正文\n\n**Blocked by:** None (can start immediately)\n\n## 进度\n"
+      "text": "<!-- DSH-FORMAT: md-v1 -->\n<!-- DSH-IDEMPOTENCY-KEY: deck-dafdda6d-5666666 -->\n<!-- DSH-CREATED: <TIME> -->\n# 01: 金标准演示票\n\n**What to build:** 正文\n\n**Blocked by:** None (can start immediately)\n\n## Progress\n"
     },
     "commentCount": 0,
     "comments": [],
@@ -68,7 +68,7 @@
   "items": [],
   "notes": [
     "The reverse blocking edges were not fetched this time (blocking=false, one reverse-edge query skipped): the empty blocks entry above does not mean 0, so call again with blocking=true if you need them.",
-    "The body is 215 characters and is complete in data.body.text (digest <DIGEST12>): writing the body back still needs body='full' first, to read the digest and pass bodyDigest.",
+    "The body is 221 characters and is complete in data.body.text (digest <DIGEST12>): writing the body back still needs body='full' first, to read the digest and pass bodyDigest.",
     "Comments default to 0 (there are 0 in total): to read the comment text, call again with comments=N (up to 200); the total is already given here."
   ],
   "ok": true,

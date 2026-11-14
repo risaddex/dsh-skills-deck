@@ -248,7 +248,7 @@ enhancements:
     why: 原文只规定 triage 角色与 wayfinder 的 claimed/resolved，没有定义「做完」的写法；本地 tracker 里 resolved 已是既有用词（issue-tracker-local.md 第 30 行），沿用而不是另造一个词。
     alternatives: 关闭就删票（破坏原文一票一文件）；只写隐藏状态（可见 Status 行是原文给读者看的，藏起来读者就看不到了）。
   - id: progress-section
-    what: 在票文件末尾追加 `## 进度` 区块，按时间倒序记录百分比与说明。
+    what: 在票文件末尾追加 `## Progress` 区块（旧票的 `## 进度` 照样认），按时间倒序记录百分比与说明。
     why: GitHub 后端已有同一套进度追加机制（src/shared/issue-file/src/progress.ts，#1090/#1403）；Markdown 后端沿用，两个后端行为一致，面板与工具不用分叉。
     alternatives: 只存插件状态文件（用户翻文件时看不到进度）；改成隐藏注释（进度是给人看的，藏起来违背它存在的意义）。
   - id: numbering-display-fallback

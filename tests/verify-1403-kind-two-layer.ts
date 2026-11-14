@@ -8,7 +8,7 @@
 // 读回来是不是还认得出？给人读的口径在规格 #1403 与工具说明里，这里给机器盯。
 //
 // 用真闸 + 真账本 + 真注册表 + 本地 Markdown 房间（与 verify-1106 同一套夹具写法）：
-//   一、六个位置各建一张，逐项核对盘上的类型标签、正文文件头标记、## 进度、Type 行、父子注释；
+//   一、六个位置各建一张，逐项核对盘上的类型标签、正文文件头标记、## Progress、Type 行、父子注释；
 //   二、四个 wayfinder label 各建一张地图工单，核对 Type 行就是去前缀的那一个；
 //   三、兜底 issue 原样收任何标签（包括类型标签）；
 //   四、读回来：带 wayfinder:map 标签的新地图票仍读成地图（parse 的判定顺序），地图工单读得到父票；
@@ -142,10 +142,11 @@ async function main() {
 // #1790 缺陷 A：状态住在可见 Status 行，普通标签住在隐藏 DSH-LABELS 注释里。
 const hiddenLabelsLine = (text: string) => ((text.match(/^<!-- DSH-LABELS: .* -->$/m) || [''])[0] || '').trim()
 const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m) || [''])[0] || '').trim()
-  const hasProgress = (text: string) => /^##\s*进度\s*$/m.test(text)
+  // #10：建票补的是英文标题；老票的中文标题由读侧兼容，这里只验写侧。
+  const hasProgress = (text: string) => /^## Progress$/m.test(text)
 
   // ── 一、六个位置各建一张 ──
-  console.log('— 一、六个位置值：类型标签、正文文件头标记、## 进度、Type 行、父子注释')
+  console.log('— 一、六个位置值：类型标签、正文文件头标记、## Progress、Type 行、父子注释')
   const mapRes = await create({ title: '两层地图', kind: 'map' })
   const mapKey = mapRes && mapRes.data && mapRes.data.ticket ? String(mapRes.data.ticket.key) : ''
   if (mapKey) {
@@ -156,9 +157,9 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     check(/<!-- DSH-LABELS: .*wayfinder:map -->/m.test(text), 'map 的 DSH-LABELS 注释带 wayfinder:map')
     check(!/DSH-ISSUE-KIND/.test(text), 'map 不写正文文件头标记')
     check(typeLines(text).length === 0, 'map 不写 Type 行（尤其没有 Type: map）')
-    check(hasProgress(text), 'map 的正文补了 ## 进度')
+    check(hasProgress(text), 'map 的正文补了 ## Progress')
     const order = ['## Destination', '## Notes', '## Decisions so far', '## Not yet specified', '## Out of scope'].map((h) => text.indexOf(h))
-    check(order.every((i) => i >= 0) && text.indexOf('## 进度') > Math.max.apply(null, order), 'map 的五节在前、## 进度在五节之后')
+    check(order.every((i) => i >= 0) && text.indexOf('## Progress') > Math.max.apply(null, order), 'map 的五节在前、## Progress 在五节之后')
   }
   const specRes = await create({ title: '两层规格', kind: 'spec', feature: 'two-layer-spec' })
   const specKey = specRes && specRes.data && specRes.data.ticket ? String(specRes.data.ticket.key) : ''
@@ -171,7 +172,7 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     check(/^<!-- DSH-LABELS: .*ready-for-agent -->$/m.test(text), 'spec 的 DSH-LABELS 带 ready-for-agent')
     check(!/DSH-ISSUE-KIND/.test(text), '新布局的 spec 不再写旧类型标记')
     check(typeLines(text).length === 0, 'spec 不写 Type 行')
-    check(hasProgress(text), 'spec 也补了 ## 进度（#1403 起所有位置都补）')
+    check(hasProgress(text), 'spec 也补了 ## Progress（#1403 起所有位置都补）')
   }
   const mapTicketRes = await create({ title: '地图下的调研票', kind: 'map-ticket', label: 'wayfinder:research', parentKey: '00' })
   const mapTicketKey = mapTicketRes && mapTicketRes.data && mapTicketRes.data.ticket ? String(mapTicketRes.data.ticket.key) : ''
@@ -185,7 +186,7 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     check(!/DSH-ISSUE-KIND/.test(text), 'map-ticket 不写正文文件头标记')
     check(/<!-- DSH-PARENT: 00 -->/.test(text), 'map-ticket 的文件头写父票 00')
     check(String(ticket.parentKey || '') === '00', 'map-ticket 读回来父票是 00（实得 ' + ticket.parentKey + '）')
-    check(hasProgress(text), 'map-ticket 的正文补了 ## 进度')
+    check(hasProgress(text), 'map-ticket 的正文补了 ## Progress')
   }
   const specTicketRes = specKey ? await create({ title: '规格下的实施票', kind: 'spec-ticket', parentKey: specKey, feature: specFeature }) : null
   if (specTicketRes && specTicketRes.data && specTicketRes.data.ticket) {
@@ -198,7 +199,7 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     check(/^\*\*Status:\*\* ready-for-agent$/m.test(text), 'spec-ticket 的可见 Status 行是 ready-for-agent（实得 ' + JSON.stringify(visibleStatusLine(text)) + '）')
     check(hiddenLabelsLine(text).indexOf('ready-for-agent') < 0, 'spec-ticket 的隐藏标签不含 triage（#1790：状态只写可见行，实得 ' + JSON.stringify(hiddenLabelsLine(text)) + '）')
     check(typeLines(text).length === 0, 'spec-ticket 不写 Type 行')
-    check(hasProgress(text), 'spec-ticket 也补了 ## 进度')
+    check(hasProgress(text), 'spec-ticket 也补了 ## Progress')
   }
   const bugRes = await create({ title: '两层缺陷票', kind: 'bug' })
   if (bugRes && bugRes.data && bugRes.data.ticket) {
@@ -208,7 +209,7 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     check(hiddenLabelsLine(text).indexOf('needs-triage') < 0, 'bug 的隐藏标签不含 triage（#1790：needs-triage 住在可见行，实得 ' + JSON.stringify(hiddenLabelsLine(text)) + '）')
     check(typeLines(text).length === 0, 'bug 不写 Type 行')
     check(!/DSH-ISSUE-KIND/.test(text), 'bug 不写旧类型标记')
-    check(hasProgress(text), 'bug 的正文补了 ## 进度')
+    check(hasProgress(text), 'bug 的正文补了 ## Progress')
   }
   const issueRes = await create({ title: '两层兜底票', kind: 'issue', labels: ['wayfinder:map', 'bug', 'ready-for-agent'] })
   if (issueRes && issueRes.data && issueRes.data.ticket) {
@@ -217,7 +218,7 @@ const visibleStatusLine = (text: string) => ((text.match(/^\*\*Status:\*\* .*$/m
     check(hiddenLabelsLine(text) === '<!-- DSH-LABELS: wayfinder:map, bug -->', 'issue 兜底原样落盘非 triage 标签（实得 ' + hiddenLabelsLine(text) + '）')
     check(/^\*\*Status:\*\* ready-for-agent$/m.test(text), 'issue 兜底把调用方给的 triage 标签落成可见状态（实得 ' + JSON.stringify(visibleStatusLine(text)) + '）')
     check(typeLines(text).length === 0, 'issue 不写 Type 行')
-    check(hasProgress(text), 'issue 的正文补了 ## 进度')
+    check(hasProgress(text), 'issue 的正文补了 ## Progress')
   }
   const issue2 = await create({ title: '兜底票带了工单标签', kind: 'issue', labels: ['wayfinder:task'] })
   if (issue2 && issue2.data && issue2.data.ticket) {

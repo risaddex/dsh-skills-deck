@@ -195,7 +195,7 @@ async function main() {
     check(files.length === 1, 'deck_issue_create 真的落到了盘上的票文件（' + files.join('、') + '）')
     const text = files.length ? ws.readTicket(files[0], 'demo-spec') : ''
     check(text.indexOf('wayfinder:') < 0, '普通票（issue）不带 wayfinder: 系列标签')
-    check(text.indexOf('## 进度') >= 0, '进度区写进了票文件')
+    check(text.indexOf('## Progress') >= 0, '进度区写进了票文件（#10 起写英文标题）')
   }
 
   // ── ②a deck_issue_create 的 spec / spec-ticket 两档（#1277、#1403）：票面文件头写对象类型标记 ──
@@ -219,7 +219,7 @@ async function main() {
     check(text.indexOf('DSH-ISSUE-KIND') < 0, '新布局不再写旧的 DSH-ISSUE-KIND 标记')
     check(text.indexOf('parentKey:') < 0, '规格是顶层容器，票面不写父注释（前 8 行：' + JSON.stringify(header) + '）')
     check(text.indexOf('Type: spec') < 0, '规格票不再写 Type: spec 这一行')
-    check(text.indexOf('## 进度') >= 0, '规格票也补进度区（#1403 起所有位置统一）')
+    check(text.indexOf('## Progress') >= 0, '规格票也补进度区（#1403 起所有位置统一）')
     const t = await callTool('deck_issue_create', { title: '演示实施票', kind: 'spec-ticket', feature: 'demo-spec', parentKey: specKey, body: '**要构建什么：** 做一件事\n' })
     const ticketKey = String((t.data && t.data.ticket && t.data.ticket.key) || '')
     check(envelopeOk(t) && t.status === 'ok' && ticketKey, 'deck_issue_create 正例：建成实施票（key=' + ticketKey + '）')

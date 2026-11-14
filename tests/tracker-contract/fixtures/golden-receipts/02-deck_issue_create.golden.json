@@ -30,7 +30,7 @@
     },
     "ticket": {
       "blockedBy": [],
-      "body": "<!-- DSH-FORMAT: md-v1 -->\n<!-- DSH-IDEMPOTENCY-KEY: deck-dafdda6d-5666666 -->\n<!-- DSH-CREATED: <TIME> -->\n# 01: 金标准演示票\n\n**What to build:** 正文\n\n**Blocked by:** None (can start immediately)\n\n## 进度\n",
+      "body": "<!-- DSH-FORMAT: md-v1 -->\n<!-- DSH-IDEMPOTENCY-KEY: deck-dafdda6d-5666666 -->\n<!-- DSH-CREATED: <TIME> -->\n# 01: 金标准演示票\n\n**What to build:** 正文\n\n**Blocked by:** None (can start immediately)\n\n## Progress\n",
       "closedAt": null,
       "comments": [],
       "createdAt": "<TIME>",
@@ -48,7 +48,7 @@
   },
   "items": [],
   "notes": [
-    "Body sections were added for you: ## 进度",
+    "Body sections were added for you: ## Progress",
     "This call used an automatic idempotency anchor (same session + same title + same labels; a repeated call inside the 5-minute window reuses the same ticket)."
   ],
   "ok": true,

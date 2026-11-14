@@ -160,14 +160,14 @@ async function createIssueInner(repo: RepositoryRef, input: CreateInput, ctx: Me
           try {
             if (typeof issue.body === 'string' && issue.body) {
               const spec = (parsed.owner + '/' + parsed.name);
-              const section = '## 待补标签（只读未落盘）\n\n以下标签这次没确认挂上（'
-                + wantLabels.join('、')
-                + '）：你在「' + spec + '」上只有读权限时，标签建不上、打不上——这不是网络问题。'
-                + '在只读仓库上建票能成、读票能看，但补标签要 triage 及以上权限（新建标签要 push）。'
-                + '有权限后请把这些标签补打上；要在只读库上长期协作，建议先 fork 到自己名下，再把工作区 origin 指向 fork（插件只认 origin，不代改配置）。\n';
-              const hasSection = /^##\s*待补标签.+未落盘.+$/m.test(issue.body);
+              const section = '## Labels still to add (read-only, not written)\n\nThese labels were not confirmed on this ticket ('
+                + wantLabels.join(', ')
+                + '): with read-only access to "' + spec + '", labels cannot be created or applied; this is not a network problem. '
+                + 'On a read-only repository a ticket can be created and read, but adding labels needs triage access or above (creating a label needs push). '
+                + 'Once you have access, add these labels; to collaborate on a read-only repository for a long time, fork it first and point the workspace origin at the fork (the plugin only reads origin and never changes that setting for you).\n';
+              const hasSection = /^##\s*(?:待补标签.+未落盘.+|Labels still to add \(read-only, not written\))[ \t]*$/m.test(issue.body);
               const newBody = hasSection
-                ? issue.body.replace(/^##\s*待补标签.+未落盘.+$\s*[\s\S]*?(?=^##\s|$(?![\s\S]))/m, section)
+                ? issue.body.replace(/^##\s*(?:待补标签.+未落盘.+|Labels still to add \(read-only, not written\))[ \t]*$\s*[\s\S]*?(?=^##\s|$(?![\s\S]))/m, section)
                 : (issue.body.replace(/\s*$/, '') + '\n\n' + section);
               const ur = await updateIssue(repo, issue.key, { body: newBody }, ctx);
               if (ur && ur.ok === true && ur.data && typeof ur.data.body === 'string') issue.body = ur.data.body;

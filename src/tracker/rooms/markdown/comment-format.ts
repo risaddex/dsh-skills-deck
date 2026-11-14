@@ -37,10 +37,10 @@ import type { Comment } from '../../contract/entities.js'
 /** 插件追加的评论区标题。写侧和读侧都从这里取，不要在别处再手写一份。 */
 export const COMMENTS_SECTION_TITLE = 'Comments'
 /** 插件追加的进度区标题（老写法带百分比，例如 `## 进度：30%`）。 */
-export const PROGRESS_SECTION_TITLE = '进度'
+export const PROGRESS_SECTION_TITLE = 'Progress'
 
 /** 插件自己往票文件里追加的段标题。它们不在原文模板的 objects 里，但同样不能当成评论正文。 */
-const PLUGIN_SECTION_TITLES = [COMMENTS_SECTION_TITLE, PROGRESS_SECTION_TITLE, '维护者原话', '目的']
+const PLUGIN_SECTION_TITLES = [COMMENTS_SECTION_TITLE, PROGRESS_SECTION_TITLE, "Maintainer's words", 'Purpose']
 
 /** 所有已知结构段标题（原文模板 + 插件追加）。小写后比对，保留原写法没有意义，只用于认标题。 */
 const STRUCTURAL_TITLES: string[] = (() => {
@@ -83,7 +83,11 @@ function headingTitleOf(line: string): string {
 function normalizedTitle(title: string): string {
   const text = String(title || '').trim()
   if (!text) return ''
-  return /^进度(?:[ \t]*[:：].*)?$/.test(text) ? PROGRESS_SECTION_TITLE : text
+  // 同一个逻辑区只有一个名字：读中文旧票与英文新票时，共用边界与追加位置。
+  if (/^(?:进度|Progress)(?:[ \t]*[:：].*)?$/i.test(text)) return PROGRESS_SECTION_TITLE
+  if (/^(?:维护者原话|(?:The\s+)?maintainer['\u2019]s\s+(?:own\s+)?words)$/i.test(text)) return "Maintainer's words"
+  if (/^(?:目的|Purpose)$/i.test(text)) return 'Purpose'
+  return text
 }
 
 /** 这一行是不是已知结构段的标题；是就返回归一后的标题，不是返回空串。 */

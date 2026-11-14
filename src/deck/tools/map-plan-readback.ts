@@ -1,7 +1,7 @@
 // src/deck/tools/map-plan-readback.ts —— 地图骨架建完之后的读回核对（#1413；从 map-plan-create.ts 拆出）
 //
-// 为什么单独拆：这段核对（地图五节齐不齐、有没有 ## 进度、子票的必备标签与类型标签对不对、父票指向谁、
-// ## 进度在不在、Type 行写对没有）有六十多行，留在 map-plan-create.ts 里会把那份文件顶过
+// 为什么单独拆：这段核对（地图五节齐不齐、有没有 ## Progress、子票的必备标签与类型标签对不对、父票指向谁、
+// ## Progress 在不在、Type 行写对没有）有六十多行，留在 map-plan-create.ts 里会把那份文件顶过
 // tests/verify-file-granularity.ts 的 350 行有效行上限。拆出来一行行为都没动：发后端的次数、
 // notes 与 items 的文案和先后顺序，与拆出来之前逐字一致。
 //
@@ -83,10 +83,10 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
     const heads = MAP_BLOCK_TITLES.map((h) => mapBody.indexOf('## ' + h))
     const missingHeads = MAP_BLOCK_TITLES.filter((h, i) => heads[i] < 0)
     if (missingHeads.length) problems.push('The map is missing these of the five sections: ' + missingHeads.join(', '))
-    if (stripProgressSections(mapBody) === mapBody) problems.push('the map has no ## 进度 section')
-    const at = mapBody.search(/^##\s*进度\s*$/m)
+    if (stripProgressSections(mapBody) === mapBody) problems.push('the map has no ## Progress section')
+    const at = mapBody.search(/^##\s*(?:进度|Progress)\s*$/im)
     const knownHeads = heads.filter((i) => i >= 0)
-    if (at >= 0 && knownHeads.length && at < Math.max.apply(null, knownHeads)) problems.push('the ## 进度 of the map is not placed after the five sections')
+    if (at >= 0 && knownHeads.length && at < Math.max.apply(null, knownHeads)) problems.push('the ## Progress of the map is not placed after the five sections')
   }
   const rows = Array.isArray(liveRows) ? (liveRows as Record<string, unknown>[]) : []
   const rowByKey = new Map<string, Record<string, unknown>>()
@@ -126,7 +126,7 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
       if (gotType !== wantType) problems.push('sub-issue "' + planKey + '" has ' + gotType + ' type labels (expected ' + wantType + ')')
     }
     if (String(row.parentKey || '') !== String(mapKey)) problems.push('sub-issue "' + planKey + '" is "' + String(row.parentKey || '') + '" (expected the map ' + mapKey + ')')
-    if (stripProgressSections(childBody) === childBody) problems.push('sub-issue "' + planKey + '" has no ## 进度 section')
+    if (stripProgressSections(childBody) === childBody) problems.push('sub-issue "' + planKey + '" has no ## Progress section')
     if (looksLikeWholeFile(childBody)) {
       checkedTypeLine = true
       const typeRows = childBody.match(/^\s*Type\s*[：:].*$/gm) || []
@@ -146,7 +146,7 @@ export async function readbackMapPlan(args: MapPlanReadbackArgs): Promise<MapPla
     const ev = failureFields(null, 'write', 'verify')
     for (const one of problems.slice(0, 8)) items.push(Object.assign({ key: '', role: 'verify', status: 'failed', reason: one }, ev))
   } else if (mapRow && liveRows) {
-    notes.push('The read-back check after building passed: the five map sections and ## 进度 are all present; ' + Object.keys(keys).length + ' sub-issues: the parent, the type labels and ## 进度' + (checkedTypeLine ? ' and the Type line' : '') + ' all match.')
+    notes.push('The read-back check after building passed: the five map sections and ## Progress are all present; ' + Object.keys(keys).length + ' sub-issues: the parent, the type labels and ## Progress' + (checkedTypeLine ? ' and the Type line' : '') + ' all match.')
   } else {
     notes.push('Read-back check after building: the map came back, but the sub-issues were not listed under the parent (' + String(args.pickedNote || 'the backend did not give a reason') + '), so this time the sub-issues were not checked.')
   }
