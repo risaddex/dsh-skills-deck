@@ -133,7 +133,7 @@ export async function setParent(
     // 或并发改了，如实回 conflict——调用方凭原文（回读到的票面）自己核对远端现在是什么。
     const want = parentKey === null ? null : String(parentKey)
     if (issue.parentKey !== want) {
-      return fail(ERROR_KIND.CONFLICT as ErrorKind, `conflict: parent write readback mismatch (want ${want === null ? '无' : '#' + want} got ${issue.parentKey === null ? '无' : '#' + issue.parentKey})`, JSON.stringify(raw))
+      return fail(ERROR_KIND.CONFLICT as ErrorKind, `conflict: parent write readback mismatch (want ${want === null ? 'none' : '#' + want} got ${issue.parentKey === null ? 'none' : '#' + issue.parentKey})`, JSON.stringify(raw))
     }
     return { ok: true, data: issue }
   } catch (err: unknown) {
@@ -205,7 +205,7 @@ export async function setAssignees(
       // 一个写请求都没发出去，远端认领还是原样，所以原文给空串。
       return fail(
         ERROR_KIND.NOTFOUND as ErrorKind,
-        `认领人用户名不存在：${unresolved.join('、')}。原认领没有改动，这次没有发出写请求。`,
+        `Assignee usernames that do not exist: ${unresolved.join(', ')}. The existing assignees were not changed, and no write request was sent this time.`,
         '',
       )
     }

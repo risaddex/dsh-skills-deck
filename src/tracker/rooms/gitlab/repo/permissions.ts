@@ -167,7 +167,7 @@ export async function getRepoPermissions(repo: RepositoryRef, ctx: OpContext): P
   if (!looksLikeProjectPath(id)) {
     // 与 getCurrentUser 同一道入口检查，理由见 repo/current-user.ts 那条函数的注释；这一格的 reason 已登记。
     emitReadDegraded(ctx, 'permissions', 'permissions:repo-ref', Date.now() - t0)
-    return fail(ERROR_KIND.NOTFOUND as ErrorKind, 'getRepoPermissions: repo.refId 缺失或不像是「分组/项目」', '')
+    return fail(ERROR_KIND.NOTFOUND as ErrorKind, 'getRepoPermissions: repo.refId is missing or does not look like "group/project"', '')
   }
 
   try {
@@ -176,19 +176,19 @@ export async function getRepoPermissions(repo: RepositoryRef, ctx: OpContext): P
     if (res.code !== 0) {
       emitReadDegraded(ctx, 'permissions', 'permissions:transport', Date.now() - t0)
       // 原文 = 这一次 glab 调用的进程结果。
-      return failGlab(res, res.stderr || res.stdout || 'getRepoPermissions 没问出来', res, ctx)
+      return failGlab(res, res.stderr || res.stdout || 'getRepoPermissions could not get an answer', res, ctx)
     }
 
     const text = String(res.stdout || '').trim()
     if (!text || text === 'null') {
       emitReadDegraded(ctx, 'permissions', 'permissions:empty', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE as ErrorKind, 'getRepoPermissions: 回包是空串或 null，权限问不出来', res.stdout)
+      return fail(ERROR_KIND.PARSE as ErrorKind, 'getRepoPermissions: the response is an empty string or null, so the permissions cannot be determined', res.stdout)
     }
 
     const bag = parseJsonObject(text)
     if (!bag) {
       emitReadDegraded(ctx, 'permissions', 'permissions:json', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE as ErrorKind, 'getRepoPermissions: 回包不是 JSON 对象', res.stdout)
+      return fail(ERROR_KIND.PARSE as ErrorKind, 'getRepoPermissions: the response is not a JSON object', res.stdout)
     }
 
     const level = maxAccessLevel(bag['permissions'])
@@ -198,7 +198,7 @@ export async function getRepoPermissions(repo: RepositoryRef, ctx: OpContext): P
       emitReadDegraded(ctx, 'permissions', 'permissions:no-fields', Date.now() - t0)
       return fail(
         ERROR_KIND.PARSE as ErrorKind,
-        'getRepoPermissions: 回包里 permissions.project_access 与 group_access 都没有可用的 access_level',
+        'getRepoPermissions: neither permissions.project_access nor group_access in the response has a usable access_level',
         text,
       )
     }

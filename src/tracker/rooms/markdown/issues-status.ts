@@ -171,7 +171,7 @@ export async function rewriteTicketText(
           const hidden = read.statusConflict.hidden.length ? read.statusConflict.hidden[0] : ''
           return failAs(
             ERROR_KIND.PARSE,
-            '这张票的可见 Status 行写的是「' + read.statusConflict.visible + '」，隐藏 DSH-LABELS 里的 triage 标签写的是「' + hidden + '」：两处冲突，这次一个字都没写。请显式给一个状态，或先用 setLabels 把两处归一。',
+            'The visible Status line of this ticket says "' + read.statusConflict.visible + '", while the triage label in the hidden DSH-LABELS says "' + hidden + '": the two conflict, so not a single character was written. Give a status explicitly, or first use setLabels to make the two agree.',
             JSON.stringify(read.statusConflict),
           )
         }
@@ -188,7 +188,7 @@ export async function rewriteTicketText(
       applyLabelColors(iss, colorMap)
       return { ok: true, data: iss }
     } catch (e) {
-      return failFromError(e, ctx, '改这张票的文件时出错')
+      return failFromError(e, ctx, 'error while changing the file of this ticket')
     }
   })
 }

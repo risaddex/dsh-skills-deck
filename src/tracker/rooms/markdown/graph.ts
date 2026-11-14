@@ -27,13 +27,13 @@ export async function readBlockedBy(ctx: OpContext, repo: RepoWithPath | null, k
   // 定位这一步会去列 `.scratch`（listEfforts），目录读不出来时它抛错：在这里转成三段式失败。
   let r: Awaited<ReturnType<typeof resolveIssueFile>>
   try{ r=await resolveIssueFile(ctx,repo,norm,{mode:'read'}) }
-  catch(e){ return failFromError(e,ctx,'按编号找这张票的文件时出错') }
+  catch(e){ return failFromError(e,ctx,'error while finding the file of this ticket by number') }
   if(!r.ok)return{ok:false,error:r.error}
   try{
     const txt=await readTextFile(ctx,r.path)
     const issue=parseMd(txt,{key:norm,parentKey:'00',isMap:false,effortId:r.effortId})
     return{ok:true,data:issue.blockedBy||[],effortId:r.effortId}
-  }catch(e){return failFromError(e,ctx,'读这张票的阻塞关系时出错')}
+  }catch(e){return failFromError(e,ctx,'error while reading the blocking relations of this ticket')}
 }
 export async function getDependenciesForKey(ctx: OpContext, repo: RepoWithPath | null, key: string, opts?: DepsOpts): Promise<{ ok: true; data: Dependencies } | GraphFailure>{
   const plat=getPlat(ctx)
@@ -42,7 +42,7 @@ export async function getDependenciesForKey(ctx: OpContext, repo: RepoWithPath |
   // 想一次问多个编号，本地房没法把多个答案塞进这一个返回值里。与其像别处那样「只回第一个、
   // 其余悄悄丢掉」，不如当场说清：请逐个编号调用。今天没有调用方传它（全仓六处调用点都传空对象）。
   if(opts&&Array.isArray(opts.keys)&&opts.keys.length){
-    return failAs(ERROR_KIND.UNSUPPORTED,'markdown getDependencies unsupported (opts.keys)：契约的返回形状只装得下一个编号的依赖关系，要多个请逐个编号调用',JSON.stringify({key:key,keys:opts.keys}))
+    return failAs(ERROR_KIND.UNSUPPORTED,'markdown getDependencies unsupported (opts.keys): the contract return shape only holds the dependencies of one number; call it once per number',JSON.stringify({key:key,keys:opts.keys}))
   }
   const normalizedKey=String(key).padStart(2,'0')
   const r=await readBlockedBy(ctx,repo,normalizedKey)
@@ -54,7 +54,7 @@ export async function getDependenciesForKey(ctx: OpContext, repo: RepoWithPath |
   // 本 effort 的目录（找不到就退回仓库根 issues 夹具形态）
   let efforts: Awaited<ReturnType<typeof listEfforts>>
   try{ efforts=await listEfforts(ctx) }
-  catch(e){ return failFromError(e,ctx,'列出这个仓库的工作单元时出错') }
+  catch(e){ return failFromError(e,ctx,'error while listing the work units of this repository') }
   const mine=efforts.find(function(e){ return e.effortId===effortId })
   const idirs=mine?[plat.join(mine.dir,'issues')]:[]
   // 回填 blockedBy 的 title/state：同 effort 内解析（'00' 指本 effort 的地图）
@@ -84,7 +84,7 @@ export async function getDependenciesForKey(ctx: OpContext, repo: RepoWithPath |
     // 列不出这个工作单元的票目录时如实失败，不当成「这里没有票」：反向聚合少扫一部分，
     // 「谁在等这张票」这个答案会悄悄变少，而它正是判断一张票能不能开工的依据（#1174 根因一）。
     try{ files=await listDirOrThrow(ctx,idir) }
-    catch(e){ return failFromError(e,ctx,'读这个工作单元的票目录时出错') }
+    catch(e){ return failFromError(e,ctx,'error while reading the ticket directory of this work unit') }
     for(const f of files){
       if(!f||!f.endsWith('.md')) continue
       const m=/^(\d+)-/.exec(f)
@@ -120,7 +120,7 @@ export async function readBlockedByGraph(ctx: OpContext, repo: RepoWithPath | nu
   const plat=getPlat(ctx)
   let efforts: Awaited<ReturnType<typeof listEfforts>>
   try{ efforts=await listEfforts(ctx) }
-  catch(e){ return failFromError(e,ctx,'列出这个仓库的工作单元时出错') }
+  catch(e){ return failFromError(e,ctx,'error while listing the work units of this repository') }
   const mine=efforts.find(function(e){ return e.effortId===(effortId||'') })
   const graph=new Map<string,string[]>()
   if(!mine)return{ok:true,graph:graph}
@@ -128,7 +128,7 @@ export async function readBlockedByGraph(ctx: OpContext, repo: RepoWithPath | nu
   for(const idir of idirs){
     let files: string[]
     try{ files=await listDirOrThrow(ctx,idir) }
-    catch(e){ return failFromError(e,ctx,'读这个工作单元的票目录时出错') }
+    catch(e){ return failFromError(e,ctx,'error while reading the ticket directory of this work unit') }
     for(const f of files){
       if(!f||!f.endsWith('.md'))continue
       const m=/^(\d+)-/.exec(f)
@@ -138,7 +138,7 @@ export async function readBlockedByGraph(ctx: OpContext, repo: RepoWithPath | nu
         const txt=await readTextFile(ctx,plat.join(idir,f))
         const iss=parseMd(txt,{key:k,parentKey:'00',isMap:false,effortId:effortId||''})
         graph.set(k,(iss.blockedBy||[]).map(function(ref){ return String(ref&&ref.key?ref.key:'').padStart(2,'0') }).filter(Boolean))
-      }catch(e){ return failFromError(e,ctx,'读这个工作单元里的票时出错（环检要读全图，读不全就不判）') }
+      }catch(e){ return failFromError(e,ctx,'error while reading the tickets in this work unit (the cycle check needs the whole graph, so it does not judge when it cannot read it all)') }
     }
   }
   // 地图自己也可能写着 Blocked by：它在工作单元根目录，单独读一次。
@@ -149,7 +149,7 @@ export async function readBlockedByGraph(ctx: OpContext, repo: RepoWithPath | nu
       const iss=parseMd(txt,{key:'00',parentKey:null,isMap:true,effortId:effortId||''})
       graph.set('00',(iss.blockedBy||[]).map(function(ref){ return String(ref&&ref.key?ref.key:'').padStart(2,'0') }).filter(Boolean))
     }
-  }catch(e){ return failFromError(e,ctx,'读这个工作单元的地图时出错（环检要读全图，读不全就不判）') }
+  }catch(e){ return failFromError(e,ctx,'error while reading the map of this work unit (the cycle check needs the whole graph, so it does not judge when it cannot read it all)') }
   return{ok:true,graph:graph}
 }
 

@@ -52,11 +52,11 @@ export { labelsOf, hasAllLabels }
 /** 把「读不动的票文件 / 读不动的票目录」清单拼成一句人看得懂的话（导出给 page.js 共用）：
  *  说清是哪几个编号、哪个文件、哪一档错。目录那一条没有编号（key 为空串），写成「票目录（路径）」。 */
 export function readFailureMessage(errors: RowReadError[]): string {
-  const parts = errors.map(function (e) { return (e.key ? String(e.key) : '票目录') + '（' + String(e.path) + '）' })
+  const parts = errors.map(function (e) { return (e.key ? String(e.key) : 'ticket directory') + ' (' + String(e.path) + ')' })
   // errors 非空由调用方保证（下面两处只在 errors.length 时调）；首错取不到时按空档拼，不抛。
   const first = errors[0] as RowReadError | undefined
-  return '本地 Markdown 有票文件或票目录读不动，数字不完整，拒绝回一个偏小的数：' + parts.join('、') +
-    '（' + String((first && first.kind) || '') + '：' + String((first && first.message) || '') + '）'
+  return 'Some local Markdown ticket files or ticket directories cannot be read, so the numbers are incomplete; refusing to return a number that is too small: ' + parts.join(', ') +
+    ' (' + String((first && first.kind) || '') + ': ' + String((first && first.message) || '') + ')'
 }
 
 /**
@@ -100,7 +100,7 @@ export async function countIssues(ctx: OpContext, repo: RepoWithPath, filter: Li
   } catch (e) {
     // 枚举这一层之外冒上来的故障（列工作单元、读目录……）：整条失败，日志留一行「停在哪条操作」。
     emitReadDegraded(ctx, 'counts', 'counts:fs-fail', Date.now() - t0)
-    return failFromError(e, ctx, '数这个工作区的票数时出错')
+    return failFromError(e, ctx, 'error while counting the tickets of this workspace')
   }
 }
 

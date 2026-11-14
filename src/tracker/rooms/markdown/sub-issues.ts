@@ -45,10 +45,10 @@ function isContainerRow(row: Issue): boolean {
  *  这里交回的是子票清单，同一种失败要说成「清单不完整，拒绝回缺行的清单」，用户才知道缺的是什么。
  *  句式与 maps.ts 的 mapReadFailureMessage 一致，名词各按各的输出换。 */
 function subIssuesReadFailureMessage(errors: RowReadError[]): string {
-  const parts = errors.map(function (err) { return (err.key ? String(err.key) : '票目录') + '（' + String(err.path) + '）' })
+  const parts = errors.map(function (err) { return (err.key ? String(err.key) : 'ticket directory') + ' (' + String(err.path) + ')' })
   const first = errors[0] as RowReadError | undefined
-  return '本地 Markdown 有票文件或票目录读不动，子票清单不完整，拒绝回缺行的清单：' + parts.join('、') +
-    '（' + String((first && first.kind) || '') + '：' + String((first && first.message) || '') + '）'
+  return 'Some local Markdown ticket files or ticket directories cannot be read, so the child ticket list is incomplete; refusing to return a list with missing rows: ' + parts.join(', ') +
+    ' (' + String((first && first.kind) || '') + ': ' + String((first && first.message) || '') + ')'
 }
 
 /** 子票按编号升序：01、02…10 是自然顺序，退化身份（目录/编号-文件名）排在数字编号之后、按字典序。 */
@@ -80,7 +80,7 @@ export async function listSubIssues(ctx: OpContext, repo: RepoWithPath, containe
   const norm = /^\d+$/.test(raw) ? raw.padStart(2, '0') : ''
   if (!norm) {
     emitReadDegraded(ctx, 'listSubIssues', 'listSubIssues:bad-key', Date.now() - t0)
-    return failAs(ERROR_KIND.PARSE, '子票取数：容器编号要是一个数字，收到的是「' + raw + '」', rawJson({ containerKey }), TRACKER_ERROR_STAGE.INPUT_REFUSED) as SubIssueListResult
+    return failAs(ERROR_KIND.PARSE, 'Fetching child tickets: the container number must be a number, but got "' + raw + '"', rawJson({ containerKey }), TRACKER_ERROR_STAGE.INPUT_REFUSED) as SubIssueListResult
   }
   const scope = scopeOf(repo, opts || undefined)
   try {
@@ -91,7 +91,7 @@ export async function listSubIssues(ctx: OpContext, repo: RepoWithPath, containe
     const containers = found.rows.filter(function (row) { return isContainerRow(row) && String(row.key) === norm })
     if (!containers.length) {
       emitReadDegraded(ctx, 'listSubIssues', 'listSubIssues:notfound', Date.now() - t0)
-      return failAs(ERROR_KIND.NOTFOUND, '子票取数：' + norm + ' 号容器没找到（这个范围里没有规格文件，也没有地图文件）', rawJson({ containerKey: norm, effort: scope })) as SubIssueListResult
+      return failAs(ERROR_KIND.NOTFOUND, 'Fetching child tickets: container ' + norm + ' was not found (there is no spec file and no map file in this scope)', rawJson({ containerKey: norm, effort: scope })) as SubIssueListResult
     }
     // 二、定工作单元。调用方给了范围就听它的；没给时只在唯一命中时自动定，多个命中不猜。
     //    这里与 GLOSSARY「诚实冲突」条写的「读按目录顺序回落」不同，是照 issues-locate 在 #1595 定下的
@@ -104,7 +104,7 @@ export async function listSubIssues(ctx: OpContext, repo: RepoWithPath, containe
     }
     if (efforts.length > 1) {
       emitReadDegraded(ctx, 'listSubIssues', 'listSubIssues:ambiguous', Date.now() - t0)
-      return failAs(ERROR_KIND.CONFLICT, '子票取数：' + norm + ' 号容器在 ' + efforts.length + ' 个工作单元里都存在（' + efforts.join('、') + '），但这次调用没指定工作单元（effortId），拒绝猜是哪一个', rawJson({ containerKey: norm, efforts }), TRACKER_ERROR_STAGE.INPUT_REFUSED) as SubIssueListResult
+      return failAs(ERROR_KIND.CONFLICT, 'Fetching child tickets: container ' + norm + ' exists in ' + efforts.length + ' work units (' + efforts.join(', ') + '), but this call named no work unit (effortId); refusing to guess which one', rawJson({ containerKey: norm, efforts }), TRACKER_ERROR_STAGE.INPUT_REFUSED) as SubIssueListResult
     }
     const effort = efforts[0]
     // 三、取这个工作单元的票行，筛出父容器编号等于容器编号的那些（规格与地图的子票都是 DSH-PARENT: 00）。
@@ -121,6 +121,6 @@ export async function listSubIssues(ctx: OpContext, repo: RepoWithPath, containe
     return { ok: true, data: { items, total: items.length, fetched: items.length, capped: false, missing: 0, dropped: 0 } } as SubIssueListResult
   } catch (e) {
     emitReadDegraded(ctx, 'listSubIssues', 'listSubIssues:fs-fail', Date.now() - t0)
-    return failFromError(e, ctx, '取这个容器（' + norm + ' 号）的子票时出错') as SubIssueListResult
+    return failFromError(e, ctx, 'error while fetching the child tickets of this container (number ' + norm + ')') as SubIssueListResult
   }
 }

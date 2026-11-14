@@ -162,7 +162,7 @@ async function main(): Promise<void> {
     check(run.error.kind === 'not-found', '失败档位是 not-found（实际 ' + JSON.stringify(run.error.kind) + '）')
     check(run.error.message.indexOf(UNKNOWN_LOGIN) >= 0, '失败说明里点名了查不到的用户名「' + UNKNOWN_LOGIN + '」：' + run.error.message)
     check(
-      run.error.message.indexOf('原认领') >= 0 || run.error.message.indexOf('没有改动') >= 0,
+      run.error.message.indexOf('The existing assignees were not changed') >= 0,
       '失败说明里写清了原认领没有改动：' + run.error.message,
     )
     check(run.puts.length === 0, '一个写请求都没发（改票 PUT 次数 ' + run.puts.length + '）')

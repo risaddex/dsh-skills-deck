@@ -80,7 +80,7 @@ async function createIssueInner(repo: RepositoryRef, input: CreateInput, ctx: Me
     // 而且必须比「回查」更早失败 —— 键不合法时连回查都无从做起。
     const wantKey = input.idempotencyKey === undefined || input.idempotencyKey === null ? null : checkIdempotencyKey(input.idempotencyKey)
     // 键本身不合规时，原文就交那个不合规的键值（为什么不合规已经写在给人看的那句话里）。
-    if (wantKey && !wantKey.ok) return fail(ERROR_KIND.PARSE, `create: idempotencyKey 不能用：${wantKey.reason}`, input.idempotencyKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
+    if (wantKey && !wantKey.ok) return fail(ERROR_KIND.PARSE, `create: idempotencyKey cannot be used: ${wantKey.reason}`, input.idempotencyKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     const idemKey = wantKey ? wantKey.key : ''
     if (idemKey) {
       const found = await lookupByAnchor(repo, idemKey, ctx, normalizeIssue)
@@ -149,7 +149,7 @@ async function createIssueInner(repo: RepositoryRef, input: CreateInput, ctx: Me
           // 为什么先收窄：setLabels 的返回是可辨识联合，失败分支才有 error；直接读 error 编译器不认，收窄后读的还是原来那一格。
           const lrError = (lr && !lr.ok) ? lr.error : null;
           const kind = String((lrError && lrError.kind) || '');
-          const message = String((lrError && lrError.message) || '后端没给出原因').slice(0, 300);
+          const message = String((lrError && lrError.message) || 'the backend gave no reason').slice(0, 300);
           issue.labelError = { kind: kind, message: message };
           if (wantType === 'map') issue.type = 'map';
           // Q6：正文“待补标签（只读未落盘）”区 —— 把没确认挂上的标签名写进正文，区名必带“未落盘”。
@@ -195,7 +195,7 @@ async function createIssueInner(repo: RepositoryRef, input: CreateInput, ctx: Me
         // 为什么断言：setParent 成功时一定带回那张票（失败走 else 记账）；graph.ts 定型后这里再复核，断言只为过编译、交的还是原来那个值。
         if (pr.ok) issue = pr.data as Issue
         else {
-          issue.parentError = { kind: String((pr.error && pr.error.kind) || ''), message: String((pr.error && pr.error.message) || '后端没给出原因').slice(0, 300) }
+          issue.parentError = { kind: String((pr.error && pr.error.kind) || ''), message: String((pr.error && pr.error.message) || 'the backend gave no reason').slice(0, 300) }
           trail.failed += 1
         }
       } catch (e) {
@@ -245,7 +245,7 @@ async function closeIssueInner(repo: RepositoryRef, key: string, opts: CloseOpts
       // 写命令已回成功、写后读回失败：不许乐观拼一张「已经关上了」的票回 ok（#790 同一类：
       // 写动作的回包不算证据）。读不回来就如实报失败，让上层说「没确认」而不是「已改好」。
       const readMsg = String((vr.error && vr.error.message) || '').slice(0, 300)
-      return fail((vr.error && vr.error.kind) || ERROR_KIND.NETWORK, 'close: 写命令已回成功，但写后读回失败：' + (readMsg || '没给出原因') + '；这张票现在是不是 closed 没确认', vr)
+      return fail((vr.error && vr.error.kind) || ERROR_KIND.NETWORK, 'close: the write command reported success, but the read-back after the write failed: ' + (readMsg || 'no reason given') + '; whether this ticket is closed now is not confirmed', vr)
     }
     const text = vr.data.stdout || ''
     let raw: unknown
@@ -295,7 +295,7 @@ async function reopenIssueInner(repo: RepositoryRef, key: string, ctx: OpContext
     if (!vr.ok) {
       // 同上：读不回来不许拼「已经重开了」的票（#790 同一类）。
       const readMsg = String((vr.error && vr.error.message) || '').slice(0, 300)
-      return fail((vr.error && vr.error.kind) || ERROR_KIND.NETWORK, 'reopen: 写命令已回成功，但写后读回失败：' + (readMsg || '没给出原因') + '；这张票现在是不是 open 没确认', vr)
+      return fail((vr.error && vr.error.kind) || ERROR_KIND.NETWORK, 'reopen: the write command reported success, but the read-back after the write failed: ' + (readMsg || 'no reason given') + '; whether this ticket is open now is not confirmed', vr)
     }
     const text = vr.data.stdout || ''
     let raw: unknown
@@ -359,7 +359,7 @@ async function updateIssueInner(repo: RepositoryRef, key: string, patch: UpdateP
     if (!vr.ok) {
       // 同上：读不回来不许拼一张「已经改好了」的票（#790 同一类）。
       const readMsg = String((vr.error && vr.error.message) || '').slice(0, 300)
-      return fail((vr.error && vr.error.kind) || ERROR_KIND.NETWORK, 'update: 写命令已回成功，但写后读回失败：' + (readMsg || '没给出原因') + '；这次改的字段落上没落上没确认', vr)
+      return fail((vr.error && vr.error.kind) || ERROR_KIND.NETWORK, 'update: the write command reported success, but the read-back after the write failed: ' + (readMsg || 'no reason given') + '; whether the changed fields landed is not confirmed', vr)
     }
     const text = vr.data.stdout || ''
     let raw: unknown
@@ -461,7 +461,7 @@ async function setAssigneesInner(repo: RepositoryRef, key: string, assignees: As
     const finalRes = await getIssue(repo, k, {}, ctx)
     if (!finalRes.ok) {
       const readMsg = String((finalRes.error && finalRes.error.message) || '').slice(0, 300)
-      return fail((finalRes.error && finalRes.error.kind) || ERROR_KIND.NETWORK, 'setAssignees: 写命令已回成功，但写后读回失败：' + (readMsg || '没给出原因') + '；认领人记上没记上没确认', finalRes)
+      return fail((finalRes.error && finalRes.error.kind) || ERROR_KIND.NETWORK, 'setAssignees: the write command reported success, but the read-back after the write failed: ' + (readMsg || 'no reason given') + '; whether the assignees were recorded is not confirmed', finalRes)
     }
     return finalRes
   } catch (e) {

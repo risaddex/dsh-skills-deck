@@ -154,7 +154,7 @@ export async function listWorkUnits(ctx: OpContext, prefetchedRootListing?: Scra
   const plat=getPlat(ctx)
   const root=await getScratchRoot(ctx)
   if (prefetchedRootListing && prefetchedRootListing.root !== root) {
-    throw new TypeError('listWorkUnits 收到的预取列举属于 ' + prefetchedRootListing.root + '，不是 ' + root)
+    throw new TypeError('listWorkUnits received a prefetched listing of ' + prefetchedRootListing.root + ', not ' + root)
   }
   const out: WorkUnit[]=[]
   const rootKind=await workUnitKindOf(ctx, root)
@@ -289,7 +289,7 @@ function conflict(key: string, hits: FileHit[]): { ok: false; error: { kind: str
   // 原文 = 命中的那几个文件与它们各自属于哪个 effort（本地就能定论：同名编号出现在多处）。
   // 这段原文正是人判断「该给哪个 effort 加范围」的依据，所以不许省。
   // 缺的是调用方该指定的范围（effortId），不是后端故障：标成输入被拒，下一步才是补上这个参数。
-  return failAs(ERROR_KIND.CONFLICT, 'issue '+key+' 在 '+hits.length+' 个 effort 里都存在，但没指定 effortId（拒绝猜目标文件）', rawJson(hits), TRACKER_ERROR_STAGE.INPUT_REFUSED)
+  return failAs(ERROR_KIND.CONFLICT, 'issue '+key+' exists in '+hits.length+' efforts, but no effortId was given (refusing to guess the target file)', rawJson(hits), TRACKER_ERROR_STAGE.INPUT_REFUSED)
 }
 /** 按 (工作单元范围, 编号) 找票文件（#1488 起编号身份由 issues-locate 的目录内身份规则决定）。
  *  o.mode='write' 时多命中即 conflict；返回 {ok,path,effortId,key,legacy} 或 {ok:false,error}。
@@ -375,7 +375,7 @@ export async function resolveIssueFile(ctx: OpContext, repo: RepoWithPath | null
   // #1480 两轴评审修（#1488 验收③「旧布局只读兼容、不迁移」）：读路径一个字节不变，写路径在这里如实失败。
   // 拦在定位这一层，是因为状态、关闭、改正文、评论、认领、标签全都经 resolveIssueFile 的写模式找文件。
   if(o.mode==='write' && (hit.legacy || isLegacyTicketDir(ctx, plat.dirname(hit.path)))) {
-    return failAs(ERROR_KIND.UNSUPPORTED, '旧布局的票只读：'+hit.path+' 落在旧版工作区根或「.scratch」的 issues/ 扁平目录里，本次一个字都没写；迁移另行处理', rawJson({key:norm,path:hit.path,legacy:true}))
+    return failAs(ERROR_KIND.UNSUPPORTED, 'Tickets in the old layout are read-only: '+hit.path+' sits in the old workspace root or in the flat issues/ directory of ".scratch", and not a single character was written this time; migration is handled separately', rawJson({key:norm,path:hit.path,legacy:true}))
   }
   // route 是读侧判票型的目录线索：旧版扁平目录一律空串（legacy=true 时 statusKindOf 不按目录猜）；
   // 其余沿用命中工作单元的种类（map/spec/plain）。

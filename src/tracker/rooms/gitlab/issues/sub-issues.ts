@@ -119,7 +119,7 @@ export async function listSubIssues(
     emitReadDegraded(logCtx, 'subIssues', 'subIssues:repo-ref', Date.now() - t0)
     return fail(
       ERROR_KIND.NOTFOUND,
-      `子票取数：repo.refId 或地图编号缺失、形状不对（repo=${id || '空'}，地图=${key || '空'}）`,
+      `Fetching child tickets: repo.refId or the map number is missing or has the wrong shape (repo=${id || 'empty'}, map=${key || 'empty'})`,
       '',
     )
   }
@@ -143,7 +143,7 @@ export async function listSubIssues(
         emitReadDegraded(logCtx, 'subIssues', notfound ? 'subIssues:notfound' : 'subIssues:page-fail', Date.now() - t0)
         return failGlab(
           listRes,
-          notfound ? `子票取数：地图 #${key} 没找到（或没有权限看它）` : '子票取数：列表第 ' + page + ' 页没取回来',
+          notfound ? `Fetching child tickets: map #${key} was not found (or you lack permission to see it)` : 'Fetching child tickets: page ' + page + ' of the list was not fetched',
           listRes,
           classifyCtx,
         )
@@ -156,7 +156,7 @@ export async function listSubIssues(
       }
       if (!Array.isArray(rows)) {
         emitReadDegraded(logCtx, 'subIssues', 'subIssues:json', Date.now() - t0)
-        return fail(ERROR_KIND.PARSE, `子票取数：列表第 ${page} 页回包不是合法数组`, listRes.stdout)
+        return fail(ERROR_KIND.PARSE, `Fetching child tickets: page ${page} of the list is not a valid array`, listRes.stdout)
       }
       if (rows.length === 0) break
       for (const row of rows as unknown[]) {
@@ -191,7 +191,7 @@ export async function listSubIssues(
       emitReadDegraded(logCtx, 'subIssues', 'subIssues:shape', Date.now() - t0)
       return fail(
         ERROR_KIND.PARSE,
-        `子票取数：地图 #${key} 的候选行一行都没能算进去（${dropped} 行缺编号或形状不对）`,
+        `Fetching child tickets: none of the candidate rows of map #${key} could be counted (${dropped} rows lack a number or have the wrong shape)`,
         lastRes ? lastRes.stdout : '',
       )
     }
@@ -207,7 +207,7 @@ export async function listSubIssues(
   } catch (e) {
     // 兜底：判档与话术都走本房唯一的出口（failGlab 内部按规则表判、按兜底规则挑话），原文交抛上来的那个错。
     emitReadDegraded(logCtx, 'subIssues', 'subIssues:transport', Date.now() - t0)
-    return failGlab(e, `子票取数：${String((e as { message?: unknown } | null)?.message || e).slice(0, 200)}`, e, classifyCtx)
+    return failGlab(e, `Fetching child tickets: ${String((e as { message?: unknown } | null)?.message || e).slice(0, 200)}`, e, classifyCtx)
   }
 }
 

@@ -143,7 +143,7 @@ export function pageFailureCheck(res: PageResponse, needStaleMsg: boolean): stri
   const err = rawErr as { kind?: unknown; message?: unknown }
   if (!KNOWN_KINDS.includes(err.kind)) bad.push('error.kind 必须是既有错误分类之一，实得 ' + JSON.stringify(err.kind))
   if (typeof err.message !== 'string' || !err.message.trim()) bad.push('error.message 要是能看懂的一句话')
-  if (needStaleMsg && typeof err.message === 'string' && err.message.indexOf('游标已失效') < 0) bad.push('游标失效这一种要在 message 里点名「游标已失效」，实得 ' + JSON.stringify(err.message))
+  if (needStaleMsg && typeof err.message === 'string' && err.message.indexOf('cursor is no longer valid') < 0) bad.push('游标失效这一种要在 message 里点名「cursor is no longer valid」，实得 ' + JSON.stringify(err.message))
   return bad
 }
 
@@ -323,7 +323,7 @@ export async function run(): Promise<PageAssertResult[]> {
     await assert('✗ probe: 失败却不说是哪一档被逮', pageFailureCheck({ ok: false, error: { kind: 'whatever', message: 'x' } }, false).length > 0, '检查器放过了自造的错误档')
     d.dispose()
 
-    const d2 = reg.register(createPagingFake({ id: 'page-stale-fake', failure: { kind: 'not-found', message: 'listPage: 游标已失效，请重新加载（after cursor is invalid）' } }))
+    const d2 = reg.register(createPagingFake({ id: 'page-stale-fake', failure: { kind: 'not-found', message: 'listPage: the cursor is no longer valid, please reload (after cursor is invalid)' } }))
     const rStale = await reg.get('page-stale-fake')!.listPage(ref('github'), { state: 'closed' }, { cursor: 'stale', limit: 50 }, ctx)
     await assert('游标失效：整体失败且消息点名「游标已失效」（界面据此丢游标重取第一页）', pageFailureCheck(rStale, true).length === 0, pageFailureCheck(rStale, false).join('；') || JSON.stringify(rStale))
     await assert('✗ probe: 游标失效却没说清是哪一种被逮', pageFailureCheck({ ok: false, error: { kind: 'parse', message: 'listPage: bad cursor' } }, true).length > 0, '检查器放过了不点名的失效消息')

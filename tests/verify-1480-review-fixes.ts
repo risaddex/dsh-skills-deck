@@ -371,7 +371,7 @@ try {
     const r: any = await attempt.run()
     check(r.ok === false, 'D 旧布局票的「' + attempt.name + '」写路径如实失败')
     check(r.ok === false && String(r.error.kind) === 'unsupported', 'D 「' + attempt.name + '」失败档位是 unsupported')
-    check(r.ok === false && /旧布局/.test(String(r.error.message)) && /只读/.test(String(r.error.message)), 'D 「' + attempt.name + '」话术说清旧布局只读：' + (r.ok ? '' : r.error.message))
+    check(r.ok === false && /old layout/.test(String(r.error.message)) && /read-only/.test(String(r.error.message)), 'D 「' + attempt.name + '」话术说清旧布局只读：' + (r.ok ? '' : r.error.message))
   }
   const writeLogs = ctxD.events.filter((e) => e.event === 'issue.write')
   const failedLogs = writeLogs.filter((e) => e.fields && e.fields.ok === false && e.fields.reason === 'fail:unsupported')

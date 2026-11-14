@@ -195,7 +195,7 @@ export async function listIssuesPage(repo: RepositoryRef, filter: ListFilter | u
       if (cursor && /cursor/i.test(msg)) {
         // raw 交的是 GitHub 回的那份 errors 负载本身（上面那句提示只是给它加了前缀）。
         emitReadDegraded(ctx, 'listPage', 'listPage:cursor', Date.now() - t0)
-        return fail(ERROR_KIND.NOTFOUND, `listPage: 游标已失效，请重新加载（${msg.slice(0, 400)}）`, JSON.stringify(j.errors))
+        return fail(ERROR_KIND.NOTFOUND, `listPage: the cursor is no longer valid, please reload (${msg.slice(0, 400)})`, JSON.stringify(j.errors))
       }
       // 一次要多了：远端明说上限是 N，就记住 N、换更小的 first 重发；退不动或退够次数才算真失败。
       const nextLim = (degradeSteps < MAX_PAGE_DEGRADE_STEPS) ? smallerPageLimit(msg, lim) : 0
@@ -244,7 +244,7 @@ export async function listIssuesPage(repo: RepositoryRef, filter: ListFilter | u
       if (typeof pageInfo.endCursor !== 'string' || !pageInfo.endCursor) {
         // 说出「没有 endCursor」这句话的证据就是这段 pageInfo 本身，原文交它（比整份回包短得多、也看得准）。
         emitReadDegraded(ctx, 'listPage', 'listPage:no-cursor', Date.now() - t0)
-        return fail(ERROR_KIND.PARSE, 'listPage: hasNextPage 为真但 endCursor 缺失（拒绝假装已经翻到底）', JSON.stringify(pageInfo))
+        return fail(ERROR_KIND.PARSE, 'listPage: hasNextPage is true but endCursor is missing (refusing to pretend the last page was reached)', JSON.stringify(pageInfo))
       }
       nextCursor = pageInfo.endCursor
     }

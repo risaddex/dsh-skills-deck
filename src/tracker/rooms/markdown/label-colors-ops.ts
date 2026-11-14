@@ -43,13 +43,13 @@ function getFs(ctx: OpContext): SandboxFs | null {
 /** 改色入参的形状把关（契约：不是一批改动就整条失败，落解析档）。
  *  颜色写错不算入参坏掉：那一条落解析档，其余照改。 */
 function shapeProblem(changes: unknown): string {
-  if (!Array.isArray(changes)) return '修改标签颜色需要一批「标签 → 新颜色」的改动，本次收到的内容不是这种格式'
+  if (!Array.isArray(changes)) return 'Changing label colors needs a batch of "label → new color" changes, and what arrived this time is not in that format'
   const seen = new Set()
   for (const c of changes) {
-    if (!c || typeof c !== 'object' || Array.isArray(c)) return '这一批改动中有一条不是「标签 → 新颜色」的格式'
-    if (typeof c.name !== 'string' || !c.name.trim()) return '这一批改动中有一条未填写标签名'
-    if (typeof c.color !== 'string' || !c.color.trim()) return '这一批改动中有一条未填写新颜色'
-    if (seen.has(c.name)) return '同一批改动里「' + c.name + '」出现了两次，一个标签在一批中只允许出现一次。请只保留其中一条，然后重试。'
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return 'One change in this batch is not in the "label → new color" format'
+    if (typeof c.name !== 'string' || !c.name.trim()) return 'One change in this batch has no label name'
+    if (typeof c.color !== 'string' || !c.color.trim()) return 'One change in this batch has no new color'
+    if (seen.has(c.name)) return 'The label "' + c.name + '" appears twice in the same batch; a label may appear only once per batch. Keep only one of them, then retry.'
     seen.add(c.name)
   }
   return ''
@@ -72,7 +72,7 @@ async function collectTicketLabelNames(ctx: OpContext, repo: RepositoryRef | nul
   // 少扫一个目录，标签清单就会悄悄少一截，而它长得和完整清单一模一样（#1174 决策 6）。
   if (!hasFs(ctx)) return { ok: true, names: Array.from(names) }
   try { for (const e of await listEfforts(ctx)) dirs.push(e.dir) } catch (e) {
-    return failAs(ERROR_KIND.ENV, '未能获取全部标签：工作区中有目录无法读取。这是插件运行环境的问题，不是你的操作有误。请关闭可能占用这些文件的程序后重试。', String((e && (e as Record<string, unknown>).message) || e))
+    return failAs(ERROR_KIND.ENV, 'Could not fetch all labels: a directory in the workspace cannot be read. This is a problem with the plugin runtime environment, not a mistake on your side. Close any program that may hold these files, then retry.', String((e && (e as Record<string, unknown>).message) || e))
   }
   for (const dir of dirs) {
     const files = [plat.join(dir, 'map.md')]
@@ -80,7 +80,7 @@ async function collectTicketLabelNames(ctx: OpContext, repo: RepositoryRef | nul
     let entries: string[] = []
     try { entries = await readDirOrThrow(ctx, idir) } catch (e) {
       // 原文 = 文件服务抛上来的那个错误（人据此看是权限、被占用还是别的）。
-      return failAs(ERROR_KIND.ENV, '未能获取全部标签：工作区中有文件无法读取。这是插件运行环境的问题，不是你的操作有误。请关闭可能占用这些文件的程序后重试。', e)
+      return failAs(ERROR_KIND.ENV, 'Could not fetch all labels: a file in the workspace cannot be read. This is a problem with the plugin runtime environment, not a mistake on your side. Close any program that may hold these files, then retry.', e)
     }
     for (const f of entries) {
       if (f && f.endsWith('.md') && /^(\d+)-/.test(f)) files.push(plat.join(idir, f))
@@ -95,7 +95,7 @@ async function collectTicketLabelNames(ctx: OpContext, repo: RepositoryRef | nul
         if (isMissingFile(e)) continue
         // 有一张票读不出来 = 拿不全标签：整条操作失败，不许把残缺清单当全量发出去。
         // 原文 = 读这个文件抛上来的错误，另附文件路径（提示语里不出现路径，原文里必须有，否则没法定位）。
-        return failAs(ERROR_KIND.ENV, '未能获取全部标签：工作区中有一张票的文件无法读取。这是插件运行环境的问题，不是你的操作有误。请关闭可能占用这个文件的程序后重试。', String(file) + '：' + String((e && (e as Record<string, unknown>).message) || e))
+        return failAs(ERROR_KIND.ENV, 'Could not fetch all labels: the file of a ticket in the workspace cannot be read. This is a problem with the plugin runtime environment, not a mistake on your side. Close any program that may hold this file, then retry.', String(file) + ': ' + String((e && (e as Record<string, unknown>).message) || e))
       }
       // labels 形的票面解析产物：只取 labels 一行，其余不管（解析失败按「这张票没有标签」处理，见下）。
       let labels: Label[] = []
@@ -137,7 +137,7 @@ async function collectAllLabels(ctx: OpContext, repo: RepositoryRef | null): Pro
   if (!read.ok) {
     // 「读不出来」按契约落解析档，同时说清未能获取全部标签（界面上这两件事都要能看懂）。
     // 原文照抄读配色文件那一步已经取好的原文，不在这里重取一份。
-    return failAs(read.error.kind, '未能获取全部标签：' + read.error.message, read.error.raw)
+    return failAs(read.error.kind, 'Could not fetch all labels: ' + read.error.message, read.error.raw)
   }
   const tickets = await collectTicketLabelNames(ctx, repo)
   if (!tickets.ok) return tickets
@@ -202,7 +202,7 @@ export async function setLabelColors(ctx: OpContext, repo: RepositoryRef | null,
     // 展示（列标签）不受影响，照读；这一档只拦写入。
     if (read.readonly === true) {
       // 原文 = 这次判定所依据的那几个事实（本地就能定论：文件声明的版本比本插件认识的新）。
-      return failAs(ERROR_KIND.PARSE, '工作区里的标签配色文件（' + LABEL_COLORS_REL_PATH + '）是新版本，当前插件只认识旧版本，改色前请先升级插件，否则会把新内容抹掉。这次什么都没改。', rawJson({ path: LABEL_COLORS_REL_PATH, readonly: true, present: read.present === true }))
+      return failAs(ERROR_KIND.PARSE, 'The label color file in the workspace (' + LABEL_COLORS_REL_PATH + ') is a newer version, and the current plugin only knows the older one; upgrade the plugin before changing colors, otherwise the new content would be wiped out. Nothing was changed this time.', rawJson({ path: LABEL_COLORS_REL_PATH, readonly: true, present: read.present === true }))
     }
     // 文件不存在不算「读不出来」：这时一份颜色都没有，每一要改的标签都落「标签不存在」这一条，
     // 一个字节都不写（契约：两边一律报不存在、都不许新增一行），提示里说清怎么才能成功。
@@ -215,15 +215,15 @@ export async function setLabelColors(ctx: OpContext, repo: RepositoryRef | null,
     for (const c of changes) {
       const want = normalizeColor(c.color)
       if (!want) {
-        failed.push({ name: c.name, reason: { kind: ERROR_KIND.PARSE as ErrorKind, message: '「' + c.name + '」的新颜色不正确：请改为不带井号的六位十六进制，例如 9d7cd8。', raw: rawJson({ name: c.name, color: c.color }) } })
+        failed.push({ name: c.name, reason: { kind: ERROR_KIND.PARSE as ErrorKind, message: 'The new color of "' + c.name + '" is not valid: use six hexadecimal digits without the hash sign, for example 9d7cd8.', raw: rawJson({ name: c.name, color: c.color }) } })
         continue
       }
       if (!fileExists) {
-        failed.push({ name: c.name, reason: { kind: ERROR_KIND.NOTFOUND as ErrorKind, message: '工作区中还没有标签配色文件（' + LABEL_COLORS_REL_PATH + '），因此所有标签都没有配置过颜色。请先在面板头部点那颗「标签配色」图标，插件会在打开这个弹窗时生成一份默认的标签配色文件；然后在文件里加入一行 "标签名": "9d7cd8"，把这两处换成实际的标签名与颜色，再回到这个弹窗点「保存」。', raw: rawJson({ path: LABEL_COLORS_REL_PATH, present: false }) } })
+        failed.push({ name: c.name, reason: { kind: ERROR_KIND.NOTFOUND as ErrorKind, message: 'The workspace has no label color file yet (' + LABEL_COLORS_REL_PATH + '), so no label has a configured color. First click the "Label colors" icon in the panel header; the plugin generates a default label color file when it opens this dialog; then add a line "label name": "9d7cd8" to the file, replacing the two values with the real label name and color, and come back to this dialog to click "Save".', raw: rawJson({ path: LABEL_COLORS_REL_PATH, present: false }) } })
         continue
       }
       if (!Object.prototype.hasOwnProperty.call(read.colors, c.name)) {
-        failed.push({ name: c.name, reason: { kind: ERROR_KIND.NOTFOUND as ErrorKind, message: '标签配色文件里没有「' + c.name + '」这个标签，插件不会自动新增。如需修改这个标签的颜色，请先把 "标签名": "9d7cd8" 这一行加入 ' + LABEL_COLORS_REL_PATH + '（把这两处换成这个标签的名字与要用的颜色），然后点「保存」。', raw: rawJson({ path: LABEL_COLORS_REL_PATH, name: c.name }) } })
+        failed.push({ name: c.name, reason: { kind: ERROR_KIND.NOTFOUND as ErrorKind, message: 'The label color file has no label "' + c.name + '", and the plugin does not add labels automatically. To change the color of this label, first add the line "label name": "9d7cd8" to ' + LABEL_COLORS_REL_PATH + ' (replacing the two values with the name of this label and the color to use), then click "Save".', raw: rawJson({ path: LABEL_COLORS_REL_PATH, name: c.name }) } })
         continue
       }
       pending[c.name] = want
@@ -246,7 +246,7 @@ export async function setLabelColors(ctx: OpContext, repo: RepositoryRef | null,
       // 写失败：整条操作失败、不留半截账（原本说会改的那几条一起报失败），理由按失败语义分档。
       // 原文 = 写过程抛上来的那个错误；提示语里照旧不许出现临时文件名（那会让人去找不存在的文件）。
       const reason = describeWriteFailure(e, LABEL_COLORS_REL_PATH)
-      return failAs(reason.kind, reason.message + ' 本次 ' + applied.length + ' 个标签的颜色均未改动。', e)
+      return failAs(reason.kind, reason.message + ' None of the colors of the ' + applied.length + ' labels in this batch were changed.', e)
     }
     return { ok: true, data: { applied: applied, failed: failed } }
   })

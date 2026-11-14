@@ -106,7 +106,7 @@ function parseLines(text: unknown): unknown[] {
     const j: unknown = JSON.parse(t)
     return Array.isArray(j) ? j : [j]
   } catch (e) {
-    throw Object.assign(new Error('gh 回的 JSON 读不出来：' + caughtMessage(e, 200)), { kind: ERROR_KIND.PARSE })
+    throw Object.assign(new Error('Could not read the JSON gh returned: ' + caughtMessage(e, 200)), { kind: ERROR_KIND.PARSE })
   }
 }
 
@@ -125,7 +125,7 @@ function createdMs(raw: unknown): number | null {
  *  #1171：这句话只陈述事实（回查没做成、这一次没有建票），不推荐调用面上不存在的做法 ——
  *  「换用不带锚的创建」是工具那一层做不到的动作。能做什么由调用方补；stage 让它认得出这一档。 */
 function lookupFailure(kind: ErrorKind, message: unknown, raw: unknown): { ok: false; error: TrackerError } {
-  return { ok: false, error: { kind: kind || ERROR_KIND.UNSUPPORTED, message: '带锚创建的回查没能做成：' + String(message || '原因不明').slice(0, 500) + '。这一次没有建票。', raw: String(raw == null ? '' : raw).slice(0, 2000), stage: TRACKER_ERROR_STAGE.ANCHOR_LOOKUP } }
+  return { ok: false, error: { kind: kind || ERROR_KIND.UNSUPPORTED, message: 'The lookup for a create with an idempotency anchor could not be completed: ' + String(message || 'unknown reason').slice(0, 500) + '. No ticket was created this time.', raw: String(raw == null ? '' : raw).slice(0, 2000), stage: TRACKER_ERROR_STAGE.ANCHOR_LOOKUP } }
 }
 
 /** 回查最大的一个隐患，写在最显眼的地方：列表接口默认按更新时间倒序（这是 GitHub 的接口约定），
@@ -147,7 +147,7 @@ const LIST_LIMIT = PAGINATION.github.anchorLookupListLimit
  */
 export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpContext, normalizeIssue: (raw: unknown) => Issue): Promise<AnchorLookupOutcome> {
   const parsed = parseRepo(repo)
-  if (!parsed) return lookupFailure(ERROR_KIND.NOTFOUND, '这个仓库的地址不合法，回查无从做起', String((repo && repo.refId) || repo || ''))
+  if (!parsed) return lookupFailure(ERROR_KIND.NOTFOUND, 'The repository address is not valid, so the lookup cannot be done', String((repo && repo.refId) || repo || ''))
   const c = ghClient(ctx)
   const slug = parsed.owner + '/' + parsed.name
   const nowMs = Date.now()
@@ -156,7 +156,7 @@ export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpCo
   let searchError = null
   try {
     const r = await c.execGh(['search', 'issues', '--repo', slug, '--match', 'body', '--json', CANDIDATE_FIELDS, '--limit', String(PAGINATION.github.anchorLookupSearchLimit), key], { cwd: ctx && ctx.cwd })
-    if (!r.ok) searchError = (r.error && r.error.message) || '搜索接口报错'
+    if (!r.ok) searchError = (r.error && r.error.message) || 'the search API reported an error'
     else {
       const rows = parseLines(r.data.stdout || '')
       const cands = rows.map(toCandidate).filter(Boolean)
@@ -175,7 +175,7 @@ export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpCo
   let rows: unknown[] = []
   try {
     const r = await c.execGh(['issue', 'list', '--repo', slug, '--state', 'open', '--limit', String(LIST_LIMIT), '--json', CANDIDATE_FIELDS], { cwd: ctx && ctx.cwd })
-    if (!r.ok) listError = (r.error && r.error.message) || '列出最近更新的票时报错'
+    if (!r.ok) listError = (r.error && r.error.message) || 'listing the recently updated tickets reported an error'
     else rows = parseLines(r.data.stdout || '')
   } catch (e) {
     listError = caughtText(e)
@@ -195,7 +195,7 @@ export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpCo
     let fetched = 0
     for (const raw of needBody) {
       if (fetched >= MAX_BODY_FETCHES) {
-        return lookupFailure(ERROR_KIND.UNSUPPORTED, '最近更新的票超过 ' + MAX_BODY_FETCHES + ' 张、还没逐张读回正文比对完（列到了 ' + rows.length + ' 张），这次不敢断定「还没建过」', JSON.stringify({ 列到的票数: rows.length, 最多逐张读回: MAX_BODY_FETCHES }))
+        return lookupFailure(ERROR_KIND.UNSUPPORTED, 'More than ' + MAX_BODY_FETCHES + ' recently updated tickets, and their bodies were not all read back and compared yet (' + rows.length + ' listed), so this call does not dare to conclude "not created yet"', JSON.stringify({ ticketsListed: rows.length, maxBodiesReadBack: MAX_BODY_FETCHES }))
       }
       fetched++
       // 为什么不断言判空：沿用原来的短路读法——空行时 num 就是空值本身、直接跳过；有值时读的还是原来那一格，行为一字不差。
@@ -203,7 +203,7 @@ export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpCo
       if (num === undefined || num === null) continue
       try {
         const b = await c.execGh(['api', `repos/${parsed.owner}/${parsed.name}/issues/${num}`], { cwd: ctx && ctx.cwd })
-        if (!b.ok) return lookupFailure((b.error && b.error.kind) || ERROR_KIND.NETWORK, '读第 ' + num + ' 张票的正文时失败：' + ((b.error && b.error.message) || ''), (b.error && b.error.raw) || (b.error && b.error.message) || '')
+        if (!b.ok) return lookupFailure((b.error && b.error.kind) || ERROR_KIND.NETWORK, 'Reading the body of ticket ' + num + ' failed: ' + ((b.error && b.error.message) || ''), (b.error && b.error.raw) || (b.error && b.error.message) || '')
         const one = parseLines(b.data.stdout || '')[0]
         const cand = toCandidate(one)
         if (!cand) continue
@@ -211,18 +211,18 @@ export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpCo
         if (isAnchorHit(m)) return { ok: true, hit: true, issue: normalizeIssue(one) }
       } catch (e) {
         const eb = caughtBag(e);
-        return lookupFailure(ghVerdictOf(e, ctx).kind, '读第 ' + num + ' 张票的正文时出错：' + caughtText(e), (eb && (eb.message || eb.stderr)) || e || '')
+        return lookupFailure(ghVerdictOf(e, ctx).kind, 'Reading the body of ticket ' + num + ' threw an error: ' + caughtText(e), (eb && (eb.message || eb.stderr)) || e || '')
       }
     }
   }
 
   // 两条路都没找到：只有在**两条路都真跑通了、都确认没有**时才算「确实还没建过」。
   if (searchError && listError) {
-    return lookupFailure(ERROR_KIND.UNSUPPORTED, '搜索接口与列表接口都没跑通（搜索：' + searchError + '；列表：' + listError + '）', JSON.stringify({ 搜索接口的报错: String(searchError), 列表接口的报错: String(listError) }))
+    return lookupFailure(ERROR_KIND.UNSUPPORTED, 'Neither the search API nor the list API worked (search: ' + searchError + '; list: ' + listError + ')', JSON.stringify({ searchApiError: String(searchError), listApiError: String(listError) }))
   }
   if (listError) {
     // 搜索通了、列表没通：搜索这条路的「没找到」不足以断定没建过（索引滞后）。
-    return lookupFailure(ERROR_KIND.UNSUPPORTED, '列表这条回查路没跑通（' + listError + '），而搜索接口没搜到不能算数（GitHub 的正文搜索索引是异步建的，刚建好的票常常还搜不到）', String(listError))
+    return lookupFailure(ERROR_KIND.UNSUPPORTED, 'The list lookup path did not work (' + listError + '), and finding nothing through the search API does not count (GitHub builds its body search index asynchronously, so a ticket that was just created often cannot be found yet)', String(listError))
   }
   const miss = matchAnchor([], repo && repo.refId, key)
   return { ok: true, hit: false, reason: miss.reason }
@@ -230,7 +230,7 @@ export async function lookupByAnchor(repo: RepositoryRef, key: string, ctx: OpCo
 
 /** 回查没做成时给调用方看的那句话（句式由核心里那一处给，本文件不自己拼）。 */
 export function describeLookupFailure(match?: AnchorMatch | null): string {
-  return describeAnchorFailure(match || anchorUnsupported('回查没有做成'))
+  return describeAnchorFailure(match || anchorUnsupported('the lookup was not completed'))
 }
 
 export default { withAnchor, lookupByAnchor, describeLookupFailure }

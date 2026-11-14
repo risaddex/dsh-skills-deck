@@ -59,7 +59,7 @@ export async function listComments(ctx: OpContext,repo: RepoWithPath | null,key:
   const norm=String(key).padStart(2,'0')
   const r=await locateForRead(ctx,repo,norm)
   if(!r.ok)return{ok:false,error:r.error}
-  try{const txt=await readTextFile(ctx,r.path);const iss=parseMd(txt,{key:norm,parentKey:'00',isMap:false,effortId:r.effortId});return{ok:true,data:iss.comments||[]}}catch(e){return failFromError(e,ctx,'读这张票的评论时出错')}
+  try{const txt=await readTextFile(ctx,r.path);const iss=parseMd(txt,{key:norm,parentKey:'00',isMap:false,effortId:r.effortId});return{ok:true,data:iss.comments||[]}}catch(e){return failFromError(e,ctx,'error while reading the comments of this ticket')}
 }
 /** 发评论的入口：先起一个事实桶，这一趟写完后按实况落一行结论（#1059）。
  *  事实（真写了几份文件）由内层填，结论由 write-log.js 的纯函数推导。 */
@@ -125,7 +125,7 @@ async function addCommentInner(ctx: OpContext,repo: RepoWithPath | null,key: str
       noteFileWritten(trail)
       const comment: Comment={author:{login:actor},authorAssociation:'',body:String(body||''),createdAt:nowIso,updatedAt:nowIso}
       return{ok:true,data:comment}
-    }catch(e){return failFromError(e,ctx,'把评论写进这张票的文件时出错')}
+    }catch(e){return failFromError(e,ctx,'error while writing the comment into the file of this ticket')}
   })
 }
 export default{listComments,addComment}

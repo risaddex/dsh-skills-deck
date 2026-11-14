@@ -69,9 +69,9 @@ export async function resolveRepoTarget(repo: RepositoryRef, ctx: OpContext): Pr
 
 /** 认不出仓库时对用户说的话（这是用户在界面上会看到的那一句）。 */
 export function noRepoTarget(opCn: string): string {
-  return opCn + '时未能确定这个工作区属于哪个 GitHub 仓库。'
-    + '请先为本机配置一个指向 GitHub 的远端仓库，并在面板中选定该仓库，然后重试。'
-    + '若 Git 远端与插件登录状态都已就绪仍出现这一句，请把这一句原文报告给插件维护者。'
+  return opCn + ': could not determine which GitHub repository this workspace belongs to. '
+    + 'Configure a remote that points at GitHub on this machine, select that repository in the panel, then retry. '
+    + 'If the Git remote and the plugin login are both ready and you still see this sentence, report this exact sentence to the plugin maintainer.'
 }
 
 /** 一条进给用户的错误：契约里 applied/failed 的 reason 就是失败形状 TrackerError —— kind + message + raw。
@@ -83,7 +83,7 @@ export function rawHint(err: unknown): string {
   const eb = errBag(err);
   const t = String((eb && (eb.message || eb.stderr)) || '').trim().replace(/\s+/g, ' ')
   if (!t) return ''
-  return '（gh 返回的说明：' + (t.length > 160 ? t.slice(0, 160) + '…（已截断）' : t) + '）'
+  return ' (gh said: ' + (t.length > 160 ? t.slice(0, 160) + '... (truncated)' : t) + ')'
 }
 
 // ── 列标签 ───────────────────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<L
     const target = await resolveRepoTarget(repo, ctx)
     // 原文段交的是调用方给进来的那个仓库标识：这是当场能证明「没有可用目标」的那个值。
     // （原来这里多传了一个 repo 给 noRepoTarget，它只收一个字，多传的本来就被忽略，去掉后行为不变。）
-    if (!target) return fail(ERROR_KIND.NOTFOUND, noRepoTarget('列标签'), String((repo && repo.refId) || repo || ''))
+    if (!target) return fail(ERROR_KIND.NOTFOUND, noRepoTarget('Listing labels'), String((repo && repo.refId) || repo || ''))
     const r = await c.execGh(
       ['label', 'list', '--repo', target.spec, '--json', 'name,color,description', '--limit', String(LABEL_LIST_LIMIT)],
       { cwd: ctx && ctx.cwd }
@@ -109,14 +109,14 @@ export async function listLabels(repo: RepositoryRef, ctx: OpContext): Promise<L
     let arr: unknown = null
     try { arr = JSON.parse(text) } catch (e) {
       // 原文交的是这次 gh 的完整产出（不是解析失败那句话）：人自己就能看出回包里到底是什么。
-      return fail(ERROR_KIND.ENV, '未能获取全部标签：插件没有读懂 GitHub 助手（gh）返回的内容。这是插件运行环境的问题，不是你的操作有误。请稍后重试。', r.data)
+      return fail(ERROR_KIND.ENV, 'Could not fetch all labels: the plugin could not understand what the GitHub helper (gh) returned. This is a problem with the plugin runtime environment, not a mistake on your side. Please retry later.', r.data)
     }
     if (!Array.isArray(arr)) {
-      return fail(ERROR_KIND.ENV, '未能获取全部标签：插件没有读懂 GitHub 助手（gh）返回的内容。这是插件运行环境的问题，不是你的操作有误。请稍后重试。', r.data)
+      return fail(ERROR_KIND.ENV, 'Could not fetch all labels: the plugin could not understand what the GitHub helper (gh) returned. This is a problem with the plugin runtime environment, not a mistake on your side. Please retry later.', r.data)
     }
     if (arr.length >= LABEL_LIST_LIMIT) {
       // 说「超过了上限」时的原文就是这份回包：人可以直接数出到底有多少条、都是些什么名字。
-      return fail(ERROR_KIND.ENV, '未能获取全部标签：这个仓库的标签总数超过了插件一次能读取的上限（' + LABEL_LIST_LIMIT + ' 条），无法确认是否读全。请先在 GitHub 的仓库页面里改名或删除不再需要的标签，然后重试。', r.data)
+      return fail(ERROR_KIND.ENV, 'Could not fetch all labels: this repository has more labels than the plugin can read in one call (' + LABEL_LIST_LIMIT + '), so it cannot confirm it read them all. Rename or delete labels you no longer need on the GitHub repository page, then retry.', r.data)
     }
     // 为什么用带断言的过滤：归一函数只回「合格项或空」，Boolean 滤掉的本来就只有空；断言只为过编译，交出去的还是原来那几项，运行时不变。
     return { ok: true, data: arr.map(toLabelColor).filter((x): x is LabelColor => Boolean(x)), provenance: labelsProvenanceFromRest(clock, { fetched: arr.length }) }
@@ -147,9 +147,9 @@ function listFailure(err: unknown, ctx: OpContext): { ok: false; error: TrackerE
   // 原文段优先交上游已经带着的原文（`err.raw`）；它没带时退回手里那个值。
   const eb = errBag(err);
   const raw = eb && typeof eb.raw === 'string' && eb.raw ? eb.raw : String((eb && eb.message) || err || '')
-  if (kind === ERROR_KIND.ENV) return fail(kind, '未能获取全部标签：本机的 GitHub 助手（gh）未能运行。这是插件运行环境的问题，不是你的操作有误。' + hint, raw)
-  if (kind === ERROR_KIND.NETWORK) return fail(kind, '未能获取全部标签：无法连接 GitHub（网络不可用或请求超时）。仓库未被修改，请确认网络可用后重试。' + hint, raw)
-  if (kind === ERROR_KIND.AUTH) return fail(kind, '未能获取全部标签：GitHub 未通过登录校验（没有登录，或登录已失效）。请先运行 gh auth login 完成登录，然后重试。' + hint, raw)
-  if (kind === ERROR_KIND.RATELIMIT) return fail(kind, '未能获取全部标签：GitHub 因请求过于频繁拒绝了这次请求。请稍后重试。' + hint, raw)
-  return fail(kind, '未能获取全部标签：读取标签时发生插件未能识别的错误。这是插件运行环境的问题，不是你的操作有误。仓库未被修改，请稍后重试。' + ((eb && eb.message) ? '（gh 返回的说明：' + String(eb.message) + '）' : '（gh 没有返回说明）'), raw)
+  if (kind === ERROR_KIND.ENV) return fail(kind, 'Could not fetch all labels: the GitHub helper (gh) on this machine failed to run. This is a problem with the plugin runtime environment, not a mistake on your side.' + hint, raw)
+  if (kind === ERROR_KIND.NETWORK) return fail(kind, 'Could not fetch all labels: could not reach GitHub (network unavailable or the request timed out). The repository was not changed; make sure the network is available, then retry.' + hint, raw)
+  if (kind === ERROR_KIND.AUTH) return fail(kind, 'Could not fetch all labels: GitHub did not accept the login (not signed in, or the login expired). Run gh auth login to sign in, then retry.' + hint, raw)
+  if (kind === ERROR_KIND.RATELIMIT) return fail(kind, 'Could not fetch all labels: GitHub refused this request because of too many requests. Please retry later.' + hint, raw)
+  return fail(kind, 'Could not fetch all labels: an error the plugin does not recognize happened while reading labels. This is a problem with the plugin runtime environment, not a mistake on your side. The repository was not changed; please retry later.' + ((eb && eb.message) ? ' (gh said: ' + String(eb.message) + ')' : ' (gh gave no explanation)'), raw)
 }

@@ -99,7 +99,7 @@ export async function createIssue(
         : (checkIdempotencyKey(input.idempotencyKey) as unknown as { ok: boolean; key: string; reason: string })
     // 原文给这次用不了的键本身（判据不成立的原因在 message 里，原文让人看见实际给的是什么）。
     if (wantKey && !wantKey.ok) {
-      return fail(ERROR_KIND.PARSE as ErrorKind, 'create: idempotencyKey 不能用：' + wantKey.reason, String(input.idempotencyKey), TRACKER_ERROR_STAGE.INPUT_REFUSED)
+      return fail(ERROR_KIND.PARSE as ErrorKind, 'create: idempotencyKey cannot be used: ' + wantKey.reason, String(input.idempotencyKey), TRACKER_ERROR_STAGE.INPUT_REFUSED)
     }
     const idemKey = wantKey ? wantKey.key : ''
     // #711：建票之前先按锚回查（回查看的是票面上的 description，不是内存里的表）。

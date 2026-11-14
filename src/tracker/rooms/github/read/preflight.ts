@@ -72,7 +72,7 @@ export function ghPreflightWorstCaseMs(): number {
     let sum = 0
     for (const via of path) {
       const step = GH_PREFLIGHT_SERIAL_STEPS.find(function (s) { return s.via === via })
-      if (!step) throw new Error('ghPreflightWorstCaseMs: 未登记的预检步骤 ' + via)
+      if (!step) throw new Error('ghPreflightWorstCaseMs: unregistered preflight step ' + via)
       sum += timeoutForGhArgs(step.argv)
     }
     if (sum > worst) worst = sum

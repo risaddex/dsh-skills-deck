@@ -204,7 +204,7 @@ console.log('\n== 五、按页取票（listPage）：创建时间倒序、游标
     'filter.state=closed 收窄：只回已关闭的两张，总数与它同口径 → ' + (closed.ok ? JSON.stringify({ n: closed.data.items.length, total: closed.data.total }) : JSON.stringify(closed.error)))
 
   const badCursor: PageOut = await listIssuesPage(ctx, pageRepo, {}, { cursor: '9' })
-  check(badCursor.ok === false && badCursor.error.kind === 'not-found' && badCursor.error.message.includes('游标已失效'),
+  check(badCursor.ok === false && badCursor.error.kind === 'not-found' && badCursor.error.message.includes('cursor is no longer valid'),
     '游标越过现在这份数据 → 明说「游标已失效，请重新加载」（界面据此重取第一页）→ ' + JSON.stringify(badCursor.error))
   const junkCursor: PageOut = await listIssuesPage(ctx, pageRepo, {}, { cursor: 'abc' })
   check(junkCursor.ok === false && junkCursor.error.kind === 'parse',

@@ -221,12 +221,12 @@ export async function initProject(
   const cwd = (handle && typeof handle.cwd === 'string' && handle.cwd) || (ctx && ctx.cwd) || ''
   const name = input && typeof input.name === 'string' ? input.name.trim() : ''
   // 仓库名与它的字符集/长度都在发出任何 git 或 glab 命令之前检查，标输入被拒。
-  if (!name) return fail(ERROR_KIND.PARSE as ErrorKind, 'initProject: 仓库名不能为空', '', TRACKER_ERROR_STAGE.INPUT_REFUSED)
+  if (!name) return fail(ERROR_KIND.PARSE as ErrorKind, 'initProject: the repository name cannot be empty', '', TRACKER_ERROR_STAGE.INPUT_REFUSED)
   if (!/^[A-Za-z0-9._-]+$/.test(name) || name.length > 100) {
     // 原文取调用方给的那个名字（名字里可能有换行之类，原样带出去让界面能展开看）。
     return fail(
       ERROR_KIND.PARSE as ErrorKind,
-      'initProject: 仓库名只支持字母、数字、点、下划线、连字符，最长 100 个字符',
+      'initProject: the repository name supports only letters, digits, dots, underscores and hyphens, at most 100 characters',
       String(input.name), TRACKER_ERROR_STAGE.INPUT_REFUSED,
     )
   }
@@ -264,7 +264,7 @@ export async function initProject(
     if (!gitExe) {
       return fail(
         ERROR_KIND.ENV as ErrorKind,
-        'initProject: 未找到 git（开仓发布要先在这个工作区建一个本地仓库，请先安装 https://git-scm.com/）',
+        'initProject: git not found (publishing a new repository needs a local repository in this workspace first; install git from https://git-scm.com/)',
         '',
       )
     }
@@ -276,14 +276,14 @@ export async function initProject(
   const userRes = await requestCurrentUser(ctx, GITLAB_READ_TIMEOUT_MS)
   if (userRes.code !== 0) {
     // glab 不在（127）、没登录、远端回绝，都在这里拦下；档位交 failGlab 按原文判。
-    return failGlab(userRes, userRes.stderr || userRes.stdout || 'initProject: glab 没答出当前登录人', userRes, ctx)
+    return failGlab(userRes, userRes.stderr || userRes.stdout || 'initProject: glab did not report the current signed-in user', userRes, ctx)
   }
   const me = parseJsonObject(userRes.stdout)
   const login = me && typeof me['username'] === 'string' ? me['username'].trim() : ''
   if (!login) {
     return fail(
       ERROR_KIND.PARSE as ErrorKind,
-      'initProject: glab 的登录人回包里没有 username，拿不到归属命名空间',
+      'initProject: the signed-in user response from glab has no username, so the owning namespace cannot be determined',
       userRes.stdout,
     )
   }
@@ -292,12 +292,12 @@ export async function initProject(
   const probe = await git(['rev-parse', '--is-inside-work-tree'], 10000)
   if (probe.code !== 0) {
     const init = await git(['init'], 30000)
-    if (init.code !== 0) return failGlab(init, 'initProject: git init 没做成', init, ctx)
+    if (init.code !== 0) return failGlab(init, 'initProject: git init did not succeed', init, ctx)
   }
 
   // ── 3）提交本地现状 ──────────────────────────────────────────────────────────
   const add = await git(['add', '.'], 30000)
-  if (add.code !== 0) return failGlab(add, 'initProject: git add 没做成', add, ctx)
+  if (add.code !== 0) return failGlab(add, 'initProject: git add did not succeed', add, ctx)
 
   let commit = await git(['commit', '-m', 'initial commit', '--allow-empty'], 60000)
   if (commit.code !== 0) {
@@ -309,7 +309,7 @@ export async function initProject(
       await git(['config', 'user.name', 'DSH User'], 10000)
       commit = await git(['commit', '-m', 'initial commit', '--allow-empty'], 60000)
     }
-    if (commit.code !== 0) return failGlab(commit, 'initProject: git commit 没做成', commit, ctx)
+    if (commit.code !== 0) return failGlab(commit, 'initProject: git commit did not succeed', commit, ctx)
   }
 
   // ── 4）建远端仓库（这一步之后远端已经有东西了）────────────────────────────────
@@ -318,7 +318,7 @@ export async function initProject(
   // 只有这个开关能把那段本地动作整个关掉（逐条依据与出处见文件头）。
   const create = await c.run(['repo', 'create', name, visFlag, '--skipGitInit'], { timeout: GITLAB_CREATE_PROJECT_TIMEOUT_MS })
   if (create.code !== 0) {
-    return failGlab(create, 'initProject: glab repo create 没建成远端仓库', create, ctx)
+    return failGlab(create, 'initProject: glab repo create did not create the remote repository', create, ctx)
   }
 
   // ── 5）认地址：先认输出，再回查一次接口；两条都不成就停下 ──────────────────────
@@ -326,7 +326,7 @@ export async function initProject(
   if (!created) {
     return fail(
       ERROR_KIND.PARSE as ErrorKind,
-      'initProject: 远端仓库已经建好，但认不出它的地址（glab 的输出里没有可用地址，回查接口也没拿到 path_with_namespace / web_url），已停下，没有配 remote',
+      'initProject: the remote repository was created, but its address could not be recognized (the glab output had no usable address, and the lookup API returned no path_with_namespace / web_url either); stopped without configuring a remote',
       create.stdout,
     )
   }
@@ -342,7 +342,7 @@ export async function initProject(
   if (wire.code !== 0) {
     return failGlab(
       wire,
-      'initProject: 远端仓库已经建好了，但 origin 没配上（' + (hasOrigin ? 'git remote set-url' : 'git remote add') + ' 失败），本地提交还在',
+      'initProject: the remote repository was created, but origin was not configured (' + (hasOrigin ? 'git remote set-url' : 'git remote add') + ' failed); the local commit is still there',
       wire,
       ctx,
     )
@@ -352,7 +352,7 @@ export async function initProject(
   if (push.code !== 0) {
     return failGlab(
       push,
-      'initProject: 远端仓库已经建好了，但 git push 没推上去，本地提交还在，修好之后重推即可',
+      'initProject: the remote repository was created, but git push did not go through; the local commit is still there, so push again after fixing it',
       push,
       ctx,
     )

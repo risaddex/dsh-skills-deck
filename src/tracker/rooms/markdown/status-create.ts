@@ -43,7 +43,7 @@ export function statusFor(kind: OriginalKind, shape: ObjectShape, input: CreateV
   if (given) return given
   const triage: string[] = triageNamesOf(labels)
   if (triage.length > 1) {
-    throw new RenderStatusConflict('这次给了多枚 triage 状态标签（' + triage.join('、') + '）：可见 Status 行只能写一个状态，请只留一枚，或改用 status 明确指定。')
+    throw new RenderStatusConflict('Several triage status labels were given this time (' + triage.join(', ') + '): the visible Status line can hold only one status, so keep only one, or name it explicitly with status.')
   }
   if (triage.length === 1) return triage[0]
   return defaultStatusFor(kind, shape)

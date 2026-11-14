@@ -163,7 +163,7 @@ async function main(): Promise<void> {
     check(took < 2000, '二、到点就返回，不等外层钳制', '实耗 ' + took + 'ms')
     const timeoutEvt = roomEvents.find((e) => e.event === 'gh.timeout')
     check(!!timeoutEvt && timeoutEvt.fields.layer === 'room-tier' && timeoutEvt.fields.cmd === 'issue:list' && timeoutEvt.fields.phase === 'inflight', '二、gh.timeout 写明是房内那一层、哪条命令、到点在执行段', JSON.stringify(timeoutEvt && timeoutEvt.fields))
-    check(/issue:list/.test(r1.error.message) && /房内分档表/.test(r1.error.message) && /读操作/.test(r1.error.message) && /可以直接重试/.test(r1.error.message), '二、超时回话带命令名与「读可重试」的后续动作', String(r1.error.message).slice(0, 240))
+    check(/issue:list/.test(r1.error.message) && /room tier table/.test(r1.error.message) && /This read/.test(r1.error.message) && /can be retried directly/.test(r1.error.message), '二、超时回话带命令名与「读可重试」的后续动作', String(r1.error.message).slice(0, 240))
     const execEvt = roomEvents.find((e) => e.event === 'gh.exec')
     check(!!execEvt && execEvt.fields.cmd === 'issue:list' && typeof execEvt.fields.latencyMs === 'number', '四、gh.exec 记出子命令与真实耗时', JSON.stringify(execEvt && execEvt.fields))
 
@@ -176,8 +176,8 @@ async function main(): Promise<void> {
     check(r2 && r2.ok === false && r2.error && r2.error.cancelled !== true && r2.error.timedOut !== true, '二、冷却期间返回的是失败但不是超时/取消', JSON.stringify(r2 && r2.error))
     check(store.spawns === 0, '二、冷却期间一条进程都没起', String(store.spawns))
     check(took2 < 1000, '二、冷却期间瞬时返回，不再赔满一次超时', '实耗 ' + took2 + 'ms')
-    check(/通路现在不通/.test(r2.error.message) && /issue:list/.test(r2.error.message) && /没有起进程/.test(r2.error.message), '二、回话说清是「通路不通」并带命令名，不是笼统限时', String(r2.error.message).slice(0, 240))
-    check(/可以直接重试/.test(r2.error.message), '四、读档的后续动作写死为「可以直接重试」', String(r2.error.message).slice(0, 240))
+    check(/path to GitHub is down right now/.test(r2.error.message) && /issue:list/.test(r2.error.message) && /did not start a process/.test(r2.error.message), '二、回话说清是「通路不通」并带命令名，不是笼统限时', String(r2.error.message).slice(0, 240))
+    check(/can be retried directly/.test(r2.error.message), '四、读档的后续动作写死为「可以直接重试」', String(r2.error.message).slice(0, 240))
     const rejectEvt = transportEvents.find((e) => e.event === 'gh.transport' && e.fields.decision === 'reject-cooling')
     check(!!rejectEvt && rejectEvt.fields.bucket === 'read', '二、冷却拒绝落进常驻轨迹（gh.transport）', JSON.stringify(rejectEvt && rejectEvt.fields))
   }
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
     const client = (await imp('src/tracker/rooms/github/transport/client.ts')).ghClient(roomCtx(roomOutbound(lane), countingOk(store), roomEvents))
     const r = await client.execGh(['issue', 'create', '--title', 'x'], { cwd: '.', timeout: 5000 })
     check(r && r.ok === false && store.spawns === 0, '四、写档冷却期间同样不起进程', JSON.stringify(r && r.error))
-    check(/这一笔写操作没有确认结果/.test(r.error.message) && /核对票面现状/.test(r.error.message) && /不要直接重放/.test(r.error.message), '四、写档的后续动作写死为「先核对现状、不直接重放」', String(r.error.message).slice(0, 260))
+    check(/This write has no confirmed result/.test(r.error.message) && /check the current state of the ticket/.test(r.error.message) && /do not simply replay it/.test(r.error.message), '四、写档的后续动作写死为「先核对现状、不直接重放」', String(r.error.message).slice(0, 260))
   }
 
   // —— 四、第一次成功立刻清零；正常时一条命令只起一次进程 ——
@@ -222,7 +222,7 @@ async function main(): Promise<void> {
     const platSrc = fs.readFileSync(path.join(ROOT, 'src/host/platformChannel.ts'), 'utf8')
     // 回话与上报的共用口径住在 tracker/kernel/outbound-tiers.ts（宿主不能新建指向刷新房或宿主兄弟文件的边）。
     const reportSrc = fs.readFileSync(path.join(ROOT, 'src/tracker/kernel/outbound-tiers.ts'), 'utf8')
-    check(/ghCooldownReply/.test(platSrc) && /outboundCooldownOf/.test(reportSrc) && /通路现在不通/.test(reportSrc), '五、平台通道的探测出口经共享口径把冷却翻译成「通路不通」', '')
+    check(/ghCooldownReply/.test(platSrc) && /outboundCooldownOf/.test(reportSrc) && /path to GitHub is down right now/.test(reportSrc), '五、平台通道的探测出口经共享口径把冷却翻译成「通路不通」', '')
     check(/waitMs:\s*deIsGh\s*\?\s*queueTimeoutForTier/.test(platSrc), '五、平台通道的探测出口把 gh 的排队预算递给闸（glab 不设上限）', '')
     const admSrc = fs.readFileSync(path.join(ROOT, 'src/refresh/rooms/host/outbound-admission.ts'), 'utf8')
     check(/gh\.transport/.test(admSrc) && /admission-cooldown/.test(admSrc), '五、准入闸里有常驻的冷却轨迹与冷却错误标记', '')

@@ -206,7 +206,7 @@ async function main(): Promise<void> {
     '① 报错给出了本地模板的三个字段行：' + JSON.stringify(rejectedFail.message),
   )
   check(rejectedFail.message.indexOf('- [ ]') >= 0, '① 报错给出了本地验收项的写法：' + JSON.stringify(rejectedFail.message))
-  check(rejectedFail.message.indexOf('# NN: 标题') >= 0, '① 报错说清本地标题写成「# NN: 标题」：' + JSON.stringify(rejectedFail.message))
+  check(rejectedFail.message.indexOf('# NN: title') >= 0, '① 报错说清本地标题写成「# NN: 标题」：' + JSON.stringify(rejectedFail.message))
   check(rejectedFail.raw === REMOTE_FOUR, '① 报错带回原文，没有丢信息')
   check(listFiles(path.join(guardTmp, '.scratch', '防错', 'issues')).length === 0, '① 被拒后 issues 目录下没有半张票')
   check(!fs.existsSync(path.join(guardTmp, '.scratch', '防错')), '① 被拒后连票目录都没建')

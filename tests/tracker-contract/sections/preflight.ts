@@ -127,7 +127,7 @@ export async function run(): Promise<PreflightAssertResult[]> {
     (() => {
       const head = 'x'.repeat(900)
       const r = fail(ERROR_KIND.NETWORK, '连接失败', { stderr: head + '\nfatal: the real cause is here' })
-      return r.error.raw.indexOf('（原文中间省略') >= 0 && r.error.raw.indexOf('fatal: the real cause is here') >= 0
+      return r.error.raw.indexOf('(middle of the original omitted') >= 0 && r.error.raw.indexOf('fatal: the real cause is here') >= 0
     })(),
     String(fail(ERROR_KIND.NETWORK, '连接失败', { stderr: 'x'.repeat(900) + '\nfatal: the real cause is here' }).error.raw.length))
 

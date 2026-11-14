@@ -123,7 +123,7 @@ function ghesMeta (version: string): any {
   const a1 = cap.runtimeCapabilityAnswerFor('listSubIssues', ghes318)
   check(a1 && a1.support === 'unsupported' && a1.operation === 'listSubIssues' && a1.ticket === '#1681', 'C1 企业版 3.18 上的子票回答「不支持」并带能力票号', a1)
   check(a1 && a1.hostKind === 'ghes' && a1.serverVersion === '3.18.4' && a1.source === 'runtime-probe', 'C2 回答带主机、版本与来源（运行时探测）', a1)
-  check(a1 && typeof a1.reason === 'string' && a1.reason.indexOf('子票') >= 0, 'C3 不支持的理由说清是哪件事（子票接口）', a1 && a1.reason)
+  check(a1 && typeof a1.reason === 'string' && a1.reason.indexOf('sub-issue API') >= 0, 'C3 不支持的理由说清是哪件事（子票接口）', a1 && a1.reason)
 
   const a2 = cap.runtimeCapabilityAnswerFor('getDependencies', ghes318)
   check(a2 && a2.support === 'unsupported', 'C4 企业版 3.18 上的依赖回答「不支持」（3.19 才有端点）', a2)

@@ -292,7 +292,7 @@ if (tiers) {
   for (const rel of held7) { try { rel() } catch (eR7) {} }
   const msg7 = String((r7 && r7.error && r7.error.message) || '')
   check(r7 && r7.ok === false && r7.error && r7.error.kind === ERROR_KIND.NETWORK && r7.error.timedOut === true, '七、名额满时上限到点按超时返回（不等整档）', JSON.stringify(r7 && r7.error))
-  check(msg7.indexOf('一次都没跑') >= 0 && /排队上限 10000 毫秒/.test(msg7), '七、回话说清「一次没跑」与排队上限（不报「命令超时」）', msg7.slice(0, 200))
+  check(msg7.indexOf('never ran') >= 0 && /queue limit 10000 ms/.test(msg7), '七、回话说清「一次没跑」与排队上限（不报「命令超时」）', msg7.slice(0, 200))
   check(took7 >= 9000 && took7 < 20000, '七、上限到点即返回（约 10 秒，不等 30 秒整档）', '实耗 ' + took7 + 'ms')
 
   // 拿到名额后到点（Q3）：回话写「排队 X 毫秒 / 拿到名额后又等了 Y 毫秒」，不把后一段叫成命令运行时长。
@@ -304,7 +304,7 @@ if (tiers) {
   const slowClient = ghClient(Object.assign({}, hangCtx7, { exec: hangExec7 }))
   const r7c = await slowClient.execGh(['issue', 'list'], { cwd: '.', timeout: 500 })
   const msg7c = String((r7c && r7c.error && r7c.error.message) || '')
-  check(/拿到名额后又等了 \d+ 毫秒/.test(msg7c) && msg7c.indexOf('一次都没跑') < 0, '七、拿到名额后到点分开写两段（不叫命令运行时长）', msg7c.slice(0, 260))
+  check(/waited another \d+ ms after getting a slot/.test(msg7c) && msg7c.indexOf('never ran') < 0, '七、拿到名额后到点分开写两段（不叫命令运行时长）', msg7c.slice(0, 260))
   const held7c2 = []
   const full7c = await Promise.race([
     (async () => { for (let i = 0; i < maxRead7; i++) held7c2.push(await lane7c.acquire({ bucket: 'read' })); return 'ok' })(),

@@ -409,7 +409,7 @@ export function createDetectionService({ registry, getPlatform, getFs, getTimers
         // message 只留一句能让人看懂发生了什么的摘要（头一行、截到 120 字），完整原文交给 fail
         // 放进 error.raw：分类是启发式的、可能猜错，原文是让人自己判断的兜底，混进 message 就再也拿不全了。
         const oneLine = String((((e as { message?: unknown } | null) || {}).message) || e).split('\n')[0].slice(0, 120)
-        preflight = fail(ERROR_KIND.NETWORK, '预检意外中断：' + oneLine, e)
+        preflight = fail(ERROR_KIND.NETWORK, 'The preflight was interrupted unexpectedly: ' + oneLine, e)
       }
     }
 

@@ -210,13 +210,13 @@ async function chainRun(ws: string, sessionId = 'writable-session'): Promise<Any
 }
 
 /** 跑一趟房间 preflight：这是用户点「重查」时真正走的外部入口。 */
-async function preflightRun(ws: string, sandboxPolicy?: unknown): Promise<AnyObj> {
+async function preflightRun(ws: string, sandboxPolicy?: unknown, lang: string | null = 'zh'): Promise<AnyObj> {
   const events: AnyObj[] = []
   const ctx: AnyObj = {
     platform: currentPlatform,
     fs: currentPlatform.fs,
     cwd: ws,
-    lang: 'zh',
+    ...(lang === null ? {} : { lang }),
     opId: 'verify-1512-md-chain',
     sandboxPolicy,
     logEvent: (level: string, event: string, fields: AnyObj) => events.push({ level, event, fields }),
@@ -367,6 +367,10 @@ async function main(): Promise<void> {
       const message = pf.probe && pf.probe.error ? String(pf.probe.error.message) : ''
       ok(message.indexOf('预检没过：本地数据目录能不能写') >= 0, '场景⑧：预检那句话点名失败的是「本地数据目录能不能写」→ ' + message.slice(0, 160))
       ok(message.indexOf('EACCES') >= 0, '场景⑧：失败证据里带着错误原文（EACCES）', message.slice(0, 300))
+      // #7: English is the default locale, so a preflight without lang must name the failed check in English.
+      const pfDefault = await preflightRun(ws, { mode: 'workspace-write' }, null)
+      const defaultMessage = pfDefault.probe && pfDefault.probe.error ? String(pfDefault.probe.error.message) : ''
+      ok(defaultMessage.indexOf('Preflight did not pass: whether the local data directory can be written') >= 0 && defaultMessage.indexOf('cannot write inside the local data dir') >= 0, '场景⑧：没有指定语言时预检整句都是英文 → ' + defaultMessage.slice(0, 160))
     }
 
     console.log('\n== 九、.scratch 列不出来：md:workspace 判 fail，不能谎报空工作区 ==')

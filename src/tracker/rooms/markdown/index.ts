@@ -261,7 +261,7 @@ export function createMarkdownBackend(ctx: OpContext) {
         // 失败那句人话：先说哪一项没过，再把判据自己写下的证据原样接上（路径、错误码都在这段证据里）。
         const first=failed[0]
         const lang=c&&(c as {lang?:string}).lang
-        const message='预检没过：'+workspaceCheckLabel(first.id,lang)+'。'+String(first.result.detail||'')
+        const message=(lang==='zh'?'预检没过：':'Preflight did not pass: ')+workspaceCheckLabel(first.id,lang)+(lang==='zh'?'。':'. ')+String(first.result.detail||'')
         // 失败结论记 preflight:check-fail：三项都量过了，是工作区状态不过（目录读不出、写不进、容器版本认不得）。
         //   与「预检中途抛异常」的 preflight:fs-fail 分开：后者这一趟根本没跑完，前者是跑完了、结论不过。
         //   三项各自的证据与耗时在上面 preflight.check 那几行里。
@@ -352,7 +352,7 @@ useBuiltinLabelColors(defaultLabelPalette)
 export const prompts = {
   // #716：本地 Markdown 后端没有自己的命令行工具（票就是工作区里的文件），所以只声明站点名字；
   //   {cli} 那一格留空，渲染时回落中性说法「当前后端的命令行」—— 提示词里绝不写死别的后端的命令名。
-  commandVocabulary: { cliBrand: '本地 Markdown' },
+  commandVocabulary: { cliBrand: 'local Markdown' },
   // #1514：原来这里还有一条 wayfinderMapBuild（「执行 wayfinder 构造地图」按钮的注入提示词）。三项判据改成
   //   一起量工作区之后，「预检没过 → 执行 wayfinder 构造地图」这个修复动作不再成立：判据问的是工作区与容器
   //   文件读不读得动，不是「还没建地图」；那条提示词因此整条删掉，不再对外提供。

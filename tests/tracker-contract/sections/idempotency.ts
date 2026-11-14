@@ -511,11 +511,11 @@ export async function run() {
     const ghBad = makeScriptedGh({ searchReady: false, listFails: true, failOn: (l) => l.startsWith('search issues'), failMessage: '搜索接口报错（探针脚本）' })
     const ctxBad = remoteCtx(ghBad)
     const rBad = await t.create(GH_REPO, { title: '拿不准的一张', idempotencyKey: 'gh-uncertain' }, ctxBad)
-    await assert('真实 github：两条回查路都没跑通 → 如实失败、一张票都不建', rBad.ok === false && KNOWN_KINDS.includes(rBad.error.kind) && /回查/.test(rBad.error.message) && ghBad.created.length === 0, JSON.stringify(rBad).slice(0, 300))
+    await assert('真实 github：两条回查路都没跑通 → 如实失败、一张票都不建', rBad.ok === false && KNOWN_KINDS.includes(rBad.error.kind) && /lookup/.test(rBad.error.message) && ghBad.created.length === 0, JSON.stringify(rBad).slice(0, 300))
     // #1171：这一档的失败要能被调用方认出来（stage=anchor-lookup），调用方才知道「票没建、可以原样重试」。
     await assert('真实 github：回查没做成这一档带 stage=anchor-lookup', rBad.ok === false && rBad.error.stage === 'anchor-lookup', JSON.stringify(rBad && rBad.error).slice(0, 300))
     await assert('真实 github：回查失败的话只说事实（没有建票），不再出现「不带锚的创建」这种调用面没有的动作',
-      rBad.ok === false && rBad.error.message.indexOf('没有建票') >= 0 && rBad.error.message.indexOf('不带锚') < 0,
+      rBad.ok === false && rBad.error.message.indexOf('No ticket was created') >= 0 && rBad.error.message.indexOf('不带锚') < 0 && !/without (?:an|the) anchor/i.test(rBad.error.message),
       String(rBad.ok === false ? rBad.error.message : rBad).slice(0, 300))
 
     // 幂等键当场检查
@@ -555,7 +555,7 @@ export async function run() {
     // #1171：与 github 同一档，调用方靠 stage 认出「回查没做成」而不是别的失败。
     await assert('真实 gitlab：回查没做成这一档带 stage=anchor-lookup', rBad.ok === false && rBad.error.stage === 'anchor-lookup', JSON.stringify(rBad && rBad.error).slice(0, 300))
     await assert('真实 gitlab：回查失败的提示里不再出现「不带锚的创建」这种调用面没有的动作',
-      rBad.ok === false && rBad.error.message.indexOf('不带锚') < 0,
+      rBad.ok === false && rBad.error.message.indexOf('不带锚') < 0 && !/without (?:an|the) anchor/i.test(rBad.error.message),
       String(rBad.ok === false ? rBad.error.message : rBad).slice(0, 300))
     d.dispose()
   }

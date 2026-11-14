@@ -157,7 +157,7 @@ export async function enumerateIssueRows(ctx: OpContext, repo: RepoWithPath, fil
   const noteDirReadError = function (idir: string, err: unknown): void {
     const got = kindFromError(err, ctx)
     const detail = err && (err as Record<string, unknown>).message ? String((err as Record<string, unknown>).message) : String(err)
-    errors.push({ key: '', path: String(idir || ''), kind: got.kind, message: '这个工作单元的票目录读不出来：' + String(idir || '') + '（' + detail + '）', raw: rawTextOf(rawFromError(err)) })
+    errors.push({ key: '', path: String(idir || ''), kind: got.kind, message: 'The ticket directory of this work unit cannot be read: ' + String(idir || '') + ' (' + detail + ')', raw: rawTextOf(rawFromError(err)) })
   }
   const collectTicketsIn = async function (idir: string, effortId: string, parentKey: string | null, useKeyFilter: boolean, route: 'map' | 'spec' | 'plain' | ''): Promise<void> {
     // 这里用严格三态（listTicketFiles 与 listDir 同口径）：宽松口把「读不出来」压成空数组，
@@ -301,7 +301,7 @@ export async function listIssues(ctx: OpContext, repo: RepoWithPath, filter: Row
     // 包括「票目录读不出来」那条（枚举里当场抛上来）：整条操作如实失败时，失败结果本身说清了
     // 是哪个目录、哪一档错，日志这条只回答「这一趟走到列举这一步就停了」。
     emitReadDegraded(ctx,'list','list:fs-fail',Date.now()-t0)
-    return failFromError(e,ctx,'列举这个工作区的票时出错')
+    return failFromError(e,ctx,'error while listing the tickets of this workspace')
   }
 }
 // 读单票的选项：契约 GetOpts 加上本房的 effort 寻址（经 scopeOf 透给定位口；不给就看 repo 上的范围）。
@@ -411,7 +411,7 @@ export async function getIssue(ctx: OpContext, repo: RepoWithPath, key: string, 
           applyLabelColors(iss, colorMap)
           await hydrateBlockedByRefs(ctx, repo, iss)
           return{ok:true,data:sliceComments(iss,opts)}
-        }catch(e){emitReadDegraded(ctx,'get','get:read-fail',Date.now()-t0);return failFromError(e,ctx,'读这个工作单元的规格文件时出错')}
+        }catch(e){emitReadDegraded(ctx,'get','get:read-fail',Date.now()-t0);return failFromError(e,ctx,'error while reading the spec file of this work unit')}
       }
       // 规格文件不存在时继续往下试地图：feature 参数也可能指向一个只有 map.md 的探索目录，
       // 那里没有规格是正常的，不能因此连地图一起判成读不到。真正有规格但读/解析失败的分支已经在上面返回。
@@ -431,7 +431,7 @@ export async function getIssue(ctx: OpContext, repo: RepoWithPath, key: string, 
         applyLabelColors(iss, colorMap)
         await hydrateBlockedByRefs(ctx, repo, iss)
         return{ok:true,data:sliceComments(iss,opts)}
-      }catch(e){emitReadDegraded(ctx,'get','get:read-fail',Date.now()-t0);return failFromError(e,ctx,'读这个工作单元的地图文件时出错')}
+      }catch(e){emitReadDegraded(ctx,'get','get:read-fail',Date.now()-t0);return failFromError(e,ctx,'error while reading the map file of this work unit')}
     }
     // 两边都没有时，feature 场景优先报规格那一句（调用方问的是规格），其余场景仍报地图。
     const lastError = (scene==='feature' && specError) ? specError : r.error
@@ -448,7 +448,7 @@ export async function getIssue(ctx: OpContext, repo: RepoWithPath, key: string, 
       applyLabelColors(iss, colorMap)
       await hydrateBlockedByRefs(ctx, repo, iss)
       return{ok:true,data:sliceComments(iss,opts)}
-    }catch(e){emitReadDegraded(ctx,'get','get:read-fail',Date.now()-t0);return failFromError(e,ctx,'读这张票的文件时出错')}
+    }catch(e){emitReadDegraded(ctx,'get','get:read-fail',Date.now()-t0);return failFromError(e,ctx,'error while reading the file of this ticket')}
   }
   degraded(r.error&&r.error.kind);return{ok:false,error:r.error}
 }

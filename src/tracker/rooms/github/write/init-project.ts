@@ -88,9 +88,9 @@ async function initProjectInner(handle: RepoHandle, input: InitProjectInput, ctx
   const cwd = (handle && handle.cwd) || (ctx && ctx.cwd) || ''
   const name = input && input.name ? String(input.name).trim() : ''
   const visibility = input && input.visibility === 'public' ? 'public' : 'private'
-  if (!name) return { ok: false, error: { kind: 'bad-name', message: '仓库名为空', raw: '' } }
+  if (!name) return { ok: false, error: { kind: 'bad-name', message: 'Repository name is empty', raw: '' } }
   if (!/^[A-Za-z0-9._-]+$/.test(name) || name.length > 100) {
-    return { ok: false, error: { kind: 'bad-name', message: '仓库名仅支持字母/数字/._- 且 ≤100：' + name, raw: String(name) } }
+    return { ok: false, error: { kind: 'bad-name', message: 'Repository name: only letters/digits/._-, max 100 characters: ' + name, raw: String(name) } }
   }
   const visFlag = visibility === 'public' ? '--public' : '--private'
 
@@ -170,10 +170,10 @@ async function initProjectInner(handle: RepoHandle, input: InitProjectInput, ctx
     const raw = String(errText || '')
     if (kind === 'git-ownership') {
       const cmd = safeDirectoryCommand(ownershipPathFrom(raw) || cwd || '')
-      return { ok: false, error: { kind: kind, message: '这个工作区的属主不是当前运行用户，git 拒绝操作（原文：dubious ownership）。' + (cmd ? '修法：' + cmd : ''), raw: raw } }
+      return { ok: false, error: { kind: kind, message: 'git refuses: workspace owner differs from current user (original: dubious ownership). ' + (cmd ? 'Fix: ' + cmd : ''), raw: raw } }
     }
     if (kind === KIND_UNKNOWN) {
-      return { ok: false, error: { kind: kind, message: '创建失败，未识别的原因。git 原话：' + raw.slice(0, 160), raw: raw } }
+      return { ok: false, error: { kind: kind, message: 'Creation failed: unknown cause. git said: ' + raw.slice(0, 160), raw: raw } }
     }
     return { ok: false, error: { kind: kind, message: raw, raw: raw } }
   }
@@ -193,9 +193,9 @@ async function initProjectInner(handle: RepoHandle, input: InitProjectInput, ctx
 
   // 前置探测：git / gh / auth（失败快返，避免已改动工作区）
   const git = await resolveGitLocal()
-  if (!git) return { ok: false, error: { kind: 'no-git', message: '未找到 git（请安装 https://git-scm.com/）', raw: '' } }
+  if (!git) return { ok: false, error: { kind: 'no-git', message: 'git not found (install: https://git-scm.com/)', raw: '' } }
   const gh = await resolveGhLocal()
-  if (!gh) return { ok: false, error: { kind: 'no-gh', message: '未在 DSH 启动时继承的 PATH 中解析到 gh 可执行文件（可能未安装，也可能安装后未重启 DSH）', raw: '', prompt: 'DSH 进程启动时从父进程继承的 PATH 中未解析到 GitHub CLI（gh）可执行文件。该结果不等同于 gh 未安装。按以下顺序处理：\n\n1. 在 DSH 之外的终端执行 `gh --version`。\n2. 有版本号输出：gh 已安装。无需重复安装。将 gh 所在目录加入用户级或系统级 PATH，或将本插件读取的 DSH_GH_PATH 设为 gh 可执行文件的绝对路径，再重启 DSH Desktop；若该目录已在 PATH 中，直接重启 DSH Desktop。重启时从开始菜单、桌面或资源管理器启动，避免从旧终端或旧 IDE 会话启动（其进程环境可能未包含新 PATH）。\n3. 无版本号输出：该终端也无法执行 gh。检查 gh 的安装目录（Windows 默认：C:\\Program Files\\GitHub CLI\\gh.exe）；确认未安装后，按官方说明安装：https://cli.github.com/。安装后重启 DSH。\n4. “重新检查”只重跑检查逻辑，不重新读取进程环境变量；不能替代重启 DSH。\n5. 完成后确认：`gh --version` 有输出，环境检查的 gh 项通过。' } }
+  if (!gh) return { ok: false, error: { kind: 'no-gh', message: 'The gh executable was not resolved from the PATH DSH inherited at startup (it may not be installed, or it was installed without restarting DSH)', raw: '', prompt: 'The PATH inherited by DSH from its parent process at startup did not resolve the GitHub CLI (gh) executable. This does not mean gh is not installed. Follow these steps:\n\n1. Run `gh --version` in a terminal outside DSH.\n2. If it prints a version, gh is installed; do not reinstall it. Add its directory to the user or system PATH, or set DSH_GH_PATH (read by this plugin) to the absolute path of gh, then restart DSH Desktop. If the directory is already on PATH, simply restart DSH Desktop. Launch from the Start menu, desktop or file manager, not an old terminal or IDE session whose environment may lack the new PATH.\n3. If no version is printed, that terminal cannot run gh either. Check its installation directory (Windows default: C:\\Program Files\\GitHub CLI\\gh.exe). Only after confirming it is absent, install it from https://cli.github.com/ and restart DSH.\n4. Recheck only reruns the check; it does not reload process environment variables and cannot replace restarting DSH.\n5. Finally, confirm that `gh --version` prints a version and the gh environment check passes.' } }
   // auth 探测
   try {
     const authR = await ghStep(['auth', 'status'], { cwd })

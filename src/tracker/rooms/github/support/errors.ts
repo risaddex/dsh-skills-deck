@@ -196,8 +196,8 @@ export function classifyGhError(err: unknown, ctx?: PreflightCtx) {
  */
 export function ghFailureMessage(verdict: Judged, own: string): string {
   const context = String(own || '').trim()
-  if (verdict.fallback) return context ? context + '；' + HINT_UNRECOGNIZED : HINT_UNRECOGNIZED
-  if (verdict.kind === ERROR_KIND.UNSUPPORTED) return context ? context + '；' + HINT_UNSUPPORTED : HINT_UNSUPPORTED
+  if (verdict.fallback) return context ? context + '; ' + HINT_UNRECOGNIZED : HINT_UNRECOGNIZED
+  if (verdict.kind === ERROR_KIND.UNSUPPORTED) return context ? context + '; ' + HINT_UNSUPPORTED : HINT_UNSUPPORTED
   return context
 }
 

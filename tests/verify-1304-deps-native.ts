@@ -168,10 +168,10 @@ async function main() {
     check(r.ok === true, 'S2-1 连接截断不算失败，已给的条目照返回（实得 ok=' + r.ok + '）')
     const d = r.ok ? r.data : {}
     check(d.blockingComplete === false, 'S2-2 到了上限就标「不全」（实得 ' + d.blockingComplete + '）')
-    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('不全') >= 0, 'S2-3 注记自己说清可能不全（实得 ' + String(d.blockingNote) + '）')
+    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('incomplete') >= 0, 'S2-3 注记自己说清可能不全（实得 ' + String(d.blockingNote) + '）')
     check((d.blocking || []).length === 1, 'S2-4 已给的那条没有被吞掉')
     check(d.blockedByComplete === false, 'S2-5 正向边被截断也要标「不全」（实得 ' + d.blockedByComplete + '）')
-    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('被谁阻塞') >= 0, 'S2-6 注记同时说清正向边也到了上限（实得 ' + String(d.blockingNote) + '）')
+    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('blocked by') >= 0, 'S2-6 注记同时说清正向边也到了上限（实得 ' + String(d.blockingNote) + '）')
     const ev = degradedEventsOf(ctx)
     check(ev.length === 1 && ev[0].fields && ev[0].fields.op === 'deps' && ev[0].fields.reason === 'deps:truncated', 'S2-7 截断落一行 read.degraded（实得 ' + JSON.stringify(ev.map((e: any) => e.fields)) + '）')
   }
@@ -200,7 +200,7 @@ async function main() {
     const d = r.ok ? r.data : {}
     check(d.blockingSource === 'scan', 'S3-2 回执交代用了整仓兜底（实得 ' + d.blockingSource + '）')
     check(d.blockingComplete === false, 'S3-3 列表被截断就标「不全」（实得 ' + d.blockingComplete + '）')
-    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('不全') >= 0 && d.blockingNote.indexOf('反推') >= 0, 'S3-4 注记说清「用了兜底」与「可能不全」（实得 ' + String(d.blockingNote) + '）')
+    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('incomplete') >= 0 && d.blockingNote.indexOf('fell back to working it out') >= 0, 'S3-4 注记说清「用了兜底」与「可能不全」（实得 ' + String(d.blockingNote) + '）')
     const bk = (d.blocking || []).map((b: any) => String(b.key)).sort().join(',')
     check(bk === '900', 'S3-5 用列表行本身反推出阻塞者 900（实得 ' + bk + '）')
     check((d.blocking || [])[0] && d.blocking[0].title === '阻塞者乙', 'S3-6 阻塞者标题直接取列表行，不再逐张读一遍（实得 ' + JSON.stringify((d.blocking || [])[0]) + '）')
@@ -226,7 +226,7 @@ async function main() {
     const d = r.ok ? r.data : {}
     check(r.ok === true && d.blockingSource === 'scan', 'S4-1 兜底路成功且交代来源（实得 ok=' + r.ok + ' source=' + d.blockingSource + '）')
     check(d.blockingComplete === true, 'S4-2 列表完整就标完整（实得 ' + d.blockingComplete + '）')
-    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('反推') >= 0 && d.blockingNote.indexOf('不全') < 0, 'S4-3 注记说明用了兜底，但不说「不全」（实得 ' + String(d.blockingNote) + '）')
+    check(typeof d.blockingNote === 'string' && d.blockingNote.indexOf('fell back to working it out') >= 0 && d.blockingNote.indexOf('incomplete') < 0, 'S4-3 注记说明用了兜底，但不说「不全」（实得 ' + String(d.blockingNote) + '）')
     check((d.blocking || []).length === 1 && d.blocking[0].title === '阻塞者丙', 'S4-4 标题取自列表行（实得 ' + JSON.stringify(d.blocking) + '）')
     const ev = degradedEventsOf(ctx)
     check(ev.length === 1 && ev[0].fields && ev[0].fields.reason === 'deps:shape', 'S4-5 兜底但结果完整时也留一行，原因为 deps:shape（实得 ' + JSON.stringify(ev.map((e: any) => e.fields)) + '）')

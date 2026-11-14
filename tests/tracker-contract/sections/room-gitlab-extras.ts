@@ -525,7 +525,7 @@ export async function run() {
     const lost = await withGitlabTracker((t) => t.listSubIssues(GL_REPO, MAP_KEY, undefined, undecidableSc.ctx))
     await assert(
       'listSubIssues：有候选行却一行都算不进去时如实失败（不把「读不出来」画成「一张都没有」）',
-      honestFailureCheck(lost).length === 0 && lost.error.kind === 'parse' && /一行都没能算进去/.test(lost.error.message),
+      honestFailureCheck(lost).length === 0 && lost.error.kind === 'parse' && /none of the candidate rows/.test(lost.error.message),
       JSON.stringify(lost).slice(0, 300),
     )
     await assert(
@@ -673,7 +673,7 @@ export async function run() {
       'initProject：push 失败的原因认得出档位时，话里说清「远端仓库已经建好了」（只有兜底那一档才换通用提示）',
       honestFailureCheck(pushFailKnown.res).length === 0 &&
         pushFailKnown.res.error.kind === 'network' &&
-        /远端仓库已经建好了/.test(pushFailKnown.res.error.message),
+        /the remote repository was created/.test(pushFailKnown.res.error.message),
       JSON.stringify(pushFailKnown.res).slice(0, 300),
     )
     await assert(
@@ -691,8 +691,8 @@ export async function run() {
     await assert(
       'initProject：origin 没配上时如实失败，并说清远端已经建好、本地提交还在',
       honestFailureCheck(wireFail.res).length === 0 &&
-        /远端仓库已经建好了/.test(wireFail.res.error.message) &&
-        /origin 没配上/.test(wireFail.res.error.message) &&
+        /the remote repository was created/.test(wireFail.res.error.message) &&
+        /origin was not configured/.test(wireFail.res.error.message) &&
         wireFail.calls.filter((c) => c.indexOf('git remote set-url origin https://gitlab.com/alice/demo-new.git') === 0).length === 1,
       JSON.stringify({ res: wireFail.res, calls: wireFail.calls }).slice(0, 400),
     )
@@ -701,7 +701,7 @@ export async function run() {
     await assert(
       'initProject：认不出新仓库地址时停下、不配 remote（宁可不发，也不拿猜出来的地址去配）',
       honestFailureCheck(noAddr.res).length === 0 &&
-        /认不出它的地址/.test(noAddr.res.error.message) &&
+        /its address could not be recognized/.test(noAddr.res.error.message) &&
         noAddr.calls.filter((c) => c.indexOf('remote add') >= 0 || c.indexOf('remote set-url') >= 0).length === 0,
       JSON.stringify({ res: noAddr.res, calls: noAddr.calls }).slice(0, 400),
     )

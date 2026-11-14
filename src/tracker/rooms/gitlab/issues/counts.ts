@@ -128,7 +128,7 @@ export async function counts(
     emitReadDegraded(ctx, 'counts', 'counts:repo-ref', Date.now() - t0)
     return fail(
       ERROR_KIND.NOTFOUND,
-      `counts: 仓库标识缺了或形状不对（项目全路径形如 group/sub/project，也可以是数字项目 ID）：${repoRefId(repo)}`,
+      `counts: the repository identifier is missing or has the wrong shape (a full project path looks like group/sub/project, or it can be a numeric project ID): ${repoRefId(repo)}`,
       repo,
     )
   }
@@ -148,21 +148,21 @@ export async function counts(
     if (r.code !== 0) {
       // 原文 = 这一次 glab 调用的进程结果（stderr 里那几句是 glab 或远端的原话）。
       emitReadDegraded(ctx, 'counts', 'counts:transport', Date.now() - t0)
-      return failGlab(r, r.stderr || r.stdout || 'counts: glab api issues_statistics 失败', r, ctx)
+      return failGlab(r, r.stderr || r.stdout || 'counts: glab api issues_statistics failed', r, ctx)
     }
     let body: unknown
     try {
       body = JSON.parse(r.stdout || '')
     } catch (e) {
       emitReadDegraded(ctx, 'counts', 'counts:json', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE, `counts: 回包不是合法 JSON ${msgOf(e).slice(0, 200)}`, r)
+      return fail(ERROR_KIND.PARSE, `counts: the response is not valid JSON ${msgOf(e).slice(0, 200)}`, r)
     }
     const statistics = asBag(asBag(body)?.['statistics'])
     const countsBag = statistics ? asBag(statistics['counts']) : null
     if (!countsBag) {
       // 「回包里缺东西」时原文就是这份回包本身（人自己能看出它到底缺了什么）。
       emitReadDegraded(ctx, 'counts', 'counts:shape', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE, 'counts: 回包里没有 statistics.counts（远端回的不是这个端点的形状）', r)
+      return fail(ERROR_KIND.PARSE, 'counts: the response has no statistics.counts (the remote did not return the shape of this endpoint)', r)
     }
     const opened = countOf(countsBag['opened'])
     const closed = countOf(countsBag['closed'])
@@ -171,7 +171,7 @@ export async function counts(
       emitReadDegraded(ctx, 'counts', 'counts:stat', Date.now() - t0)
       return fail(
         ERROR_KIND.PARSE,
-        'counts: 三个数里有缺失或不是非负整数的（拒绝拿别的数或 0 顶上）',
+        'counts: one of the three numbers is missing or not a non-negative integer (refusing to substitute another number or 0)',
         r,
       )
     }

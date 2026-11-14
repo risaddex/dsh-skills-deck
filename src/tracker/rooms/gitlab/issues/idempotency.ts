@@ -71,7 +71,7 @@ function parseRows(text: string): Record<string, unknown>[] {
   const t = String(text || '').trim()
   if (!t) return []
   const j: unknown = JSON.parse(t)
-  if (!Array.isArray(j)) throw new Error('返回的不是一个列表')
+  if (!Array.isArray(j)) throw new Error('the response is not a list')
   return j as Record<string, unknown>[]
 }
 
@@ -108,7 +108,7 @@ function lookupFailure(
   raw: string,
 ): { ok: false; error: TrackerError } {
   const native =
-    '带锚创建的回查没能做成：' + String(message || '原因不明').slice(0, 500) + '。这一次没有建票。'
+    'The lookup for a create with an idempotency anchor could not be completed: ' + String(message || 'unknown reason').slice(0, 500) + '. No ticket was created this time.'
   // 档位兜底也走 ERROR_KIND 常量：这条兜底只在判档结果缺失时才用得上，含义是「本家不敢断定」。
   return {
     ok: false,
@@ -145,14 +145,14 @@ export async function lookupByAnchor(
   opCtx: (Partial<OpContext> & Partial<BackendContext>) | null | undefined,
 ): Promise<LookupByAnchorResult> {
   const id = repoRefId(repo)
-  if (!id) return lookupFailure({ kind: ERROR_KIND.UNSUPPORTED as ErrorKind, fallback: false }, '这个仓库的 refId 是空的，回查无从做起', '')
+  if (!id) return lookupFailure({ kind: ERROR_KIND.UNSUPPORTED as ErrorKind, fallback: false }, 'The refId of this repository is empty, so the lookup cannot be done', '')
 
   // ① 快路：服务端搜索（只搜 description）。
   let searchError: string | null = null
   try {
     const q = 'search=' + encodeURIComponent(key) + '&in=description&state=opened'
     const res = await requestIssueList(opCtx, id, q, GITLAB_READ_TIMEOUT_MS)
-    if (res.code !== 0) searchError = res.stderr || res.stdout || '搜索接口报错'
+    if (res.code !== 0) searchError = res.stderr || res.stdout || 'the search API reported an error'
     else {
       const rows = parseRows(res.stdout)
       const cands = rows.map(toCandidate).filter((x): x is AnchorCandidate => x !== null)
@@ -172,7 +172,7 @@ export async function lookupByAnchor(
   try {
     const q = 'state=opened&order_by=created_at&sort=desc&per_page=' + SCAN_LIMIT + '&' + DETAIL_QUERY
     const res = await requestIssueList(opCtx, id, q, GITLAB_SLOW_READ_TIMEOUT_MS)
-    if (res.code !== 0) listError = res.stderr || res.stdout || '列出票时报错'
+    if (res.code !== 0) listError = res.stderr || res.stdout || 'listing tickets reported an error'
     else {
       const rows = parseRows(res.stdout)
       for (const raw of rows) {
@@ -185,7 +185,7 @@ export async function lookupByAnchor(
         // 这一档是「本家承认自己这次不敢断定」，不是判档判出来的；原文给扫描上限本身。
         return lookupFailure(
           { kind: ERROR_KIND.UNSUPPORTED as ErrorKind, fallback: false },
-          '按创建时间倒序看完了前 ' + SCAN_LIMIT + ' 张还没找到这个锚，这个仓库比这更大，这次不敢断定「还没建过」',
+          'Looked through the newest ' + SCAN_LIMIT + ' tickets by creation time without finding this anchor, and the repository is larger than that, so this call does not dare to conclude "not created yet"',
           'per_page=' + SCAN_LIMIT,
         )
       }
@@ -196,18 +196,18 @@ export async function lookupByAnchor(
 
   // 两条路都没找到：只有在**两条路都真跑通了、都确认没有**时才算「确实还没建过」。
   if (searchError && listError) {
-    const bothRaw = '搜索：' + searchError + '\n列表：' + listError
+    const bothRaw = 'search: ' + searchError + '\nlist: ' + listError
     return lookupFailure(
       // 空上下文统一成 undefined，是因为判档只收 undefined，null 会被当成非法值拦掉。
       classifyGlabError({ message: listError }, opCtx ?? undefined),
-      '搜索接口与列表接口都没跑通（搜索：' + searchError + '；列表：' + listError + '）',
+      'Neither the search API nor the list API worked (search: ' + searchError + '; list: ' + listError + ')',
       bothRaw,
     )
   }
   if (listError) {
     return lookupFailure(
       classifyGlabError({ message: listError }, opCtx ?? undefined),
-      '列表这条回查路没跑通（' + listError + '），而搜索接口没搜到不能算数（服务端搜索对刚建好的票可能有延迟）',
+      'The list lookup path did not work (' + listError + '), and finding nothing through the search API does not count (server search may lag behind a ticket that was just created)',
       listError,
     )
   }
@@ -217,7 +217,7 @@ export async function lookupByAnchor(
 
 /** 回查没做成时给调用方看的那句话（句式由核心里那一处给，本文件不自己拼）。 */
 export function describeLookupFailure(match: AnchorMatch | null | undefined): string {
-  return describeAnchorFailure(match || anchorUnsupported('回查没有做成'))
+  return describeAnchorFailure(match || anchorUnsupported('the lookup was not completed'))
 }
 
 export default { withAnchor, lookupByAnchor, describeLookupFailure }

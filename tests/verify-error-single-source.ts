@@ -560,7 +560,7 @@ console.log('── C. 契约里的 raw 仍然必填，而且真的带得出来'
     'C4.1 fail(...) 返回的失败结果带字符串 raw（真调用）')
   const raw1 = String((failed1 && failed1.error && failed1.error.raw) || '')
   check(raw1.indexOf(secret) < 0, 'C4.2 raw 里没有令牌明文（真调用；实得 ' + JSON.stringify(raw1.slice(0, 60)) + '）')
-  check(raw1.indexOf('***（凭据已遮蔽）') >= 0, 'C4.3 raw 里留下了遮蔽标记，人知道这里原本有凭据')
+  check(raw1.indexOf('*** (credential masked)') >= 0, 'C4.3 raw 里留下了遮蔽标记，人知道这里原本有凭据')
   check(/403/.test(raw1), 'C4.4 raw 里留着后端原文本身（不是只留一句摘要）')
   const failed2 = preflightMod.fail('network', '连不上', { message: 'connect ECONNREFUSED 127.0.0.1:9', stdout: '', stderr: 'dial tcp: connection refused' })
   check(typeof (failed2 && failed2.error && failed2.error.raw) === 'string' && /ECONNREFUSED|connection refused/.test(String(failed2.error.raw)),
@@ -569,7 +569,7 @@ console.log('── C. 契约里的 raw 仍然必填，而且真的带得出来'
   const failed3 = preflightMod.fail('auth', '这次没成', 'PRIVATE-TOKEN: zzzzSECRET9999\nGET https://gitlab.example.com/api/v4/projects?private_token=zzzzSECRET9999')
   const raw3 = String(failed3 && failed3.error && failed3.error.raw)
   check(raw3.indexOf('zzzzSECRET9999') < 0, 'C5.1 PRIVATE-TOKEN 头与 private_token 查询串里的令牌都被遮蔽（实得 ' + JSON.stringify(raw3.slice(0, 80)) + '）')
-  check((raw3.match(/\*\*\*（凭据已遮蔽）/g) || []).length >= 2, 'C5.2 两处凭据各留一个遮蔽标记，人知道这里原本有凭据')
+  check((raw3.match(/\*\*\* \(credential masked\)/g) || []).length >= 2, 'C5.2 两处凭据各留一个遮蔽标记，人知道这里原本有凭据')
   }).catch((e) => {
     check(false, 'C4.0 载入 ' + preflightRel + ' 做真调用失败（要在链路里跑，或手工加 --import ./scripts/ts-hook.mts）：' + ((e && e.message) || e))
   }).finally(finish)

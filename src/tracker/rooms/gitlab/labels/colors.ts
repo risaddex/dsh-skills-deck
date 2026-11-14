@@ -79,18 +79,18 @@ export const WRITE_CONCURRENCY_DEFAULT = PAGINATION.gitlab.labelWriteConcurrency
  * 本判据照样按住，因为首尾空白在任何一家都不可能算标签名的一部分。
  */
 function changesProblem(changes: unknown): string {
-  if (!Array.isArray(changes)) return '修改标签颜色需要一批「标签 → 新颜色」的改动，本次收到的内容不是这种格式'
+  if (!Array.isArray(changes)) return 'Changing label colors needs a batch of "label → new color" changes, and what arrived this time is not in that format'
   const seen = new Set<string>()
   for (const ch of changes) {
-    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) return '这一批改动中有一条不是「标签 → 新颜色」的格式'
+    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) return 'One change in this batch is not in the "label → new color" format'
     // 为什么断言：上面刚验过这一条是对象，名字颜色两格下面还要验；断言只为过编译，读的还是原来那几格。
     const bag = ch as { name?: unknown; color?: unknown }
-    if (typeof bag.name !== 'string' || !bag.name.trim()) return '这一批改动中有一条未填写标签名'
-    if (typeof bag.color !== 'string' || !bag.color.trim()) return '这一批改动中有一条未填写新颜色'
+    if (typeof bag.name !== 'string' || !bag.name.trim()) return 'One change in this batch has no label name'
+    if (typeof bag.color !== 'string' || !bag.color.trim()) return 'One change in this batch has no new color'
     // 重名判据两边都用去掉首尾空白之后的名字，所以「bug」与「 bug 」算同一条；
     // 交给远端的那一份仍然是用户写的那串原文（见 applyOne：请求边界按原始名字编码路径）。
     const key = bag.name.trim()
-    if (seen.has(key)) return '同一批改动里「' + key + '」出现了两次，一个标签在一批中只允许出现一次。请只保留其中一条，然后重试。'
+    if (seen.has(key)) return 'The label "' + key + '" appears twice in the same batch; a label may appear only once per batch. Keep only one of them, then retry.'
     seen.add(key)
   }
   return ''
@@ -162,7 +162,7 @@ async function applyOne(ctx: OpContext, refId: string, ch: LabelColorChange): Pr
   if (!want) {
     // 这条是本插件自己先拦下来的：颜色还没送到 GitLab 就被判为不合格，所以没有任何后端原文可交，
     // 第三段如实给空串（不能把用户自己填的颜色当成「原始说明」回显，那是假的出处）。
-    return { ok: false, entry: { name: ch.name, reason: reason(ERROR_KIND.PARSE, '「' + ch.name + '」的新颜色不正确：请改为不带井号的六位十六进制，例如 9d7cd8。', '') } }
+    return { ok: false, entry: { name: ch.name, reason: reason(ERROR_KIND.PARSE, 'The new color of "' + ch.name + '" is not valid: use six hexadecimal digits without the hash sign, for example 9d7cd8.', '') } }
   }
   const res = await requestLabelColor(ctx, refId, ch.name, '#' + want, GITLAB_READ_TIMEOUT_MS)
   if (res.code === 0) {
@@ -183,26 +183,26 @@ function explainWriteFailure(err: unknown, ch: LabelColorChange, ctx: OpContext)
   const kind = kindOf(err, ctx)
   const hint = withRawHint('', err)
   if (kind === ERROR_KIND.AUTH) {
-    return reason(kind, 'GitLab 未通过登录校验（没有登录，或登录已失效），因此无法修改「' + ch.name + '」的颜色：请先运行 glab auth login 完成登录，然后重新保存。本次「' + ch.name + '」的颜色未改动。' + hint, err)
+    return reason(kind, 'GitLab did not accept the login (not signed in, or the login expired), so the color of "' + ch.name + '" cannot be changed: run glab auth login to sign in, then save again. The color of "' + ch.name + '" was not changed this time.' + hint, err)
   }
   if (kind === ERROR_KIND.RATELIMIT) {
-    return reason(kind, 'GitLab 因请求过于频繁拒绝了这次请求。请稍后重新保存。本次「' + ch.name + '」的颜色未改动。' + hint, err)
+    return reason(kind, 'GitLab refused this request because of too many requests. Please save again later. The color of "' + ch.name + '" was not changed this time.' + hint, err)
   }
   if (kind === ERROR_KIND.NETWORK) {
-    return reason(kind, '修改「' + ch.name + '」的颜色时无法连接 GitLab（网络不可用或请求超时），插件没有拿到答复，因此无法确认这一条的颜色是否已经改动。请确认网络可用后重新保存，并重新打开这个弹窗核对。' + hint, err)
+    return reason(kind, 'While changing the color of "' + ch.name + '", GitLab could not be reached (network unavailable or the request timed out) and the plugin got no answer, so it cannot be confirmed whether this color was changed. Make sure the network is available, save again, and reopen this dialog to check.' + hint, err)
   }
   if (kind === ERROR_KIND.PARSE) {
-    return reason(kind, 'GitLab 拒绝了「' + ch.name + '」的新颜色。GitLab 要求颜色是带井号的六位十六进制（例如 #9d7cd8），插件已经按这个写法发出去，所以这一条多半是标签名或权限引起的。本次「' + ch.name + '」的颜色未改动。' + hint, err)
+    return reason(kind, 'GitLab rejected the new color of "' + ch.name + '". GitLab requires six hexadecimal digits with the hash sign (for example #9d7cd8), and the plugin already sent it that way, so this is most likely caused by the label name or by permissions. The color of "' + ch.name + '" was not changed this time.' + hint, err)
   }
   if (kind === ERROR_KIND.NOTFOUND) {
     // 同一个 404 在这家有三种来路（标签不在、项目名不对、没有写权限），文档没有给可分辨的返回体；
     // 三条都写进同一句里，让人自己按顺序核对，不假装能分开。
-    return reason(kind, 'GitLab 报告找不到「' + ch.name + '」这个标签（或这个项目）。三种可能：标签不在这个项目里、项目全路径不正确、当前账号在这个项目上没有改标签的权限。请核对标签名与项目全路径、确认账号已登录且有权限，然后重新保存。本次「' + ch.name + '」的颜色未改动。' + hint, err)
+    return reason(kind, 'GitLab reported it cannot find the label "' + ch.name + '" (or this project). Three possibilities: the label is not in this project, the full project path is wrong, or the current account lacks permission to change labels in this project. Check the label name and the full project path, confirm the account is signed in and has permission, then save again. The color of "' + ch.name + '" was not changed this time.' + hint, err)
   }
   if (kind === ERROR_KIND.ENV) {
-    return reason(kind, '修改「' + ch.name + '」的颜色时，本机的 GitLab 助手（glab）没有给出答复，因此无法确认这一条的颜色是否已经改动。这是插件运行环境的问题，不是你的操作有误。请稍后重新保存，并重新打开这个弹窗核对。' + hint, err)
+    return reason(kind, 'While changing the color of "' + ch.name + '", the GitLab helper (glab) on this machine gave no answer, so it cannot be confirmed whether this color was changed. This is a problem with the plugin runtime environment, not a mistake on your side. Save again later, and reopen this dialog to check.' + hint, err)
   }
-  return reason(kind, '修改「' + ch.name + '」的颜色时发生插件未能识别的错误。插件无法确认这一条的颜色是否已经改动，请重新打开这个弹窗核对；若仍然失败，请把这一句原文报告给插件维护者。' + hint, err)
+  return reason(kind, 'An error the plugin does not recognize happened while changing the color of "' + ch.name + '". The plugin cannot confirm whether this color was changed; reopen this dialog to check; if it still fails, report this exact sentence to the plugin maintainer.' + hint, err)
 }
 
 /**
@@ -225,7 +225,7 @@ export async function setLabelColors(repo: RepositoryRef, changes: LabelColorCha
     if (!refId) {
       const raw = String((repo && repo.refId) || '')
       emitReadDegraded(ctx, 'labels', 'labels:repo-ref', Date.now() - t0)
-      return fail(ERROR_KIND.NOTFOUND, '修改标签颜色时未能确定这个工作区属于哪个 GitLab 项目（项目全路径形如 group/sub/project）。请先在面板中选定这个工作区对应的 GitLab 仓库，然后重试。', raw)
+      return fail(ERROR_KIND.NOTFOUND, 'Changing label colors: could not determine which GitLab project this workspace belongs to (a full project path looks like group/sub/project). Select the GitLab repository for this workspace in the panel, then retry.', raw)
     }
     // 空的一批是合法的成功：什么都没要求改，就什么都没改。
     if (changes.length === 0) return { ok: true, data: { applied: [], failed: [] } }
@@ -237,7 +237,7 @@ export async function setLabelColors(repo: RepositoryRef, changes: LabelColorCha
           ok: false,
           entry: {
             name: ch.name,
-            reason: reason(ERROR_KIND.ENV, '修改「' + ch.name + '」的颜色时插件运行出错。这是插件运行环境的问题，不是你的操作有误；同一批中的其它标签仍会继续修改。', e),
+            reason: reason(ERROR_KIND.ENV, 'The plugin hit a runtime error while changing the color of "' + ch.name + '". This is a problem with the plugin runtime environment, not a mistake on your side; the other labels in the same batch are still being changed.', e),
           },
         }
       }
@@ -255,7 +255,7 @@ export async function setLabelColors(repo: RepositoryRef, changes: LabelColorCha
     return { ok: true, data: { applied: applied, failed: failed } }
   } catch (err) {
     // 判档只走本房唯一的出口（classifyGlabError）。
-    return failGlab(err, '修改标签颜色时发生插件未能识别的错误。这是插件运行环境的问题，不是你的操作有误，请稍后重试。', err, ctx)
+    return failGlab(err, 'An error the plugin does not recognize happened while changing label colors. This is a problem with the plugin runtime environment, not a mistake on your side; please retry later.', err, ctx)
   }
 }
 

@@ -210,7 +210,7 @@ async function writeAllViaGraphql(a: WriteBlockedByArgs, ids: Map<string, string
     if (out.status === 'cycle') {
       return { ok: false, fellBack: false, failure: fail(ERROR_KIND.CONFLICT, 'conflict: cycle ' + out.message, out.error) }
     }
-    return { ok: false, fellBack: false, failure: failFromMutation(out, 'setBlockedBy: 撤阻塞边时出错', a.ctx) }
+    return { ok: false, fellBack: false, failure: failFromMutation(out, 'setBlockedBy: error while removing blocking edges', a.ctx) }
   }
   for (const b of a.toAdd) {
     const out = await graphqlEdgeMutation(a.client, ADD_BLOCKED_BY_MUTATION, 'addBlockedBy', issueId, idOf(b), a.ctx)
@@ -222,7 +222,7 @@ async function writeAllViaGraphql(a: WriteBlockedByArgs, ids: Map<string, string
     if (out.status === 'cycle') {
       return { ok: false, fellBack: false, failure: fail(ERROR_KIND.CONFLICT, 'conflict: cycle ' + out.message, out.error) }
     }
-    return { ok: false, fellBack: false, failure: failFromMutation(out, 'setBlockedBy: 补阻塞边时出错', a.ctx) }
+    return { ok: false, fellBack: false, failure: failFromMutation(out, 'setBlockedBy: error while adding blocking edges', a.ctx) }
   }
   return { ok: true }
 }

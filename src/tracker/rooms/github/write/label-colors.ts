@@ -68,16 +68,16 @@ function reason(kind: ErrorKind, message: string, raw: unknown): TrackerError {
  *  契约里名字是要原样交给 GitHub 的，而 GitHub 认名字时大小写不敏感、首尾空格也不算数，
  *  只比字节串会让「bug」与「BUG」这种同一批里的同一个标签各发一次命令（#620 整改 D4）。 */
 function changesProblem(changes: unknown): string {
-  if (!Array.isArray(changes)) return '修改标签颜色需要一批「标签 → 新颜色」的改动，本次收到的内容不是这种格式'
+  if (!Array.isArray(changes)) return 'Changing label colors needs a batch of "label → new color" changes, and what arrived this time is not in that format'
   const seen = new Set<string>()
   for (const ch of changes) {
-    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) return '这一批改动中有一条不是「标签 → 新颜色」的格式'
+    if (!ch || typeof ch !== 'object' || Array.isArray(ch)) return 'One change in this batch is not in the "label → new color" format'
     // 为什么断言：上面刚验过这一条是对象，名字颜色两格下面还要验；断言只为过编译，读的还是原来那几格，运行时不变。
     const bag = ch as { name?: unknown; color?: unknown };
-    if (typeof bag.name !== 'string' || !bag.name.trim()) return '这一批改动中有一条未填写标签名'
-    if (typeof bag.color !== 'string' || !bag.color.trim()) return '这一批改动中有一条未填写新颜色'
+    if (typeof bag.name !== 'string' || !bag.name.trim()) return 'One change in this batch has no label name'
+    if (typeof bag.color !== 'string' || !bag.color.trim()) return 'One change in this batch has no new color'
     const key = bag.name.trim().toLowerCase()
-    if (seen.has(key)) return '同一批改动里「' + bag.name + '」出现了两次，一个标签在一批中只允许出现一次。标签名比较时不区分大小写、也不计首尾空格，这两类写法在 GitHub 上指向同一个标签。请只保留其中一条，然后重试。'
+    if (seen.has(key)) return 'The label "' + bag.name + '" appears twice in the same batch; a label may appear only once per batch. Label names are compared without regard to case or leading and trailing spaces, because on GitHub such spellings point at the same label. Keep only one of them, then retry.'
     seen.add(key)
   }
   return ''
@@ -120,7 +120,7 @@ async function applyOne(c: GhClient, spec: string, ch: LabelColorChange, ctx: Op
   if (!want) {
     // 这条是本插件自己先拦下来的：颜色还没送到 gh 就被判为不合格，所以没有任何后端原文可交，
     // 第三段如实给空串（不能把用户自己填的颜色当成「原始说明」回显，那是假的出处）。
-    return { ok: false, entry: { name: ch.name, reason: reason(ERROR_KIND.PARSE, '「' + ch.name + '」的新颜色不正确：请改为不带井号的六位十六进制，例如 9d7cd8。', '') } }
+    return { ok: false, entry: { name: ch.name, reason: reason(ERROR_KIND.PARSE, 'The new color of "' + ch.name + '" is not valid: use six hexadecimal digits without the hash sign, for example 9d7cd8.', '') } }
   }
   // 真发出去了才算一条写命令（route 在这里改口，一条都没发时它保持 none）；成没成由这一条的结果说。
   trail.route = 'rest'
@@ -153,7 +153,7 @@ async function setLabelColorsInner(repo: RepositoryRef, changes: LabelColorChang
     if (bad) return fail(ERROR_KIND.PARSE, bad, changes)
     const target = await resolveRepoTarget(repo, ctx)
     // （noRepoTarget 只收一个字：原来多传的 repo 本来就被忽略，去掉后行为不变。）
-    if (!target) return fail(ERROR_KIND.NOTFOUND, noRepoTarget('修改标签颜色'), repo)
+    if (!target) return fail(ERROR_KIND.NOTFOUND, noRepoTarget('Changing label colors'), repo)
     if (changes.length === 0) return { ok: true, data: { applied: [], failed: [] } }
     const c = ghClient(ctx)
     // #992：本批共用的权限复用位 —— 撞到 404 才问仓库权限，且一批里只真问一次
@@ -171,7 +171,7 @@ async function setLabelColorsInner(repo: RepositoryRef, changes: LabelColorChang
           ok: false,
           entry: {
             name: ch.name,
-            reason: reason(ERROR_KIND.ENV, '修改「' + ch.name + '」的颜色时插件运行出错。这是插件运行环境的问题，不是你的操作有误；同一批中的其它标签仍会继续修改。', e),
+            reason: reason(ERROR_KIND.ENV, 'The plugin hit a runtime error while changing the color of "' + ch.name + '". This is a problem with the plugin runtime environment, not a mistake on your side; the other labels in the same batch are still being changed.', e),
           },
         }
       }
@@ -206,27 +206,27 @@ async function explainWriteFailure(c: GhClient, spec: string, ch: LabelColorChan
   // ① 没登录：gh 自己的约定（gh help exit-codes：需要登录 = 退出码 4）。这条事实在本房扩展表里
   //    也写着、指向同一档 auth；这里再看一眼退出码，只是为了挑「未登录」那句更具体的说法。
   if (code === 4) {
-    return reason(ERROR_KIND.AUTH, 'GitHub 未登录，因此无法修改「' + ch.name + '」的颜色：请先运行 gh auth login 登录账号，然后返回保存。本次「' + ch.name + '」的颜色未改动。', err)
+    return reason(ERROR_KIND.AUTH, 'You are not signed in to GitHub, so the color of "' + ch.name + '" cannot be changed: run gh auth login to sign in, then come back and save. The color of "' + ch.name + '" was not changed this time.', err)
   }
   // ② 限速：403 或 429 带 rate limit 文案（官方文档：次限速也走这两个状态码）
   if (kind === ERROR_KIND.RATELIMIT) {
-    return reason(ERROR_KIND.RATELIMIT, 'GitHub 因请求过于频繁拒绝了这次请求。请稍后重新保存。本次「' + ch.name + '」的颜色未改动。', err)
+    return reason(ERROR_KIND.RATELIMIT, 'GitHub refused this request because of too many requests. Please save again later. The color of "' + ch.name + '" was not changed this time.', err)
   }
   // ③ 凭据被拒 / 权限不足
   if (kind === ERROR_KIND.AUTH) {
-    return reason(ERROR_KIND.AUTH, 'GitHub 返回登录凭据无效（可能已过期或被撤销）：请重新运行 gh auth login 登录后再保存。本次「' + ch.name + '」的颜色未改动。' + hint, err)
+    return reason(ERROR_KIND.AUTH, 'GitHub says the login credentials are invalid (they may have expired or been revoked): run gh auth login again, then save. The color of "' + ch.name + '" was not changed this time.' + hint, err)
   }
   // ④ 颜色被 API 拒（422）：实测原文是两行「HTTP 422: Validation Failed」加「Label.color is invalid」，
   //    本房扩展表把这种写法归解析档。
   if (kind === ERROR_KIND.PARSE) {
-    return reason(ERROR_KIND.PARSE, 'GitHub 拒绝了「' + ch.name + '」的新颜色：颜色需为不带井号的六位十六进制（例如 9d7cd8）。请改为正确写法后重新保存。' + hint, err)
+    return reason(ERROR_KIND.PARSE, 'GitHub rejected the new color of "' + ch.name + '": the color must be six hexadecimal digits without the hash sign (for example 9d7cd8). Correct it and save again.' + hint, err)
   }
   // ⑤ 404：三种情况（标签不存在 / 仓库不存在 / 没有写权限）长得一模一样，只能再问一次仓库权限。
   if (kind === ERROR_KIND.NOTFOUND) return await explain404(c, spec, ch, ctx, hint, permCache, err)
   // ⑥ 其余各档照实说。
-  if (kind === ERROR_KIND.ENV) return reason(ERROR_KIND.ENV, '修改「' + ch.name + '」的颜色时，本机的 GitHub 助手（gh）没有给出答复，因此无法确认这一条的颜色是否已经改动。这是插件运行环境的问题，不是你的操作有误。请用 gh label list 核对后再重试。' + hint, err)
-  if (kind === ERROR_KIND.NETWORK) return reason(ERROR_KIND.NETWORK, '修改「' + ch.name + '」的颜色时无法连接 GitHub（网络不可用或请求超时），插件没有拿到 GitHub 的答复，因此无法确认这一条的颜色是否已经改动。请确认网络可用，并用 gh label list 核对后再重试。' + hint, err)
-  return reason(kind, '修改「' + ch.name + '」的颜色时发生插件未能识别的错误。插件无法确认这一条的颜色是否已经改动，请用 gh label list 核对后再重试；若仍然失败，请把这一句原文报告给插件维护者。' + ((eb && eb.message) ? '（gh 返回的说明：' + String(eb.message) + '）' : '（gh 没有返回说明）'), err)
+  if (kind === ERROR_KIND.ENV) return reason(ERROR_KIND.ENV, 'While changing the color of "' + ch.name + '", the GitHub helper (gh) on this machine gave no answer, so it cannot be confirmed whether this color was changed. This is a problem with the plugin runtime environment, not a mistake on your side. Check with gh label list, then retry.' + hint, err)
+  if (kind === ERROR_KIND.NETWORK) return reason(ERROR_KIND.NETWORK, 'While changing the color of "' + ch.name + '", GitHub could not be reached (network unavailable or the request timed out) and the plugin got no answer from GitHub, so it cannot be confirmed whether this color was changed. Make sure the network is available, check with gh label list, then retry.' + hint, err)
+  return reason(kind, 'An error the plugin does not recognize happened while changing the color of "' + ch.name + '". The plugin cannot confirm whether this color was changed; check with gh label list, then retry; if it still fails, report this exact sentence to the plugin maintainer.' + ((eb && eb.message) ? ' (gh said: ' + String(eb.message) + ')' : ' (gh gave no explanation)'), err)
 }
 
 /** 撞到 404 时多问一次仓库权限，把「标签或仓库不存在」与「你没有写权限」分开。
@@ -236,12 +236,12 @@ async function explainWriteFailure(c: GhClient, spec: string, ch: LabelColorChan
 async function explain404(c: GhClient, spec: string, ch: LabelColorChange, ctx: OpContext, hint: string, permCache: Map<string, Promise<RepoPermissions | null>>, err: unknown): Promise<TrackerError> {
   const perm = await readRepoPermissions(c, spec, ctx, permCache)
   if (perm && perm.push === false) {
-    return reason(ERROR_KIND.AUTH, '当前账号在「' + spec + '」上没有写权限（只能读取），因此无法修改标签。本次「' + ch.name + '」的颜色未改动，请换用有写权限的账号，或请仓库管理员为该账号授予写权限，然后重试。', err)
+    return reason(ERROR_KIND.AUTH, 'The current account has no write access on "' + spec + '" (read only), so labels cannot be changed. The color of "' + ch.name + '" was not changed this time; switch to an account with write access, or ask a repository admin to grant this account write access, then retry.', err)
   }
   if (perm && perm.push === true) {
-    return reason(ERROR_KIND.NOTFOUND, '这个仓库中没有名为「' + ch.name + '」的标签。请先核对标签名，或先在这个仓库中创建这个标签，然后重新保存。注意：GitHub 上标签名不区分大小写，冒号与空格都算在标签名里。', err)
+    return reason(ERROR_KIND.NOTFOUND, 'This repository has no label named "' + ch.name + '". Check the label name, or create the label in this repository first, then save again. Note: GitHub label names are case-insensitive, and colons and spaces count as part of the name.', err)
   }
-  return reason(ERROR_KIND.NOTFOUND, '修改「' + ch.name + '」的颜色时 GitHub 报告找不到这个标签，插件也无法确认当前账号在「' + spec + '」上的权限，因此分不出是标签不存在、仓库名不正确，还是没有写权限。本次「' + ch.name + '」的颜色未改动，请先确认仓库名与标签名正确、账号已登录，然后重试。' + hint, err)
+  return reason(ERROR_KIND.NOTFOUND, 'While changing the color of "' + ch.name + '", GitHub reported it cannot find this label, and the plugin also cannot confirm the permissions of the current account on "' + spec + '", so it cannot tell whether the label does not exist, the repository name is wrong, or write access is missing. The color of "' + ch.name + '" was not changed this time; confirm the repository name and label name are correct and the account is signed in, then retry.' + hint, err)
 }
 
 export default { listLabels, setLabelColors }

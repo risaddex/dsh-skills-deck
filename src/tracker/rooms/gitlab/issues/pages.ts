@@ -156,7 +156,7 @@ export async function listPage(
   if (!fullPath) {
     // 原文 = 这次收到的入参本身：它缺了或形状不对，人自己能看出差在哪。
     emitReadDegraded(ctx, 'listPage', 'listPage:repo-ref', Date.now() - t0)
-    return fail(ERROR_KIND.NOTFOUND, 'listPage: 仓库标识缺了或形状不对（项目全路径形如 group/sub/project，也可以是数字项目 ID）', repo)
+    return fail(ERROR_KIND.NOTFOUND, 'listPage: the repository identifier is missing or has the wrong shape (a full project path looks like group/sub/project, or it can be a numeric project ID)', repo)
   }
   const perPage = limitOf(opts)
   const cursor = cursorOf(opts)
@@ -164,7 +164,7 @@ export async function listPage(
   if (page === null) {
     // 游标认不出来（用户手改过、或换了后端留下别的形状）：原文给这个游标本身，让人看出是它不对。
     emitReadDegraded(ctx, 'listPage', 'listPage:cursor', Date.now() - t0)
-    return fail(ERROR_KIND.NOTFOUND, `listPage: 游标已失效，请重新加载（${cursor.slice(0, 200)}）`, cursor)
+    return fail(ERROR_KIND.NOTFOUND, `listPage: the cursor is no longer valid, please reload (${cursor.slice(0, 200)})`, cursor)
   }
   const state = stateOf(filter)
   const labels = labelsOf(filter)
@@ -185,19 +185,19 @@ export async function listPage(
     if (r.code !== 0) {
       // 原文 = 这一次 glab 调用的进程结果（stderr 里那几句是 glab 或远端的原话）。
       emitReadDegraded(ctx, 'listPage', 'listPage:transport', Date.now() - t0)
-      return failGlab(r, r.stderr || r.stdout || 'listPage: glab api issues 失败', r, ctx)
+      return failGlab(r, r.stderr || r.stdout || 'listPage: glab api issues failed', r, ctx)
     }
     let rows: unknown
     try {
       rows = JSON.parse(r.stdout || '')
     } catch (e) {
       emitReadDegraded(ctx, 'listPage', 'listPage:json', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE, `listPage: 回包不是合法 JSON ${msgOf(e).slice(0, 200)}`, r)
+      return fail(ERROR_KIND.PARSE, `listPage: the response is not valid JSON ${msgOf(e).slice(0, 200)}`, r)
     }
     if (!Array.isArray(rows)) {
       // 原文 = 远端回的那一段（人据此看出返回的到底是什么形状，而不是只被告知「不是数组」）。
       emitReadDegraded(ctx, 'listPage', 'listPage:shape', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE, 'listPage: 回包不是一个数组（远端回的不是这个端点的形状）', r.stdout)
+      return fail(ERROR_KIND.PARSE, 'listPage: the response is not an array (the remote did not return the shape of this endpoint)', r.stdout)
     }
     // 总数：调同房 counts 那条读（同一份口径），而不是从这一页或响应头里凑。
     const counted = await counts(repo, filter, ctx)
@@ -216,7 +216,7 @@ export async function listPage(
         // 为什么不丢掉那一行接着回：本房的口径是「取不全就整体失败，不返回残缺清单」
         // （见 ../labels/list.ts 的 listLabels）；丢一行接着回，人看到的是历史少了中间几张，既不报错也无处查。
         emitReadDegraded(ctx, 'listPage', 'listPage:shape', Date.now() - t0)
-        return fail(ERROR_KIND.PARSE, `listPage: 有一行归一不成一张票 ${msgOf(e).slice(0, 200)}`, raw)
+        return fail(ERROR_KIND.PARSE, `listPage: a row could not be normalized into a ticket ${msgOf(e).slice(0, 200)}`, raw)
       }
     }
     // 还有下一页的判据：**远端这一页给了几行**（rows.length）比要的 per_page 少，就是到底了。

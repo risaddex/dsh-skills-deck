@@ -85,7 +85,8 @@ type LooseFs = {
 }
 
 function isEn(deps: WorkspaceCheckDeps): boolean {
-  return !!deps && deps.lang === 'en'
+  // English is the default locale (#4): only an explicit zh request picks the Chinese sentence.
+  return !deps || deps.lang !== 'zh'
 }
 function pick(deps: WorkspaceCheckDeps, zh: string, en: string): string {
   return isEn(deps) ? en : zh
@@ -147,11 +148,11 @@ async function safeExists(ctx: OpContext, fullPath: string): Promise<boolean> {
 }
 
 /** 一个工作单元给人看的名字：目录名不足以说明它是地图、规格还是票目录，所以两样都写。 */
-function unitLabel(u: WorkUnit): string {
-  if (u && u.legacy) return '工作区根 issues/（旧版布局）'
-  const kind = u && u.kind === 'map' ? '探索地图' : (u && u.kind === 'spec' ? '规格' : '票目录')
-  const where = u && u.effortId ? String(u.effortId) : '根级'
-  return where + '（' + kind + '）'
+function unitLabel(u: WorkUnit, deps: WorkspaceCheckDeps): string {
+  if (u && u.legacy) return pick(deps, '工作区根 issues/（旧版布局）', 'workspace root issues/ (old layout)')
+  const kind = u && u.kind === 'map' ? pick(deps, '探索地图', 'exploration map') : (u && u.kind === 'spec' ? pick(deps, '规格', 'spec') : pick(deps, '票目录', 'ticket directory'))
+  const where = u && u.effortId ? String(u.effortId) : pick(deps, '根级', 'root level')
+  return where + pick(deps, '（', ' (') + kind + pick(deps, '）', ')')
 }
 
 /**
@@ -181,7 +182,7 @@ export async function checkWorkspace(deps: WorkspaceCheckDeps): Promise<Workspac
           'empty workspace: no work units under ' + root + ' yet (no map.md / spec.md / issues/); tickets and maps can start from here'),
       }
     }
-    const shown = units.slice(0, 8).map(unitLabel).join('、')
+    const shown = units.slice(0, 8).map((unit) => unitLabel(unit, deps)).join(pick(deps, '、', ', '))
     const more = units.length > 8 ? pick(deps, ' 等 ' + units.length + ' 个', ' and ' + (units.length - 8) + ' more') : ''
     return {
       status: 'pass',
@@ -399,7 +400,7 @@ export async function checkContainersReadable(deps: WorkspaceCheckDeps): Promise
       }
     }
     if (!isSupportedDshFormat(text)) {
-      const fmt = dshFormatOf(text) || '（空）'
+      const fmt = dshFormatOf(text) || '(empty)'
       const supported = SUPPORTED_DSH_FORMATS.join(' / ')
       return {
         status: 'fail',
@@ -410,7 +411,7 @@ export async function checkContainersReadable(deps: WorkspaceCheckDeps): Promise
       }
     }
   }
-  const shown = files.slice(0, 8).join('、')
+  const shown = files.slice(0, 8).join(', ')
   return {
     status: 'pass',
     evidence: 'containers=' + files.length,
@@ -442,7 +443,7 @@ const CHECK_LABELS: Readonly<Record<WorkspaceCheckId, { zh: string; en: string }
 export function workspaceCheckLabel(id: string, lang?: string): string {
   const row = (CHECK_LABELS as Record<string, { zh: string; en: string } | undefined>)[id]
   if (!row) return id
-  return lang === 'en' ? row.en : row.zh
+  return lang === 'zh' ? row.zh : row.en
 }
 
 /** 按 id 取一项判据（宿主谓词按检查项 id 分派时用）。收不带 md: 前缀的短 id，省调用方再拼一次。 */

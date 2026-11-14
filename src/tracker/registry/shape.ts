@@ -118,15 +118,15 @@ export function wrapTracker(mod: BackendModule, impl: RoomOperations | null | un
  * 口径类型本身（BackendBudgetModel）住在契约层，这里只引用类型与名字表。
  */
 function describeBudgetProblems(budget: unknown): string[] {
-  if (!budget || typeof budget !== 'object') return ['budget 必须是一个对象（后端模块缺预算声明）']
+  if (!budget || typeof budget !== 'object') return ['budget must be an object (the backend module lacks a budget declaration)']
   const b = budget as Partial<Record<keyof BackendBudgetModel, unknown>>
   const problems: string[] = []
   if (typeof b.kind !== 'string' || (BUDGET_KINDS as readonly string[]).indexOf(b.kind) < 0) {
-    problems.push("budget.kind 非法（只能是 'two-buckets' / 'requests-only' / 'off-network' / 'unknown' 四者之一）")
+    problems.push("budget.kind is invalid (it can only be one of 'two-buckets' / 'requests-only' / 'off-network' / 'unknown')")
   }
-  if (typeof b.countsRequests !== 'boolean') problems.push('budget.countsRequests 缺布尔值（请求数进不进账，必须明说）')
-  if (typeof b.countsPoints !== 'boolean') problems.push('budget.countsPoints 缺布尔值（点数进不进账，必须明说）')
-  if (typeof b.independentBuckets !== 'boolean') problems.push('budget.independentBuckets 缺布尔值（两种限额通不相通，必须明说）')
+  if (typeof b.countsRequests !== 'boolean') problems.push('budget.countsRequests lacks a boolean (whether requests are counted must be stated)')
+  if (typeof b.countsPoints !== 'boolean') problems.push('budget.countsPoints lacks a boolean (whether points are counted must be stated)')
+  if (typeof b.independentBuckets !== 'boolean') problems.push('budget.independentBuckets lacks a boolean (whether the two limits are shared must be stated)')
   return problems
 }
 
@@ -143,9 +143,9 @@ export function validateMod(mod: unknown): asserts mod is BackendModule {
   // 调用方照原文展示，不再转述（缺声明与形状不对都是同一道口，同一套说法）。
   const budgetProblems = describeBudgetProblems((m as { budget?: unknown }).budget)
   if (budgetProblems.length > 0) {
-    throw new TrackerRegistryError('shape', `BackendModule '${m.id}' budget invalid: ${budgetProblems.join('；')}`)
+    throw new TrackerRegistryError('shape', `BackendModule '${m.id}' budget invalid: ${budgetProblems.join('; ')}`)
   }
   if (m.id === 'other') {
-    throw new TrackerRegistryError('other-not-registrable', "'other' 已弃用：无后端请用 Selection.backendId:null（不造后端，不造假身份）")
+    throw new TrackerRegistryError('other-not-registrable', "'other' is deprecated: for no backend use Selection.backendId:null (no fake backend, no fake identity)")
   }
 }

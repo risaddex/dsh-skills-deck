@@ -331,7 +331,7 @@ try {
   const broken: any = await beD.listSubIssues(repoOf('demo'), '00', {}, ctxD)
   check(broken.ok === false, '有票文件读不动时整体失败，不返回只有 1 张的清单')
   if (!broken.ok) {
-    check(String(broken.error.message).indexOf('本地 Markdown 有票文件或票目录读不动') === 0,
+    check(String(broken.error.message).indexOf('Some local Markdown ticket files or ticket directories cannot be read') === 0,
       '失败消息直说「有票文件或票目录读不动，子票清单不完整」→ ' + String(broken.error.message).slice(0, 60))
     check(String(broken.error.message).includes('02-坏票.md'), '失败消息点名是哪一张读不动（用户能照着去查）')
   }

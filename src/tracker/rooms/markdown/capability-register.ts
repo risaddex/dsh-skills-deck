@@ -56,18 +56,18 @@ export const MARKDOWN_CAPABILITY_REGISTER = {
   // —— 操作 24 条：3 条做了但有对不上的输入（差在哪写在 gap 里，这是给人看的账）——
   getDependencies: {
     tier: 'partial',
-    gap: '一次问多个编号（opts.keys）这一条不认：契约的返回形状只装得下一个编号的依赖关系，本后端的做法是如实回「不支持」，请逐个编号调用。单个编号的读取、以及两个方向（被谁阻塞、阻塞了谁）都正常。',
+    gap: 'Asking for several numbers at once (opts.keys) is not supported: the contract return shape only holds the dependencies of one number, so this backend honestly answers "unsupported"; call it once per number. Reading a single number, and both directions (blocked by whom, blocking whom), work normally.',
     ticket: '#1174',
   },
 
   update: {
     tier: 'partial',
-    gap: '里程碑、以及「类型」以外的自定义字段不认：本地票文件里没有放这些的地方，传了就如实回「不支持」，不再静默丢掉然后回一句成功。标题、正文、标签照常。',
+    gap: 'Milestones and custom fields other than "Type" are not supported: a local ticket file has no place for them, so passing them honestly answers "unsupported" instead of silently dropping them and reporting success. Title, body and labels work as usual.',
     ticket: '#1174',
   },
   setParent: {
     tier: 'partial',
-    gap: '认在同一个工作单元里换父；父挂在别的工作单元时不认（本地是「目录即父子」，跨目录等于要搬文件），如实回「不支持」。这条限制从本地后端做出来那天就在，不是这次新加的。',
+    gap: 'Changing the parent within the same work unit is supported; a parent in another work unit is not (locally "the directory is the parent", so crossing directories would mean moving files), and it honestly answers "unsupported". This limit has existed since the local backend was built; it is not new.',
     ticket: '#1174',
   },
 

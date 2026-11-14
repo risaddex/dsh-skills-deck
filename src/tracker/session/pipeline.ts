@@ -195,7 +195,7 @@ export async function runPipelineOp(deps: PipelineDeps, op: string, args: unknow
   if (typeof room !== 'function') {
     // 实例上没有这个成员：按说注册表已经补过桩，到这里说明装配时拿错了实例。
     // 报「不支持」而不是炸：调用方认得这个档位，会话不制造新形状的失败。
-    return pipelineFail(ERROR_KIND.UNSUPPORTED, '会话实例上没有 ' + op + '（装配时拿错了实例）', '')
+    return pipelineFail(ERROR_KIND.UNSUPPORTED, 'The session instance has no ' + op + ' (the wrong instance was picked during assembly)', '')
   }
   if (op === 'readBudget') {
     // 读预算直达房间：它回来的就是读数，不裁决、不记账（看额度这件事本身不花额度）。
@@ -208,7 +208,7 @@ export async function runPipelineOp(deps: PipelineDeps, op: string, args: unknow
     try {
       result = await (room as (...a: unknown[]) => Promise<unknown>)(...args)
     } catch (err) {
-      return pipelineFail(ERROR_KIND.NETWORK, '读预算失败（' + String((err as Error)?.message || err) + '）', '')
+      return pipelineFail(ERROR_KIND.NETWORK, 'Reading the budget failed (' + String((err as Error)?.message || err) + ')', '')
     }
     const failure = result as { ok?: boolean; error?: { kind?: string } } | null
     if (failure && failure.ok === false && failure.error && failure.error.kind === ERROR_KIND.UNSUPPORTED) {
@@ -230,7 +230,7 @@ export async function runPipelineOp(deps: PipelineDeps, op: string, args: unknow
     decision = await deps.admit({ op, budget: deps.budget, reading, canWrite: deps.canWrite })
   } catch (err) {
     // 裁决自己炸了：调用方分不清「被拦」与「闸坏了」，一律按失败回（环境档：裁决这件工具不可用）。
-    return pipelineFail(ERROR_KIND.ENV, '预算裁决执行失败，本次调用未发出（' + String((err as Error)?.message || err) + '）', '')
+    return pipelineFail(ERROR_KIND.ENV, 'The budget decision failed to run, so this call was not sent (' + String((err as Error)?.message || err) + ')', '')
   }
   const verdict = decision as { allowed?: unknown; kind?: string; message?: string; reason?: unknown; channels?: unknown }
   if (!verdict || verdict.allowed !== true) {
@@ -238,7 +238,7 @@ export async function runPipelineOp(deps: PipelineDeps, op: string, args: unknow
     tell('pipeline.deferred', { op, reason: String(verdict?.reason || 'unknown') })
     return pipelineFail(
       typeof verdict?.kind === 'string' ? verdict.kind : ERROR_KIND.RATELIMIT,
-      typeof verdict?.message === 'string' ? verdict.message : '预算不足，本次调用推迟',
+      typeof verdict?.message === 'string' ? verdict.message : 'Not enough budget; this call is deferred',
       '',
     )
   }
@@ -298,7 +298,7 @@ export async function runPipelineOp(deps: PipelineDeps, op: string, args: unknow
   if (threw) {
     // 房间抛了等于「工具不可用」：契约要求失败回值不抛，管线在这里把抛收成回值。
     // 失败信封同样是「这一笔结束了」的事实，所以 return 之前也要报一次 onEnd（ok=false）。
-    result = pipelineFail(ERROR_KIND.ENV, op + ' 执行失败（房间抛错，已收成失败回值）', String((thrown as Error)?.message || thrown))
+    result = pipelineFail(ERROR_KIND.ENV, op + ' failed (the room threw, turned into a failure value)', String((thrown as Error)?.message || thrown))
     notifyEnd(result)
     return result
   }

@@ -81,7 +81,7 @@ export async function getCurrentUser(repo: RepositoryRef, ctx: OpContext): Promi
   const id = repoRefId(repo)
   if (!looksLikeProjectPath(id)) {
     emitReadDegraded(ctx, 'currentUser', 'currentUser:repo-ref', Date.now() - t0)
-    return fail(ERROR_KIND.NOTFOUND as ErrorKind, 'getCurrentUser: repo.refId 缺失或不像是「分组/项目」', '')
+    return fail(ERROR_KIND.NOTFOUND as ErrorKind, 'getCurrentUser: repo.refId is missing or does not look like "group/project"', '')
   }
 
   try {
@@ -91,13 +91,13 @@ export async function getCurrentUser(repo: RepositoryRef, ctx: OpContext): Promi
       // 具体档位仍由 failGlab 按原文判，这里只负责让「身份没问出来」在日志里是一条线。
       emitReadDegraded(ctx, 'currentUser', 'currentUser:transport', Date.now() - t0)
       // 原文 = 这一次 glab 调用的进程结果。
-      return failGlab(res, res.stderr || res.stdout || 'getCurrentUser 没问出来', res, ctx)
+      return failGlab(res, res.stderr || res.stdout || 'getCurrentUser could not get an answer', res, ctx)
     }
 
     const bag = parseJsonObject(res.stdout)
     if (!bag) {
       emitReadDegraded(ctx, 'currentUser', 'currentUser:json', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE as ErrorKind, 'getCurrentUser: 回包不是 JSON 对象', res.stdout)
+      return fail(ERROR_KIND.PARSE as ErrorKind, 'getCurrentUser: the response is not a JSON object', res.stdout)
     }
 
     const login = typeof bag['username'] === 'string' ? bag['username'].trim() : ''
@@ -105,7 +105,7 @@ export async function getCurrentUser(repo: RepositoryRef, ctx: OpContext): Promi
       // 命令成功、JSON 也解析得动，缺的正是这一条读必须有的一格：这种「成功却没读到」最容易被
       // 当成「没有登录人」糊过去，所以单独落一行，再如实失败。
       emitReadDegraded(ctx, 'currentUser', 'currentUser:shape', Date.now() - t0)
-      return fail(ERROR_KIND.PARSE as ErrorKind, 'getCurrentUser: 回包里没有 username', res.stdout)
+      return fail(ERROR_KIND.PARSE as ErrorKind, 'getCurrentUser: the response has no username', res.stdout)
     }
 
     const actor: Actor = { login }
