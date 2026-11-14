@@ -41,6 +41,7 @@ declare function otherFiltered(...args: any[]): any;
 declare function checkShowTitle(...args: any[]): any;
 declare function Ic(...args: any[]): any;
 declare function tr(...args: any[]): any;
+declare function switchClearKeyword(): string;
 declare function h(...args: any[]): any;
 export const SwitchConfirmModal = (props: any) => {
   const sid = props && props.sessionId
@@ -62,7 +63,9 @@ export const SwitchConfirmModal = (props: any) => {
   const criOk = cri ? !!cri.allOk : false
   const criDetails = cri ? [cri.c1, cri.c4, cri.c5].filter(Boolean) : []
   const migrateBlocked = isMigrate && !criLoading && !criOk
-  const clearNeedInput = isClear && sc.clearInput !== '确认清空'
+  // The same keyword drives the hint, the placeholder and this check (see switchClearKeyword in store-switch.ts).
+  const clearKeyword: string = switchClearKeyword()
+  const clearNeedInput = isClear && (clearKeyword === '' || sc.clearInput !== clearKeyword)
   // #191（用户反馈）：option=null 时三选一不默认选中；目标未选 OR 三选一未选时确认按钮禁用
   const _optNone = sc.option == null
   const isTargetPending = sc.targetBackendId == null
@@ -122,8 +125,8 @@ export const SwitchConfirmModal = (props: any) => {
         h('span', { style: { fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, minHeight: 18 } }, [
           h('span', null, label),
           badge ? h('span', { style: { fontSize: 10, color: col, border: '1px solid ' + col, borderRadius: 4, padding: '0 4px', lineHeight: 1.6 } }, badge) : null,
-          h('span', { style: { fontSize: 10, color: col, border: '1px solid ' + col, borderRadius: 4, padding: '0 4px', lineHeight: 1.6, visibility: checked ? 'visible' : 'hidden' } }, '已选'),
-          h('span', { style: { fontSize: 10, color: '#4ade80', visibility: (checked && id === 'keep') ? 'visible' : 'hidden' } }, '● 推荐'),
+          h('span', { style: { fontSize: 10, color: col, border: '1px solid ' + col, borderRadius: 4, padding: '0 4px', lineHeight: 1.6, visibility: checked ? 'visible' : 'hidden' } }, 'Selected'),
+          h('span', { style: { fontSize: 10, color: '#4ade80', visibility: (checked && id === 'keep') ? 'visible' : 'hidden' } }, '● Recommended'),
         ]),
         h('span', { style: { fontSize: 11, color: '#8b8b95', display: 'block', marginTop: 2 } }, desc),
       ]),
@@ -170,7 +173,7 @@ export const SwitchConfirmModal = (props: any) => {
           h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 4 } }, [h('span', { style: { width: 8, height: 8, borderRadius: '50%', background: curColor, flex: 'none' } }), h('span', { style: { fontWeight: 600, color: curColor } }, curLabel)]),
           h('span', null, '→'),
           sc.targetBackendId == null
-            ? h('span', { style: { fontSize: 11, color: '#8b8b95', fontStyle: 'italic' } }, '选择目标后端…')
+            ? h('span', { style: { fontSize: 11, color: '#8b8b95', fontStyle: 'italic' } }, 'Choose a target backend…')
             : h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 4 } }, [h('span', { style: { width: 8, height: 8, borderRadius: '50%', background: targetColor, flex: 'none' } }), h('span', { style: { fontWeight: 600, color: targetColor } }, targetLabel)]),
           h('span', { style: { flex: 1 } }),
         ])
@@ -212,17 +215,17 @@ export const SwitchConfirmModal = (props: any) => {
             h('span', { style: { color: '#8b8b95', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, cDetail),
           ])
         })) : null,
-        migrateBlocked ? h('div', { style: { marginTop: 6, color: '#f87171', fontSize: 11 } }, 'prompt: ' + (criDetails.filter(function (c: any) { return c && c.status !== 'done' }).map(function (c: any) { return (c && c.show && c.show.hint) || (c && c.show && c.show.desc) || '' }).join('；') || tr('switch.criHintFallback'))) : null,
+        migrateBlocked ? h('div', { style: { marginTop: 6, color: '#f87171', fontSize: 11 } }, 'prompt: ' + (criDetails.filter(function (c: any) { return c && c.status !== 'done' }).map(function (c: any) { return (c && c.show && c.show.hint) || (c && c.show && c.show.desc) || '' }).join('; ') || tr('switch.criHintFallback'))) : null,
         isMigrate ? h('div', { style: { marginTop: 6, color: '#8b8b95', fontSize: 10 } }, tr('switch.migrateNote')) : null,
       ]) : null,
       isClear ? h('div', { style: { border: '1px solid rgba(248,113,113,.45)', background: 'rgba(248,113,113,.08)', borderRadius: 8, padding: '8px 10px', marginBottom: 10 } }, [
         h('div', { style: { fontSize: 11, fontWeight: 700, color: '#f87171', marginBottom: 4 } }, tr('switch.clearWarn')),
-        h('div', { style: { fontSize: 11, color: '#8b8b95', marginBottom: 6 } }, tr('switch.clearDesc')),
+        h('div', { style: { fontSize: 11, color: '#8b8b95', marginBottom: 6 } }, tr('switch.clearDesc', { keyword: clearKeyword })),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, [
           h('span', { style: { fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' } }, tr('switch.clearInputLabel')),
-          h('input', { value: sc.clearInput || '', onChange: onClearInput, placeholder: '确认清空', style: { flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid ' + (clearNeedInput ? 'rgba(248,113,113,.6)' : 'rgba(74,222,128,.5)'), background: 'var(--dsw-alias-bg-layer-1,#10131a)', color: 'var(--dsw-alias-label-primary,#e6edf3)', fontSize: 12 } }),
+          h('input', { value: sc.clearInput || '', onChange: onClearInput, placeholder: clearKeyword, style: { flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid ' + (clearNeedInput ? 'rgba(248,113,113,.6)' : 'rgba(74,222,128,.5)'), background: 'var(--dsw-alias-bg-layer-1,#10131a)', color: 'var(--dsw-alias-label-primary,#e6edf3)', fontSize: 12 } }),
         ]),
-        clearNeedInput ? h('div', { style: { fontSize: 10, color: '#f87171', marginTop: 4 } }, tr('switch.clearNeedInput')) : h('div', { style: { fontSize: 10, color: '#4ade80', marginTop: 4 } }, tr('switch.clearOk')),
+        clearNeedInput ? h('div', { style: { fontSize: 10, color: '#f87171', marginTop: 4 } }, tr('switch.clearNeedInput', { keyword: clearKeyword })) : h('div', { style: { fontSize: 10, color: '#4ade80', marginTop: 4 } }, tr('switch.clearOk')),
       ]) : null,
       ]),
     ]),

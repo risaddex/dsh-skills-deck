@@ -55,7 +55,7 @@ export const ChecksTab = ({ st }: any) => {
   React.useEffect(function () { try { (typeof chainEventRefresh === 'function' ? chainEventRefresh(st, whyEnter, false) : loadChain(st, false, whyEnter)) } catch (e) {} }, [])
   // #529：语言切换即时重取——快照内说明行按取回时语言 baked（标题走词条自动翻）；
   //   快照语言与当前不一致时 force 重取，说明行也翻；重取前标题已先翻，无闪烁回退。
-  const curLang = (typeof promptLang === 'function' ? promptLang() : 'zh')
+  const curLang = (typeof promptLang === 'function' ? promptLang() : 'en')
   React.useEffect(function () {
     try { if (st.chainSnapshot && st.chainLangLoaded && st.chainLangLoaded !== curLang) loadChain(st, true, 'action-done') } catch (e) {}
   }, [curLang])
@@ -272,7 +272,7 @@ export const ChecksTab = ({ st }: any) => {
       if (rs.phase === 'syncing') return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid #2b3a2b', background: 'rgba(74,222,128,.06)', borderRadius: 8, fontSize: 12, color: 'var(--dsw-alias-state-success-primary,#4ade80)', marginBottom: 6 } }, [
         h('span', { className: 'dsws-rficon dsws-spin' }, [Ic({ n: 'refresh', size: 11 })]),
         h('span', null, tr('panel.repoSync.syncing')),
-        h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)', marginLeft: 2 } }, '（' + tr('panel.repoSync.guardHint') + '）'),
+        h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)', marginLeft: 2 } }, ' (' + tr('panel.repoSync.guardHint') + ')'),
       ])
       return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid #5a4a1f', background: 'rgba(251,191,36,.07)', borderRadius: 8, fontSize: 12, color: 'var(--dsw-alias-state-warning-primary,#fbbf24)', marginBottom: 6, flexWrap: 'wrap' } }, [
         h('span', null, tr('panel.repoSync.timeout')),

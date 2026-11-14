@@ -317,7 +317,7 @@ loadSnapshot(s,true,true)}else{s.selection=prev;try{if(s.cwd)setCachedSelection(
           //   所以 kernel/styles.js 那条 .dsws-folded 规则盖得住；里面那颗按钮自己写着 display，标记不能落在它身上）。
           h('span', { 'data-head-fold': 'icon', 'data-head-icon': 'mark', className: headIconCls('mark'), style: { lineHeight: 0 } }, h(SubworkspaceMark, { key: 'subws', st: s })),
           // #191 · 仓库名右侧切换按钮（已选态常驻 · pending 灰置 · _isOther 隐藏）
-          h('span', { 'data-head-fold': 'icon', 'data-head-icon': 'switch', className: headIconCls('switch'), style: { lineHeight: 0 } }, (function(){ if(_isOther) return null; var _sel=s.selection||(s.snapshot&&s.snapshot.selection)||null, _bid=_sel?_sel.backendId:null; if(_bid==null) return null; var _pend=!!(_sel&&_sel.pending), _col=(typeof backendColorOf==='function'?backendColorOf(_bid):'#6e7681'); return h(Tip, { content: _pend ? '切换后端 · 探测中不可用' : '切换后端' }, h('button',{'data-repo-switch':1,className:'dsws-hov','data-press':'icon','data-log':'head.switchbackend',type:'button','aria-label':'切换后端','aria-disabled':_pend?'true':'false',disabled:_pend,onClick:function(e: any){try{if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation()}catch(_){};if(_pend)return;try{openSwitchConfirm(s,null)}catch(_){}},style:{display:'inline-flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box',width:16,height:16,borderRadius:4,flex:'none',border:'1px solid '+_col,color:_col,background:'transparent',cursor:_pend?'not-allowed':'pointer',opacity:_pend?0.45:1,fontSize:10,lineHeight:1,padding:0,colorScheme:'light dark'}},Ic({n:'swap',size:10}))) })()),
+          h('span', { 'data-head-fold': 'icon', 'data-head-icon': 'switch', className: headIconCls('switch'), style: { lineHeight: 0 } }, (function(){ if(_isOther) return null; var _sel=s.selection||(s.snapshot&&s.snapshot.selection)||null, _bid=_sel?_sel.backendId:null; if(_bid==null) return null; var _pend=!!(_sel&&_sel.pending), _col=(typeof backendColorOf==='function'?backendColorOf(_bid):'#6e7681'); return h(Tip, { content: _pend ? 'Switch backend · Unavailable while checking' : 'Switch backend' }, h('button',{'data-repo-switch':1,className:'dsws-hov','data-press':'icon','data-log':'head.switchbackend',type:'button','aria-label':'Switch backend','aria-disabled':_pend?'true':'false',disabled:_pend,onClick:function(e: any){try{if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation()}catch(_){};if(_pend)return;try{openSwitchConfirm(s,null)}catch(_){}},style:{display:'inline-flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box',width:16,height:16,borderRadius:4,flex:'none',border:'1px solid '+_col,color:_col,background:'transparent',cursor:_pend?'not-allowed':'pointer',opacity:_pend?0.45:1,fontSize:10,lineHeight:1,padding:0,colorScheme:'light dark'}},Ic({n:'swap',size:10}))) })()),
           // #621 标签配色入口：16 像素见方的小图标（与左边那颗切换后端按钮同规格），点开改色弹窗；
           //   它和左右两颗单字形图标一样，宽度不够时一颗一颗撤（撤的是外面那层 span，见上面 #667 第三轮那句）。
           //   会话号一起传进去：宿主靠它算「写这个工作区」要用的沙箱政策（#624 的研究结论）。
@@ -398,19 +398,19 @@ loadSnapshot(s,true,true)}else{s.selection=prev;try{if(s.cwd)setCachedSelection(
           //   卡里那颗「去选择」只是行内的一枚字，不是另一颗按钮，点击仍由这张卡接住。
           h('div', { className:'dsws-hov', 'data-press':'row', 'data-log':'panel.norepo.row', onClick: _openGateModal, style:{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', background:'rgba(56,139,253,.10)', border:'1px solid rgba(56,139,253,.35)', borderRadius:10, cursor:'pointer', color:'#58a6ff', fontSize:12, fontWeight:600 } }, [
             Ic({ n: 'compass', size:14, color:'#58a6ff' }),
-            h('span', { style:{ flex:1 } }, '该工作区还没有设置 — 点击选择后端'),
-            h('span', { style:{ fontSize:11, color:'#58a6ff', border:'1px solid rgba(56,139,253,.4)', borderRadius:6, padding:'1px 6px', background:'rgba(56,139,253,.12)' } }, '去选择'),
+            h('span', { style:{ flex:1 } }, 'This workspace is not configured yet — click to choose a backend'),
+            h('span', { style:{ fontSize:11, color:'#58a6ff', border:'1px solid rgba(56,139,253,.4)', borderRadius:6, padding:'1px 6px', background:'rgba(56,139,253,.12)' } }, 'Choose backend'),
           ]),
-          h('div', { style:{ fontSize:11, color:'#8b8b95', padding:'0 2px' } }, '选择后将回到主线流程（列表/状态栏正常可用），仅设置页可见引导已隐藏主线'),
+          h('div', { style:{ fontSize:11, color:'#8b8b95', padding:'0 2px' } }, 'Choose a backend to restore the ticket list and status bar; setup currently keeps them hidden.'),
           // 接线（#1335 界面反馈）：点遮罩空白处会关窗 —— 遮罩是用户真的会点的地方，接 other 形状。
           //   弹窗盒自己不是控件（它的点击只是不让遮罩那条判定生效），但日志要能把「点空白关窗」与
           //   「点弹窗里的字」分开，所以盒上单独挂一个 data-log；不挂 data-press，免得一按整块弹窗都变暗。
           _gateOpen ? h('div', { 'data-press':'other', 'data-log':'panel.gate.overlay', onClick:function(e: any){ if(e.target===e.currentTarget) _closeGateModal() }, style:{ position:'absolute', inset:0, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'12px 16px', paddingTop:'12px', zIndex:5 } }, [
             h('div', { 'data-log':'panel.gate.dialog', style:{ background:'var(--dsw-alias-bg-layer-2,#16181d)', border:'1px solid var(--dsw-alias-border-l1,#2a2d35)', borderRadius:12, padding:'16px', width:'92%', maxWidth:380, boxShadow:'0 8px 24px rgba(0,0,0,.5)' } }, [
-              h('div', { style:{ fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6, marginBottom:6 } }, [Ic({n:'compass',size:14}), h('span', null, '请选择 Tracker 后端以继续')]),
-              h('div', { style:{ fontSize:11, color:'#8b8b95', marginBottom:10, lineHeight:1.5 } }, '不同后端的初始化与前置检查不同，选择后将回到主线流程（列表/状态栏正常可用）'),
+              h('div', { style:{ fontSize:13, fontWeight:700, display:'flex', alignItems:'center', gap:6, marginBottom:6 } }, [Ic({n:'compass',size:14}), h('span', null, 'Choose a tracker backend to continue')]),
+              h('div', { style:{ fontSize:11, color:'#8b8b95', marginBottom:10, lineHeight:1.5 } }, 'Each backend has its own setup and prerequisite checks. Choosing one restores the ticket list and status bar.'),
               // #1600：筹备中黄条摘掉——GitLab 已可用，不再提示。
-              s.gateLoading ? h('div', { style:{ fontSize:11, color:'#8b8b95', padding:'6px 0' } }, '加载中…') : h('div', { style:{ display:'flex', flexDirection:'column', gap:6 } }, _gateModules.map(function(m: any){
+              s.gateLoading ? h('div', { style:{ fontSize:11, color:'#8b8b95', padding:'6px 0' } }, 'Loading…') : h('div', { style:{ display:'flex', flexDirection:'column', gap:6 } }, _gateModules.map(function(m: any){
                 const isSel = s.gateSelected===m.id
                 const col = (typeof backendColorOf==='function'? backendColorOf(m.id) : '')
                 const isRec = _gateModules[0] && _gateModules[0].id===m.id
@@ -423,14 +423,14 @@ loadSnapshot(s,true,true)}else{s.selection=prev;try{if(s.cwd)setCachedSelection(
                   h('span', { style:{ fontSize:12, fontWeight:600 } }, m.label),
                   h('span', { style:{ fontSize:10, color:'#8b8b95' } }, m.id),
                   h('span', { style:{ flex:1 } }),
-                  isRec ? h('span', { style:{ fontSize:10, color:'#4ade80', border:'1px solid #4ade80', borderRadius:4, padding:'0 4px', lineHeight:1.6 } }, '推荐') : null,
+                  isRec ? h('span', { style:{ fontSize:10, color:'#4ade80', border:'1px solid #4ade80', borderRadius:4, padding:'0 4px', lineHeight:1.6 } }, 'Recommended') : null,
                 ])
                 return row
               })),
               s.gateError ? h('div', { style:{ fontSize:11, color:'#f87171', marginTop:8 } }, s.gateError) : null,
               h('div', { style:{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:12 } }, [
-                h('button', { className:'dsws-btn ghost dsws-hov', 'data-press':'button', 'data-log':'panel.gate.cancel', onClick: _closeGateModal, style:{ fontSize:12 } }, '取消'),
-                h('button', { className:'dsws-btn primary dsws-hov', 'data-press':'button', 'data-log':'panel.gate.confirm', onClick: _confirmGate, style:{ background:'#58a6ff', borderColor:'#58a6ff', color:'#0b1220', fontWeight:700, fontSize:12 } }, '确认并继续'),
+                h('button', { className:'dsws-btn ghost dsws-hov', 'data-press':'button', 'data-log':'panel.gate.cancel', onClick: _closeGateModal, style:{ fontSize:12 } }, 'Cancel'),
+                h('button', { className:'dsws-btn primary dsws-hov', 'data-press':'button', 'data-log':'panel.gate.confirm', onClick: _confirmGate, style:{ background:'#58a6ff', borderColor:'#58a6ff', color:'#0b1220', fontWeight:700, fontSize:12 } }, 'Confirm and continue'),
               ]),
             ])
           ]) : null,

@@ -84,7 +84,7 @@ export const confirmOverlayGate = function(s: any, gateModules: any){
             }
           }).catch(function(e: any){
             s.selection=prev; try{ if(s.cwd) setCachedSelection(s.cwd,prev) }catch(e2){}; emit(s)
-            try{ flash(s, '绑定失败:'+String(e && e.message || e).slice(0,120), 'warn') }catch(e3){}
+            try{ flash(s, 'Binding failed: '+String(e && e.message || e).slice(0,120), 'warn') }catch(e3){}
           })
         }
       }

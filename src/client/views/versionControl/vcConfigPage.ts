@@ -220,7 +220,7 @@ const vcConfigQueryRowOf = function (h: any, t: any, kind: string, ctx: any): an
   if (st === 'ok') {
     if (isAttr) {
       const entries = Array.isArray(state.entries) ? state.entries : []
-      text = entries.map(function (one: any) { return String(one.attr || '') + '=' + String(one.value || '') }).join('；') || vcConfigText(t, 'vc.config.attr.none', null)
+      text = entries.map(function (one: any) { return String(one.attr || '') + '=' + String(one.value || '') }).join('; ') || vcConfigText(t, 'vc.config.attr.none', null)
     } else {
       text = String(state.mapped || '')
     }

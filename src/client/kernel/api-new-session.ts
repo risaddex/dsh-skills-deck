@@ -75,8 +75,8 @@ declare const ensureInjectFocusAtEnd: any; declare const deckPromptFiltered: any
             else if (/^\s*\/research\b/.test(t)) act = 'research'
             else if (/^\s*\/prototype\b/.test(t)) act = 'prototype'
             else if (/^\s*\/handoff\b/.test(t)) act = 'handoff'
-            else if (t.indexOf('思维对齐') >= 0 || t.indexOf('成果沉淀') >= 0) act = 'supplement'
-            else if (/^\s*##\s*体检/.test(t) || t.indexOf('把游离的开放票归位') >= 0) act = 'health'
+            else if (t.indexOf('思维对齐') >= 0 || t.indexOf('成果沉淀') >= 0 || t.indexOf('alignment & consolidation') >= 0) act = 'supplement'
+            else if (/^\s*##\s*(?:体检|Health check)/im.test(t) || t.indexOf('把游离的开放票归位') >= 0 || t.indexOf('put orphaned open tickets where they belong') >= 0) act = 'health'
           }
           if (act) { try { title = newSessionTitleNew(act) } catch (eA) {} }
         }

@@ -218,7 +218,7 @@ export function vcCommitPanelOf(o: any): any {
     if (r.state === 'ok') {
       const headShort = String(r.headAfter || '').slice(0, 7)
       const base = t(resultMode === 'amend' ? 'vc.commit.result.okAmend' : 'vc.commit.result.ok', { mode: modeLabel(resultMode), ms: Number(r.ms || 0), cmd: String(r.cmd || 'commit') })
-      result = { state: 'ok', retry: false, tip: '', text: base + (headShort !== '' ? '；' + t('vc.commit.result.headShort', { oid: headShort }) : '') }
+      result = { state: 'ok', retry: false, tip: '', text: base + (headShort !== '' ? '; ' + t('vc.commit.result.headShort', { oid: headShort }) : '') }
     } else {
       const reasonTextOf = r.reason ? t(commitBlockKeyOf(r.reason)) : ''
       const extra = [String(r.message || ''), reasonTextOf].filter(function (s: string) { return s !== '' }).join(': ')

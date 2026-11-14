@@ -10,6 +10,12 @@ declare function flash(...args: any[]): any;
 declare function emit(...args: any[]): any;
 declare const timer: any;
 declare const SLOT_QUEUE_STEP_MS: number;
+declare function promptLang(...args: any[]): any;
+// A bilingual label object ({zh, en, ...}) is shown in the active locale first, then English, then Chinese.
+function _labelInLang(lbl: any): any {
+  const lang: string = typeof promptLang === 'function' ? String(promptLang() || '') : ''
+  return (lang && lbl[lang]) || lbl.en || lbl.zh || lbl.fallback || String(lbl)
+}
 export const SLOT_RENDERER_VERSION: number = 1
 // 动作类型内联（与 chain.js / actions.js 同值，零 import；2026-08-28 新增 wizard）
 const SR_ACTION_TYPE: any = Object.freeze({ FORM: 'form', INJECT_PROMPT: 'inject-prompt', RPC: 'rpc', REFRESH: 'refresh', OPEN_URL: 'open-url', WIZARD: 'wizard' })
@@ -45,7 +51,7 @@ export function openFormModal(st: any, formAction: any, onSubmit: any): void {
     if (isWizard) return
     if (!st._formModalQueue) st._formModalQueue = []
     st._formModalQueue.push({ formAction: action, onSubmit: typeof onSubmit === 'function' ? onSubmit : null })
-    try { if (typeof flash === 'function') flash(st, '已加入队列（' + String(_queueLen(st)) + ' 个待处理）', 'info') } catch(_){}
+    try { if (typeof flash === 'function') flash(st, 'Added to the queue (' + String(_queueLen(st)) + ' pending in the queue)', 'info') } catch(_){}
     return
   }
   if (isWizard) {
@@ -64,8 +70,8 @@ export function openFormModal(st: any, formAction: any, onSubmit: any): void {
     m.schema = []
     m.submitAction = action.submitAction || action.submit || (action.form && action.form.submit) || null
     let lbl: any = action.label
-    if (lbl && typeof lbl === 'object' && !Array.isArray(lbl)) lbl = lbl.zh || lbl.en || lbl.fallback || String(lbl)
-    m.label = lbl && typeof lbl === 'string' ? lbl : (action.label ? String(action.label) : '向导')
+    if (lbl && typeof lbl === 'object' && !Array.isArray(lbl)) lbl = _labelInLang(lbl)
+    m.label = lbl && typeof lbl === 'string' ? lbl : (action.label ? String(action.label) : 'Wizard')
     m.stepId = action._stepId || ''
     m.pending = false
   } else {
@@ -78,8 +84,8 @@ export function openFormModal(st: any, formAction: any, onSubmit: any): void {
     m.submitAction = action.submitAction || action.submit || (action.form && action.form.submit) || null
     m.onSubmit = typeof onSubmit === 'function' ? onSubmit : null
     let lbl: any = action.label
-    if (lbl && typeof lbl === 'object' && !Array.isArray(lbl)) lbl = lbl.zh || lbl.en || lbl.fallback || String(lbl)
-    m.label = lbl && typeof lbl === 'string' ? lbl : (action.label ? String(action.label) : (action.type === 'form' ? '填写表单' : ''))
+    if (lbl && typeof lbl === 'object' && !Array.isArray(lbl)) lbl = _labelInLang(lbl)
+    m.label = lbl && typeof lbl === 'string' ? lbl : (action.label ? String(action.label) : (action.type === 'form' ? 'Fill in the form' : ''))
     m.stepId = action._stepId || ''
     m.pending = false
     try { if (typeof emit === 'function') emit(st) } catch (e) { try { st.tick = (st.tick||0)+1 } catch(_) {} }
@@ -121,10 +127,10 @@ export function createModalRenderForm(st: any): any {
   return function (schema: any, onSubmit: any): void {
     // 兼容：若 schema 是 wizard 形状（{steps}），则按 wizard；否则按 form
     if (schema && typeof schema === 'object' && !Array.isArray(schema) && Array.isArray(schema.steps)) {
-      openFormModal(st, { type: 'wizard', steps: schema.steps, label: schema.label || '向导', submitAction: schema.submitAction }, onSubmit)
+      openFormModal(st, { type: 'wizard', steps: schema.steps, label: schema.label || 'Wizard', submitAction: schema.submitAction }, onSubmit)
       return
     }
-    const fakeAction: any = { type: SR_ACTION_TYPE.FORM, schema: schema, submitAction: null, label: '填写表单' }
+    const fakeAction: any = { type: SR_ACTION_TYPE.FORM, schema: schema, submitAction: null, label: 'Fill in the form' }
     openFormModal(st, fakeAction, onSubmit)
   }
 }

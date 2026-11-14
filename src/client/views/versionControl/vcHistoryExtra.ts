@@ -95,7 +95,7 @@ const vcHistoryCompareErrorText = function (t: any, fail: any): string {
     return t('vc.shell.history.compareUnknownRev', { rev: rev }) + ' ' + t('vc.shell.history.compareUnknownRevHint')
   }
   const msg: string = String((fail && fail.message) || '')
-  return msg === '' ? t('vc.shell.history.compareError') : t('vc.shell.history.compareError') + '：' + vcOneLine(msg, 120)
+  return msg === '' ? t('vc.shell.history.compareError') : t('vc.shell.history.compareError') + ': ' + vcOneLine(msg, 120)
 }
 
 /** 比较结果头：比较的是哪两端、几个文件，右边一颗「退出比较」。 */
@@ -225,7 +225,7 @@ const vcNoteResultTextOf = function (t: any, ui: any, rev: any): string {
     const key: string = VC_NOTE_REASON_KEY[reason] || ''
     if (key !== '') return t(key)
     const msg: string = String((one.error && one.error.message) || '')
-    return msg === '' ? t('vc.shell.history.noteWriteError') : t('vc.shell.history.noteWriteError') + '：' + vcOneLine(msg, 120)
+    return msg === '' ? t('vc.shell.history.noteWriteError') : t('vc.shell.history.noteWriteError') + ': ' + vcOneLine(msg, 120)
   }
   return ''
 }

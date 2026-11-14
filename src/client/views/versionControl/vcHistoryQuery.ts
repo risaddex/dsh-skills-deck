@@ -97,7 +97,7 @@ export const vcHistoryCompareSummaryOf = function (files: any, t: any): string {
   const parts: string[] = [t('vc.shell.history.compareFiles', { n: String(list.length) })]
   if (added > 0) parts.push('+' + String(added))
   if (deleted > 0) parts.push('−' + String(deleted))
-  return parts.join('，')
+  return parts.join(', ')
 }
 
 export const VC_HISTORY_QUERY_SOURCE = 'src/client/views/versionControl/vcHistoryQuery.ts'

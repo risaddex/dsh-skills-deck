@@ -97,6 +97,18 @@ export const vcShellResultNode = function (h: any, t: any, o: any) {
   return h('div', attrs, kids)
 }
 
+// Display text for the ledger's level and final-form codes. The translators live in vcPageHead.ts
+//   (spliced later in the same closure, so they exist by render time); a leaf compiled on its own
+//   without them falls back to the raw code rather than failing.
+declare function vcCapLevelTextOf(t: any, level: any): string
+declare function vcCapFormTextOf(t: any, form: any): string
+const vcCapLevelDisplayOf = function (t: any, level: any): string {
+  return typeof vcCapLevelTextOf === 'function' ? vcCapLevelTextOf(t, level) : String(level || '')
+}
+const vcCapFormDisplayOf = function (t: any, form: any): string {
+  return typeof vcCapFormTextOf === 'function' ? vcCapFormTextOf(t, form) : String(form || '')
+}
+
 // 一条能力的主入口画法：终局形态决定画说明、只读读数还是入口提示；这里从不画假按钮。
 export const vcCapabilitySurfaceKindOf = function (cap: any) {
   if (!cap) return 'note'
@@ -114,8 +126,8 @@ export const vcShellSurfaceNode = function (h: any, t: any, o: any) {
     kids.push(h('div', { key: 'head', className: 'vcs-surface-head' }, [
       h('span', { key: 'id', className: 'vcs-surface-id' }, String(cap.id)),
       h('span', { key: 'name', className: 'vcs-surface-name' }, String(cap.name || '')),
-      h('span', { key: 'level', className: 'vcs-surface-level' }, t('vc.shell.cap.level') + ' ' + String(cap.level || '')),
-      h('span', { key: 'form', className: 'vcs-surface-form' }, t('vc.shell.cap.form') + ' ' + String(cap.finalForm || '')),
+      h('span', { key: 'level', className: 'vcs-surface-level' }, t('vc.shell.cap.level') + ' ' + vcCapLevelDisplayOf(t, cap.level)),
+      h('span', { key: 'form', className: 'vcs-surface-form' }, t('vc.shell.cap.form') + ' ' + vcCapFormDisplayOf(t, cap.finalForm)),
     ]))
     if (cap.command) kids.push(h('code', { key: 'cmd', className: 'vcs-surface-cmd' }, String(cap.command)))
   }
@@ -139,7 +151,7 @@ export const vcShellCapabilityRowNode = function (h: any, t: any, o: any) {
     h('div', { key: 'head', className: 'vcs-cap-head' }, [
       h('span', { key: 'id', className: 'vcs-cap-id' }, String(cap.id || '')),
       h('span', { key: 'name', className: 'vcs-cap-name' }, String(cap.name || '')),
-      h('span', { key: 'badges', className: 'vcs-cap-badges' }, String(cap.level || '') + ' · ' + String(cap.finalForm || '')),
+      h('span', { key: 'badges', className: 'vcs-cap-badges' }, vcCapLevelDisplayOf(t, cap.level) + ' · ' + vcCapFormDisplayOf(t, cap.finalForm)),
     ]),
   ]
   if (cap.command) kids.push(h('code', { key: 'cmd', className: 'vcs-cap-cmd' }, String(cap.command)))

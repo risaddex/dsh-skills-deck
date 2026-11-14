@@ -72,7 +72,7 @@ export const vcPushDecisionOf = function (decision: any) {
 /** 禁用时悬停里那句话：把理由逐条翻成词条，用「；」连起来（一条都没有时不编话）。 */
 export const vcBlockedTipOf = function (decision: any, t: any) {
   const keys = vcReasonKeysOf(decision && decision.reasons)
-  return keys.map(function (k: any) { return t(k) }).join('；')
+  return keys.map(function (k: any) { return t(k) }).join('; ')
 }
 
 /** 宿主写失败：reason（WRITE_REASONS 的 38 个）→ 话术族。 */

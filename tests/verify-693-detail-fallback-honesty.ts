@@ -273,10 +273,10 @@ function storeOf (patch?: Record<string, unknown>): any {
 {
   const { html, text } = await renderStore(storeOf({ issueMode: 'loading' }))
   check(text.includes('修复：单票详情页的兜底不许说错话'), '薄片段·秒开保留：标题已经用快照那一行画出来（#58 的成果不动）')
-  check(text.includes('描述'), '薄片段：描述那一段照常画出来（不是整页空白）')
+  check(text.includes('Description'), '薄片段：描述那一段照常画出来（不是整页空白）')
   check(!text.includes(ZH.noBody), '薄片段：「无描述」没出现（正文只是还没拿到，不是没有）')
   check(!text.includes(ZH.readOnlyHint), '薄片段：「只读」没出现（没拿到评论不等于不能评论）')
-  check(!text.includes('评论 (0)'), '薄片段：没报「评论 (0)」（评论只是还没拿到，不是没有）')
+  check(!text.includes('Comments (0)'), '薄片段：没报「评论 (0)」（评论只是还没拿到，不是没有）')
   check(text.includes(ZH.loading) || text.includes(ZH.bodyNotYet) || text.includes(ZH.notYet), '薄片段：正文那格说的是加载中或还没拿到（实得：「' + text.slice(0, 200) + '」）')
   check(!html.includes('<textarea'), '薄片段：详情没回来时不给输入框（没拿到评论，不知道能不能发）')
 }
@@ -286,10 +286,10 @@ function storeOf (patch?: Record<string, unknown>): any {
   const { html, text } = await renderStore(storeOf({ issueMode: 'err', issueError: { kind: 'network', message: 'boom' } }))
   check(!text.includes(ZH.noBody), '取数失败：「无描述」没出现（取不到，不是没有）')
   check(!text.includes(ZH.readOnlyHint), '取数失败：「只读」没出现')
-  check(!text.includes('评论 (0)'), '取数失败：没报「评论 (0)」')
+  check(!text.includes('Comments (0)'), '取数失败：没报「评论 (0)」')
   check(text.includes(ZH.bodyNotYet) || text.includes(ZH.notYet), '取数失败：正文那格说的是「还没拿到」')
   check(text.includes('network') && text.includes('boom'), '取数失败：把失败原因说出来（network: boom）')
-  check(text.includes('重试'), '取数失败：给得出重试')
+  check(text.includes('Retry'), '取数失败：给得出重试')
   check(text.includes('修复：单票详情页的兜底不许说错话'), '取数失败：上次拿到的标题仍在（不白屏）')
   check(!html.includes('<textarea'), '取数失败：不给输入框')
 }
@@ -311,7 +311,7 @@ function storeOf (patch?: Record<string, unknown>): any {
   check(summaryText.indexOf('没有起进程') < 0, '通路冷却：折叠条只留短提示，不重复整段技术原文（实得：「' + summaryText.slice(0, 80) + '」）')
   check(summaryEnd > 0 && html.indexOf('没有起进程') > summaryEnd, '通路冷却：整段技术原文只放在展开后的正文里（不再铺在主行或折叠条）')
   check(text.includes(raw), '通路冷却：原始说明（raw）也仍在折叠区里')
-  check(text.includes('重试'), '通路冷却：重试按钮照常给')
+  check(text.includes('Retry'), '通路冷却：重试按钮照常给')
 }
 
 
@@ -324,7 +324,7 @@ function storeOf (patch?: Record<string, unknown>): any {
   const { html, text } = await renderStore(storeOf({ issueDetail: emptyDetail, issueMode: 'real' }))
   check(text.includes(ZH.noBody), '详情回来了·正文为空：「无描述」这时候才出现（真的是空）')
   check(text.includes(ZH.noComments), '详情回来了·评论为空：「无评论」这时候才出现（真的是空）')
-  check(text.includes('评论 (0)'), '详情回来了·评论为空：这时候才报「评论 (0)」')
+  check(text.includes('Comments (0)'), '详情回来了·评论为空：这时候才报「评论 (0)」')
   check(!text.includes(ZH.readOnlyHint), '详情回来了·评论为空：不说「只读」（这个后端给了评论能力，只是还没人评论）')
   check(html.includes('<textarea'), '详情回来了·评论为空：给输入框（能评论）')
 }
@@ -363,7 +363,7 @@ function storeOf (patch?: Record<string, unknown>): any {
   const { html, text } = await renderStore(storeOf({ issueDetail: full, issueMode: 'real' }))
   check(text.includes('这张票的正文'), '正常路径：正文画出来')
   check(text.includes('@b') && text.includes('一条评论'), '正常路径：评论画出来')
-  check(text.includes('评论 (1)'), '正常路径：评论条数照常报')
+  check(text.includes('Comments (1)'), '正常路径：评论条数照常报')
   check(html.includes('<textarea') && !text.includes(ZH.readOnlyHint), '正常路径：给输入框，不说「只读」')
   check(!text.includes(ZH.noBody) && !text.includes(ZH.noComments), '正常路径：兜底那两句都不出现')
 }

@@ -96,9 +96,10 @@ zh:
   switch.criHintFallback: 切换前置检查未全部通过，请按上方清单处理后重试
   switch.migrateNote: 受限：目标单 feature 99 上限、标签/拓扑可能有损、500/5000 限额需分批；仅 UI 说明，后端零改动。
   switch.clearWarn: 确认清空（不可逆）
-  switch.clearDesc: 仅清空当前视图，不删除远端仓库本身；请输入“确认清空”后方可执行。
+  switch.clearDesc: 仅清空当前视图，不删除远端仓库本身；请输入“{keyword}”后方可执行。
   switch.clearInputLabel: 输入确认：
-  switch.clearNeedInput: 请输入“确认清空”以启用确认
+  switch.clearNeedInput: 请输入“{keyword}”以启用确认
+  switch.clearKeyword: 确认清空
   switch.clearOk: 已确认清空关键词
   switch.cancel: 取消
   switch.confirm: 确认切换
@@ -297,9 +298,10 @@ en:
   switch.criHintFallback: Switch preflight not fully passed — resolve items above and retry
   switch.migrateNote: "Limits: 99 per feature, labels/topology may be lossy, 500/5000 rate limits — UI description only, no backend change."
   switch.clearWarn: Confirm clear (irreversible)
-  switch.clearDesc: Only clears current view, does not delete remote repo. Type “确认清空” to proceed.
+  switch.clearDesc: Only clears the current view and does not delete the remote repository. Type “{keyword}” to proceed.
   switch.clearInputLabel: "Type to confirm:"
-  switch.clearNeedInput: Type “确认清空” to enable
+  switch.clearNeedInput: Type “{keyword}” to enable confirmation
+  switch.clearKeyword: CONFIRM CLEAR
   switch.clearOk: Confirmed
   switch.cancel: Cancel
   switch.confirm: Confirm switch

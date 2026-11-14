@@ -69,14 +69,14 @@ export const NotificationHistoryPanel = ({ st, view, onClose }: any) => {
     h('button', { key: 'close', className: 'dsws-btn dsws-hov', 'data-press': 'icon', 'data-log': 'notice.close', 'data-notice-close': 1, type: 'button', 'aria-label': tr('notice.close'), onClick: function () { if (typeof onClose === 'function') onClose() }, style: { lineHeight: 0, padding: '2px 5px' } }, Ic({ n: 'x', size: 11 })),
   ])
   const current = h('div', { key: 'current', 'data-notice-current': degraded ? 'degraded' : 'normal', style: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '0 2px 6px', color: degraded ? noticeToneColorOf('warn') : 'var(--dsw-alias-label-caption,#8b8b95)' } }, [
-    h('span', { key: 'label' }, tr('notice.current') + '：'),
+    h('span', { key: 'label' }, tr('notice.current') + ': '),
     h('span', { key: 'value' }, degraded ? tr('notice.currentDegraded') : tr('notice.currentNormal')),
     unread > 0 ? h('span', { key: 'unread', 'data-notice-unread-count': 1, style: { marginLeft: 'auto' } }, tr('notice.unreadCount', { n: unread })) : null,
   ])
   // #1833：额度行 —— 一行说清「充足 / 紧张 / 还没同步 / 不需要额度 / 没有额度」；
   //   按钮展开后逐条念宿主给的原始读数（GraphQL / REST 剩余与上限、同步失败原因），不在这里算新数字。
   const budgetRow = !budgetView ? null : h('div', { key: 'budget', 'data-notice-budget': budgetView.tier, style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, fontSize: 11, padding: '0 2px 6px', color: budgetView.color } }, [
-    h('span', { key: 'label' }, tr('notice.budget') + '：'),
+    h('span', { key: 'label' }, tr('notice.budget') + ': '),
     h('span', { key: 'state', 'data-notice-budget-state': 1 }, tr(budgetView.stateKey)),
     budgetView.lines.length > 0 ? h('button', {
       key: 'toggle', className: 'dsws-btn dsws-hov', 'data-press': 'chip', 'data-log': 'notice.budget.toggle', 'data-notice-budget-toggle': 1, type: 'button',

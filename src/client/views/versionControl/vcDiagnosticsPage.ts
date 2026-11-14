@@ -336,7 +336,7 @@ const vcDiagPointerBlock = function (h: any, t: any): any {
     const textKey: string = cap === '13.3' ? 'vc.diag.pointer.search' : 'vc.diag.pointer.commits'
     kids.push(h('p', {
       key: cap, className: 'vcs-diag-pointer page-note', 'data-vc-diag-pointer': cap, 'data-vc-diag-pointer-page': String(p.page || ''),
-    }, cap + ' ' + vcDiagCapNameOf(cap) + '：' + t(textKey)))
+    }, cap + ' ' + vcDiagCapNameOf(cap) + ': ' + t(textKey)))
   }
   return h('div', { key: 'pointer', className: 'vcs-diag-block', 'data-vc-diag-block': 'pointer' }, kids)
 }

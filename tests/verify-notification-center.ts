@@ -368,7 +368,7 @@ globalThis.DswsCtx = React.createContext({ h: React.createElement })
 
   // #1833：当前状态区里那一行额度（真投影渲染，负例与三档都覆盖）。
   const budgetPlentyMarkup = renderPanel(stBudget({ budgetKind: 'two-buckets', readKnown: true, offNetwork: false, buckets: { graphql: { remaining: 4200, limit: 5000 }, rest: { remaining: 4500, limit: 5000 } } }), viewOf(EVENTS, {}))
-  check(budgetPlentyMarkup.indexOf('data-notice-budget="plenty"') >= 0 && budgetPlentyMarkup.indexOf('额度：') >= 0 && budgetPlentyMarkup.indexOf('>充足<') >= 0, '历史浮层：额度行说「充足」')
+  check(budgetPlentyMarkup.indexOf('data-notice-budget="plenty"') >= 0 && budgetPlentyMarkup.indexOf('额度: ') >= 0 && budgetPlentyMarkup.indexOf('>充足<') >= 0, '历史浮层：额度行说「充足」')
   check(budgetPlentyMarkup.indexOf('data-notice-budget-toggle="1"') >= 0 && budgetPlentyMarkup.indexOf('原始读数') >= 0, '…有原始读数可展开时给一个「原始读数」按钮')
   check(budgetPlentyMarkup.indexOf('data-notice-budget-detail') < 0, '…默认收起，不把数字铺在浮层上')
   const budgetTightMarkup = renderPanel(stBudget({ budgetKind: 'two-buckets', readKnown: true, offNetwork: false, buckets: { graphql: { remaining: 500, limit: 5000 }, rest: { remaining: 4500, limit: 5000 } } }), viewOf(EVENTS, {}))

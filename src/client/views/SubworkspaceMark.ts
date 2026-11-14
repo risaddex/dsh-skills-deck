@@ -330,7 +330,7 @@ export const SubworkspaceMark = function (props: any) {
   //   历史归位提示与 wf.workspaceFacts 一起删除了）。
   const shown = subShown
   if (!shown.length) return null
-  const aria = shown.join('；')
+  const aria = shown.join('; ')
   // 显示与点击都用还原过写法的那一条：浮层里写着「点一下打开 D:\ilife」，点下去就不该打开另一条写法
   const shownRoot = subwsMarkRootShown(root, cwd)
   const dim = { fontSize: 11, lineHeight: '16px', whiteSpace: 'normal', wordBreak: 'break-word' }

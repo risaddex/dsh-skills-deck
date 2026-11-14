@@ -100,7 +100,14 @@ export const repoShortName = function (repoRef: any): string {
   return parts[parts.length-1] || n
 }
 // #189 · 切换三选一确认态（全局 per-store，复用 wf.bind + 三缓存失效）
-export const DEFAULT_SWITCH_PROMPT_ZH: string = '现有 issues 保留在原后端，切换后不可见，切回可见'
+// The typed confirmation for the destructive "clear" option. It is read from the copy table in the active
+//   locale, so the word the dialog tells the person to type is exactly the word this check expects; the
+//   comparison is exact (no trimming, no case folding, no other locale's word), which keeps the second
+//   barrier as strict as it was. Change the word in config/copy/word.yaml (switch.clearKeyword), not here.
+export const switchClearKeyword = function (): string {
+  return String(typeof tr === 'function' ? tr('switch.clearKeyword') : '')
+}
+export const DEFAULT_SWITCH_PROMPT_ZH: string = 'Existing issues stay in the original backend. They are hidden after switching and visible again when you switch back.'
 // #191 · targetId=null 进入"目标待选"态（仓库名右侧按钮直弹 Modal，target 由 Modal 内 radio 选）
 export const openSwitchConfirm = function (st: any, targetId: any): boolean {
   const cur: any = st.selection ? st.selection.backendId : null
@@ -149,7 +156,7 @@ export const loadSwitchCri = function (st: any): void {
   // #284：CRI 迁移到链快照（wf.chain 全链步骤一步取齐）
   // #529：附带当前语言与绑定后端（与 loadChain 同口径；否则英文界面下明细恒为中文）
   const criT0: number = Date.now()
-  const criLang: any = (typeof promptLang === 'function' ? promptLang() : 'zh')
+  const criLang: any = (typeof promptLang === 'function' ? promptLang() : 'en')
   // #1478：和 loadChain 同口径，把会话号一并带给宿主 —— 宿主按请求里的会话号解析沙箱许可；
   // 同一个工作区里可能同时有多个会话，只传 cwd 会落到别的会话的许可上，CRI 判断跟着失真。
   const criArgs: any = Object.assign({}, st.cwd ? { cwd: st.cwd } : {}, st.sessionId ? { sessionId: st.sessionId } : {}, (typeof userHintOf === 'function' && userHintOf(st.selection)) ? { backendId: userHintOf(st.selection) } : {}, { lang: criLang })
@@ -181,7 +188,10 @@ export const confirmSwitchConfirm = function (st: any): void {
   // #191：目标待选态时 Modal 内未选 target，确认按钮禁用（与 isTargetPending 共用阻断语义）
   if (sc.targetBackendId == null) return
   if (sc.option === 'migrate' && sc.criChecks && !sc.criChecks.allOk) return
-  if (sc.option === 'clear' && sc.clearInput !== '确认清空') return
+  if (sc.option === 'clear') {
+    const keyword: string = switchClearKeyword()
+    if (keyword === '' || sc.clearInput !== keyword) return
+  }
   sc.confirming = true; emit(st)
   const targetId: any = sc.targetBackendId
   const prevSel: any = st.selection
@@ -198,7 +208,7 @@ export const confirmSwitchConfirm = function (st: any): void {
     sc.confirming = false; emit(st)
     try { flash(st, tr('switch.bindFail', { err: String(msg).slice(0, 120) }), 'warn') } catch {}
   }
-  if (typeof host === 'undefined' || typeof host.call !== 'function') { doFail('host.call 不可用'); return }
+  if (typeof host === 'undefined' || typeof host.call !== 'function') { doFail('host.call is unavailable'); return }
   // #669 第 5 件：这条跨边界电话以前一个字都不记 —— 真机上出现「点确认切换没反应」时，
   //   日志里既没有成功那一行也没有失败那一行，事后只能靠猜。补上与其它跨边界调用同形的两行
   //   （事件名沿用现成的 host.call / host.call.fail，不新增事件名）。

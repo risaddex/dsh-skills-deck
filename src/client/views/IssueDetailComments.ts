@@ -101,9 +101,9 @@ export const renderIssueDetailComments = function (h: any, st: any, issueNumber:
         // #1783：评论未知 ≠ 没有评论。未知时说「评论 · 加载中」，不报「(0)」。
         h('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-secondary,#a1a1aa)', marginBottom: 6 } }, detail
           ? (commentsUnknown
-            ? '评论 · ' + (mode === 'err' ? tr('detail.notYet') : tr('list.loading'))
-            : '评论 ' + (commentsNodes.length ? '(' + commentsNodes.length + ')' : '(0)'))
-          : '评论 · ' + (mode === 'err' ? tr('detail.notYet') : tr('list.loading'))),
+            ? 'Comments · ' + (mode === 'err' ? tr('detail.notYet') : tr('list.loading'))
+            : 'Comments ' + (commentsNodes.length ? '(' + commentsNodes.length + ')' : '(0)'))
+          : 'Comments · ' + (mode === 'err' ? tr('detail.notYet') : tr('list.loading'))),
         // 列表画已取到的全部评论：以前这里只画前 50 条，加载更多把总数推到 56 后后 6 条永远画不出来（#1784）。
         commentsNodes.length ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, commentsNodes.map(function (c: any, i: any) {
           const login = c.author && c.author.login || 'ghost'
@@ -224,7 +224,7 @@ export const renderIssueDetailComments = function (h: any, st: any, issueNumber:
             style: { width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 56, fontSize: 12, lineHeight: 1.5, padding: '7px 9px', borderRadius: 6, border: '1px solid var(--dsw-alias-border-l1,#2a2d35)', background: 'rgba(255,255,255,.03)', color: 'var(--dsw-alias-label-primary,#e6edf3)' }, // 焦点环走全局宿主环（#1387 第五条）：行内隐藏会盖住键盘焦点，删掉后落到宿主蓝内环。
           }),
           h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 } }, [
-            h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, 'Markdown · ⌘+Enter / Ctrl+Enter 发送'),
+            h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, 'Markdown · ⌘+Enter / Ctrl+Enter to send'),
             h('span', { style: { flex: 1 } }),
             h(Tip, { content: (st.cmtSending ? tr('tip.sendingComment') : tr('tip.sendComment')) }, h('button', {
               className: 'dsws-btn primary' + (st.cmtSending ? ' dsws-fb-busy' : '') + (cmtRes === 'ok' ? ' dsws-fb-okflash' : '') + (cmtRes === 'fail' ? ' dsws-fb-errflash dsws-fb-shake' : ''), 'data-press': 'button', 'data-log': 'issue.comment.send',

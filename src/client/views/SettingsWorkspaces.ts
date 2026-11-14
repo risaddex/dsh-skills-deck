@@ -368,7 +368,7 @@ export const renderWsOverview = function (h: any, sharedSt: any, wsOverview: any
                 const display=row.display||cwd
                 // #653：这一组并进了不止一条目录才标一句（几条目录并在这里）；Hover 浮层给组里每条原样路径，不猜。
                 const mergedNote = row.merged ? tr('cfg.wsMergedCount', { n: row.members.length }) : ''
-                const hoverText = row.merged ? row.members.join(' ｜ ') : cwd
+                const hoverText = row.merged ? row.members.join(' | ') : cwd
                 // #1612：两颗开关的当前状态只认 deck-state 归一后的值——文件里缺省、旧字段迁移都由它兜住，这里不重新判定。
                 // #1879：第三颗「下一步建议」同口径（绿 = on 显示、灰 = off 不显示），读数同样只从 deck-state 来。
                 const sbOn = deckStatusBarOf(cwd)==='show'

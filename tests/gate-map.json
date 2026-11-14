@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-06T14:05:45.934Z",
+  "generatedAt": "2026-11-14T11:17:08.666Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 600,
-  "gateCount": 600,
-  "attributedGates": 544,
+  "chainLength": 601,
+  "gateCount": 601,
+  "attributedGates": 545,
   "unattributedGates": 56,
   "buildOutputOnlyGates": 21,
   "completionRecordedGates": 143,
@@ -9232,6 +9232,32 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 5 条"
     },
     {
+      "step": "node tests/verify-9-client-english.ts",
+      "file": "tests/verify-9-client-english.ts",
+      "guards": [
+        "config/copy/vcshell.yaml",
+        "config/copy/word.yaml",
+        "src/client/kernel/api-new-session.ts",
+        "src/client/kernel/slotRenderer-queue.ts",
+        "src/client/kernel/store-switch.ts",
+        "src/client/views/shared/SwitchConfirmModal.ts",
+        "src/client/views/versionControl/vcPageHead.ts",
+        "src/client/views/versionControl/vcPalette.ts",
+        "src/client/views/versionControl/vcShellPrimitives.ts"
+      ],
+      "dirs": [
+        "config/copy",
+        "src/client/kernel",
+        "src/client/views/shared",
+        "src/client/views/versionControl"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 9 条）"
+    },
+    {
       "step": "node tests/verify-907-chain-titles.ts",
       "file": "tests/verify-907-chain-titles.ts",
       "guards": [
@@ -14147,6 +14173,7 @@
       "node tests/verify-1837-skill-importance.ts",
       "node tests/verify-1887-counts-from-library.ts",
       "node tests/verify-1933-network-fallback.ts",
+      "node tests/verify-9-client-english.ts",
       "node tests/verify-notification-center.ts",
       "node tests/verify-rest-fallback-banner.ts"
     ],
@@ -14683,6 +14710,7 @@
       "node tests/verify-698-switch-asks-layout.ts",
       "node tests/verify-786-focus-end.ts",
       "node tests/verify-842-version-control-write-view.ts",
+      "node tests/verify-9-client-english.ts",
       "node tests/verify-907-chain-titles.ts",
       "node tests/verify-b2-map-newsession.ts",
       "node tests/verify-bug-entry.ts",
@@ -14939,6 +14967,7 @@
       "node tests/verify-599-merged-pr.ts",
       "node tests/verify-626-type-chip.ts",
       "node tests/verify-693-detail-fallback-honesty.ts",
+      "node tests/verify-9-client-english.ts",
       "node tests/verify-907-chain-titles.ts",
       "node tests/verify-bug-entry.ts",
       "node tests/verify-diagnostic-log-actions.ts",
@@ -14990,6 +15019,7 @@
       "node tests/verify-818-version-control-view.ts",
       "node tests/verify-842-version-control-write-view.ts",
       "node tests/verify-881-commit-open.ts",
+      "node tests/verify-9-client-english.ts",
       "node tests/verify-997-vc-sight-browser.ts",
       "node tests/verify-997-vc-sight.ts",
       "node tests/verify-container-colors.ts",
