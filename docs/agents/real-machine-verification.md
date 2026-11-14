@@ -4,6 +4,12 @@ Every version that is going to be released has one ticket whose title starts wit
 
 The division of labour in one sentence: **the development ticket is responsible for finishing the work and registering the scenarios, the checklist ticket is responsible for collecting the scenarios and executing the verification, and the pre-release check is responsible for stopping the release.**
 
+## Language of the checklist records
+
+The instructions and scenario descriptions are English. The fixed parts that the release checks read remain Chinese: use the [exact-text reference in the checklist template](checklist-issue-template.md#chinese-text-that-must-stay-exactly-as-written) when creating a ticket or recording a result. Keep status cells to one Chinese status word; put explanations, evidence and failure-ticket links in the Notes column. Preserve the scenario-block opener, the batch identity and baseline lines, the closing count line and the difference-audit line verbatim. This is a temporary compatibility boundary, not bilingual support.
+
+The production release path calls `runReleaseGate` from the published `dsh-featherhunter-plugin-base` dependency through `scripts/lib/release-preflight-gate.mts` and `verify/ticket-face.mts`. The local `scripts/lib/checklist-consistency.mts` has its own tests but is not the production gate's parser. Changing that local checker alone, or configuring an English vocabulary alone, does not make the published gate bilingual: its identity, baseline and audit patterns and its result/count semantics still require Chinese tokens in version 0.1.7. Full translation of those records remains pending in [#17](https://github.com/risaddex/dsh-skills-deck/issues/17); existing checklist tickets are not migrated by this documentation change.
+
 ## Why the verification is collected into one ticket
 
 - The "done" of a development ticket states acceptance conditions at the code level, which is not the same as the change actually taking effect on a real machine. Keeping the two recorded separately is what stops "every gate is green" from passing for "the effect the user can see has been confirmed".
