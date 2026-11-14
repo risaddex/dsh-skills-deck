@@ -81,7 +81,8 @@ function missingMapBlocks(text: string): string[] {
  * 写成转义是为了让后来人一眼看出这里**同时**认两种冒号，不必去猜那一格的宽度。
  */
 function hasProgressHeading(text: string): boolean {
-  return /^##\s*(?:进度|Progress)(?:\s*[\uFF1A:]\s*\d{1,3}\s*%?)?\s*$/m.test(text)
+  // #10：与进度读侧一样忽略大小写；这里只判断是否已有，不改标题原文或旧记录。
+  return /^##\s*(?:进度|Progress)(?:\s*[\uFF1A:]\s*\d{1,3}\s*%?)?\s*$/im.test(text)
 }
 
 /**
