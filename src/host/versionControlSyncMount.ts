@@ -39,7 +39,7 @@ export function createSyncMount(host: any): any {
     return assembling
   }
   function failed(): Promise<any> {
-    return Promise.resolve(failPhone('env', '同步模块加载失败：这次没有起任何 git 进程，重试一次或看诊断页'))
+    return Promise.resolve(failPhone('env', 'Failed to load the sync module; no git process was started. Retry or check the Diagnostics page'))
   }
   return {
     // 两条电话名与客户端 vcSyncData.ts、门禁、宿主入口注册必须逐字一致（wf.gitSyncCheck / wf.gitSyncWrite）。

@@ -47,14 +47,14 @@ export function createBranchPhones(deps: any): any {
   }
   /** 失败时把用户最需要的四样都带上：git 原话、环节、期望、实际、上游原因。 */
   function gitFail(res: any, step: string, expected: string, actual: string, cause?: string): any {
-    return fail('git-failed', step + '失败：git 原话「' + gitSays(res) + '」', {
+    return fail('git-failed', step + ': failed; git reported: "' + gitSays(res) + '"', {
       git: gitSays(res), step: step, expected: expected, actual: actual, cause: cause || (res && res.kind) || '',
       exitCode: res && typeof res.exitCode === 'number' ? res.exitCode : null,
     })
   }
   async function baseOf(args: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, cwdOf(args))
     if (base.ok !== true) return { fail: base }
     return { exe: exe, root: base.root }
@@ -64,42 +64,42 @@ export function createBranchPhones(deps: any): any {
     const res: any = await runPinned(exe, root, args, { stdoutLimit: 8 * 1024 * 1024 })
     const bad: any = res.kind === 'ok' || (allowNonZero && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     return { ok: true, stdout: res.stdout, stderr: res.stderr, exitCode: res.exitCode }
   }
   async function refsOf(exe: any, root: any): Promise<any> {
     const spec: any = commandFor('refs', {})
-    const r: any = await readOut(exe, root, '读分支清单这一步', spec.args)
+    const r: any = await readOut(exe, root, 'Reading the branch list', spec.args)
     if (r.ok !== true) return r
     const parsed: any = parseRefs(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', '分支清单解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'Branch list parse failed: ' + parsed.detail) }
     return { ok: true, refs: parsed.refs }
   }
   async function tagsOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读标签清单这一步', tagListArgs())
+    const r: any = await readOut(exe, root, 'Reading the tag list', tagListArgs())
     if (r.ok !== true) return r
     const parsed: any = parseTagList(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', '标签清单解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'Tag list parse failed: ' + parsed.detail) }
     return { ok: true, tags: parsed.tags }
   }
   async function descriptionsOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读分支说明这一步', branchDescriptionsArgs(), true)
+    const r: any = await readOut(exe, root, 'Reading branch descriptions', branchDescriptionsArgs(), true)
     if (r.ok !== true) return r
     // git config --get-regexp 没有命中时退出码是 1：这不是失败，是「一条说明都没配过」。
     // 其它非零退出码（例如配置文件读不了）是真失败：照实报，不能当成「没配过说明」把故障吞掉。
     if (typeof r.exitCode === 'number' && r.exitCode !== 0) {
       if (r.exitCode === 1) return { ok: true, descriptions: {} }
-      return { ok: false, envelope: gitFail({ kind: 'non-zero', exitCode: r.exitCode, stderr: r.stderr }, '读分支说明这一步', '读回分支说明，或明确告诉我一条都没配过', '退出码 ' + r.exitCode) }
+      return { ok: false, envelope: gitFail({ kind: 'non-zero', exitCode: r.exitCode, stderr: r.stderr }, 'Reading branch descriptions', 'Read back branch descriptions, or explicitly report that none have been configured', 'Exit code ' + r.exitCode) }
     }
     const parsed: any = parseBranchDescriptions(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', '分支说明解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'Branch description parse failed: ' + parsed.detail) }
     return { ok: true, descriptions: parsed.descriptions }
   }
   async function namesOf(exe: any, root: any, which: string, base: string): Promise<any> {
-    const r: any = await readOut(exe, root, '读已并入分支这一步', mergedBranchesArgs(which, base))
+    const r: any = await readOut(exe, root, 'Reading merged branches', mergedBranchesArgs(which, base))
     if (r.ok !== true) return r
     const parsed: any = parseBranchNameList(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', '已并入分支解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'Merged-branch list parse failed: ' + parsed.detail) }
     return { ok: true, names: parsed.names }
   }
   function currentBranchOf(refs: any[]): any {
@@ -119,7 +119,7 @@ export function createBranchPhones(deps: any): any {
     if (desc.ok !== true) return desc.envelope
     // 版本片：git 版本 + 九个写动作各自的可用档。4.2 / 4.3 / 4.4 在 2.23 以下退成 degraded（改用 checkout），
     // 界面据此画一行「当前 git 版本用 checkout 等价动作」——不让用户点了按钮才看到 git: 'switch' is not a git command。
-    const ver: any = await readOut(b.exe, b.root, '读 git 版本这一步', ['--version'])
+    const ver: any = await readOut(b.exe, b.root, 'Reading the git version', ['--version'])
     if (ver.ok !== true) return ver.envelope
     const gitVersion: string = firstLine(ver.stdout)
     const actions: any[] = []

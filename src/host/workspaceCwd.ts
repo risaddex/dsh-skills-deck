@@ -15,11 +15,11 @@ function fileWriteReasonOf(e: any) { const s = String((e && (e.code || e.message
  * 分档口径与 fileWriteReasonOf 同一份，不另判一次；认不出来的那档照实说「写入这一步报了错」，不编具体原因。
  */
 function bindFailAdviceOf(reason: any) {
-  if (reason === 'no-permit') return '这个工作区不在本次会话允许写入的范围内'
-  if (reason === 'no-session-permit') return '宿主没拿到这次请求的会话号（或那个会话已经不在了），没法确认这次写入的许可'
-  if (reason === 'readonly') return '这个工作区所在的磁盘是只读的'
-  if (reason === 'no-dir') return '工作区里的 docs/agents 这个目录建不出来'
-  return '写入这一步报了错'
+  if (reason === 'no-permit') return 'This workspace is outside the write scope allowed for this session'
+  if (reason === 'no-session-permit') return 'The host did not receive this request\'s session ID (or that session no longer exists), so write permission cannot be confirmed'
+  if (reason === 'readonly') return 'The disk containing this workspace is read-only'
+  if (reason === 'no-dir') return 'The docs/agents directory could not be created in the workspace'
+  return 'The write step reported an error'
 }
 // #1074 转制类型：Ctx.get 取出来按 any 用（框架服务晚到是既有语义，运行时处处有 typeof 守卫）；
 // WfArgs 是客户端 JSON 的边界，入口电话只负责原样转交。
@@ -73,16 +73,16 @@ export function createWorkspaceCwd(deps: Deps) {
     // #1445：这一步改走写会话。以前这里自己查注册表（reg.get）、自己 describe 仓库引用、自己拼上下文；
     // 现在这三件事都由会话回包给出，写路径上的预算与记账也才真正经过会话。后端做不做这件事仍然问后端自己：
     // 不实现的后端在会话里会回 unsupported，下面照旧按「它不愿意放这份文件」跳过。
-    if (typeof openSession !== 'function') return { ok: false, error: { kind: 'env', message: '插件还没有装配「开会话」这个出口（内部叫 openSession），所以这次没能把标签配色文件放进这个工作区，这个工作区里现在可能还没有这份文件。请把这条提示原文报告给插件维护者。' } }
+    if (typeof openSession !== 'function') return { ok: false, error: { kind: 'env', message: 'The plugin has not connected the open-session outlet (internally called openSession), so the label-colour file was not placed in this workspace and may not exist there yet. Report this exact message to the plugin maintainer.' } }
     try {
       const sb = resolveSandboxPolicy(args || null, cwd)
       let opened: any = null
       try { opened = await openSession(cwd, { write: true, resolveSelection: function () { return { backendId: backendId } } }) } catch (eO) {
-        return { ok: false, error: { kind: 'env', message: '插件没能把标签配色文件放进这个工作区（打开写会话这一步出错），所以这个工作区里现在可能还没有这份文件。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+        return { ok: false, error: { kind: 'env', message: 'The plugin could not place the label-colour file in this workspace (opening the write session failed), so the file may not exist there yet. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
       }
       if (!opened || opened.ok !== true || typeof opened.call !== 'function') {
-        const reason = String((opened && opened.reason) || '未说明原因')
-        return { ok: false, error: { kind: 'env', message: '插件没能把标签配色文件放进这个工作区（没能打开写会话，原因：' + reason + '），所以这个工作区里现在可能还没有这份文件。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+        const reason = String((opened && opened.reason) || 'No reason was given')
+        return { ok: false, error: { kind: 'env', message: 'The plugin could not place the label-colour file in this workspace (could not open a write session; reason: ' + reason + '), so the file may not exist there yet. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
       }
       // 会话的公共上下文有意不带沙箱政策与会话号，而 markdown 后端写文件要看政策（研究 #614/#624），
       // #1305 门禁也断言这一步必须带本次会话号；这里补的是本文件已经算好的那一份，不另造政策算法。
@@ -93,14 +93,14 @@ export function createWorkspaceCwd(deps: Deps) {
       if (placed && placed.ok === true) return { ok: true, placed: placed.placed === true, reason: placed.reason || '' }
       // 后端如实回了「这件事我不做」：它的颜色存在别处，没有本地文件可放 —— 这是跳过，不是失败。
       if (placed && placed.error && placed.error.kind === 'unsupported') return { ok: true, skipped: 'backend-wants-no-file' }
-      return { ok: false, error: (placed && placed.error) || { kind: 'env', message: '后端既没有说这次要不要放配色文件，也没有说明原因。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+      return { ok: false, error: (placed && placed.error) || { kind: 'env', message: 'The backend did not say whether to place the colour file or why. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
     } catch (e) {
-      return { ok: false, error: { kind: 'env', message: '插件没能把标签配色文件放进这个工作区（放入这一步出错），所以这个工作区里现在可能还没有这份文件。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+      return { ok: false, error: { kind: 'env', message: 'The plugin could not place the label-colour file in this workspace (the placement step failed), so the file may not exist there yet. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
     }
   }
   async function handleBind(args: WfArgs) {
     // #1003 空目录闸：还没认出工作区是哪条时，不拿进程目录冒充去绑定写文件，直接说还没就绪。
-    if (!args || typeof args.cwd !== 'string' || !args.cwd.trim()) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!args || typeof args.cwd !== 'string' || !args.cwd.trim()) return { ok: false, error: 'This workspace is not ready (its directory has not been identified). Retry once the panel recognises the workspace.' }
     const cwd = await canonicalKey(args.cwd)
     const backendId = args && ('backendId' in args ? args.backendId : args.backend)
     try {
@@ -109,12 +109,12 @@ export function createWorkspaceCwd(deps: Deps) {
       // （那颗「清除后端选择」在 #669 第 6 件已退役，见 src/client/kernel/store-switch.js）。
       // 所以如实回失败：不许回一句 ok 却在文件里什么都没写 —— 那就成了「以为选了、其实没选」。
       if (backendId === undefined || backendId === null || backendId === '') {
-        return { ok: false, kind: 'no-record-for-none', cwd: cwd, error: '「这个工作区不选任何后端」这个选择今天还没有地方可以记下来（工作区里的配置文件只能写一个后端名），所以这次没有生效。想换后端请直接选一个。' }
+        return { ok: false, kind: 'no-record-for-none', cwd: cwd, error: 'The choice "use no backend for this workspace" cannot be recorded yet (the workspace configuration file stores only one backend name), so it did not take effect. To change backends, select one directly.' }
       }
       const reg = await getTrackerRegistry()
-      if (!reg) return { ok: false, error: '插件尚未就绪：还没有可用的后端清单，这次选择没有生效。请稍后重试。' }
+      if (!reg) return { ok: false, error: 'The plugin is not ready: no backend list is available yet, so this choice did not take effect. Retry later.' }
       if (typeof reg.has !== 'function' || !reg.has(backendId)) {
-        return { ok: false, kind: 'unknown-backend', cwd: cwd, error: '插件不认识这个后端（' + String(backendId).slice(0, 60) + '），这次选择没有生效。请重新打开选择窗口再选一次。' }
+        return { ok: false, kind: 'unknown-backend', cwd: cwd, error: 'The plugin does not recognise this backend (' + String(backendId).slice(0, 60) + '); this choice did not take effect. Reopen the selector and choose again.' }
       }
       // #1138 唯一写入口，一次动作只写一份：先写工作区文件，**写成功才算这次选择生效**。
       //   以前这里同时写进程内绑定、本机记忆与工作区文件三处，顶层 ok 却恒为真 —— 文件写失败照样回 ok，
@@ -129,7 +129,7 @@ export function createWorkspaceCwd(deps: Deps) {
         return {
           ok: false, kind: 'workspace-file-failed', cwd: cwd, backendId: backendId, workspaceFile: workspaceFile,
           errorKind: _whyCode,
-          error: '这次没能把选择写进这个工作区里的配置文件（' + bindFailAdviceOf(_whyCode) + '），所以这次选择没有生效。请确认这个目录可以写，然后重新选一次。',
+          error: 'This choice could not be written to the workspace configuration file (' + bindFailAdviceOf(_whyCode) + '), so it did not take effect. Make sure this directory is writable, then choose again.',
         }
       }
       // 落到这里才算生效：清三处缓存，顺手放配色文件，再补一份本机记忆（H）——H 只是「文件万一被删还能再生成一次」的备份，不参与判定。
@@ -177,8 +177,8 @@ export function createWorkspaceCwd(deps: Deps) {
       } catch (e) { why = fileWriteReasonOf(e) } }
     if (why === 'written') return { ok: true, cwd: cwd, layout: want, pickedAt: Date.now(), workspaceFile: 'written' }
     // 写不进文件就是这次选择没生效：如实说原因，不退回本机记忆顶替（#1449 拍板）。
-    const _advice = why === 'no-record' ? '文件里还没有选定后端，布局要先有后端记录才能写' : (why === 'no-channel' ? '这次没拿到可用的文件通道' : bindFailAdviceOf(why))
-    return { ok: false, cwd: cwd, layout: want, workspaceFile: why, error: '这次没能把布局写进这个工作区里的配置文件（' + _advice + '），所以这次选择没有生效。' }
+    const _advice = why === 'no-record' ? 'No backend is selected in the file yet; a layout requires a backend entry first' : (why === 'no-channel' ? 'No usable file channel was available this time' : bindFailAdviceOf(why))
+    return { ok: false, cwd: cwd, layout: want, workspaceFile: why, error: 'The layout could not be written to the workspace configuration file (' + _advice + '), so this choice did not take effect.' }
   }
   // #1138：这一条答的是「哪些工作区已经选过后端，各选的是谁」。
   //   以前它读的是注册表里那份进程内副本（`reg.allBindings()`），重启就没、别的窗口也看不见；
@@ -248,7 +248,7 @@ export function createWorkspaceCwd(deps: Deps) {
       //   现在整段交给唯一判定出口（人选的唯一真源是工作区文件，出口内部再接声明文件与自动识别）。
       const outlet = (typeof getDecisionFn === 'function') ? await getDecisionFn().catch(function () { return null }) : null
       if (!outlet || typeof outlet.decideBackend !== 'function') {
-        return { ok: false, error: '插件尚未就绪：判定出口这次没装上，所以没有选出后端。请稍后重试；如果仍然失败，请把这条提示原文报告给插件维护者。' }
+        return { ok: false, error: 'The plugin is not ready: the decision outlet was not connected, so no backend was selected. Retry later; if it still fails, report this exact message to the plugin maintainer.' }
       }
       // #1048 收口补做：把日志出口一并递进去，这条电话的判定才留下结论线（与面板、deck 工具同源同形）。
       //   不递的后果是「用户在设置页选了后端、事后想查为什么是这个」，日志里查不到这一趟判定。
@@ -298,7 +298,7 @@ export function createWorkspaceCwd(deps: Deps) {
     // 来源如实记：人当场点的是 user，从老记忆搬来的是 migrated（切核后核认，新老都认）。
     const _source = (_via === 'migrate') ? 'migrated' : 'user';
     if (!backendId || typeof backendId !== 'string' || backendId.trim() === '') {
-      return { ok: false, error: { kind: 'env', reason: 'other', message: '内部调用没给后端名，这次没有写工作区文件。' } }
+      return { ok: false, error: { kind: 'env', reason: 'other', message: 'The internal call provided no backend name; the workspace file was not written.' } }
     }
     const sb = resolveSandboxPolicy(args, cwd)
     let fsSvc: FsSvc | null = null
@@ -309,7 +309,7 @@ export function createWorkspaceCwd(deps: Deps) {
       if (!fsSvc || typeof fsSvc.resolve !== 'function' || typeof fsSvc.readText !== 'function' || typeof fsSvc.writeText !== 'function') {
         // 拿不到文件通道属于持久化边界的入口失败：记工作区散列与原因档，方便与外层 wf.bind 那一行对上。
         try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('warn', 'host.call.fail', { method: _method, kind: 'bind', errorHash: hash8('no-fs'), cwdHash: hash8(String(cwd)), errorKind: 'no-channel' }) } catch (eL) {}
-        return { ok: false, error: { kind: 'env', reason: 'no-channel', message: '这次没拿到可用的文件通道（写工作区文件要用它）。' } }
+        return { ok: false, error: { kind: 'env', reason: 'no-channel', message: 'No usable file channel was available (it is needed to write the workspace file).' } }
       }
       let existed = false;
       let existedLayout = null;
@@ -335,7 +335,7 @@ export function createWorkspaceCwd(deps: Deps) {
       // 成功是状态变化的结论线：记工作区散列，方便与客户端那一行 wf.bind 对上（路径原文不记，只记散列）。
       try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('info', 'host.call', { method: _method, latencyMs: Date.now() - _t0, ok: true, kind: 'bind', cwdHash: hash8(String(cwd)) }) } catch (eL) {}
       // #1434：先读回比对，读到的与刚写进去的不一致等于这次没写成，如实回失败（不删老文件）。
-      let back: string | null = null; try { back = await fsSvc.readText(target2) } catch (eB) { back = null }; if (back === null || String(back) !== text) { try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('warn', 'host.call.fail', { method: _method, kind: 'bind', errorHash: hash8('read-back'), cwdHash: hash8(String(cwd)), errorKind: 'read-back-mismatch' }) } catch (eL) {}; return { ok: false, error: { kind: 'env', reason: 'read-back-mismatch', message: '写完之后重新读这份文件，读到的内容与刚写进去的不一致，这次选择没有生效。' } } }
+      let back: string | null = null; try { back = await fsSvc.readText(target2) } catch (eB) { back = null }; if (back === null || String(back) !== text) { try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('warn', 'host.call.fail', { method: _method, kind: 'bind', errorHash: hash8('read-back'), cwdHash: hash8(String(cwd)), errorKind: 'read-back-mismatch' }) } catch (eL) {}; return { ok: false, error: { kind: 'env', reason: 'read-back-mismatch', message: 'Reading the file back returned content different from what was just written; this choice did not take effect.' } } }
       // #1434：读回一致后顺手删老文件（best-effort）：文件本来就不在算删掉；删不掉只记一条日志，主流程照回成功。
       let legacyDeleted = false; try { if (typeof (fsSvc as any).rm === 'function') { await (fsSvc as any).rm(await fsSvc.resolve(WORKSPACE_FILE_LEGACY_REL, { cwd: cwd }), { force: true }); legacyDeleted = true } } catch (eR) { legacyDeleted = /ENOENT|FS_NOT_FOUND|not found/i.test(String((eR as any).code || (eR as any).message || eR)) }; if (!legacyDeleted) { try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('warn', 'host.call.fail', { method: _method, kind: 'bind', errorHash: hash8('legacy-rm'), cwdHash: hash8(String(cwd)), errorKind: 'legacy-delete-failed' }) } catch (eL) {} }
       try { const ws = await getWorkspaceStore(); ws.invalidate({ cwd: cwd }) } catch {}
@@ -344,13 +344,13 @@ export function createWorkspaceCwd(deps: Deps) {
       // 这一层（以及它下面的子目录）的归属结论就变了。根判定有 30 秒缓存，不在这里清掉，
       // 面板最多 30 秒还在说旧话（例如刚选完后端，子目录仍显示归上级）。清不掉不影响本次绑定成功。
       try { if (typeof forgetWorkspaceRootCache === 'function') await forgetWorkspaceRootCache() } catch (eC) {}
-      return { ok: true, placed: true, reason: existed ? 'overwritten' : 'created', legacyDeleted: legacyDeleted, warnings: legacyDeleted ? [] : ['legacy-delete-failed：老文件（' + WORKSPACE_FILE_LEGACY_REL + '）没能删掉，它还在，但已经没用了，可以手动删掉。'] }
+      return { ok: true, placed: true, reason: existed ? 'overwritten' : 'created', legacyDeleted: legacyDeleted, warnings: legacyDeleted ? [] : ['legacy-delete-failed: the old file (' + WORKSPACE_FILE_LEGACY_REL + ') could not be deleted. It is no longer used and can be removed manually.'] }
     } catch (eW) {
       // 写失败是本次切换没生效的唯一判据：记四档原因码与工作区散列，错误散列里带上有无会话政策，方便分组比对。
       // 有无政策的区分意义：没政策多半是没找到归属会话（退回部署默认政策被拒），有政策仍被拒多半是会话只读或目录真不可写。
       // 注意：写成功那条路的会话政策变量只活在上面那个 try 里，catch 里看不见，这里重新算一次（纯函数，开销可忽略）。
       try { if (logCtx && typeof logCtx.fire === 'function') { const _reason2 = fileWriteReasonOf(eW); const _hasPolicy = (sb && (sb as any).policy) ? 'has-policy' : 'no-policy'; logCtx.fire('warn', 'host.call.fail', { method: _method, kind: 'bind', errorHash: hash8(_reason2 + ':' + _hasPolicy + ':' + msgOf(eW).slice(0, 80)), cwdHash: hash8(String(cwd)), errorKind: _reason2 }) } } catch (eL) {}
-      return { ok: false, error: { kind: 'env', reason: fileWriteReasonOf(eW), message: '写工作区配置文件这一步出错（' + msgOf(eW).slice(0, 120) + '）。' } } }
+      return { ok: false, error: { kind: 'env', reason: fileWriteReasonOf(eW), message: 'Writing the workspace configuration file failed (' + msgOf(eW).slice(0, 120) + ').' } } }
   }
   // #1003 老用户迁移：文件缺席 + 本机记忆有 → 把记忆写进工作区文件，写成功才算迁移成。
   //   人话：老工作区从没建过那份文件（本机记忆替它答了上万次），先把选择落到文件，
@@ -389,7 +389,7 @@ export function createWorkspaceCwd(deps: Deps) {
       // 迁移是状态变化：写成了记一行结论（含耗时与工作区散列），写不成记失败行（含原因档），跳过的不记（常态，不刷屏）。
       if (out && out.ok === true) { try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('info', 'host.call', { method: 'wf.bind.migrate', latencyMs: Date.now() - _migT0, ok: true, kind: 'bind', cwdHash: hash8(String(key)) }) } catch (eL0) {} return { ok: true, migrated: true, reason: out.reason || 'created' } }
       try { if (logCtx && typeof logCtx.fire === 'function') { const _mr = (out && out.error && (out.error as any).reason) || 'other'; logCtx.fire('warn', 'host.call.fail', { method: 'wf.bind.migrate', kind: 'bind', errorHash: hash8(_mr + ':' + msgOf((out && out.error) || 'migrate-failed').slice(0, 80)), cwdHash: hash8(String(key)), errorKind: _mr }) } } catch (eL1) {}
-      return { ok: false, error: (out && out.error) || { kind: 'env', message: '迁移写文件失败' } }
+      return { ok: false, error: (out && out.error) || { kind: 'env', message: 'Migration file write failed' } }
     } catch (eM) {
       try { if (logCtx && typeof logCtx.fire === 'function') logCtx.fire('warn', 'host.call.fail', { method: 'wf.bind.migrate', kind: 'bind', errorHash: hash8(msgOf(eM)), cwdHash: hash8(String(key)) }) } catch (eL) {}
       return { ok: false, error: { kind: 'env', message: msgOf(eM).slice(0, 120) } }

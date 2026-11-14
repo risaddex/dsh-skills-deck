@@ -139,7 +139,7 @@ export function createNamingSummary(deps: any): {
     }
     const framed = 'Generate the session title from this JSON array of human messages:\n' +
       JSON.stringify([{ role: 'user', text: a }, { role: 'assistant', text: b }])
-    const system = '你是会话标题助手。只看用户第一段与助手第一段，总结成十字以内的标题。用消息的语言，只回标题一行，不要引号、解释与 Markdown。'
+    const system = 'You are a session-title assistant. Use only the first user message and first assistant message to produce a title of at most ten characters. Use the language of the messages. Return only one title line, without quotes, explanations or Markdown.'
     let signal: any = null
     try { signal = AbortSignal.timeout(SUMMARY_TIMEOUT_MS) } catch (e) { signal = undefined }
     const options: any = {

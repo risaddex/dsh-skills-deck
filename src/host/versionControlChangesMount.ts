@@ -22,7 +22,7 @@ export function createChangesMount(host: any): any {
       assembling = import('./versionControlChanges.js').then(function (m: any): any {
         return m.createChangesPhone(host)
       }).catch(function (e: any): any {
-        const message: string = '改动页那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the Changes-page family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { check: failed, write: failed, tickets: new Map() }
       })

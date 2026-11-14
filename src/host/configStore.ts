@@ -57,7 +57,7 @@ function isMissingFile(e: any): boolean {
 
 function needIo(io: any): void {
   if (!io || typeof io.readText !== 'function' || typeof io.writeText !== 'function') {
-    throw new Error('configStore：调用时要递文件读写口 io（至少有 readText 与 writeText），测试时给假实现即可')
+    throw new Error('configStore: pass a file IO port with at least readText and writeText; tests may use a fake implementation')
   }
 }
 
@@ -66,7 +66,7 @@ function envFail(what: any, rel: any, detail: any): any {
   return {
     ok: false,
     reason: 'env',
-    message: what + '（' + rel + '）。' + detail,
+    message: what + ' (' + rel + '). ' + detail,
   }
 }
 
@@ -95,26 +95,26 @@ function countAliases(text: any): number {
  */
 export function parseConfig(text: any, schema: any): any {
   if (schema !== 'workspace' && schema !== 'settings' && schema !== 'label-colors') {
-    return { ok: false, reason: 'bad-shape', message: '核不认识这个 schema：' + String(schema) }
+    return { ok: false, reason: 'bad-shape', message: 'The core does not recognise this schema: ' + String(schema) }
   }
-  if (typeof text !== 'string') return { ok: false, reason: 'bad-shape', message: '要解析的不是一段文字' }
+  if (typeof text !== 'string') return { ok: false, reason: 'bad-shape', message: 'The input to parse is not text' }
   const stripped: string = text.replace(/^\uFEFF/, '')
   if (stripped.length > MAX_FILE_CHARS) {
-    return { ok: false, reason: 'oversize', message: '这份文件太大了（' + stripped.length + ' 字，上限 ' + MAX_FILE_CHARS + ' 字），核拒绝解析：配置文件本该很小，超了说明拿错了文件' }
+    return { ok: false, reason: 'oversize', message: 'This file is too large (' + stripped.length + ' characters; limit: ' + MAX_FILE_CHARS + ' characters). The core refuses to parse it: configuration files should be small; this may be the wrong file' }
   }
   if (countAliases(stripped) > MAX_ALIASES) {
-    return { ok: false, reason: 'aliases', message: '这份文件里的别名（`*名字`）太多了（上限 ' + MAX_ALIASES + ' 个），核拒绝解析：正常配置文件里一个别名都不会有' }
+    return { ok: false, reason: 'aliases', message: 'This file has too many aliases (`*name`); limit: ' + MAX_ALIASES + '. The core refuses to parse it: normal configuration files do not need aliases' }
   }
   let doc: any = null
   try {
     doc = parseYaml(stripped, { schema: 'core', maxAliasCount: MAX_ALIASES, uniqueKeys: true })
   } catch (e: any) {
     const msg: string = String((e && e.message) || e || '')
-    if (/alias/i.test(msg)) return { ok: false, reason: 'aliases', message: '这份文件里的别名太多了，核拒绝解析：正常配置文件里一个别名都不会有' }
-    return { ok: false, reason: 'yaml-error', message: '这份文件的内容不是合法的 YAML（也就是老的 JSON 也不是）：' + msg.slice(0, 160) }
+    if (/alias/i.test(msg)) return { ok: false, reason: 'aliases', message: 'This file has too many aliases. The core refuses to parse it: normal configuration files do not need aliases' }
+    return { ok: false, reason: 'yaml-error', message: 'This file is not valid YAML (nor legacy JSON): ' + msg.slice(0, 160) }
   }
   if (doc === undefined || doc === null || (typeof doc === 'string' && doc.trim() === '')) {
-    return { ok: false, reason: 'bad-shape', message: '这份文件里什么都没有（空白文件）' }
+    return { ok: false, reason: 'bad-shape', message: 'This file is empty' }
   }
   if (schema === 'workspace') return parseWorkspace(doc, DOC_LAYOUT_VALUES)
   if (schema === 'settings') return parseSettings(doc)
@@ -126,7 +126,7 @@ export function stringifyConfig(value: any, schema: any): any {
   if (schema === 'workspace') return stringifyWorkspace(value, DOC_LAYOUT_VALUES)
   if (schema === 'settings') return stringifySettings(value)
   if (schema === 'label-colors') return stringifyLabelColors(value)
-  return { ok: false, reason: 'bad-shape', message: '核不认识这个 schema：' + String(schema) }
+  return { ok: false, reason: 'bad-shape', message: 'The core does not recognise this schema: ' + String(schema) }
 }
 
 // ── 读写的公共骨架（新优先、老兼容） ──
@@ -151,7 +151,7 @@ async function readWithFallback(io: any, yamlAbs: any, yamlRel: any, jsonAbs: an
         legacyPresent = false
       }
       const warnings: any[] = [...(parsed.warnings || [])]
-      if (legacyPresent) warnings.push('legacy-present：老文件（' + jsonRel + '）还在，以新文件（' + yamlRel + '）为准，它是迁移遗留')
+      if (legacyPresent) warnings.push('legacy-present: the old file (' + jsonRel + ') still exists; the new file (' + yamlRel + ') takes precedence. The old file is a migration leftover')
       return { ok: true, value: parsed.value, from: 'yaml', readonly: parsed.readonly === true, legacyPresent, warnings }
     }
     // 新文件在但读坏了：看看老文件能不能救，不能才报错。
@@ -166,7 +166,7 @@ async function readWithFallback(io: any, yamlAbs: any, yamlRel: any, jsonAbs: an
             from: 'json',
             readonly: fallback.readonly === true,
             legacyPresent: false,
-            warnings: ['yaml-unreadable：新文件（' + yamlRel + '）读不出来（' + parsed.message.slice(0, 80) + '），这次先用老文件（' + jsonRel + '）顶着，请检查新文件'],
+            warnings: ['yaml-unreadable: the new file (' + yamlRel + ') could not be read (' + parsed.message.slice(0, 80) + '); using the old file (' + jsonRel + ') for now. Please check the new file'],
           }
         }
       } catch (e2) {
@@ -177,7 +177,7 @@ async function readWithFallback(io: any, yamlAbs: any, yamlRel: any, jsonAbs: an
     return { ok: false, reason: parsed.reason, message: parsed.message, from: 'yaml', warnings: [] }
   }
   if (yamlError !== null) {
-    return envFail('读这份文件这一步出错了', yamlRel, '可能是当前账号读不到它，也可能是它正被别的程序占用；插件分不出是哪一种。请检查后重试。错误原文：' + String((yamlError && yamlError.message) || yamlError).slice(0, 120))
+    return envFail('Failed to read this file', yamlRel, 'The current account may lack read permission, or another program may be using the file; the plugin cannot tell which. Check and retry. Original error: ' + String((yamlError && yamlError.message) || yamlError).slice(0, 120))
   }
   // 新文件确实不在：读老文件。
   let jsonText: string | null = null
@@ -185,7 +185,7 @@ async function readWithFallback(io: any, yamlAbs: any, yamlRel: any, jsonAbs: an
     jsonText = await io.readText(jsonAbs)
   } catch (e: any) {
     if (isMissingFile(e)) return { ok: false, reason: 'missing', message: missingMessage, from: 'none', warnings: [] }
-    return envFail('读这份文件这一步出错了', jsonRel, '可能是当前账号读不到它，也可能是它正被别的程序占用。请检查后重试。错误原文：' + String((e && e.message) || e).slice(0, 120))
+    return envFail('Failed to read this file', jsonRel, 'The current account may lack read permission, or another program may be using the file. Check and retry. Original error: ' + String((e && e.message) || e).slice(0, 120))
   }
   const parsed: any = parseConfig(jsonText, schemaId)
   if (!parsed.ok) return { ok: false, reason: parsed.reason, message: parsed.message, from: 'json', warnings: [] }
@@ -208,10 +208,10 @@ async function writeWithCleanup(io: any, yamlAbs: any, yamlRel: any, jsonAbs: an
     await io.writeText(yamlAbs, text)
     const back: any = await io.readText(yamlAbs)
     if (String(back) !== text) {
-      return envFail('保存失败：写完之后重新读这份文件，读到的内容与刚写进去的不一致', yamlRel, '因此不能确认已经保存。请打开这份文件核对内容，手动改成想保存的样子，然后重试。')
+      return envFail('Save failed: reading the file back returned content different from what was just written', yamlRel, 'The save cannot be confirmed. Open the file, check its content, edit it to the intended value, and retry.')
     }
   } catch (e: any) {
-    return envFail('保存失败：写不进这份文件', yamlRel, '请检查它的上一级目录在不在、当前账号能不能写入，然后重试。错误原文：' + String((e && e.message) || e).slice(0, 120))
+    return envFail('Save failed: could not write this file', yamlRel, 'Check that its parent directory exists and the current account can write to it, then retry. Original error: ' + String((e && e.message) || e).slice(0, 120))
   }
   let legacyDeleted: boolean = false
   const warnings: string[] = []
@@ -221,7 +221,7 @@ async function writeWithCleanup(io: any, yamlAbs: any, yamlRel: any, jsonAbs: an
       legacyDeleted = true
     } catch (e: any) {
       if (!isMissingFile(e)) {
-        warnings.push('legacy-delete-failed：老文件（' + jsonRel + '）没能删掉，它还在，但已经没用了，可以手动删掉。错误原文：' + String((e && e.message) || e).slice(0, 80))
+        warnings.push('legacy-delete-failed: the old file (' + jsonRel + ') could not be deleted. It is no longer used and can be removed manually. Original error: ' + String((e && e.message) || e).slice(0, 80))
       } else {
         legacyDeleted = true
       }
@@ -245,7 +245,7 @@ export async function readWorkspaceConfig(root: any, io: any): Promise<any> {
     joinRoot(root, WORKSPACE_JSON_REL),
     WORKSPACE_JSON_REL,
     'workspace',
-    '这条工作区还没选后端（工作区里的 ' + WORKSPACE_YAML_REL + ' 不在）。请去面板选一次后端。',
+    'This workspace has not selected a backend (the workspace file ' + WORKSPACE_YAML_REL + ' is missing). Select a backend in the panel.',
   )
 }
 
@@ -272,8 +272,8 @@ export async function readLocalSettings(homeDir: any, io: any): Promise<any> {
   try {
     text = await io.readText(abs)
   } catch (e: any) {
-    if (isMissingFile(e)) return { ok: false, reason: 'missing', message: '本机设置文件（' + rel + '）还没有，第一次保存时会自动建一份。', from: 'none', warnings: [] }
-    return envFail('读这份文件这一步出错了', rel, '可能是当前账号读不到它，也可能是它正被别的程序占用。请检查后重试。错误原文：' + String((e && e.message) || e).slice(0, 120))
+    if (isMissingFile(e)) return { ok: false, reason: 'missing', message: 'The local settings file (' + rel + ') does not exist yet; it will be created on the first save.', from: 'none', warnings: [] }
+    return envFail('Failed to read this file', rel, 'The current account may lack read permission, or another program may be using the file. Check and retry. Original error: ' + String((e && e.message) || e).slice(0, 120))
   }
   const parsed: any = parseConfig(text, 'settings')
   if (!parsed.ok) return { ok: false, reason: parsed.reason, message: parsed.message, from: 'yaml', warnings: [] }
@@ -298,10 +298,10 @@ export async function writeLocalSettings(value: any, homeDir: any, io: any): Pro
     await io.writeText(abs, made.text)
     const back: any = await io.readText(abs)
     if (String(back) !== made.text) {
-      return envFail('保存失败：写完之后重新读这份文件，读到的内容与刚写进去的不一致', rel, '因此不能确认已经保存。请打开这份文件核对内容，然后重试。')
+      return envFail('Save failed: reading the file back returned content different from what was just written', rel, 'The save cannot be confirmed. Open the file, check its content, and retry.')
     }
   } catch (e: any) {
-    return envFail('保存失败：写不进这份文件', rel, '请检查它的上一级目录在不在、当前账号能不能写入，然后重试。错误原文：' + String((e && e.message) || e).slice(0, 120))
+    return envFail('Save failed: could not write this file', rel, 'Check that its parent directory exists and the current account can write to it, then retry. Original error: ' + String((e && e.message) || e).slice(0, 120))
   }
   return { ok: true, from: 'yaml', legacyDeleted: true, warnings: [] }
 }
@@ -316,7 +316,7 @@ export async function readLabelColors(root: any, io: any): Promise<any> {
     joinRoot(root, LABEL_COLORS_JSON_REL),
     LABEL_COLORS_JSON_REL,
     'label-colors',
-    '工作区里的标签配色文件（' + LABEL_COLORS_YAML_REL + '）还没有，第一次打开改色弹窗时会自动按默认颜色建一份。',
+    'The workspace label-colour file (' + LABEL_COLORS_YAML_REL + ') does not exist yet; opening the colour dialog for the first time will create it with the default colours.',
   )
 }
 

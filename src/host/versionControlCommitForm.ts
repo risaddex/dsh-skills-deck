@@ -69,7 +69,7 @@ export function createCommitFormPhone(host: any): any {
   /** 一条只读命令：-C 钉仓库 + 固定前缀，参数各自独立成元素，不经 shell。 */
   async function readGit(dir: any, argv: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { kind: 'spawn-failed', message: '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）' }
+    if (!exe) return { kind: 'spawn-failed', message: 'Cannot find git (platform.resolveExecutable("git") returned no path)' }
     const args: string[] = ['-C', String(dir)].concat(fixedPrefix(), Array.isArray(argv) ? argv : [])
     return runGit(exe, String(dir), args, { stdoutLimit: STDOUT_LIMIT, timeoutMs: timeoutMs })
   }
@@ -77,19 +77,19 @@ export function createCommitFormPhone(host: any): any {
   /** 把一次只读命令的失败翻成固定失败信封；成功回 null。软降级的两处只判「读不到」，不走这里。 */
   function failureOf(res: any, what: string): any {
     const kind: string = String((res && res.kind) || '')
-    if (kind === 'timeout') return failPhone('timeout', what + '超时了，没能在限定时间内拿到结果')
-    if (kind === 'spawn-failed') return failPhone('env', what + '起不了 git 进程：' + String((res && res.message) || ''))
-    if (kind === 'stdin-failed') return failPhone('env', what + '没能把内容交给 git')
-    if (kind === 'non-zero') return failPhone('git', what + '被 git 拒绝（退出码 ' + String((res && res.exitCode) || '') + '）')
-    if (kind !== 'ok') return failPhone('env', what + '没能完成')
-    if (res && res.truncated) return failPhone('truncated', what + '的输出超过了宿主上限，读不全就不猜')
+    if (kind === 'timeout') return failPhone('timeout', what + ': timed out before a result was available')
+    if (kind === 'spawn-failed') return failPhone('env', what + ': could not start git: ' + String((res && res.message) || ''))
+    if (kind === 'stdin-failed') return failPhone('env', what + ': could not send the content to git')
+    if (kind === 'non-zero') return failPhone('git', what + ': rejected by git (exit code ' + String((res && res.exitCode) || '') + ')')
+    if (kind !== 'ok') return failPhone('env', what + ': could not complete')
+    if (res && res.truncated) return failPhone('truncated', what + ': output exceeded the host limit; incomplete output will not be guessed')
     return null
   }
 
   /** 读本机 git 配置里表单用得到的那几项；读不成整条电话失败（身份与签名设置拿不到，表单没法可靠预填）。 */
   async function readFormConfig(dir: any): Promise<any> {
     const res: any = await readGit(dir, ['config', '--null', '--list'])
-    const bad: any = failureOf(res, '读本机 git 配置这一步')
+    const bad: any = failureOf(res, 'Reading local git configuration')
     if (bad) return { error: bad }
     return { cfg: parseConfigNul(res.stdout) }
   }
@@ -141,7 +141,7 @@ export function createCommitFormPhone(host: any): any {
   async function handleGitCommitForm(args: any): Promise<any> {
     const cwd: any = args && typeof args.cwd === 'string' && args.cwd.trim() !== '' ? args.cwd : DEFAULT_CWD
     const dir: string = String(cwd || '')
-    if (typeof resolveGitExecutable !== 'function' || typeof runGit !== 'function' || typeof fixedPrefix !== 'function') return failPhone('env', '宿主没有把 git 进程出口接给提交表单')
+    if (typeof resolveGitExecutable !== 'function' || typeof runGit !== 'function' || typeof fixedPrefix !== 'function') return failPhone('env', 'The host has not connected the git process runner to the commit form')
     const configed: any = await readFormConfig(dir)
     if (configed.error) return configed.error
     const cfg: any = configed.cfg || {}

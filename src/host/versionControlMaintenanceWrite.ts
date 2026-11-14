@@ -59,12 +59,12 @@ export function createMaintenanceWrite(deps: any): any {
     for (let i = 0; i < steps.length; i += 1) {
       const argv: string[] = steps[i]
       let res: any
-      try { res = await deps.runPinned(exe, root, argv, { timeoutMs: writeTimeoutMs, stdoutLimit: WRITE_LIMIT }) } catch (e) { return wfail('env', 'unknown', '维护命令没有起进程：' + firstLine(String((e && (e as any).message) || e))) }
+      try { res = await deps.runPinned(exe, root, argv, { timeoutMs: writeTimeoutMs, stdoutLimit: WRITE_LIMIT }) } catch (e) { return wfail('env', 'unknown', 'The maintenance command did not start a process: ' + firstLine(String((e && (e as any).message) || e))) }
       ran.push(argv)
       if (!res || res.kind !== 'ok') {
-        const said: string = firstLine((res && (res.stderr || res.message)) || '') || '命令没有正常结束'
+        const said: string = firstLine((res && (res.stderr || res.message)) || '') || 'The command did not finish normally'
         const reason: string = classifyWriteFailure(argv[0] as any, res && res.exitCode, said)
-        return wfail('git-failed', reason, '维护命令「git ' + argv.join(' ') + '」失败：' + said, { git: said, step: argv.join(' '), argv: argv, ran: ran })
+        return wfail('git-failed', reason, 'Maintenance command "git ' + argv.join(' ') + '" failed: ' + said, { git: said, step: argv.join(' '), argv: argv, ran: ran })
       }
     }
     return { ok: true, argv: steps, ran: ran }
@@ -84,27 +84,27 @@ export function createMaintenanceWrite(deps: any): any {
     const ridBad: string | null = requestIdProblem(requestId)
     if (ridBad) return wfail('args', ridBad, ridBad, { hint: writeHintFor(ridBad) })
     const ticket: any = tickets.get(ticketId)
-    if (!ticket) return wfail('blocked', 'ticket-missing', '找不到这张预检票：可能已经过期或面板刷新过，请重新点一次。')
+    if (!ticket) return wfail('blocked', 'ticket-missing', 'This preflight ticket was not found; it may have expired or the panel may have refreshed. Click again.')
     const op: string = String(a.op || '')
-    if (String(ticket.op || '') !== op) return wfail('blocked', 'ticket-op-mismatch', '这张票是给另一个动作签的，请按当前动作重新预检。')
+    if (String(ticket.op || '') !== op) return wfail('blocked', 'ticket-op-mismatch', 'This ticket was issued for a different action; run preflight again for the current action.')
     const meta: any = maintenanceWriteOpOf(op)
-    if (meta === null) return wfail('args', 'bad-target', '维护页能执行的动作里没有：' + op)
+    if (meta === null) return wfail('args', 'bad-target', 'The maintenance page cannot execute: ' + op)
     const pure: any = ticketPureVerdict(ticket, op as any, now())
-    if (!pure.ok) return wfail(pure.reason === 'ticket-expired' ? 'blocked' : 'blocked', pure.reason, pure.reason === 'ticket-expired' ? '这张票已经超过 120 秒，现场可能变了，请重新确认一次。' : '这张票与当前动作对不上，请重新预检。')
-    if (a.confirmed !== true) return wfail('need-confirm', 'need-confirm', '危险或会动对象库的动作必须先在确认卡里确认。')
-    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return wfail('args', 'bad-target', '缺少仓库目录，不知道该维护哪个仓库。')
+    if (!pure.ok) return wfail(pure.reason === 'ticket-expired' ? 'blocked' : 'blocked', pure.reason, pure.reason === 'ticket-expired' ? 'This ticket is older than 120 seconds and the repository may have changed; confirm again.' : 'This ticket does not match the current action; run preflight again.')
+    if (a.confirmed !== true) return wfail('need-confirm', 'need-confirm', 'Dangerous actions or actions that modify the object database must be confirmed on the confirmation card first.')
+    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return wfail('args', 'bad-target', 'Missing repository directory; cannot identify which repository to maintain.')
     const plan: any = ticket.plan || { op: op, mode: '' }
     const measured: any = await read.measure(a.cwd, plan)
     if (measured.ok !== true) return measured
     const scene: any = measured.scene
-    if (measured.repoRoot !== ticket.repoRoot) return wfail('blocked', 'stale-repo', '票里的仓库目录和现在的不一致，请重新预检。')
-    if (measured.headOid !== ticket.headOid) return wfail('blocked', 'target-changed', '预检之后 HEAD 动过了，现场变了，请重新确认。')
+    if (measured.repoRoot !== ticket.repoRoot) return wfail('blocked', 'stale-repo', 'The ticket\'s repository directory differs from the current one; run preflight again.')
+    if (measured.headOid !== ticket.headOid) return wfail('blocked', 'target-changed', 'HEAD changed after preflight, so repository state changed; confirm again.')
     const bindingsBad: string | null = bindingsVerdict(ticket, measured.bindings)
-    if (bindingsBad !== null) return wfail('blocked', bindingsBad === 'stale-index' ? 'target-changed' : bindingsBad, bindingsBad === 'stale-index' ? '预检之后索引变过了，请重新确认。' : '预检之后现场变了，请重新确认。')
+    if (bindingsBad !== null) return wfail('blocked', bindingsBad === 'stale-index' ? 'target-changed' : bindingsBad, bindingsBad === 'stale-index' ? 'The index changed after preflight; confirm again.' : 'Repository state changed after preflight; confirm again.')
     const sceneProblem: string | null = maintenanceSceneProblem({ repoBare: false, operation: scene.operation })
-    if (sceneProblem !== null) return wfail('blocked', sceneProblem, '这个仓库现在不能做维护动作（有合并或变基正在进行），请先收尾。')
+    if (sceneProblem !== null) return wfail('blocked', sceneProblem, 'This repository cannot run maintenance now (a merge or rebase is in progress); finish it first.')
     const versionProblem: string | null = maintenanceVersionProblem(meta, scene.gitVersion)
-    if (versionProblem !== null) return wfail('blocked', versionProblem, '这个 git 版本（' + scene.gitVersion + '）已经不支持这个动作了，请刷新后再看。')
+    if (versionProblem !== null) return wfail('blocked', versionProblem, 'This git version (' + scene.gitVersion + ') no longer supports this action; refresh and check again.')
 
     let backup: any = null
     if (maintenanceRequiresBackupOf(op)) {
@@ -119,8 +119,8 @@ export function createMaintenanceWrite(deps: any): any {
       let launched: any = null
       try { launched = await deps.taskStart({ cwd: measured.repoRoot, op: taskReq.op, args: taskReq.args, confirm: true, requestId: requestId || undefined }) } catch (e) { launched = null }
       if (!launched || launched.ok !== true) {
-        const said: string = firstLine(String((launched && launched.error && launched.error.message) || '任务通道没有接受这次请求'))
-        const out: any = wfail('env', 'task-start-failed', '长任务没有起来：' + said, backup ? { backup: backup } : {})
+        const said: string = firstLine(String((launched && launched.error && launched.error.message) || 'The task channel did not accept this request'))
+        const out: any = wfail('env', 'task-start-failed', 'The long-running task did not start: ' + said, backup ? { backup: backup } : {})
         remember(requestId, out)
         return out
       }

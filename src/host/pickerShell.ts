@@ -40,16 +40,16 @@ export function createPickerShell(deps?: any): any {
     let cwd = (args && (args.cwd || args.path)) || DEFAULT_CWD
     try {
       const platform = await getPlatform()
-      if (!platform || typeof platform.openFolder !== 'function') return { ok: false, error: '当前平台不支持打开' }
+      if (!platform || typeof platform.openFolder !== 'function') return { ok: false, error: 'Opening is not supported on this platform' }
       if (args && args.file) {
         const file = String(args.file)
-        if (!file) return { ok: false, error: '缺少 file' }
-        if (!platform.path || typeof platform.path.dirname !== 'function') return { ok: false, error: '当前平台不支持解析路径' }
+        if (!file) return { ok: false, error: 'Missing file' }
+        if (!platform.path || typeof platform.path.dirname !== 'function') return { ok: false, error: 'Path resolution is not supported on this platform' }
         cwd = platform.path.dirname(file)
       }
-      if (!cwd) return { ok: false, error: '缺少 cwd' }
+      if (!cwd) return { ok: false, error: 'Missing cwd' }
       const res = await platform.openFolder(String(cwd), DEFAULT_CWD)
-      if (!res || res.ok !== true) return { ok: false, error: String((res && res.error) || '打开失败') }
+      if (!res || res.ok !== true) return { ok: false, error: String((res && res.error) || 'Open failed') }
       return { ok: true, cwd: String(cwd), opener: res.opener || '' }
     } catch (e) {
       return { ok: false, error: String((e && (e as any).message) || e) }
@@ -83,7 +83,7 @@ export function createPickerShell(deps?: any): any {
         }
       } catch(_){}
       // 3) 回落：宿主暂无原生对话框能力，提示手输（前端会保留输入框可用）
-      return { ok: false, error: '当前环境暂无原生目录选择器，请手动输入路径', errorKind: 'no-picker' }
+      return { ok: false, error: 'No native directory picker is available in this environment; enter the path manually', errorKind: 'no-picker' }
     } catch (e) {
       return { ok: false, error: String((e && (e as any).message) || e), errorKind: 'internal' }
     }
@@ -109,14 +109,14 @@ export function createPickerShell(deps?: any): any {
           if (p) return { ok: true, path: String(p) }
         }
       } catch(_){}
-      return { ok: false, error: '当前环境暂无原生文件选择器，请手动输入路径', errorKind: 'no-picker' }
+      return { ok: false, error: 'No native file picker is available in this environment; enter the path manually', errorKind: 'no-picker' }
     } catch (e) {
       return { ok: false, error: String((e && (e as any).message) || e), errorKind: 'internal' }
     }
   }
   async function handleOpenPath(args?: any) {
     const raw = args && args.path ? String(args.path) : ''
-    if (!raw) return { ok: false, error: '缺少 path', errorKind: 'bad-arg' }
+    if (!raw) return { ok: false, error: 'Missing path', errorKind: 'bad-arg' }
     let p = raw.trim()
     // 去 file:// 前缀（UI 传来可能是 file:///D:/a/b.md）
     if (/^file:\/\//i.test(p)) {
@@ -125,16 +125,16 @@ export function createPickerShell(deps?: any): any {
       if (/^\/[A-Za-z]:\//.test(p)) p = p.slice(1)
     }
     // 基础校验：路径需为绝对或含盘符/斜杠，避免 shell 注入的相对跳出
-    if (!p) return { ok: false, error: 'path 为空', errorKind: 'bad-arg' }
+    if (!p) return { ok: false, error: 'path is empty', errorKind: 'bad-arg' }
     try {
       const plat = await getPlatform()
-      if (!plat || typeof plat.openFile !== 'function' || typeof plat.openFolder !== 'function') return { ok: false, error: '当前平台不支持打开', errorKind: 'unsupported' }
+      if (!plat || typeof plat.openFile !== 'function' || typeof plat.openFolder !== 'function') return { ok: false, error: 'Opening is not supported on this platform', errorKind: 'unsupported' }
       // 目录与文件走不同意图：目录直接打开看里面（选中只会打开上级）；分类经平台路径基名（各系统分隔符各自认），此处不猜系统。
       let base = ''
       try { base = plat.path && typeof plat.path.basename === 'function' ? plat.path.basename(p) : '' } catch {}
       const looksDir = !base || base.indexOf('.') < 0
       const res = looksDir ? await plat.openFolder(p, DEFAULT_CWD) : await plat.openFile(p, DEFAULT_CWD)
-      if (!res || res.ok !== true) return { ok: false, error: String((res && res.error) || '打开失败'), errorKind: 'open-fail' }
+      if (!res || res.ok !== true) return { ok: false, error: String((res && res.error) || 'Open failed'), errorKind: 'open-fail' }
       return { ok: true }
     } catch (e) {
       return { ok: false, error: String((e && (e as any).message) || e), errorKind: 'internal' }

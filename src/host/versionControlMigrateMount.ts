@@ -88,10 +88,10 @@ export function createMigrateMount(host: any): any {
     return _p
   }
   function failed(kind: string, message: string): any { return host.failPhone(kind, message) }
-  const fallback: any = function (): any { return failed('env', '迁移与备份域的装配失败：这次没有起任何 git 进程，重试一次或看诊断页') }
+  const fallback: any = function (): any { return failed('env', 'Failed to assemble the migration-and-backup family; no git process was started. Retry or check the Diagnostics page') }
   return {
-    handleGitMigrateCheck: async function (a: any): Promise<any> { try { const p: any = await phones(); return p.check(a) } catch (e) { return failed('env', '迁移与备份域加载失败：' + String(((e as any) && (e as any).message) || (e as any))) } },
-    handleGitMigrateWrite: async function (a: any): Promise<any> { try { const p: any = await phones(); return p.write(a) } catch (e) { return failed('env', '迁移与备份域加载失败：' + String(((e as any) && (e as any).message) || (e as any))) } },
+    handleGitMigrateCheck: async function (a: any): Promise<any> { try { const p: any = await phones(); return p.check(a) } catch (e) { return failed('env', 'Failed to load the migration-and-backup family: ' + String(((e as any) && (e as any).message) || (e as any))) } },
+    handleGitMigrateWrite: async function (a: any): Promise<any> { try { const p: any = await phones(); return p.write(a) } catch (e) { return failed('env', 'Failed to load the migration-and-backup family: ' + String(((e as any) && (e as any).message) || (e as any))) } },
     tickets: async function (): Promise<any> { try { const p: any = await phones(); return p.tickets } catch (e) { return null } },
     fallback: fallback
   }

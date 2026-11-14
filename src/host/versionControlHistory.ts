@@ -50,20 +50,20 @@ const COMPARE_FILES_MAX = 2000
 
 /** 每种查询失败说明里的「在干什么」，用中文短句，界面直接展示，不出现命令名。 */
 const WHAT: Record<string, string> = {
-  'file-history': '拉这个文件的历史',
-  blame: '追溯这个文件的行级来历',
-  grep: '按说明搜提交',
-  pickaxe: '按代码变化搜提交',
-  compare: '比较两个引用',
-  'range-diff': '对照两组提交',
-  describe: '读版本名',
-  reflog: '读引用日志',
-  notes: '读提交备注',
-  'show-file': '取这个版本的文件内容',
+  'file-history': 'Read this file\'s history',
+  blame: 'Trace the origin of this file\'s lines',
+  grep: 'Search commits by message',
+  pickaxe: 'Search commits by code changes',
+  compare: 'Compare two refs',
+  'range-diff': 'Compare two commit ranges',
+  describe: 'Read version names',
+  reflog: 'Read the reflog',
+  notes: 'Read commit notes',
+  'show-file': 'Read this version of the file',
 }
 
 /** 取说明用的短句；不认识的 kind 给一句兜底（正常走不到这里，输入校验在共享层）。 */
-function whatOf(kind: string): string { return WHAT[kind] || '这次历史查询' }
+function whatOf(kind: string): string { return WHAT[kind] || 'This history query' }
 
 /** 每种查询的 stdout 字节上限：大输出 8 MB，小输出按需收紧。 */
 function limitOf(kind: string): number {
@@ -81,18 +81,18 @@ export function createHistoryQueryPhone(deps: any): (args: any) => Promise<any> 
   function payloadOf(kind: string, stdout: string): any {
     if (kind === 'file-history' || kind === 'grep' || kind === 'pickaxe') {
       const parsed: any = parseLog(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '提交清单解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'Commit list parse failed: ' + parsed.detail)
       // 空清单不是错误：说明这一组条件没有匹配到提交，界面照实说「没有匹配」，不猜成「没有历史」。
       return { ok: true, kind: kind, commits: parsed.commits, count: parsed.commits.length, reason: parsed.commits.length > 0 ? 'ok' : 'empty' }
     }
     if (kind === 'blame') {
       const parsed: any = parseBlame(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '行级追溯的结果解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'Blame result parse failed: ' + parsed.detail)
       return { ok: true, kind: kind, lines: parsed.lines, count: parsed.lines.length }
     }
     if (kind === 'compare') {
       const parsed: any = parseDiffFiles(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '两个引用的差异清单解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'Diff list for the two refs could not be parsed: ' + parsed.detail)
       const total: number = parsed.files.length
       const truncated: boolean = total > COMPARE_FILES_MAX
       const files: any[] = truncated ? parsed.files.slice(0, COMPARE_FILES_MAX) : parsed.files
@@ -101,7 +101,7 @@ export function createHistoryQueryPhone(deps: any): (args: any) => Promise<any> 
     }
     if (kind === 'range-diff') {
       const parsed: any = parseRangeDiff(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '两组提交对照的结果解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'Comparison of the two commit ranges could not be parsed: ' + parsed.detail)
       const total: number = parsed.pairs.length
       const truncated: boolean = total > RANGE_PAIRS_MAX
       const pairs: any[] = truncated ? parsed.pairs.slice(0, RANGE_PAIRS_MAX) : parsed.pairs
@@ -109,12 +109,12 @@ export function createHistoryQueryPhone(deps: any): (args: any) => Promise<any> 
     }
     if (kind === 'describe') {
       const parsed: any = parseDescribe(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '版本名解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'Version name parse failed: ' + parsed.detail)
       return { ok: true, kind: kind, text: parsed.describe.text, dirty: parsed.describe.dirty }
     }
     if (kind === 'reflog') {
       const parsed: any = parseReflog(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '引用日志解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'Reflog parse failed: ' + parsed.detail)
       return { ok: true, kind: kind, entries: parsed.entries, count: parsed.entries.length, reason: parsed.entries.length > 0 ? 'ok' : 'empty' }
     }
     if (kind === 'notes') {
@@ -123,22 +123,22 @@ export function createHistoryQueryPhone(deps: any): (args: any) => Promise<any> 
     }
     if (kind === 'show-file') {
       const parsed: any = parseFileContent(stdout)
-      if (parsed.ok !== true) return failPhone('parse', '这个版本的文件内容解析失败：' + parsed.detail)
+      if (parsed.ok !== true) return failPhone('parse', 'File content for this version could not be parsed: ' + parsed.detail)
       return { ok: true, kind: kind, text: parsed.file.text, binary: parsed.file.binary }
     }
-    return failPhone('args', '不认识的历史查询：' + kind)
+    return failPhone('args', 'Unrecognised history query: ' + kind)
   }
 
   /** 一条历史查询电话：校验输入 → 找 git 与仓库根 → 起进程 → 失败/截断判断 → 按 kind 解析。 */
   async function handle(args: any): Promise<any> {
     const raw: any = args ? args.kind : ''
-    if (typeof raw !== 'string' || raw === '') return failPhone('args', '这次历史查询没有说明是哪一种（缺少 kind）')
+    if (typeof raw !== 'string' || raw === '') return failPhone('args', 'History query type is missing (kind)')
     const built: any = historyQueryCommandFor(raw, args && args.params ? args.params : {})
     // 输入不合口径（空关键词、坏提交号、超长路径、行号倒挂……）在这里就拒，绝不起进程，也不猜一个替代值。
     if (built.ok !== true) return failPhone('args', built.detail)
     const kind: string = built.kind
     const exe: any = await resolveGitExecutable()
-    if (!exe) return failPhone('env', '找不到 git 命令，历史查询起不了进程')
+    if (!exe) return failPhone('env', 'Cannot find git; the history query cannot start a process')
     const base: any = await resolveRepoRoot(exe, cwdOf(args))
     if (base.ok !== true) return base
     // 3.8 比较两个引用：先分别认一遍两端。认不出的那一端要原样说给用户听（「找不到『nope』这个引用」），
@@ -151,7 +151,7 @@ export function createHistoryQueryPhone(deps: any): (args: any) => Promise<any> 
       for (let i = 0; i < which.length; i += 1) {
         const check: any = await runPinned(exe, base.root, ['rev-parse', '--verify', '--quiet', revs[i] + '^{commit}'], { stdoutLimit: 4096 })
         if (!check || check.kind !== 'ok') {
-          const env: any = failPhone('args', '找不到「' + revs[i] + '」这个引用')
+          const env: any = failPhone('args', 'Cannot find "' + revs[i] + '" as a ref')
           env.error.reason = 'unknown-rev'
           env.error.which = which[i]
           env.error.rev = revs[i]
@@ -168,7 +168,7 @@ export function createHistoryQueryPhone(deps: any): (args: any) => Promise<any> 
     const bad: any = failureFromExec(res, whatOf(kind))
     if (bad) return bad
     // 读不全就不交半份：blame 与 range-diff 不接长任务通道，超上限一律显式失败并写清上限。
-    if (res.truncated) return failPhone('truncated', whatOf(kind) + '的输出超过了 ' + String(limitOf(kind)) + ' 字节上限，读不全就不给半份数据')
+    if (res.truncated) return failPhone('truncated', whatOf(kind) + ': output exceeds the ' + String(limitOf(kind)) + '-byte limit; partial data will not be returned')
     const out: any = payloadOf(kind, res.stdout)
     if (kind === 'compare' && out && out.ok === true) { out.leftOid = ends.leftOid; out.rightOid = ends.rightOid }
     // 回包里带上「问的是哪条提交 / 哪个文件」：界面靠它判断这份读数属不属于正在看的那一条

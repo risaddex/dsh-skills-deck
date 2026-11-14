@@ -15,7 +15,7 @@ export function createConflictMount(host: any): any {
         return { scene: scene, check: check, write: write }
       }).catch(function (e: any) {
         const said: string = String((e && e.message) || e)
-        const fail: any = async function (): Promise<any> { return h.failPhone('env', '冲突向导这一层装配失败：' + said) }
+        const fail: any = async function (): Promise<any> { return h.failPhone('env', 'Failed to assemble the conflict wizard: ' + said) }
         return { scene: null, check: { handleConflictCheck: fail, handleConflictRead: fail, tickets: new Map(), results: new Map() }, write: { handleConflictWrite: fail, tickets: new Map(), results: new Map() } }
       })
     }

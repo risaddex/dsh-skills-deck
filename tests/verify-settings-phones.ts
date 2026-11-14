@@ -189,7 +189,7 @@ async function main() {
     const phones2 = createSettingsPhones({ getPlatform: async () => ({ getHome: async () => home }), readLocalSettings, writeLocalSettings, fs: fake, logCtx: null })
     const w = await phones2.handleSetSettings({ value: goodValue })
     const wrote = calls.some((c) => c.name === 'writeFile')
-    check(w.ok === false && w.error && w.error.kind === 'readonly' && /请升级插件/.test(w.error.message), '只读文件写之前先读一次，读到只读直接回升级文案。', JSON.stringify(w).slice(0, 200))
+    check(w.ok === false && w.error && w.error.kind === 'readonly' && /Upgrade the plugin/.test(w.error.message), '只读文件写之前先读一次，读到只读直接回升级文案。', JSON.stringify(w).slice(0, 200))
     check(wrote === false, '只读拒绝时没有动盘上的任何字节。')
     const back = await phones.handleGetSettings({})
     check(back.ok === true && back.readonly === true, '拒绝之后文件还是原来的高版本，没有被覆盖。')
@@ -200,7 +200,7 @@ async function main() {
     const phones = createSettingsPhones({ getPlatform: async () => ({ getHome: async () => home }), readLocalSettings, writeLocalSettings, fs: null, logCtx: null })
     const high = Object.assign({}, goodValue, { version: 9 })
     const w = await phones.handleSetSettings({ value: high })
-    check(w.ok === false && w.error && w.error.kind === 'readonly' && /请升级插件/.test(w.error.message), '写高版本的值同样按只读拒绝。', JSON.stringify(w).slice(0, 200))
+    check(w.ok === false && w.error && w.error.kind === 'readonly' && /Upgrade the plugin/.test(w.error.message), '写高版本的值同样按只读拒绝。', JSON.stringify(w).slice(0, 200))
   }
   {
     // 写路径进程内串行：两笔写同时发起，后到的等前面的落盘之后再开始。

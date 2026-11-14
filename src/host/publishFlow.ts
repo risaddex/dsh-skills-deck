@@ -126,12 +126,12 @@ export function createPublishFlow(deps: Deps) {
       return {
         ok: false,
         errorKind: kind,
-        error: '这个工作区的属主不是当前运行用户，git 拒绝操作（原文：dubious ownership）。' +
-          (cmd ? '修法：' + cmd : ''),
+        error: 'This workspace is owned by a different user than the current process; git refused the operation (original message: dubious ownership).' +
+          (cmd ? ' How to fix it: ' + cmd : ''),
       }
     }
     if (kind === KIND_UNKNOWN) {
-      return { ok: false, errorKind: kind, error: '创建失败，未识别的原因。git 原话：' + raw.slice(0, 160) }
+      return { ok: false, errorKind: kind, error: 'Creation failed for an unrecognised reason. Git reported: ' + raw.slice(0, 160) }
     }
     return { ok: false, errorKind: kind, error: raw }
   }
@@ -168,7 +168,7 @@ export function createPublishFlow(deps: Deps) {
   // #1621：no-gh 那条排查/安装提示由宿主给（面板文案归宿主）。同一段话在房间的 src/tracker/rooms/github/write/init-project.ts
   //   里还存着一份（房间回包要自带 prompt），两处必须逐字一致；门禁 tests/verify-1621-gh-missing-copy.ts 盯着这件事，
   //   改一处就同步改另一处。
-  const NO_GH_PROMPT = 'DSH 进程启动时从父进程继承的 PATH 中未解析到 GitHub CLI（gh）可执行文件。该结果不等同于 gh 未安装。按以下顺序处理：\n\n1. 在 DSH 之外的终端执行 `gh --version`。\n2. 有版本号输出：gh 已安装。无需重复安装。将 gh 所在目录加入用户级或系统级 PATH，或将本插件读取的 DSH_GH_PATH 设为 gh 可执行文件的绝对路径，再重启 DSH Desktop；若该目录已在 PATH 中，直接重启 DSH Desktop。重启时从开始菜单、桌面或资源管理器启动，避免从旧终端或旧 IDE 会话启动（其进程环境可能未包含新 PATH）。\n3. 无版本号输出：该终端也无法执行 gh。检查 gh 的安装目录（Windows 默认：C:\\Program Files\\GitHub CLI\\gh.exe）；确认未安装后，按官方说明安装：https://cli.github.com/。安装后重启 DSH。\n4. “重新检查”只重跑检查逻辑，不重新读取进程环境变量；不能替代重启 DSH。\n5. 完成后确认：`gh --version` 有输出，环境检查的 gh 项通过。'
+  const NO_GH_PROMPT = 'The PATH inherited by DSH from its parent process at startup did not resolve the GitHub CLI (gh) executable. This does not mean gh is not installed. Follow these steps:\n\n1. Run `gh --version` in a terminal outside DSH.\n2. If it prints a version, gh is installed; do not reinstall it. Add its directory to the user or system PATH, or set DSH_GH_PATH (read by this plugin) to the absolute path of gh, then restart DSH Desktop. If the directory is already on PATH, simply restart DSH Desktop. Launch from the Start menu, desktop or file manager, not an old terminal or IDE session whose environment may lack the new PATH.\n3. If no version is printed, that terminal cannot run gh either. Check its installation directory (Windows default: C:\\Program Files\\GitHub CLI\\gh.exe). Only after confirming it is absent, install it from https://cli.github.com/ and restart DSH.\n4. Recheck only reruns the check; it does not reload process environment variables and cannot replace restarting DSH.\n5. Finally, confirm that `gh --version` prints a version and the gh environment check passes.'
 
   // 失败回包的映射（#1445）：房间的档位名与宿主原来的 errorKind 是同一套（no-git / no-gh / not-logged-in /
   //   already-exists / network / permission / git-ownership / unknown），所以档位原样透传，界面那边的分支不用改。
@@ -218,24 +218,24 @@ export function createPublishFlow(deps: Deps) {
     const cwd = (args && args.cwd) || DEFAULT_CWD
     const name = args && args.name ? String(args.name).trim() : ''
     const visibility = (args && args.visibility) === 'public' ? 'public' : 'private'
-    if (!name) return { ok: false, errorKind: 'bad-name', error: '仓库名为空' }
+    if (!name) return { ok: false, errorKind: 'bad-name', error: 'The repository name is empty' }
     if (!/^[A-Za-z0-9._-]+$/.test(name) || name.length > 100) {
-      return { ok: false, errorKind: 'bad-name', error: '仓库名仅支持字母/数字/._- 且 ≤100：' + name }
+      return { ok: false, errorKind: 'bad-name', error: 'Repository names may contain only letters, digits, ._- and at most 100 characters: ' + name }
     }
     // 前置：git 可执行 + 工作区 git 可用性（#994）。失败快返，一步都不改这个目录。
     const git = await resolveGit()
-    if (!git) return { ok: false, errorKind: 'no-git', error: '未找到 git（请安装 https://git-scm.com/）' }
+    if (!git) return { ok: false, errorKind: 'no-git', error: 'Git was not found (install it from https://git-scm.com/)' }
     const usable = await preflightWorkspaceGit(git, cwd)
     if (!usable.ok) return gitFail(usable.text, cwd)
     // #1445：建仓整步交给写会话。宿主没接 openSession 时如实回环境失败 —— 不自己调注册表、
     //   也不偷偷退回直调 gh 的老路（那条路正是这一票要拆掉的）。
     if (typeof openSession !== 'function') {
-      return { ok: false, errorKind: 'env', error: '写会话没接上（宿主没有注入 openSession），这次建仓没有开始。' }
+      return { ok: false, errorKind: 'env', error: 'The write session is not connected (the host did not inject openSession); repository creation has not started.' }
     }
     const opened = await openSession(cwd, { write: true, exec: sessionExecOf(cwd) })
     if (!opened || !opened.ok) {
       const why = (opened && opened.reason) ? String(opened.reason) : 'unknown'
-      return { ok: false, errorKind: 'env', error: '写会话没开起来（' + why + '），这次建仓没有开始。' }
+      return { ok: false, errorKind: 'env', error: 'Could not open the write session (' + why + '); repository creation has not started.' }
     }
     // 房间的入口是 initProject(handle, input, ctx)：ctx 由会话的 call 交过来（工作目录、平台、出站面都在里面），
     //   本文件不自己拼上下文，也不往实参里塞别的键 —— 房间读的是它自己拿到的那一份。
@@ -247,7 +247,7 @@ export function createPublishFlow(deps: Deps) {
     } catch (e) {
       const eb = e as { message?: unknown } | null
       const msg = String((eb && eb.message) || e).slice(0, 200)
-      return { ok: false, errorKind: 'env', error: '写会话调用失败：' + msg }
+      return { ok: false, errorKind: 'env', error: 'Write-session call failed: ' + msg }
     }
     if (!r || !(r as { ok?: boolean }).ok) return publishFailure(r, name, cwd, git)
     // 成功：仓库身份取会话回包的 repoRef（房间按 getRepoKey → currentUser 的顺序定 owner），
@@ -276,8 +276,8 @@ export function createPublishFlow(deps: Deps) {
   interface ContractOpArgs { op?: unknown; cwd?: unknown; name?: unknown; visibility?: unknown }
   async function handleContractOp(args?: ContractOpArgs | null) {
     const op = args && args.op ? String(args.op).trim() : ''
-    if (!op) return { ok: false, errorKind: 'bad-name', error: '缺少 op（契约操作名，如 initProject）' }
-    if (op !== 'initProject') return { ok: false, errorKind: 'unsupported', error: '不支持的契约操作：' + op }
+    if (!op) return { ok: false, errorKind: 'bad-name', error: 'Missing op (contract operation name, such as initProject)' }
+    if (op !== 'initProject') return { ok: false, errorKind: 'unsupported', error: 'Unsupported contract operation: ' + op }
     const cwd = (args && args.cwd ? String(args.cwd) : '') || DEFAULT_CWD
     const name = args && args.name ? String(args.name) : ''
     const visibility = (args && args.visibility) === 'public' ? 'public' : 'private'
@@ -293,7 +293,7 @@ export function createPublishFlow(deps: Deps) {
     const repoUrl = args && typeof args.repoUrl === 'string' && args.repoUrl ? String(args.repoUrl) : ''
     const owner = args && args.owner ? String(args.owner) : ''
     const git = await resolveGit()
-    if (!git) return { ok: false, errorKind: 'no-git', error: '未找到 git（请安装 https://git-scm.com/）' }
+    if (!git) return { ok: false, errorKind: 'no-git', error: 'Git was not found (install it from https://git-scm.com/)' }
     try {
       const ro = await gitExec([git, 'remote', 'get-url', 'origin'], cwd)
       if (!ro.ok && repoUrl) { await gitExec([git, 'remote', 'add', 'origin', repoUrl + '.git'], cwd) }

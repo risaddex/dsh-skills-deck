@@ -304,7 +304,7 @@ async function revChecks(makeVc) {
 
   // ⑩ 形状合法但仓库里没有：照样明确拒绝
   const missing = (await call({ cwd: CWD, rev: 'deadbeef' })).r
-  add(missing && missing.ok === false && missing.error.kind === 'args' && missing.error.message.indexOf('找不到') >= 0,
+  add(missing && missing.ok === false && missing.error.kind === 'args' && missing.error.message.indexOf('not in the current repository') >= 0,
     '形状合法但仓库里没有的提交号：明确拒绝 kind=args（实得 ' + JSON.stringify(missing && missing.error) + '）')
 
   // ⑪ 读不全就不给半份（清单与补丁各一条）

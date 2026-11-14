@@ -99,8 +99,8 @@ export function createChangesCheck(deps: any): any {
     let r: any
     try { r = await d.runRead(String(cwd || ''), args, { stdoutLimit: limit, timeoutMs: READ_TIMEOUT_MS }) } catch (e) { return { ok: false, error: { kind: 'env', reason: 'unknown-write-failure', message: String(((e as any) && (e as any).message) || (e as any)), hint: writeHintFor('unknown-write-failure') } } }
     if (r && r.kind === 'ok') return { ok: true, stdout: String(r.stdout || ''), truncated: r.truncated === true }
-    if (r && r.kind === 'non-zero') return fail('other', 'unknown-write-failure', firstLine(r.stderr) || 'git 以非零退出码结束了这条只读命令')
-    return fail((r && r.kind) || 'other', 'unknown-write-failure', firstLine(r && r.message) || '这条只读命令没有正常结束')
+    if (r && r.kind === 'non-zero') return fail('other', 'unknown-write-failure', firstLine(r.stderr) || 'Git exited with a non-zero exit code for this read-only command')
+    return fail((r && r.kind) || 'other', 'unknown-write-failure', firstLine(r && r.message) || 'This read-only command did not finish normally')
   }
 
   /** 读一条路径在索引里的记录（判断「是不是已跟踪」与「索引里有没有它」）。 */
@@ -145,19 +145,19 @@ export function createChangesCheck(deps: any): any {
   async function handle(args: any, op: string): Promise<any> {
     const a: any = args || {}
     const cwd: string = String(a.cwd || '')
-    if (cwd === '') return fail('args', 'bad-target', '这次请求没有给出工作目录')
+    if (cwd === '') return fail('args', 'bad-target', 'This request supplied no working directory')
     const meta: any = changesOpMetaOf(op)
-    if (!meta) return fail('args', 'bad-target', '不认识的改动页动作：' + String(op))
+    if (!meta) return fail('args', 'bad-target', 'Unrecognised Changes-page action: ' + String(op))
 
     // ① 首屏：工作区形状、仓库状态、HEAD 都从这一份读数来，不另起一套读法。
     const sr: any = await d.readScreenOf(cwd)
-    if (!sr || sr.ok !== true) return sr || fail('env', 'unknown-write-failure', '读不到这个仓库的首屏')
+    if (!sr || sr.ok !== true) return sr || fail('env', 'unknown-write-failure', 'Cannot read this repository\'s initial screen')
     const screen: any = sr.screen || {}
     const gitVersion: string = String(sr.gitVersion || '')
     const repo: any = screen.repo || {}
     if (repo.bare === true) return fail('env', 'repo-bare', writeHintFor('repo-bare'))
     if (busyOf(screen)) return fail('blocked', 'operation-in-progress', writeHintFor('operation-in-progress'))
-    if (Number(screen.conflictCount) > 0) return fail('blocked', 'operation-in-progress', '还有冲突没有处理完，改动页的暂存与丢弃先不接；请先解决冲突')
+    if (Number(screen.conflictCount) > 0) return fail('blocked', 'operation-in-progress', 'Unresolved conflicts remain; staging and discarding changes are unavailable until they are resolved')
 
     // ② 只读动作：查为什么被忽略不需要票，直接回判定链（与 1.12 追加忽略共用同一条命令）。
     if (op === 'explain-ignored') {
@@ -166,8 +166,8 @@ export function createChangesCheck(deps: any): any {
       const ci: any = await readOut(cwd, checkIgnoreArgs(String(a.path)), SMALL_LIMIT)
       // git check-ignore：命中时退出码 0 并把判定链写到 stdout；没命中时退出码 1 且 stdout 为空。
       if (ci.ok !== true) {
-        if (ci.error && ci.error.kind === 'other' && /非零退出/.test(String(ci.error.message || ''))) {
-          return { ok: true, ignored: false, lines: [], match: null, hint: '这条路径没有被任何忽略规则命中' }
+        if (ci.error && ci.error.kind === 'other' && /non-zero exit|非零退出/i.test(String(ci.error.message || ''))) {
+          return { ok: true, ignored: false, lines: [], match: null, hint: 'No ignore rule matches this path' }
         }
         return ci
       }
@@ -186,16 +186,16 @@ export function createChangesCheck(deps: any): any {
       const badPath: any = pathArgProblem(a.path)
       if (badPath) return fail('args', 'bad-path', writeHintFor('bad-path'), { pathProblem: badPath })
       const entry: any = entryOf(screen, String(a.path), 'unstaged')
-      if (!entry) return fail('args', 'nothing-to-do', '这个文件现在没有未暂存的改动')
+      if (!entry) return fail('args', 'nothing-to-do', 'This file has no unstaged changes')
       plan = makeChangesPlan({ op: 'stage-file', paths: [String(a.path)] })
     } else if (op === 'stage-all') {
       const n: number = Number(screen.stagedCount || 0) + Number(screen.unstagedCount || 0)
-      if (n <= 0) return fail('args', 'nothing-to-do', '工作区已经干净，没有可暂存的改动')
+      if (n <= 0) return fail('args', 'nothing-to-do', 'The workspace is clean; there is nothing to stage')
       plan = makeChangesPlan({ op: 'stage-all' })
     } else if (op === 'unstage') {
       const badPath: any = pathArgProblem(a.path)
       if (badPath) return fail('args', 'bad-path', writeHintFor('bad-path'), { pathProblem: badPath })
-      if (!entryOf(screen, String(a.path), 'staged')) return fail('args', 'nothing-to-do', '这个文件没有已暂存的改动；撤回暂存只撤回已暂存的那一份')
+      if (!entryOf(screen, String(a.path), 'staged')) return fail('args', 'nothing-to-do', 'This file has no staged changes; unstaging only withdraws the staged version')
       plan = makeChangesPlan({ op: 'unstage', paths: [String(a.path)] })
     } else if (op === 'stage-hunks') {
       const badPath: any = pathArgProblem(a.path)
@@ -205,16 +205,16 @@ export function createChangesCheck(deps: any): any {
       // 执行层按同一个 reverse 重新读同一份差异，界面上的块号与真正 apply 的那一块才始终是同一块。
       const reverse: boolean = a.reverse === true
       const entry: any = entryOf(screen, path, reverse ? 'staged' : 'unstaged')
-      if (!entry) return fail('args', 'nothing-to-do', reverse ? '这个文件现在没有已暂存的块可以退回' : '这个文件现在没有未暂存的改动')
-      if (entry.change === 'untracked') return fail('args', 'hunks-unavailable', '未跟踪文件没有可拆的块，请按整份文件暂存')
+      if (!entry) return fail('args', 'nothing-to-do', reverse ? 'This file has no staged hunks to unstage' : 'This file has no unstaged changes')
+      if (entry.change === 'untracked') return fail('args', 'hunks-unavailable', 'Untracked files have no separable hunks; stage the whole file')
       if (entry.change === 'binary' || entry.change === 'renamed') return fail('args', 'hunks-unavailable', writeHintFor('hunks-unavailable'))
       const raw: any = await readOut(cwd, reverse ? diffCachedHunksArgs(path) : diffHunksArgs(path), PATCH_LIMIT)
       if (raw.ok !== true) return raw
-      if (raw.truncated === true) return fail('other', 'hunks-unavailable', '这个文件的差异太大，读不全就拆不出块；请按整份文件处理')
+      if (raw.truncated === true) return fail('other', 'hunks-unavailable', 'This file\'s diff is too large to read completely and split into hunks; handle the whole file')
       const parsed: any = splitUnifiedDiff(raw.stdout)
       if (parsed.ok !== true) {
         if (parsed.reason === 'binary' || parsed.reason === 'rename' || parsed.reason === 'no-diff') return fail('args', 'hunks-unavailable', writeHintFor('hunks-unavailable'))
-        return fail('parse', 'hunks-unavailable', '这段差异读不懂，拆不出块；请按整份文件处理')
+        return fail('parse', 'hunks-unavailable', 'This diff cannot be parsed into hunks; handle the whole file')
       }
       const idx: number = (typeof a.hunkIndex === 'number' && isFinite(a.hunkIndex)) ? Math.floor(a.hunkIndex) : -1
       const one: any = patchForHunk(raw.stdout, idx)
@@ -228,25 +228,25 @@ export function createChangesCheck(deps: any): any {
       if (badPath) return fail('args', 'bad-path', writeHintFor('bad-path'), { pathProblem: badPath })
       const path: string = String(a.path)
       const entry: any = entryOf(screen, path, 'unstaged')
-      if (isUntracked(screen, path)) return fail('args', 'nothing-to-do', '未跟踪文件没有可丢弃的改动；要删掉它请走「删除未跟踪文件」')
-      if (!entry) return fail('args', 'nothing-to-do', '这个文件现在没有未暂存的改动')
+      if (isUntracked(screen, path)) return fail('args', 'nothing-to-do', 'Untracked files have no tracked changes to discard; use Delete untracked files to remove them')
+      if (!entry) return fail('args', 'nothing-to-do', 'This file has no unstaged changes')
       plan = makeChangesPlan({ op: 'discard-file', paths: [path], mode: versionUsesRestore(gitVersion) ? 'restore' : 'checkout' })
     } else if (op === 'discard-all') {
       const tracked: any[] = Array.isArray(screen.unstaged) ? screen.unstaged.filter(function (f: any) { return f && f.change !== 'untracked' }) : []
-      if (tracked.length === 0) return fail('args', 'nothing-to-do', '没有可丢弃的已跟踪改动（未跟踪文件不在这里处理）')
+      if (tracked.length === 0) return fail('args', 'nothing-to-do', 'There are no tracked changes to discard (untracked files are not handled here)')
       plan = makeChangesPlan({ op: 'discard-all', mode: versionUsesRestore(gitVersion) ? 'restore' : 'checkout' })
     } else if (op === 'clean-untracked') {
       const badPath: any = pathArgProblem(a.path)
       if (badPath) return fail('args', 'bad-path', writeHintFor('bad-path'), { pathProblem: badPath })
       const path: string = String(a.path)
-      if (!isUntracked(screen, path)) return fail('args', 'nothing-to-do', '这个路径不是未跟踪文件；删除未跟踪文件只处理未跟踪的路径')
+      if (!isUntracked(screen, path)) return fail('args', 'nothing-to-do', 'This path is not untracked; Delete untracked files handles only untracked paths')
       const pv: any = await readOut(cwd, cleanPreviewArgs([path]), SMALL_LIMIT)
       if (pv.ok !== true) return pv
       const removeList: string[] = String(pv.stdout || '').split(/\r?\n/).map(function (line: any) {
         const m: any = /^Would remove (.+)$/.exec(String(line).trim())
         return m ? String(m[1]) : ''
       }).filter(function (x: string) { return x !== '' }).sort()
-      if (removeList.length === 0) return fail('args', 'nothing-to-do', '这条路径下没有可删除的未跟踪文件')
+      if (removeList.length === 0) return fail('args', 'nothing-to-do', 'There are no untracked files to delete under this path')
       plan = makeChangesPlan({ op: 'clean-untracked', paths: [path], removeList: removeList })
     } else if (op === 'rm-tracked') {
       const badPath: any = pathArgProblem(a.path)
@@ -254,11 +254,11 @@ export function createChangesCheck(deps: any): any {
       const path: string = String(a.path)
       const one: any = await lsFilesOne(cwd, path)
       if (one.ok !== true) return one
-      if (!one.tracked) return fail('args', 'nothing-to-do', '这个路径不在索引里；删除已跟踪文件只处理已跟踪的路径')
+      if (!one.tracked) return fail('args', 'nothing-to-do', 'This path is not in the index; Delete tracked files handles only tracked paths')
       // 已暂存的改动不许连坐：先把暂存撤了再删，免得一次动作同时改索引里的两件事。
       // 未暂存的改动可以一起删——改动页只列有改动的文件，删除一条改过的文件正是它最常见的用法；
       //   git rm 用 -f 才肯删，确认卡里已经把「会丢掉多少行」写清楚，用户点的是确认。
-      if (entryOf(screen, path, 'staged')) return fail('args', 'path-modified', '这个文件还有已暂存的改动，删除前请先撤回暂存')
+      if (entryOf(screen, path, 'staged')) return fail('args', 'path-modified', 'This file has staged changes; unstage them before deleting it')
       plan = makeChangesPlan({ op: 'rm-tracked', paths: [path] })
     } else if (op === 'rm-cached') {
       const badPath: any = pathArgProblem(a.path)
@@ -266,8 +266,8 @@ export function createChangesCheck(deps: any): any {
       const path: string = String(a.path)
       const one: any = await lsFilesOne(cwd, path)
       if (one.ok !== true) return one
-      if (!one.tracked) return fail('args', 'nothing-to-do', '这个路径不在索引里；停止跟踪只处理已跟踪的路径')
-      if (entryOf(screen, path, 'staged')) return fail('args', 'path-modified', '这个文件还有已暂存的改动，停止跟踪前请先撤回暂存')
+      if (!one.tracked) return fail('args', 'nothing-to-do', 'This path is not in the index; Stop tracking handles only tracked paths')
+      if (entryOf(screen, path, 'staged')) return fail('args', 'path-modified', 'This file has staged changes; unstage them before stopping tracking')
       plan = makeChangesPlan({ op: 'rm-cached', paths: [path] })
     } else if (op === 'mv') {
       const from: string = String(a.path || '')
@@ -276,12 +276,12 @@ export function createChangesCheck(deps: any): any {
       if (two) return fail('args', 'bad-path', writeHintFor('bad-path'), { pathProblem: two })
       const one: any = await lsFilesOne(cwd, from)
       if (one.ok !== true) return one
-      if (!one.tracked) return fail('args', 'nothing-to-do', '要移动的路径不在索引里；重命名只处理已跟踪的路径')
-      if (entryOf(screen, from, 'staged')) return fail('args', 'path-modified', '这个文件还有已暂存的改动，移动前请先撤回暂存')
+      if (!one.tracked) return fail('args', 'nothing-to-do', 'The source path is not in the index; Rename handles only tracked paths')
+      if (entryOf(screen, from, 'staged')) return fail('args', 'path-modified', 'This file has staged changes; unstage them before moving it')
       let exists: any = null
       try { exists = await d.pathExists(cwd, to) } catch (e) { exists = null }
       if (exists === true) return fail('args', 'path-exists', writeHintFor('path-exists'))
-      if (exists === null) return fail('env', 'unknown-write-failure', '查不出目标路径在不在，移动这一步做不了')
+      if (exists === null) return fail('env', 'unknown-write-failure', 'Cannot determine whether the destination path exists; the move cannot proceed')
       plan = makeChangesPlan({ op: 'mv', paths: [from], to: to })
     } else if (op === 'ignore') {
       const badPath: any = pathArgProblem(a.path)
@@ -292,17 +292,17 @@ export function createChangesCheck(deps: any): any {
       if (badLine) return fail('args', 'ignore-invalid', writeHintFor('ignore-invalid'))
       const old: any = await d.readTextFile(cwd, pathOfGitignore())
       const oldText: string = (old && old.ok === true) ? String(old.text || '') : ''
-      if (old && old.ok !== true && old.reason !== 'missing') return fail('env', 'unknown-write-failure', '读不到仓库根 .gitignore，无法安全追加')
+      if (old && old.ok !== true && old.reason !== 'missing') return fail('env', 'unknown-write-failure', 'Cannot read the repository-root .gitignore; appending safely is not possible')
       const append: any = gitignoreAppendOf(oldText, [line])
-      if (append.added.length === 0) return fail('args', 'nothing-to-do', '这一行已经在 .gitignore 里了，不需要重复追加')
+      if (append.added.length === 0) return fail('args', 'nothing-to-do', 'This line is already in .gitignore; no need to append it again')
       plan = makeChangesPlan({ op: 'ignore', paths: [path], ignoreLines: append.added, ignoreOldDigest: digest16(oldText) })
     }
-    if (!plan) return fail('args', 'bad-target', '不认识的改动页动作：' + String(op))
+    if (!plan) return fail('args', 'bad-target', 'Unrecognised Changes-page action: ' + String(op))
 
     // ④ 索引指纹与条数：与执行前那次逐字节同一口径（同一固定前缀、同一 -z、不截断）。
     const lf: any = await readOut(cwd, lsFilesStageArgs(), LSFILES_LIMIT)
     if (lf.ok !== true) return lf
-    if (lf.truncated === true) return fail('other', 'fingerprint-unavailable', '暂存区清单太大被截断了，这一步做不了')
+    if (lf.truncated === true) return fail('other', 'fingerprint-unavailable', 'The index listing was truncated because it is too large; this step cannot proceed')
     const indexFingerprint: string = digest16(fingerprintInputOf(lf.stdout))
     const indexEntries: number = indexRecordCount(lf.stdout)
     const headOid: string = String((screen.identity && screen.identity.oid) || '')
@@ -341,7 +341,7 @@ export function createChangesCheck(deps: any): any {
       // 只读动作 op 的名单与写动作分开登记：漏掉一条就会永远落到「不认识的动作」。
       if (op === 'explain-ignored') return handle(args, op)
       const meta: any = changesOpMetaOf(op)
-      if (!meta || meta.write !== true) return fail('args', 'bad-target', '预检要知道是哪种改动页写操作（op）')
+      if (!meta || meta.write !== true) return fail('args', 'bad-target', 'Preflight requires the Changes-page write operation (op)')
       return handle(args, op)
     },
     tickets: tickets,

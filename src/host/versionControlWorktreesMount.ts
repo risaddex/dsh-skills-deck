@@ -34,7 +34,7 @@ export function createWorktreesMount(host: any): any {
           randomId: host.randomId,
         })
       }).catch(function (e: any): any {
-        const message: string = '工作树页那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the worktree-page family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { handleGitWorktreeCheck: failed, handleGitWorktreeRun: failed }
       })

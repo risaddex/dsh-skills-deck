@@ -80,11 +80,11 @@ async function cacheDirOf(deps: any): Promise<string> {
  *  为什么连 .. 也挡：票据把路径绑成了字符串，repo/../outside 与 outside 是同一份文件，
  *  只做「开头是不是绝对路径」的检查会让路径比较失去意义。 */
 function stdinPathProblem(p: any): string {
-  if (typeof p !== 'string' || !p) return '路径为空或不是字符串'
-  if (p.indexOf('\u0000') >= 0) return '路径里含 NUL'
-  if (!pathIsAbsolute(p)) return '不是绝对路径'
+  if (typeof p !== 'string' || !p) return 'The path is empty or not a string'
+  if (p.indexOf('\u0000') >= 0) return 'The path contains NUL'
+  if (!pathIsAbsolute(p)) return 'Not an absolute path'
   const segments: string[] = p.split(/[\\/]+/)
-  if (segments.indexOf('..') >= 0) return '路径里含 .. 段'
+  if (segments.indexOf('..') >= 0) return 'The path contains a .. segment'
   return ''
 }
 
@@ -92,27 +92,27 @@ function stdinPathProblem(p: any): string {
  *  任何一项不符都在起进程之前给明确失败（零进程）；读文件留到最后，读出来再按字节数复核一次，
  *  防「查 stat 之后文件被换掉」这种小窗口。 */
 export async function prepareStdinFile(spec: any): Promise<any> {
-  if (!spec || typeof spec !== 'object') return { ok: false, reason: 'bad-spec', message: 'stdinFile 必须给出 path、sizeBytes 与 sha256' }
+  if (!spec || typeof spec !== 'object') return { ok: false, reason: 'bad-spec', message: 'stdinFile must provide path, sizeBytes and sha256' }
   const problem: string = stdinPathProblem(spec.path)
   if (problem) return { ok: false, reason: 'bad-path', message: problem }
   const sizeBytes: any = spec.sizeBytes
   const sha256: string = (typeof spec.sha256 === 'string') ? spec.sha256.toLowerCase() : ''
-  if (!Number.isInteger(sizeBytes) || sizeBytes < 0) return { ok: false, reason: 'bad-spec', message: 'sizeBytes 必须是非负整数' }
-  if (!/^[0-9a-f]{64}$/.test(sha256)) return { ok: false, reason: 'bad-spec', message: 'sha256 必须是 64 位十六进制摘要' }
+  if (!Number.isInteger(sizeBytes) || sizeBytes < 0) return { ok: false, reason: 'bad-spec', message: 'sizeBytes must be a non-negative integer' }
+  if (!/^[0-9a-f]{64}$/.test(sha256)) return { ok: false, reason: 'bad-spec', message: 'sha256 must be a 64-character hexadecimal digest' }
   let st: any
   try { st = await fsLstat(spec.path) } catch (e) {
     const code: string = (e && (e as any).code) ? String((e as any).code) : ''
-    if (code === 'ENOENT' || code === 'ENOTDIR') return { ok: false, reason: 'missing-file', message: 'stdinFile 指向的文件不存在' }
-    return { ok: false, reason: 'unreadable', message: '读不了 stdinFile 的文件信息：' + String(((e as any) && (e as any).message) || e) }
+    if (code === 'ENOENT' || code === 'ENOTDIR') return { ok: false, reason: 'missing-file', message: 'The file referenced by stdinFile does not exist' }
+    return { ok: false, reason: 'unreadable', message: 'Cannot read stdinFile metadata: ' + String(((e as any) && (e as any).message) || e) }
   }
   // lstat：符号链接本身不是普通文件，不收（否则「路径绑定」可以绕过成任意目标）。
-  if (!st || typeof st.isFile !== 'function' || !st.isFile()) return { ok: false, reason: 'not-regular-file', message: 'stdinFile 只收普通文件' }
-  if (st.size !== sizeBytes) return { ok: false, reason: 'size-mismatch', message: '文件大小与票据绑定的不一致（实际 ' + st.size + '，票据 ' + sizeBytes + '）' }
+  if (!st || typeof st.isFile !== 'function' || !st.isFile()) return { ok: false, reason: 'not-regular-file', message: 'stdinFile accepts only regular files' }
+  if (st.size !== sizeBytes) return { ok: false, reason: 'size-mismatch', message: 'File size differs from the ticket (actual ' + st.size + ', ticket ' + sizeBytes + ')' }
   let bytes: any
-  try { bytes = await fsReadFile(spec.path) } catch (e) { return { ok: false, reason: 'unreadable', message: '读不了 stdinFile 的文件内容：' + String(((e as any) && (e as any).message) || e) } }
-  if (bytes.length !== sizeBytes) return { ok: false, reason: 'size-mismatch', message: '读出来的字节数与票据绑定的不一致（实际 ' + bytes.length + '，票据 ' + sizeBytes + '）' }
+  try { bytes = await fsReadFile(spec.path) } catch (e) { return { ok: false, reason: 'unreadable', message: 'Cannot read stdinFile contents: ' + String(((e as any) && (e as any).message) || e) } }
+  if (bytes.length !== sizeBytes) return { ok: false, reason: 'size-mismatch', message: 'The number of bytes read differs from the ticket (actual ' + bytes.length + ', ticket ' + sizeBytes + ')' }
   const actual: string = cryptoCreateHash('sha256').update(bytes).digest('hex')
-  if (actual !== sha256) return { ok: false, reason: 'digest-mismatch', message: '文件摘要与票据绑定的不一致（实际 ' + actual.slice(0, 16) + '…，票据 ' + sha256.slice(0, 16) + '…）' }
+  if (actual !== sha256) return { ok: false, reason: 'digest-mismatch', message: 'File digest differs from the ticket (actual ' + actual.slice(0, 16) + '…, ticket ' + sha256.slice(0, 16) + '…)' }
   return { ok: true, bytes: bytes }
 }
 
@@ -122,7 +122,7 @@ export async function prepareStdinFile(spec: any): Promise<any> {
 export function makeLaunchTaskGit(d: any, pollMs: number): any {
   return async function launchTaskGit(options: any): Promise<any> {
     const resolved: any = await d.resolveGitExecutable()
-    if (!resolved) return { ok: false, kind: 'spawn-failed', message: '找不到 git 可执行文件（platform.resolveExecutable("git") 没有给出路径）' }
+    if (!resolved) return { ok: false, kind: 'spawn-failed', message: 'Cannot find the git executable (platform.resolveExecutable("git") returned no path)' }
     const dir: string = String((options && options.cwd) || d.repoRoot || '')
     const args: string[] = Array.isArray(options && options.args) ? options.args : []
     const argv: string[] = [resolved, '-C', dir].concat(fixedPrefix(), args)
@@ -175,7 +175,7 @@ export function makeLaunchTaskGit(d: any, pollMs: number): any {
       if (!sink || typeof sink.write !== 'function') {
         try { if (handle && typeof handle.terminate === 'function') handle.terminate() } catch (eT) {}
         d.fire('warn', 'git.exec.fail', { argv0: d.gitName, cwdHash: d.dirHash(dir), via: d.via, cmd: subcommandOf(args), errorKind: 'stdin' })
-        return { ok: false, kind: 'stdin-failed', message: '这条传输层服务不支持给 git 送标准输入，fast-import 跑不了' }
+        return { ok: false, kind: 'stdin-failed', message: 'This transport service cannot send standard input to git; fast-import cannot run' }
       }
       try {
         if (typeof sink.on === 'function') sink.on('error', function (e: any): void {
@@ -293,7 +293,7 @@ export function createTaskChannel(deps: any): any {
       const r: any = await runner()
       return await r[method](args)
     } catch (e) {
-      return failPhone('env', '长任务通道装配失败：' + firstLine(String(((e as any) && (e as any).message) || (e as any))))
+      return failPhone('env', 'Failed to assemble the long-running task channel: ' + firstLine(String(((e as any) && (e as any).message) || (e as any))))
     }
   }
   return {

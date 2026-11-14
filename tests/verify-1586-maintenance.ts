@@ -862,7 +862,7 @@ async function main() {
   check(/export function createMaintenanceMount/.test(eMountSrc), 'E1 装配壳导出 createMaintenanceMount（父文件只多一行调用）')
   check(/versionControlMaintenanceRead/.test(eMountSrc) && /versionControlMaintenanceCheck/.test(eMountSrc) && /versionControlMaintenanceWrite/.test(eMountSrc), 'E2 装配壳懒加载三片宿主叶子')
   check(/loggedPhone\('wf\.gitMaintenanceRead', 'git-maintenance-read'/.test(eMountSrc) && /loggedPhone\('wf\.gitMaintenanceCheck', 'git-maintenance-check'/.test(eMountSrc) && /loggedPhone\('wf\.gitMaintenanceWrite', 'git-maintenance-write'/.test(eMountSrc), 'E3 三条电话都经统一日志出口包装（host.call / host.call.fail）')
-  check(eMountSrc.indexOf('维护页这一层装配失败') >= 0 && /createBackupRunner/.test(eMountSrc), 'E4 装配失败有明确失败回包，危险动作的备份走共用备份装置')
+  check(eMountSrc.indexOf('Failed to assemble the maintenance page') >= 0 && /createBackupRunner/.test(eMountSrc), 'E4 装配失败有明确失败回包，危险动作的备份走共用备份装置')
   check(eParentSrc.indexOf('createMaintenanceMount') >= 0, 'E5 父文件 versionControl.ts 装配了维护页装配壳')
   check(['handleGitMaintenanceRead', 'handleGitMaintenanceCheck', 'handleGitMaintenanceWrite', 'maintenanceTickets'].every(function (k) { return eParentSrc.indexOf(k) >= 0 }), 'E6 父文件把三条电话与票表读取口都挂进出参对象')
   check(eIndexSrc.split("harness.handle('wf.gitMaintenanceRead'").length - 1 === 1 && eIndexSrc.split("harness.handle('wf.gitMaintenanceCheck'").length - 1 === 1 && eIndexSrc.split("harness.handle('wf.gitMaintenanceWrite'").length - 1 === 1, 'E7 宿主入口三条注册各一次（不多不少）')

@@ -537,7 +537,7 @@ async function main() {
   check(dNoCall.ok === false && dNoCall.error.kind === 'args' && dNoCallRoute.seen.length === 0, 'D21 空路径这类不合口径的输入在宿主侧就拒：一个 git 进程都不起（实测起了 ' + dNoCallRoute.seen.length + ' 个）')
   const dTruncRoute = makeQueryRoute({ truncated: { blame: true } })
   const dTrunc = await hostMod.createVersionControl(makeQueryHostDeps(dTruncRoute.route).deps).handleGitHistoryQuery({ cwd: 'D:/假工作区/repo', kind: 'blame', params: { path: '文件 一.txt', lineStart: 1, lineEnd: 2 } })
-  check(dTrunc.ok === false && dTrunc.error.kind === 'truncated' && String(dTrunc.error.message).indexOf('读不全就不给半份') >= 0 && dTrunc.lines === undefined, 'D22 读不全：blame 输出超上限时显式失败并写清「读不全就不给半份」，回包里没有半份 lines（实测 ' + JSON.stringify(dTrunc.error) + '）')
+  check(dTrunc.ok === false && dTrunc.error.kind === 'truncated' && String(dTrunc.error.message).indexOf('partial data will not be returned') >= 0 && dTrunc.lines === undefined, 'D22 读不全：blame 输出超上限时显式失败并写清「读不全就不给半份」，回包里没有半份 lines（实测 ' + JSON.stringify(dTrunc.error) + '）')
   const dNoRepo = await hostMod.createVersionControl(makeQueryHostDeps(makeQueryRoute({ noRepo: true }).route).deps).handleGitHistoryQuery({ cwd: 'D:/不在仓库里', kind: 'describe', params: {} })
   check(dNoRepo.ok === false && dNoRepo.error.kind === 'not-repo', 'D23 不在仓库里：明确回 not-repo（不试出一条空命令当成功）')
   const dNoGit = await hostMod.createVersionControl(makeQueryHostDeps(makeQueryRoute({}).route, { gitExe: null }).deps).handleGitHistoryQuery({ cwd: 'D:/假工作区/repo', kind: 'describe', params: {} })

@@ -16,14 +16,14 @@ import { syncPlanDigestInput } from '../shared/version-control/src/sync-actions.
 export const SYNC_WRITE_SOURCE = 'src/host/versionControlSyncWrite.ts'
 
 function stepOf(action: string): string {
-  if (action === 'fetch') return '获取远端更新这一步'
-  if (action === 'pull-merge' || action === 'pull-rebase' || action === 'pull-ff-only') return '拉取并处理上游这一步'
-  if (action === 'delete-remote-ref') return '删除远端引用这一步'
-  if (action === 'force-push') return '带租约强推这一步'
-  if (action === 'atomic-push') return '原子推送这一步'
-  if (action === 'push-tags') return '推送标签这一步'
-  if (action === 'push-upstream') return '推送并设置上游这一步'
-  return '推送这一步'
+  if (action === 'fetch') return 'Fetching remote updates'
+  if (action === 'pull-merge' || action === 'pull-rebase' || action === 'pull-ff-only') return 'Pulling and integrating upstream'
+  if (action === 'delete-remote-ref') return 'Deleting remote refs'
+  if (action === 'force-push') return 'Force-pushing with lease'
+  if (action === 'atomic-push') return 'Pushing atomically'
+  if (action === 'push-tags') return 'Pushing tags'
+  if (action === 'push-upstream') return 'Pushing and setting upstream'
+  return 'Pushing'
 }
 
 export function createSyncWrite(d: any): any {
@@ -56,29 +56,29 @@ export function createSyncWrite(d: any): any {
     }
     const ticketId: string = String(a.ticketId || '')
     const idProblem: any = idShapeProblem(ticketId)
-    if (idProblem) return wfail('args', 'bad-target', '票号格式不合法：' + String(ticketId).slice(0, 80))
+    if (idProblem) return wfail('args', 'bad-target', 'Invalid ticket ID: ' + String(ticketId).slice(0, 80))
     const ridProblem: any = requestIdProblem(requestId)
-    if (ridProblem) return wfail('args', ridProblem, 'requestId 格式不合法：只能用字母、数字、下划线与连字符，长度不超过 64')
+    if (ridProblem) return wfail('args', ridProblem, 'Invalid requestId: use only letters, digits, underscores and hyphens, at most 64 characters')
     const ticket: any = tickets.get(ticketId)
-    if (!ticket) return wfail('blocked', 'ticket-missing', '这张票不存在或已经被执行过：重新预检拿一张新票')
+    if (!ticket) return wfail('blocked', 'ticket-missing', 'This ticket does not exist or has already been executed; run preflight again for a new ticket')
     const plan: any = ticket.target || {}
     const action: string = String(a.action || plan.action || '')
-    if (String(plan.action || '') !== action) return wfail('args', 'ticket-op-mismatch', '这张票不是为这个同步动作签的：重新预检')
+    if (String(plan.action || '') !== action) return wfail('args', 'ticket-op-mismatch', 'This ticket was not issued for this sync action; run preflight again')
     const pure: any = ticketPureVerdict(ticket, ticket.op, now())
-    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), '这张票已经过期或不能用：重新预检')
+    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), 'This ticket has expired or is unusable; run preflight again')
     const cwd: string = typeof a.cwd === 'string' && a.cwd.trim() !== '' ? a.cwd : ''
-    if (!cwd) return wfail('args', 'bad-target', '缺少工作目录：执行必须说清在哪个仓库做')
+    if (!cwd) return wfail('args', 'bad-target', 'Missing working directory: execution must identify the repository')
     const cur: any = await measure(cwd)
-    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', '执行前读不回现场：这次不执行，先刷新')
-    if (String(cur.root || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', '这张票不是给这个仓库签的：重新预检')
-    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'stale-head', '预检之后 HEAD 变了：这次不执行，重新预检')
+    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', 'Cannot reread repository state before execution; nothing was executed. Refresh first')
+    if (String(cur.root || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', 'This ticket was not issued for this repository; run preflight again')
+    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'stale-head', 'HEAD changed after preflight; nothing was executed. Run preflight again')
     const bind: any = bindingsVerdict(ticket, { preconditions: { planDigest: syncPlanDigestInput(plan) }, counters: { indexEntries: ticket.indexEntries } })
-    if (bind) return wfail('blocked', String(bind), '预检之后要执行的动作变了：这次不执行，重新预检')
-    if (plan.needsConfirm === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', '这个动作要先确认（确认卡上写清后果），确认后带 confirmed:true 再发一次', { decision: 'warn', confirm: ticket.confirm || null })
+    if (bind) return wfail('blocked', String(bind), 'The action to execute changed after preflight; nothing was executed. Run preflight again')
+    if (plan.needsConfirm === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', 'This action requires confirmation (the card states the consequences); confirm, then resend with confirmed:true', { decision: 'warn', confirm: ticket.confirm || null })
     const started: any = await startTask({ requestId: requestId || ticketId, op: plan.op, args: plan.taskArgs, cwd: cwd, confirm: true })
     if (!started || started.ok !== true) {
       if (started && started.error) return started
-      return wfail('env', 'env', '长任务通道没有返回结果：这次没有起进程')
+      return wfail('env', 'env', 'The long-running task channel returned no result; no process was started')
     }
     const out: any = {
       ok: true,

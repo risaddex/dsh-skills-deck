@@ -239,7 +239,7 @@ async function main() {
   const hc = await r4.runner.cancel({ taskId: h1.task.taskId })
   check(hc.ok === true && hc.task.conclusion === 'cancelled', '不响应信号的进程也被判为取消')
   check(l4.calls[0].handle.terminated === 2, '宽限期过后补一次强杀')
-  check(/残留/.test(hc.task.residual), '强杀后残留说明写清楚')
+  check(/Leftovers may remain/.test(hc.task.residual), '强杀后残留说明写清楚')
 
   // 5.7 requestId 重放：同一请求号回上次结果，不重复执行
   const d5 = mkTmp('replay')

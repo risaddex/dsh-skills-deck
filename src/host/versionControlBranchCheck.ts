@@ -54,12 +54,12 @@ export function createBranchCheck(deps: any): any {
   async function versionFor(exe: any, root: any, op: string): Promise<any> {
     const capId: string = String(BRANCH_OP_CAP_IDS[op] || '')
     const cap: any = capsById[capId]
-    if (!cap) return { ok: false, envelope: fail('env', 'env', '能力账本里找不到这个分支动作的版本登记：' + capId) }
-    const v: any = await readOut(exe, root, '读 git 版本这一步', ['--version'])
+    if (!cap) return { ok: false, envelope: fail('env', 'env', 'No version entry for this branch action in the capability ledger: ' + capId) }
+    const v: any = await readOut(exe, root, 'Reading the git version', ['--version'])
     if (v.ok !== true) return { ok: false, envelope: v.envelope }
     const gitVersion: string = firstLine(v.stdout)
     const avail: any = capabilityAvailability(cap, gitVersion)
-    if (avail.state === 'hidden') return { ok: false, envelope: fail('unsupported', 'version-unsupported', '这台机器上的 git 版本太旧（' + gitVersion + '），这个分支动作至少需要 ' + String(avail.needed) + '；升级 git 之后再试', { gitVersion: gitVersion, needed: avail.needed, capId: capId }) }
+    if (avail.state === 'hidden') return { ok: false, envelope: fail('unsupported', 'version-unsupported', 'Git on this machine is too old (' + gitVersion + '); this branch action requires at least ' + String(avail.needed) + '; upgrade git and retry', { gitVersion: gitVersion, needed: avail.needed, capId: capId }) }
     return { ok: true, tier: avail.state === 'degraded' ? 'degraded' : 'full', gitVersion: gitVersion, capId: capId, needed: avail.needed, alternative: avail.alternative }
   }
 
@@ -77,61 +77,61 @@ export function createBranchCheck(deps: any): any {
     const res: any = await runPinned(exe, root, args, { stdoutLimit: 8 * 1024 * 1024, timeoutMs: READ_TIMEOUT_MS })
     const bad: any = res.kind === 'ok' || (allowNonZero && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     return { ok: true, stdout: res.stdout, stderr: res.stderr, exitCode: res.exitCode }
   }
   async function baseOf(cwd: string): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return { fail: base }
     return { exe: exe, root: base.root }
   }
   async function refsOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读分支清单这一步', commandFor('refs', {}).args)
+    const r: any = await readOut(exe, root, 'Reading the branch list', commandFor('refs', {}).args)
     if (r.ok !== true) return r
     const parsed: any = parseRefs(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '分支清单解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Branch list parse failed: ' + parsed.detail) }
     return { ok: true, refs: parsed.refs }
   }
   async function tagsOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读标签清单这一步', tagListArgs())
+    const r: any = await readOut(exe, root, 'Reading the tag list', tagListArgs())
     if (r.ok !== true) return r
     const parsed: any = parseTagList(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '标签清单解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Tag list parse failed: ' + parsed.detail) }
     return { ok: true, tags: parsed.tags }
   }
   async function descriptionsOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读分支说明这一步', branchDescriptionsArgs(), true)
+    const r: any = await readOut(exe, root, 'Reading branch descriptions', branchDescriptionsArgs(), true)
     if (r.ok !== true) return r
     // git config --get-regexp 没命中时退出码 1：这是「一条说明都没配过」，不是失败；其它非零是真失败。
     if (typeof r.exitCode === 'number' && r.exitCode !== 0) {
       if (r.exitCode === 1) return { ok: true, descriptions: {} }
-      return { ok: false, envelope: fail('git-failed', 'other', '读分支说明这一步失败：git 原话「' + gitSays({ kind: 'non-zero', exitCode: r.exitCode, stderr: r.stderr }) + '」', { git: gitSays({ kind: 'non-zero', exitCode: r.exitCode, stderr: r.stderr }), step: '读分支说明这一步', actual: '退出码 ' + r.exitCode }) }
+      return { ok: false, envelope: fail('git-failed', 'other', 'Reading branch descriptions failed; git reported: "' + gitSays({ kind: 'non-zero', exitCode: r.exitCode, stderr: r.stderr }) + '"', { git: gitSays({ kind: 'non-zero', exitCode: r.exitCode, stderr: r.stderr }), step: 'Reading branch descriptions', actual: 'Exit code ' + r.exitCode }) }
     }
     const parsed: any = parseBranchDescriptions(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '分支说明解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Branch description parse failed: ' + parsed.detail) }
     return { ok: true, descriptions: parsed.descriptions }
   }
   async function namesOf(exe: any, root: any, which: string, base: string): Promise<any> {
-    const r: any = await readOut(exe, root, '读已并入分支这一步', mergedBranchesArgs(which, base))
+    const r: any = await readOut(exe, root, 'Reading merged branches', mergedBranchesArgs(which, base))
     if (r.ok !== true) return r
     const parsed: any = parseBranchNameList(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '已并入分支解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Merged-branch list parse failed: ' + parsed.detail) }
     return { ok: true, names: parsed.names }
   }
   async function revOid(exe: any, root: any, rev: string): Promise<any> {
-    const r: any = await readOut(exe, root, '确认目标提交这一步', ['rev-parse', '-q', '--verify', String(rev)], true)
+    const r: any = await readOut(exe, root, 'Checking the target commit', ['rev-parse', '-q', '--verify', String(rev)], true)
     if (r.ok !== true) return r
     if (typeof r.exitCode === 'number' && r.exitCode !== 0) return { ok: true, oid: null }
     return { ok: true, oid: String(r.stdout || '').trim() || null }
   }
   async function configOf(exe: any, root: any, key: string): Promise<any> {
-    const r: any = await readOut(exe, root, '读分支上游配置这一步', ['config', '--local', '--get', key], true)
+    const r: any = await readOut(exe, root, 'Reading branch upstream configuration', ['config', '--local', '--get', key], true)
     if (r.ok !== true) return r
     if (typeof r.exitCode === 'number' && r.exitCode !== 0) {
       if (r.exitCode === 1) return { ok: true, value: null }
-      return { ok: false, envelope: fail('git-failed', 'other', '读分支上游配置这一步失败：退出码 ' + r.exitCode) }
+      return { ok: false, envelope: fail('git-failed', 'other', 'Reading branch upstream configuration failed; exit code ' + r.exitCode) }
     }
     return { ok: true, value: String(r.stdout || '').replace(/\r?\n$/, '') }
   }
@@ -220,15 +220,15 @@ export function createBranchCheck(deps: any): any {
     })
   }
   function confirmOf(op: string, plan: any, scene: any, merged?: boolean): any {
-    if (op === 'create') return { kind: op, target: plan.name, verb: '新建并切换到分支 ' + plan.name }
-    if (op === 'switch') return { kind: op, target: plan.name, verb: '切换到分支 ' + plan.name }
-    if (op === 'detach') return { kind: op, target: plan.rev, verb: '切到提交 ' + plan.rev + '（分离头指针）' }
-    if (op === 'rename') return { kind: op, target: plan.from + ' → ' + plan.to, verb: '把分支 ' + plan.from + ' 改名为 ' + plan.to }
-    if (op === 'delete') return { kind: op, target: plan.name, verb: '删除分支 ' + plan.name + (merged === false ? '（未并入，会丢提交）' : '') }
-    if (op === 'upstream') return { kind: op, target: plan.branch, verb: plan.unset ? '取消分支 ' + plan.branch + ' 的上游' : '把分支 ' + plan.branch + ' 的上游设为 ' + String(plan.upstream) }
-    if (op === 'tag-create') { const modeText: string = plan.mode === 'signed' ? '签名标签' : (plan.mode === 'annotated' ? '附注标签' : '轻量标签'); return { kind: op, target: plan.name, verb: '在 ' + String(plan.target || 'HEAD') + ' 上建' + modeText + ' ' + plan.name } }
-    if (op === 'tag-delete') return { kind: op, target: plan.name, verb: '删除标签 ' + plan.name }
-    return { kind: op, target: plan.branch, verb: '写入分支 ' + plan.branch + ' 的说明' }
+    if (op === 'create') return { kind: op, target: plan.name, verb: 'Create and switch to branch ' + plan.name }
+    if (op === 'switch') return { kind: op, target: plan.name, verb: 'Switch to branch ' + plan.name }
+    if (op === 'detach') return { kind: op, target: plan.rev, verb: 'Check out commit ' + plan.rev + ' (detached HEAD)' }
+    if (op === 'rename') return { kind: op, target: plan.from + ' → ' + plan.to, verb: 'Branch ' + plan.from + ': rename to ' + plan.to }
+    if (op === 'delete') return { kind: op, target: plan.name, verb: 'Delete branch ' + plan.name + (merged === false ? ' (not merged; commits will be lost)' : '') }
+    if (op === 'upstream') return { kind: op, target: plan.branch, verb: plan.unset ? 'Remove the upstream of branch ' + plan.branch + '' : 'Branch ' + plan.branch + ': set upstream to ' + String(plan.upstream) }
+    if (op === 'tag-create') { const modeText: string = plan.mode === 'signed' ? 'signed tag' : (plan.mode === 'annotated' ? 'annotated tag' : 'lightweight tag'); return { kind: op, target: plan.name, verb: 'At ' + String(plan.target || 'HEAD') + ', create a ' + modeText + ' ' + plan.name } }
+    if (op === 'tag-delete') return { kind: op, target: plan.name, verb: 'Delete tag ' + plan.name }
+    return { kind: op, target: plan.branch, verb: 'Write the description for branch ' + plan.branch + '' }
   }
   /** 现场摘要：block 时也要回，界面才能画「为什么不能点」。 */
   function sceneSummaryOf(scene: any, plan: any, merged?: boolean): any {
@@ -270,12 +270,12 @@ export function createBranchCheck(deps: any): any {
   async function verifyAt(args: any): Promise<any> {
     const object: string = String(args.object || '')
     const objectKind: string = args.objectKind === 'tag' ? 'tag' : 'commit'
-    if (!object || object.charAt(0) === '-' || /\s/.test(object)) return fail('args', 'bad-target', '要验签的对象是空的或不合法')
+    if (!object || object.charAt(0) === '-' || /\s/.test(object)) return fail('args', 'bad-target', 'The object to verify is empty or invalid')
     const b: any = await baseOf(String(args.cwd))
     if (b.fail) return b.fail
     const argv: string[] = objectKind === 'tag' ? verifyTagArgs(object) : verifyCommitArgs(object)
     const res: any = await runPinned(b.exe, b.root, argv, { stdoutLimit: 1024 * 1024, timeoutMs: READ_TIMEOUT_MS })
-    const bad: any = res.kind === 'ok' || res.kind === 'non-zero' ? null : failureFromExec(res, '验签这一步')
+    const bad: any = res.kind === 'ok' || res.kind === 'non-zero' ? null : failureFromExec(res, 'Verifying the signature')
     if (bad) return bad
     const exitCode: number = typeof res.exitCode === 'number' ? res.exitCode : (res.kind === 'ok' ? 0 : -1)
     return { ok: true, contract: BRANCH_CHECK_CONTRACT, version: BRANCH_CHECK_VERSION, op: BRANCH_TICKET_READ_OP, kind: BRANCH_TICKET_READ_OP, objectKind: objectKind, object: object, command: argv.slice(0, 2).join(' '), verified: exitCode === 0, exitCode: exitCode, gitSays: (String((res && res.stdout) || '').trim() !== '' ? firstLine(res.stdout) : firstLine(res && res.stderr)).slice(0, 400), atMs: nowFn() }
@@ -284,7 +284,7 @@ export function createBranchCheck(deps: any): any {
   /** 预检入口：校验 → 读现场 → 判定 → 签票（block 不签票，照样回现场）。 */
   async function handleBranchCheck(args: any): Promise<any> {
     const a: any = args || {}
-    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'bad-target', '缺少工作目录：预检必须先说清在哪个仓库做')
+    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'bad-target', 'Missing working directory: preflight must identify the repository')
     if (String(a.op || '') === BRANCH_TICKET_READ_OP) return verifyAt(a)
     const planRes: any = branchPlanOf(String(a.op || ''), a)
     if (!planRes.ok) return fail('args', planRes.reason, planRes.message)
@@ -306,7 +306,7 @@ export function createBranchCheck(deps: any): any {
     if ((op === 'switch' || op === 'delete' || op === 'describe') && !exists(plan.name) && !exists(plan.branch)) return fail('blocked', 'branch-missing', branchReasonText('branch-missing'), { contract: BRANCH_CHECK_CONTRACT, version: BRANCH_CHECK_VERSION, op: op, decision: { verdict: 'block', reasons: ['branch-missing'] }, reasons: ['branch-missing'], scene: sceneSummaryOf(scene, plan), readAtMs: nowFn() })
     if (op === 'rename' && !exists(plan.from)) return fail('args', 'branch-missing', branchReasonText('branch-missing'), { reasons: ['branch-missing'] })
     if (op === 'upstream' && !exists(plan.branch)) return fail('args', 'branch-missing', branchReasonText('branch-missing'), { reasons: ['branch-missing'] })
-    if ((op === 'tag-delete') && tagOf(scene, plan.name) === null) return fail('args', 'branch-missing', '这个标签不存在了：刷新标签列表再试', { reasons: ['branch-missing'] })
+    if ((op === 'tag-delete') && tagOf(scene, plan.name) === null) return fail('args', 'branch-missing', 'This tag no longer exists; refresh the tag list and retry', { reasons: ['branch-missing'] })
     let decision: any = null
     let merged: boolean | undefined
     if (op === 'create') decision = decideBranchCreate({ nameExists: exists(plan.name) })
@@ -323,7 +323,7 @@ export function createBranchCheck(deps: any): any {
     else decision = decideDescriptionWrite({ branchExists: true, text: plan.text })
     // 4.5 改名到已存在的名字、4.6 删当前分支这类判定在共享层给 block；这里统一转成失败信封并回现场。
     const confirm: any = confirmOf(op, plan, scene, merged)
-    if (decision.verdict === 'block') return fail('blocked', String(decision.reasons[0] || 'other'), branchReasonText(decision.reasons[0]) + '（理由：' + decision.reasons.join('、') + '）', { contract: BRANCH_CHECK_CONTRACT, version: BRANCH_CHECK_VERSION, op: op, decision: decision, reasons: decision.reasons, confirm: confirm, scene: sceneSummaryOf(scene, plan, merged), readAtMs: nowFn() })
+    if (decision.verdict === 'block') return fail('blocked', String(decision.reasons[0] || 'other'), branchReasonText(decision.reasons[0]) + ' (reason: ' + decision.reasons.join(', ') + ')', { contract: BRANCH_CHECK_CONTRACT, version: BRANCH_CHECK_VERSION, op: op, decision: decision, reasons: decision.reasons, confirm: confirm, scene: sceneSummaryOf(scene, plan, merged), readAtMs: nowFn() })
     // 版本档必须在签票之前算好并写进计划：票里保存的就是执行层要照做的 argv 依据，
     // 计划摘要（bindingsOf 的 planDigest）也因此把 tier 算进去——预检与执行不会各判一次版本。
     const ver: any = await versionFor(b.exe, b.root, op)

@@ -30,7 +30,7 @@ export function createUndoMount(host: any): any {
           defaultCwd: host.DEFAULT_CWD,
         })
       }).catch(function (e: any): any {
-        const message: string = '历史改写预检层加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the history-rewrite preflight layer: ' + String((e && e.message) || e)
         return { handleCheck: function (): any { return host.failPhone('env', message) }, measure: function (): any { return host.failPhone('env', message) }, tickets: new Map(), results: new Map() }
       })
     }
@@ -55,7 +55,7 @@ export function createUndoMount(host: any): any {
           })
         })
       }).catch(function (e: any): any {
-        const message: string = '历史改写执行层加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the history-rewrite execution layer: ' + String((e && e.message) || e)
         return { handleWrite: function (): any { return host.failPhone('env', message) } }
       })
     }

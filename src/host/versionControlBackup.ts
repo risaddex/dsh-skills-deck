@@ -23,7 +23,7 @@ const WRITE_LIMIT: number = 1024 * 1024
 /** 造备份执行层；failurePrefix 由调用方给出，好让失败话术衔接各自的后续动作。 */
 export function createBackupRunner(deps: any): any {
   const writeTimeoutMs: number = Number(deps.writeTimeoutMs) || 600000
-  const failurePrefix: string = String(deps.failurePrefix || '整仓备份失败，已中止（这次没有起后续命令）：')
+  const failurePrefix: string = String(deps.failurePrefix || 'Full-repository backup failed; stopped without starting subsequent commands: ')
   const now = function (): number { try { return typeof deps.now === 'function' ? Number(deps.now()) : Date.now() } catch (e) { return Date.now() } }
 
   /** 递归数一个目录的字节数：镜像备份的对象大小按 KiB 取整会得到 0，所以用实际文件大小兜底。 */
@@ -63,7 +63,7 @@ export function createBackupRunner(deps: any): any {
   async function runBackup(exe: string, root: string, backupPlan: any): Promise<any> {
     const kind: string = backupPlan && backupPlan.kind === 'bundle' ? 'bundle' : 'mirror'
     const path: string = String((backupPlan && backupPlan.path) || '')
-    if (path === '') return { ok: false, reason: 'backup-failed', message: '备份路径是空的，不知道该往哪里备份，已中止。' }
+    if (path === '') return { ok: false, reason: 'backup-failed', message: 'The backup path is empty; the backup destination is unknown. Stopped.' }
     const parent: string = path.replace(/[\\/][^\\/]+$/, '')
     const started: number = Date.now()
     let res: any
@@ -72,10 +72,10 @@ export function createBackupRunner(deps: any): any {
         ? await deps.runPinned(exe, root, ['bundle', 'create', path, '--all'], { timeoutMs: writeTimeoutMs, stdoutLimit: WRITE_LIMIT })
         : await deps.runPinned(exe, parent, ['clone', '--mirror', root, path], { timeoutMs: writeTimeoutMs, stdoutLimit: WRITE_LIMIT })
     } catch (e) {
-      return { ok: false, reason: 'backup-failed', message: failurePrefix + '备份命令没有起进程：' + firstLine(String((e && (e as any).message) || e)) }
+      return { ok: false, reason: 'backup-failed', message: failurePrefix + 'The backup command did not start a process: ' + firstLine(String((e && (e as any).message) || e)) }
     }
     if (!res || res.kind !== 'ok') {
-      const said: string = firstLine((res && (res.stderr || res.message)) || '') || '备份命令没有正常结束'
+      const said: string = firstLine((res && (res.stderr || res.message)) || '') || 'The backup command did not finish normally'
       return { ok: false, reason: 'backup-failed', message: failurePrefix + said }
     }
     const elapsedMs: number = Math.max(0, Date.now() - started)
@@ -89,7 +89,7 @@ export function createBackupRunner(deps: any): any {
       bytes = Math.max(mb.ok ? Number(mb.bytes) || 0 : 0, walked)
     }
     const point: any = backupPointOf({ kind: kind, path: path, bytes: bytes, elapsedMs: elapsedMs, atMs: now() })
-    if (point.ok !== true) return { ok: false, reason: 'backup-unreadable', message: '备份做完了但读不出它的大小，按约定不能拿半份信息继续：' + String(point.message || '') }
+    if (point.ok !== true) return { ok: false, reason: 'backup-unreadable', message: 'Backup finished, but its size could not be read. Continuing with incomplete information is not allowed: ' + String(point.message || '') }
     return { ok: true, point: point.point }
   }
 

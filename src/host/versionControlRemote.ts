@@ -73,13 +73,13 @@ export function createRemotePhones(deps: any): any {
   /** 把父文件注入的失败信封（failPhone / failureFromExec 的产物）转成域 8 的形状，补上 reason。 */
   function adapt(cause: any, reason: string, hint: string): any {
     const kind: string = (cause && cause.error && cause.error.kind) || 'env'
-    const message: string = (cause && cause.error && cause.error.message) || '这一步没有成功'
+    const message: string = (cause && cause.error && cause.error.message) || 'This step did not succeed'
     return fail(kind, reason, message, hint)
   }
   /** 起 git：先找可执行文件，再问出仓库根；两步都失败就回失败信封。 */
   async function prepare(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { ok: false, fail: failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { ok: false, fail: failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, cwd)
     if (base.ok !== true) return { ok: false, fail: base }
     return { ok: true, exe: exe, root: base.root }
@@ -87,19 +87,19 @@ export function createRemotePhones(deps: any): any {
   /** 读一遍远端列表 + 每个远端的本地跟踪分支（全部本地命令，不联网）。 */
   async function readState(exe: any, root: any): Promise<any> {
     const res: any = await runPinned(exe, root, remoteListArgs(), { stdoutLimit: LIST_STDOUT_LIMIT })
-    const bad: any = failureFromExec(res, '读远端列表这一步')
+    const bad: any = failureFromExec(res, 'Reading the remote list')
     if (bad) return bad
-    if (res.truncated) return failPhone('truncated', '远端列表超过了尺寸上限，读不全就不给半份。请减少远端数量后再试。')
+    if (res.truncated) return failPhone('truncated', 'The remote list exceeded the size limit; a partial list will not be returned. Remove some remotes and retry.')
     const parsed: any = parseRemoteList(res.stdout)
-    if (parsed.ok !== true) return fail('parse', 'remote-list-malformed', '远端列表读不全（有远端缺 fetch 或 push 记录）。面板不猜，请到终端里跑一次 git remote -v 看看。', '')
+    if (parsed.ok !== true) return fail('parse', 'remote-list-malformed', 'The remote list is incomplete (a remote is missing its fetch or push entry). The panel will not guess; run git remote -v in a terminal to inspect it.', '')
     const remotes: any[] = []
     for (const entry of parsed.remotes) {
       const br: any = await runPinned(exe, root, remoteBranchesArgs(entry.name), { stdoutLimit: BRANCH_STDOUT_LIMIT })
-      const brBad: any = failureFromExec(br, '读远端 ' + entry.name + ' 的跟踪分支这一步')
+      const brBad: any = failureFromExec(br, 'Reading tracking branches for remote ' + entry.name + '')
       if (brBad) return brBad
-      if (br.truncated) return failPhone('truncated', '远端 ' + entry.name + ' 的跟踪分支读不全（输出被截断），不给半份。')
+      if (br.truncated) return failPhone('truncated', 'Tracking branches for remote ' + entry.name + ' are incomplete (output was truncated); a partial list will not be returned.')
       const branches: any = parseRemoteBranches(br.stdout, entry.name)
-      if (branches.ok !== true) return fail('parse', 'remote-branches-malformed', '远端 ' + entry.name + ' 的跟踪分支读不全（记录格式不对）。面板不猜。', '')
+      if (branches.ok !== true) return fail('parse', 'remote-branches-malformed', 'Tracking branches for remote ' + entry.name + ' are incomplete (malformed records). The panel will not guess.', '')
       remotes.push({
         name: entry.name,
         fetchUrl: entry.fetchUrl,
@@ -123,7 +123,7 @@ export function createRemotePhones(deps: any): any {
    */
   async function handleGitRemoteCheck(args: any): Promise<any> {
     const action: string = String((args && args.action) || '')
-    if (!remoteWriteActionOf(action)) return fail('args', 'remote-action', '不认识的远端动作，预检没有发起。', '只能从登记 / 改名 / 删除 / 改地址四种里选。')
+    if (!remoteWriteActionOf(action)) return fail('args', 'remote-action', 'Unrecognised remote action; preflight was not started.', 'Choose one of the four actions: add, rename, delete or change URL.')
     const p: any = await prepare(cwdOf(args))
     if (!p.ok) return p.fail
     const before: any = await readState(p.exe, p.root)
@@ -150,11 +150,11 @@ export function createRemotePhones(deps: any): any {
     if (refuse) return refuse
     const t0: number = nowMs()
     const res: any = await runPinned(p.exe, p.root, run.argv(), { timeoutMs: WRITE_TIMEOUT_MS })
-    const bad: any = failureFromExec(res, '执行 ' + command + ' 这一步')
-    if (bad) return adapt(bad, 'remote-write-failed', '写动作没有成功，远端列表仍是动手前的样子。请按上面的 git 原话处理后再试。')
+    const bad: any = failureFromExec(res, 'Execute ' + command + '')
+    if (bad) return adapt(bad, 'remote-write-failed', 'The write did not succeed; the remote list is unchanged. Address git\'s message above and retry.')
     const after: any = await readState(p.exe, p.root)
     if (after.ok !== true) {
-      return fail('read-after', 'remote-read-after-failed', '动作已经发出去，但重新读远端列表没有成功，没法确认结果。请点一下刷新，看一眼列表再决定。', '')
+      return fail('read-after', 'remote-read-after-failed', 'The action was sent, but rereading the remote list failed, so the result cannot be confirmed. Refresh and check the list before deciding.', '')
     }
     const reply: any = {
       ok: true,
@@ -175,15 +175,15 @@ export function createRemotePhones(deps: any): any {
     const name: any = args && args.name
     const url: any = args && args.url
     const nameProblem: any = remoteNameProblem(name)
-    if (nameProblem) return fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '换一个名字再试。')
+    if (nameProblem) return fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Use another name and retry.')
     const urlProblem: any = remoteUrlProblem(url)
-    if (urlProblem) return fail('args', 'remote-url', '这个地址面板不认（支持 https / http / ssh / git / file、本机路径与 git@host:path 这种写法）。', '检查地址是否完整、是否含空白。')
+    if (urlProblem) return fail('args', 'remote-url', 'The panel does not accept this URL (supported: https, http, ssh, git, file, local paths and git@host:path).', 'Check that the URL is complete and contains no whitespace.')
     return await writeAction('add', 'git remote add', args, {
       name: name,
       argv: function (): string[] { return remoteAddArgs(name, url) },
       target: function (remotes: any[]): any { return remotes.filter((r: any) => r.name === name)[0] || null },
       refuse: function (target: any): any {
-        if (target) return fail('args', 'remote-exists', '已经有叫 ' + name + ' 的远端了。', '先删掉或改名原来的远端，或者换一个名字。')
+        if (target) return fail('args', 'remote-exists', 'A remote named ' + name + ' already exists.', 'Delete or rename the existing remote, or use another name.')
         return null
       },
     })
@@ -194,14 +194,14 @@ export function createRemotePhones(deps: any): any {
     const to: any = args && args.to
     const fromProblem: any = remoteNameProblem(from)
     const toProblem: any = remoteNameProblem(to)
-    if (fromProblem || toProblem) return fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '换一个名字再试。')
-    if (from === to) return fail('args', 'remote-unchanged', '新旧名字是同一个，这次改名没有意义。', '换一个新的名字再试。')
+    if (fromProblem || toProblem) return fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Use another name and retry.')
+    if (from === to) return fail('args', 'remote-unchanged', 'The old and new names are the same; this rename has no effect.', 'Use a different new name and retry.')
     return await writeAction('rename', 'git remote rename', args, {
       name: to,
       argv: function (): string[] { return remoteRenameArgs(from, to) },
       target: function (remotes: any[]): any { return remotes.filter((r: any) => r.name === from)[0] || null },
       refuse: function (target: any): any {
-        if (!target) return fail('args', 'remote-missing', '没有叫 ' + from + ' 的远端，改名做不了。', '刷新一下远端列表再选。')
+        if (!target) return fail('args', 'remote-missing', 'There is no remote named ' + from + '; it cannot be renamed.', 'Refresh the remote list and select again.')
         return null
       },
     })
@@ -210,13 +210,13 @@ export function createRemotePhones(deps: any): any {
   async function handleGitRemoteRemove(args: any): Promise<any> {
     const name: any = args && args.name
     const nameProblem: any = remoteNameProblem(name)
-    if (nameProblem) return fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '从远端列表里选一个再试。')
+    if (nameProblem) return fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Select a remote from the list and retry.')
     return await writeAction('remove', 'git remote remove', args, {
       name: name,
       argv: function (): string[] { return remoteRemoveArgs(name) },
       target: function (remotes: any[]): any { return remotes.filter((r: any) => r.name === name)[0] || null },
       refuse: function (target: any): any {
-        if (!target) return fail('args', 'remote-missing', '没有叫 ' + name + ' 的远端，删除做不了。', '刷新一下远端列表再选。')
+        if (!target) return fail('args', 'remote-missing', 'There is no remote named ' + name + '; it cannot be deleted.', 'Refresh the remote list and select again.')
         return null
       },
     })
@@ -226,16 +226,16 @@ export function createRemotePhones(deps: any): any {
     const name: any = args && args.name
     const url: any = args && args.url
     const nameProblem: any = remoteNameProblem(name)
-    if (nameProblem) return fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '从远端列表里选一个再试。')
+    if (nameProblem) return fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Select a remote from the list and retry.')
     const urlProblem: any = remoteUrlProblem(url)
-    if (urlProblem) return fail('args', 'remote-url', '这个地址面板不认（支持 https / http / ssh / git / file、本机路径与 git@host:path 这种写法）。', '检查地址是否完整、是否含空白。')
+    if (urlProblem) return fail('args', 'remote-url', 'The panel does not accept this URL (supported: https, http, ssh, git, file, local paths and git@host:path).', 'Check that the URL is complete and contains no whitespace.')
     return await writeAction('setUrl', 'git remote set-url', args, {
       name: name,
       argv: function (): string[] { return remoteSetUrlArgs(name, url) },
       target: function (remotes: any[]): any { return remotes.filter((r: any) => r.name === name)[0] || null },
       refuse: function (target: any): any {
-        if (!target) return fail('args', 'remote-missing', '没有叫 ' + name + ' 的远端，改地址做不了。', '刷新一下远端列表再选。')
-        if (target.fetchUrl === url && target.pushUrl === url) return fail('args', 'remote-unchanged', '新地址和现在一样，这次没有改动。', '换一个地址再试。')
+        if (!target) return fail('args', 'remote-missing', 'There is no remote named ' + name + '; its URL cannot be changed.', 'Refresh the remote list and select again.')
+        if (target.fetchUrl === url && target.pushUrl === url) return fail('args', 'remote-unchanged', 'The new URL is the same as the current one; nothing changed.', 'Use a different URL and retry.')
         return null
       },
     })
@@ -245,9 +245,9 @@ export function createRemotePhones(deps: any): any {
     const name: any = args && args.name
     const refs: any = (args && Array.isArray(args.refs)) ? args.refs : []
     const nameProblem: any = remoteNameProblem(name)
-    if (nameProblem) return Promise.resolve(fail('args', 'remote-name', '远端名不合法，联网查看没有发起。', '从远端列表里选一个再试。'))
+    if (nameProblem) return Promise.resolve(fail('args', 'remote-name', 'Invalid remote name; the network query was not started.', 'Select a remote from the list and retry.'))
     for (const ref of refs) {
-      if (remoteRefSelectorProblem(ref)) return Promise.resolve(fail('args', 'remote-ref', '引用选择器不合法，联网查看没有发起。', '只写分支短名或完整的 refs/heads/…、refs/tags/…。'))
+      if (remoteRefSelectorProblem(ref)) return Promise.resolve(fail('args', 'remote-ref', 'Invalid ref selector; the network query was not started.', 'Use a short branch name or a full refs/heads/… or refs/tags/… name.'))
     }
     const key: string = JSON.stringify([cwdOf(args), name, refs])
     const running: any = inflight.get(key)
@@ -265,7 +265,7 @@ export function createRemotePhones(deps: any): any {
     const before: any = await readState(p.exe, p.root)
     if (before.ok !== true) return before
     if (!before.remotes.some((r: any) => r.name === name)) {
-      return fail('args', 'remote-missing', '没有叫 ' + name + ' 的远端，联网查看没有发起。', '刷新一下远端列表再选。')
+      return fail('args', 'remote-missing', 'There is no remote named ' + name + '; the network query was not started.', 'Refresh the remote list and select again.')
     }
     const res: any = await runPinned(p.exe, p.root, lsRemoteArgs(name, refs), {
       stdoutLimit: ONLINE_STDOUT_LIMIT,
@@ -276,7 +276,7 @@ export function createRemotePhones(deps: any): any {
     if (failure) return { ok: false, error: failure, remoteName: name }
     const parsed: any = parseLsRemote(res.stdout)
     if (parsed.ok !== true) {
-      return fail('parse', 'ls-remote-malformed', '远端的引用清单读不懂（提交号或引用名格式不对），这次不给半份。', '稍后再点一次；一直不行就到终端里手动跑 git ls-remote 看完整输出。')
+      return fail('parse', 'ls-remote-malformed', 'The remote ref list cannot be parsed (malformed commit ID or ref name); a partial list will not be returned.', 'Click again later; if it keeps failing, run git ls-remote manually in a terminal to see the full output.')
     }
     return { ok: true, source: 'network', remoteName: name, refs: parsed.refs, count: parsed.refs.length, readAtMs: nowMs(), truncated: false }
   }

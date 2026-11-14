@@ -36,7 +36,7 @@ export function notePhonesOf(host: any): any {
           randomId: function (): string { return Math.random().toString(36).slice(2) },
         })
       }).catch(function (e: any): any {
-        const message: string = '提交备注那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the commit-note family: ' + String((e && e.message) || e)
         const fail: any = function (): any { return host.failPhone('env', message) }
         return { check: fail, write: fail, tickets: new Map(), results: new Map() }
       })

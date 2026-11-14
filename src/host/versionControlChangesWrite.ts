@@ -97,20 +97,20 @@ export function createChangesWrite(deps: any): any {
     if (r && r.kind === 'ok') return { ok: true, stdout: String(r.stdout || ''), truncated: r.truncated === true }
     if (r && r.kind === 'non-zero') {
       const reason: string = classifyWriteFailure(String(argv[0] || '') as any, Number(r.exitCode), String(r.stderr || ''))
-      return wfail('other', reason, firstLine(r.stderr) || 'git 以非零退出码结束了这次写操作', { exitCode: Number(r.exitCode) })
+      return wfail('other', reason, firstLine(r.stderr) || 'Git exited with a non-zero exit code for this write operation', { exitCode: Number(r.exitCode) })
     }
-    if (r && r.kind === 'timeout') return wfail('timeout', 'unknown-write-failure', '这次写操作在 ' + String(WRITE_TIMEOUT_MS) + ' 毫秒内没有结束，已经让进程退出')
-    return wfail('env', 'unknown-write-failure', firstLine(r && r.message) || '写命令没有正常起进程')
+    if (r && r.kind === 'timeout') return wfail('timeout', 'unknown-write-failure', 'This write did not finish within ' + String(WRITE_TIMEOUT_MS) + ' ms; the process was terminated')
+    return wfail('env', 'unknown-write-failure', firstLine(r && r.message) || 'The write command did not start normally')
   }
 
   /** 读一次首屏并重算票面要复核的那几格；任何一格答不出来都整笔拒绝，不拿旧值凑。 */
   async function currentOf(cwd: string, plan: ChangesPlan): Promise<any> {
     const sr: any = await d.readScreenOf(cwd)
-    if (!sr || sr.ok !== true) return { fail: sr || wfail('env', 'unknown-write-failure', '读不到这个仓库的首屏') }
+    if (!sr || sr.ok !== true) return { fail: sr || wfail('env', 'unknown-write-failure', 'Cannot read this repository\'s initial screen') }
     const screen: any = sr.screen || {}
     const lf: any = await d.runCommand(cwd, lsFilesStageArgs(), { stdoutLimit: 8 * 1024 * 1024, timeoutMs: WRITE_TIMEOUT_MS })
-    if (!lf || lf.kind !== 'ok') return { fail: wfail('env', 'fingerprint-unavailable', '重读暂存区清单失败，这一步做不了') }
-    if (lf.truncated === true) return { fail: wfail('other', 'fingerprint-unavailable', '暂存区清单太大被截断了，这一步做不了') }
+    if (!lf || lf.kind !== 'ok') return { fail: wfail('env', 'fingerprint-unavailable', 'Failed to reread the index listing; this step cannot proceed') }
+    if (lf.truncated === true) return { fail: wfail('other', 'fingerprint-unavailable', 'The index listing was truncated because it is too large; this step cannot proceed') }
     const indexEntries: number = indexRecordCount(String(lf.stdout || ''))
     const bindings: any = {
       preconditions: {
@@ -139,27 +139,27 @@ export function createChangesWrite(deps: any): any {
   async function contentVerdict(cwd: string, plan: ChangesPlan): Promise<any> {
     if (plan.op === 'stage-hunks') {
       const raw: any = await d.runCommand(cwd, plan.reverse === true ? diffCachedHunksArgs(String(plan.paths[0] || '')) : diffHunksArgs(String(plan.paths[0] || '')), { stdoutLimit: 4 * 1024 * 1024, timeoutMs: WRITE_TIMEOUT_MS })
-      if (!raw || raw.kind !== 'ok') return { ok: false, reason: 'target-changed', detail: '重新读这个文件的差异失败' }
+      if (!raw || raw.kind !== 'ok') return { ok: false, reason: 'target-changed', detail: 'Failed to reread this file\'s diff' }
       const idx: number = (typeof plan.hunkIndex === 'number') ? plan.hunkIndex : -1
       const one: any = patchForHunk(String(raw.stdout || ''), idx)
-      if (one.ok !== true || digest16(one.text) !== String(plan.patchDigest || '')) return { ok: false, reason: 'target-changed', detail: '选中的那一块和第几次预检时不一样了' }
+      if (one.ok !== true || digest16(one.text) !== String(plan.patchDigest || '')) return { ok: false, reason: 'target-changed', detail: 'The selected hunk differs from the one checked during preflight' }
       return { ok: true }
     }
     if (plan.op === 'clean-untracked') {
       const pv: any = await d.runCommand(cwd, ['clean', '-nd', '--'].concat(plan.paths), { stdoutLimit: STDOUT_LIMIT, timeoutMs: WRITE_TIMEOUT_MS })
-      if (!pv || pv.kind !== 'ok') return { ok: false, reason: 'target-changed', detail: '重新列未跟踪清单失败' }
+      if (!pv || pv.kind !== 'ok') return { ok: false, reason: 'target-changed', detail: 'Failed to relist untracked files' }
       const removeList: string[] = String(pv.stdout || '').split(/\r?\n/).map(function (line: any) {
         const m: any = /^Would remove (.+)$/.exec(String(line).trim())
         return m ? String(m[1]) : ''
       }).filter(function (x: string) { return x !== '' }).sort()
-      if (canonicalJson(removeList) !== canonicalJson(plan.removeList)) return { ok: false, reason: 'target-changed', detail: '要删的未跟踪文件清单变了' }
+      if (canonicalJson(removeList) !== canonicalJson(plan.removeList)) return { ok: false, reason: 'target-changed', detail: 'The list of untracked files to delete changed' }
       return { ok: true }
     }
     if (plan.op === 'ignore') {
       const old: any = await d.readTextFile(cwd, '.gitignore')
       const oldText: string = (old && old.ok === true) ? String(old.text || '') : ''
-      if (old && old.ok !== true && old.reason !== 'missing') return { ok: false, reason: 'target-changed', detail: '读不到仓库根 .gitignore' }
-      if (digest16(oldText) !== String(plan.ignoreOldDigest || '')) return { ok: false, reason: 'target-changed', detail: '.gitignore 在这一步之前被改过了' }
+      if (old && old.ok !== true && old.reason !== 'missing') return { ok: false, reason: 'target-changed', detail: 'Cannot read the repository-root .gitignore' }
+      if (digest16(oldText) !== String(plan.ignoreOldDigest || '')) return { ok: false, reason: 'target-changed', detail: '.gitignore was changed before this step' }
       return { ok: true }
     }
     return { ok: true }
@@ -171,10 +171,10 @@ export function createChangesWrite(deps: any): any {
       const old: any = await d.readTextFile(cwd, '.gitignore')
       const oldText: string = (old && old.ok === true) ? String(old.text || '') : ''
       const append: any = gitignoreAppendOf(oldText, Array.isArray(plan.ignoreLines) ? plan.ignoreLines : [])
-      if (append.added.length === 0) return wfail('args', 'nothing-to-do', '这一行已经在 .gitignore 里了，不需要重复追加')
+      if (append.added.length === 0) return wfail('args', 'nothing-to-do', 'This line is already in .gitignore; no need to append it again')
       let wrote: any
       try { wrote = await d.writeTextFile(cwd, '.gitignore', append.text) } catch (e) { return wfail('env', 'unknown-write-failure', String(((e as any) && (e as any).message) || (e as any))) }
-      if (wrote && wrote.ok === false) return wfail('env', 'unknown-write-failure', String((wrote.error && wrote.error.message) || '写 .gitignore 失败'))
+      if (wrote && wrote.ok === false) return wfail('env', 'unknown-write-failure', String((wrote.error && wrote.error.message) || 'Failed to write .gitignore'))
       return { ok: true, wrote: append.added }
     }
     let patchPath: string = ''
@@ -184,17 +184,17 @@ export function createChangesWrite(deps: any): any {
         // 先按票据里绑定的那一块重新拼出补丁；拼不出来就绝不把别的块写给 git。
         // 正向从「索引相对工作区」取块，反向从「索引相对 HEAD」取块：与预检、与界面展开的那一份同源。
         const raw: any = await d.runCommand(cwd, plan.reverse === true ? diffCachedHunksArgs(String(plan.paths[0] || '')) : diffHunksArgs(String(plan.paths[0] || '')), { stdoutLimit: 4 * 1024 * 1024, timeoutMs: WRITE_TIMEOUT_MS })
-        if (!raw || raw.kind !== 'ok') return wfail('env', 'target-changed', '重新读这个文件的差异失败')
+        if (!raw || raw.kind !== 'ok') return wfail('env', 'target-changed', 'Failed to reread this file\'s diff')
         const one: any = patchForHunk(String(raw.stdout || ''), (typeof plan.hunkIndex === 'number') ? plan.hunkIndex : -1)
         if (one.ok !== true) return wfail('args', 'hunk-out-of-range', writeHintFor('hunk-out-of-range'))
         let tmp: any
         try { tmp = await d.writeTempPatch(String(one.text)) } catch (e) { return wfail('env', 'unknown-write-failure', String(((e as any) && (e as any).message) || (e as any))) }
-        if (!tmp || tmp.ok !== true || !tmp.path) return wfail('env', 'unknown-write-failure', '写临时补丁文件失败，逐块暂存没有执行')
+        if (!tmp || tmp.ok !== true || !tmp.path) return wfail('env', 'unknown-write-failure', 'Failed to write the temporary patch; hunk staging was not executed')
         patchPath = String(tmp.path)
         return await runOne(cwd, plan.reverse === true ? applyCachedReverseArgs(patchPath) : applyCachedArgs(patchPath))
       }
       const argv: any = argvOf(plan)
-      if (!argv) return wfail('args', 'bad-target', '这个动作没有对应的 git 命令')
+      if (!argv) return wfail('args', 'bad-target', 'There is no git command for this action')
       return await runOne(cwd, argv)
     } finally {
       if (patchPath !== '') { try { await d.deleteFile(patchPath) } catch (e) { /* 临时文件删不掉不影响已经执行完的写命令；下次预检会重新生成内容 */ } }
@@ -248,13 +248,13 @@ export function createChangesWrite(deps: any): any {
     // ③ 票面复核：票在不在、动作对不对、过没过期、仓库/HEAD/索引有没有变。
     const ticket: any = tickets.get(ticketId) || null
     if (!ticket) return wfail('blocked', 'ticket-missing', writeHintFor('ticket-missing'))
-    if (!ticket.changes || String(ticket.changes.op || '') !== op) return wfail('args', 'ticket-op-mismatch', '这张票不是这次动作签发的')
+    if (!ticket.changes || String(ticket.changes.op || '') !== op) return wfail('args', 'ticket-op-mismatch', 'This ticket was not issued for this action')
     const pure: any = ticketPureVerdict(ticket, op as any, now())
     if (pure && pure.ok !== true) return wfail('blocked', pure.reason, writeHintFor(pure.reason))
-    if (ticket.changes.op !== op) return wfail('args', 'ticket-op-mismatch', '这张票绑的动作与请求不一致')
+    if (ticket.changes.op !== op) return wfail('args', 'ticket-op-mismatch', 'The action bound to this ticket differs from the request')
 
     const cur: any = await currentOf(cwd, ticket.changes)
-    if (!cur || cur.ok !== true) return cur && cur.fail ? cur.fail : wfail('env', 'unknown-write-failure', '重算当前仓库状态失败')
+    if (!cur || cur.ok !== true) return cur && cur.fail ? cur.fail : wfail('env', 'unknown-write-failure', 'Failed to recompute the current repository state')
     const verdict: any = ticketVerdict(ticket, now(), cur.current)
     if (verdict && verdict.ok !== true) return wfail('blocked', verdict.reason, writeHintFor(verdict.reason))
     // bindingsVerdict 第二个参数是「此刻重量的绑定值」本身（与 #1741 写层同一调用口径），不是外层包装。
@@ -265,7 +265,7 @@ export function createChangesWrite(deps: any): any {
 
     // ④ 执行：写命令只在这里起一次；失败按动作分类成理由，成功回读首屏证明结果落在哪里。
     const exec: any = await execute(cwd, ticket.changes)
-    if (!exec || exec.ok !== true) return remember(requestId, exec || wfail('env', 'unknown-write-failure', '写命令没有返回结论'))
+    if (!exec || exec.ok !== true) return remember(requestId, exec || wfail('env', 'unknown-write-failure', 'The write command returned no conclusion'))
     const sr: any = await d.readScreenOf(cwd)
     const out: any = {
       ok: true,

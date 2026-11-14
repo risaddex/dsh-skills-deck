@@ -97,7 +97,7 @@ const wsBroken = mkWs()
 const apiBroken = mkApi(makeFs(true))
 const wb = await apiBroken.handleSetupLayout({ cwd: wsBroken, layout: 'multi' })
 check(wb.ok === false && wb.workspaceFile !== 'written', '写不进文件时不谎报成功（回执如实标出没进文件的原因）—— 实得 ' + JSON.stringify(wb))
-check(String(wb.error || '').includes('没有生效'), '失败回执说清「这次选择没有生效」—— 实得 ' + JSON.stringify(wb.error))
+check(String(wb.error || '').includes('did not take effect'), '失败回执说清「这次选择没有生效」—— 实得 ' + JSON.stringify(wb.error))
 const brokenDocKeys = Object.keys((choicesDoc().layouts || {}))
 check(brokenDocKeys.length === 0, '失败后本机记忆里也没有留备份（layouts 仍为空）—— 实得 ' + JSON.stringify(brokenDocKeys))
 

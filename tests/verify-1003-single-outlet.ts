@@ -153,7 +153,7 @@ async function main() {
     const l = await lcOf(Object.assign({}, noAuto, { get: () => fakeTracker() }), fss).handleListLabels({ cwd: dir });
     check(l.ok === true && l.backendId === 'github', 'S1 读用途（列标签）不受影响，照旧读到声明文件', JSON.stringify(l).slice(0, 160));
     const w1 = await lcOf(Object.assign({}, noAuto, { get: () => fakeTracker() }), fss).handleSetLabelColors({ cwd: dir, changes: [{ name: 'bug', color: '0b7285' }] });
-    check(w1.ok === false && /先在面板上选定/.test(String(w1.error && w1.error.message)), 'S1 写用途（改色）拒绝：只有声明文件不算人亲手选过', JSON.stringify(w1).slice(0, 200));
+    check(w1.ok === false && /Select the backend for this workspace in the panel/.test(String(w1.error && w1.error.message)), 'S1 写用途（改色）拒绝：只有声明文件不算人亲手选过', JSON.stringify(w1).slice(0, 200));
     const d = await detOf(noAuto, fss).detect({ cwd: dir }, { skipSkillProbes: true });
     check(d.selection && d.selection.backendId === 'github', 'S1 探测服务同样读到声明文件', JSON.stringify(d.selection));
     // 对照：给这个工作区补上一份「人亲手选过」的记录之后，结论换成文件的（这里文件与声明同为 github，

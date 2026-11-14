@@ -242,7 +242,7 @@ export function createBootstrap(deps: BootstrapDeps): BootstrapPhones {
       try {
         const m: any = await import('../shared/matt-skills.js')
         SKILL_PROBE_NAMES = (m && (m.MATT_SKILL_PROBE_NAMES || m.default?.MATT_SKILL_PROBE_NAMES)) || null
-        if (!SKILL_PROBE_NAMES) throw new Error('shared/matt-skills.js 未导出 MATT_SKILL_PROBE_NAMES')
+        if (!SKILL_PROBE_NAMES) throw new Error('shared/matt-skills.js does not export MATT_SKILL_PROBE_NAMES')
       } catch (e: unknown) {
         // 兜底：内联一份与真源一致的常量（仅在 shared 文件丢失时使用；CI/构建必须保证真源在场）
         SKILL_PROBE_NAMES = ['ask-matt','code-review','codebase-design','diagnosing-bugs','domain-modeling','grill-with-docs','implement','improve-codebase-architecture','prototype','research','setup-matt-pocock-skills','tdd','to-spec','to-tickets','triage','wayfinder','wizard','grill-me','grilling','handoff','teach','to-questionnaire','wait-what','writing-for-agents','implement-spec','pr','retro']
@@ -258,7 +258,7 @@ export function createBootstrap(deps: BootstrapDeps): BootstrapPhones {
         const m: any = await import('../shared/tracker/check-catalog-views.js')
         const items: any[] = (m && m.GENERIC_CHECK_ITEMS) || []
         CHAIN_SKILL_NAMES = items.filter(function (it: any) { return it && it.check && typeof it.check.skill === 'string' }).map(function (it: any) { return it.check.skill })
-        if (!CHAIN_SKILL_NAMES.length) throw new Error('链目录里没有技能检查项')
+        if (!CHAIN_SKILL_NAMES.length) throw new Error('The chain directory has no skill checks')
       } catch (e: unknown) {
         // 兜底：与链目录一致的三项（仅在目录文件丢失时使用；目录在场时以上面读到的为准）
         CHAIN_SKILL_NAMES = ['wayfinder', 'setup-matt-pocock-skills', 'ask-matt']

@@ -52,12 +52,12 @@ export function createSubmoduleBoardReader(deps: any): any {
     const res: any = await runPinned(exe, root, args, READ_OPTS)
     const bad: any = res.kind === 'ok' || (allowNonZero && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     return { ok: true, stdout: res.stdout, stderr: res.stderr, exitCode: res.exitCode }
   }
   async function baseOf(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return { fail: base }
     return { exe: exe, root: base.root, gitDir: base.gitDir }
@@ -65,13 +65,13 @@ export function createSubmoduleBoardReader(deps: any): any {
   /** 逐个子模块的补充事实：读不到哪格就缺哪格，绝不让一个坏子模块拖垮整页。 */
   async function factsOf(exe: any, root: any, gitDir: any, row: any): Promise<any> {
     const dir: string = joinPath(root, row.path)
-    const head: any = await readOut(exe, dir, '读子模块当前分支这一步', ['rev-parse', '--abbrev-ref', 'HEAD'], true)
+    const head: any = await readOut(exe, dir, 'Reading the submodule\'s current branch', ['rev-parse', '--abbrev-ref', 'HEAD'], true)
     const headText: string = head.ok === true ? shortText(head.stdout) : ''
     const detached: boolean = headText === 'HEAD' || headText === ''
-    const count: any = await readOut(exe, dir, '算子模块本地提交数这一步', ['rev-list', '--count', 'HEAD', '--not', '--branches'], true)
+    const count: any = await readOut(exe, dir, 'Counting the submodule\'s local commits', ['rev-list', '--count', 'HEAD', '--not', '--branches'], true)
     let localCommits: number = 0
     if (count.ok === true) { const n: number = parseInt(shortText(count.stdout), 10); localCommits = isFinite(n) && n > 0 ? n : 0 }
-    const gd: any = await readOut(exe, dir, '读子模块 git 目录这一步', ['rev-parse', '--git-dir'], true)
+    const gd: any = await readOut(exe, dir, 'Reading the submodule\'s git directory', ['rev-parse', '--git-dir'], true)
     const gdText: string = gd.ok === true ? shortText(gd.stdout) : ''
     // 老式克隆把 .git 放成子模块目录里的真目录（路径以 /.git 结尾）；新版把 .git 写成文件、实体放
     // 父仓库的 .git/modules 下。只有前者还需要吸收，后者再跑吸收动作是空操作。
@@ -87,11 +87,11 @@ export function createSubmoduleBoardReader(deps: any): any {
   }
   /** 读一块完整现场：状态行 + 登记行 + 逐行补充事实。任何一步真失败就整包失败，不给半份数据。 */
   async function boardOf(exe: any, root: any, gitDir: any): Promise<any> {
-    const statusRes: any = await readOut(exe, root, '读子模块清单这一步', submoduleStatusArgs())
+    const statusRes: any = await readOut(exe, root, 'Reading the submodule list', submoduleStatusArgs())
     if (statusRes.ok !== true) return { ok: false, envelope: statusRes.envelope }
     const parsed: any = submoduleParseStatus(statusRes.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '子模块清单解析失败：' + String(parsed.detail || '')) }
-    const configRes: any = await readOut(exe, root, '读子模块登记这一步', submoduleConfigArgs(), true)
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Submodule list parse failed: ' + String(parsed.detail || '')) }
+    const configRes: any = await readOut(exe, root, 'Reading submodule registrations', submoduleConfigArgs(), true)
     if (configRes.ok !== true) return { ok: false, envelope: configRes.envelope }
     let modules: any[] = []
     const exitCode: any = configRes.exitCode
@@ -99,11 +99,11 @@ export function createSubmoduleBoardReader(deps: any): any {
       // 退出码 1 = 没有 .gitmodules（还没登记过子模块），这是正常空态；其它非零才是真失败。
       if (exitCode !== 1) {
         const said: string = gitSays({ kind: 'non-zero', exitCode: exitCode, stderr: configRes.stderr })
-        return { ok: false, envelope: fail('git-failed', 'other', '读子模块登记这一步失败：git 原话「' + said + '」', { git: said, step: '读子模块登记这一步', expected: '退出码 0，或 1（还没登记过子模块）', actual: '退出码 ' + exitCode, cause: 'git config -f .gitmodules --get-regexp 返回了非零' }) }
+        return { ok: false, envelope: fail('git-failed', 'other', 'Reading submodule registrations failed; git reported: "' + said + '"', { git: said, step: 'Reading submodule registrations', expected: 'Exit code 0, or 1 (no submodules registered yet)', actual: 'Exit code ' + exitCode, cause: 'git config -f .gitmodules --get-regexp returned non-zero' }) }
       }
     } else {
       const pc: any = submoduleParseConfig(configRes.stdout)
-      if (pc.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '子模块登记解析失败：' + String(pc.detail || '')) }
+      if (pc.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Submodule registration parse failed: ' + String(pc.detail || '')) }
       modules = pc.modules
     }
     const facts: any = {}
@@ -129,7 +129,7 @@ export function createSubmodulePhones(deps: any): any {
   async function handleGitSubmodules(args: any): Promise<any> {
     const cwd: string = typeof cwdOf === 'function' ? cwdOf(args) : ''
     const exe: any = await resolveGitExecutable()
-    if (!exe) return failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return base
     const board: any = await reader.boardOf(exe, base.root, base.gitDir)

@@ -52,24 +52,24 @@ export function createConflictWrite(deps: any): any {
     return { state: s.state, conflictCount: s.conflictCount, conflicts: s.conflicts, headOid: s.headOid }
   }
   function stepOf(op: string): string {
-    if (op === 'merge' || op === 'merge-ff-only' || op === 'merge-no-ff' || op === 'merge-squash') return '合并这一步'
-    if (op === 'take-side') return '为冲突文件选边这一步'
-    if (op === 'save-file') return '把整份编辑写回这一步'
-    if (op === 'mark-resolved') return '标记已解决这一步'
-    if (op === 'op-continue') return '继续进行中的操作这一步'
-    if (op === 'op-skip') return '跳过这一步'
-    return '中止进行中的操作这一步'
+    if (op === 'merge' || op === 'merge-ff-only' || op === 'merge-no-ff' || op === 'merge-squash') return 'Merging'
+    if (op === 'take-side') return 'Choosing a side for a conflicted file'
+    if (op === 'save-file') return 'Writing the entire edit back'
+    if (op === 'mark-resolved') return 'Marking as resolved'
+    if (op === 'op-continue') return 'Continuing the operation in progress'
+    if (op === 'op-skip') return 'Skipping this step'
+    return 'Aborting the operation in progress'
   }
   function expectedOf(op: string, plan: any): string {
     const target: string = String(plan.target || '')
     const path: string = String(plan.path || '')
-    if (op === 'merge' || op === 'merge-ff-only' || op === 'merge-no-ff' || op === 'merge-squash') return '把 ' + target + ' 合并进来'
-    if (op === 'take-side') return '把 ' + path + ' 处理成选中的那一边并登记进暂存区'
-    if (op === 'save-file') return '把 ' + path + ' 的整份编辑写回工作区且不留冲突标记'
-    if (op === 'mark-resolved') return '把 ' + path + ' 标记为已解决'
-    if (op === 'op-continue') return '把进行中的操作继续下去'
-    if (op === 'op-skip') return '跳过进行中操作的这一步'
-    return '中止进行中的操作并回到操作前'
+    if (op === 'merge' || op === 'merge-ff-only' || op === 'merge-no-ff' || op === 'merge-squash') return '' + target + ': merge it in'
+    if (op === 'take-side') return '' + path + ': use the selected side and stage it'
+    if (op === 'save-file') return '' + path + ': write the entire edit to the workspace without conflict markers'
+    if (op === 'mark-resolved') return '' + path + ': mark as resolved'
+    if (op === 'op-continue') return 'Continue the operation in progress'
+    if (op === 'op-skip') return 'Skip this step of the operation in progress'
+    return 'Abort the operation in progress and return to its starting state'
   }
   /** 跑一条 argv；需要默认提交说明的动作（继续）把编辑器换成必定成功的 true，避免 GIT_EDITOR=必失败命令把它拦下。
    *  其余动作保持默认的必失败编辑器（规格第 7 节）：真需要编辑时要显式失败，绝不弹编辑器卡住。 */
@@ -106,11 +106,11 @@ export function createConflictWrite(deps: any): any {
         ok: false,
         argv: argv,
         ran: ran,
-        failure: wfail('git-failed', classifyWriteFailure(plan.op, res && res.exitCode, says), stepOf(op) + '失败：git 原话「' + says.slice(0, 400) + '」', {
+        failure: wfail('git-failed', classifyWriteFailure(plan.op, res && res.exitCode, says), stepOf(op) + ': failed; git reported: "' + says.slice(0, 400) + '"', {
           git: says.slice(0, 400),
           step: stepOf(op),
           expected: expectedOf(op, plan),
-          actual: '退出码 ' + String(res && res.exitCode),
+          actual: 'Exit code ' + String(res && res.exitCode),
           cause: (res && res.kind) || '',
           exitCode: (res && typeof res.exitCode === 'number') ? res.exitCode : null,
           argv: argv,
@@ -126,17 +126,17 @@ export function createConflictWrite(deps: any): any {
     const cwd: string = String(a.cwd)
     const path: string = String(plan.path || '')
     const text: any = a.text
-    if (typeof text !== 'string') return wfail('args', 'bad-text', '缺少要写回的整份内容：text 必须是字符串')
+    if (typeof text !== 'string') return wfail('args', 'bad-text', 'Missing complete content to write: text must be a string')
     if (scene.digest16(String(text)) !== String(plan.textDigest || '')) {
-      return wfail('blocked', 'target-changed', '要写回的内容和确认时不是同一份（可能在预检之后又改过）：请重新看一眼再点', { decision: ticket.decision || null })
+      return wfail('blocked', 'target-changed', 'The content differs from what was confirmed (possibly edited after preflight); review it again before confirming', { decision: ticket.decision || null })
     }
     const old: any = await scene.readTextFile(cur.repoRoot, path)
     if (!old || old.ok !== true) return wfail('blocked', 'path-not-conflicted', writeHintFor('path-not-conflicted'), { decision: ticket.decision || null })
     if (scene.digest16(old.text) !== String(plan.oldDigest || '')) {
-      return wfail('blocked', 'target-changed', '这个文件在预检之后又变过：这次不写，重新看一眼再点', { decision: ticket.decision || null })
+      return wfail('blocked', 'target-changed', 'This file changed after preflight; nothing was written. Review it again before confirming', { decision: ticket.decision || null })
     }
     const w: any = await scene.writeTextFile(cur.repoRoot, path, String(text))
-    if (!w || w.ok !== true) return wfail('env', 'unknown-write-failure', '写文件失败：' + String((w && w.message) || '不知道原因'), { decision: ticket.decision || null })
+    if (!w || w.ok !== true) return wfail('env', 'unknown-write-failure', 'Failed to write the file: ' + String((w && w.message) || 'Reason unknown'), { decision: ticket.decision || null })
     const mc: any = await scene.markerCheckPathOf(cwd, path)
     if (!mc || mc.ok !== true || mc.clean !== true) {
       // 写回旧文本，把工作区恢复成交给用户时的样子：宁可不保存，也不留一份带冲突标记的文件。
@@ -158,25 +158,25 @@ export function createConflictWrite(deps: any): any {
     const ticketId: string = String(a.ticketId || '')
     const op: string = String(a.op || '')
     const idProblem: any = idShapeProblem(ticketId)
-    if (idProblem) return wfail('args', 'bad-target', '票号格式不合法：' + String(ticketId).slice(0, 80))
+    if (idProblem) return wfail('args', 'bad-target', 'Invalid ticket ID: ' + String(ticketId).slice(0, 80))
     const ridProblem: any = requestIdProblem(requestId)
-    if (ridProblem) return wfail('args', ridProblem, 'requestId 格式不合法：只能用字母、数字、下划线与连字符，长度不超过 64')
+    if (ridProblem) return wfail('args', ridProblem, 'Invalid requestId: use only letters, digits, underscores and hyphens, at most 64 characters')
     const ticket: any = tickets.get(ticketId)
-    if (!ticket) return wfail('blocked', 'ticket-missing', '这张票不存在或已经被执行过：重新预检拿一张新票')
-    if (String(ticket.op || '') !== op) return wfail('args', 'ticket-op-mismatch', '这张票不是为这个动作签的：重新预检')
+    if (!ticket) return wfail('blocked', 'ticket-missing', 'This ticket does not exist or has already been executed; run preflight again for a new ticket')
+    if (String(ticket.op || '') !== op) return wfail('args', 'ticket-op-mismatch', 'This ticket was not issued for this action; run preflight again')
     const meta: any = conflictOpMetaOf(op)
-    if (meta === null || CONFLICT_WRITE_OPS.indexOf(meta) < 0) return wfail('args', 'bad-target', '这个动作不需要凭票执行：' + op)
+    if (meta === null || CONFLICT_WRITE_OPS.indexOf(meta) < 0) return wfail('args', 'bad-target', 'This action does not require a ticket: ' + op)
     const pure: any = ticketPureVerdict(ticket, ticket.op, nowFn())
-    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), '这张票已经过期或不能用：重新预检')
-    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', '这个动作要先确认（确认卡上写清后果），确认后带 confirmed:true 再发一次', { decision: ticket.decision || null })
+    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), 'This ticket has expired or is unusable; run preflight again')
+    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', 'This action requires confirmation (the card states the consequences); confirm, then resend with confirmed:true', { decision: ticket.decision || null })
     const cwd: string = typeof a.cwd === 'string' && a.cwd.trim() !== '' ? a.cwd : ''
-    if (!cwd) return wfail('args', 'bad-target', '缺少工作目录：执行必须说清在哪个仓库做')
+    if (!cwd) return wfail('args', 'bad-target', 'Missing working directory: execution must identify the repository')
     const cur: any = await measure(cwd, ticket.plan)
-    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', '执行前读不回现场：这次不执行，先刷新')
-    if (String(cur.repoRoot || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', '这张票不是给这个仓库签的：重新预检')
-    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'target-changed', '预检之后 HEAD 变了：这次不执行，重新预检')
+    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', 'Cannot reread repository state before execution; nothing was executed. Refresh first')
+    if (String(cur.repoRoot || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', 'This ticket was not issued for this repository; run preflight again')
+    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'target-changed', 'HEAD changed after preflight; nothing was executed. Run preflight again')
     const bind: any = bindingsVerdict(ticket, cur.bindings)
-    if (bind) return wfail('blocked', String(bind === 'stale-index' ? 'target-changed' : bind), '预检之后要动的东西变了（进行中状态、冲突清单或工作区）：这次不执行，重新预检', { decision: ticket.decision || null })
+    if (bind) return wfail('blocked', String(bind === 'stale-index' ? 'target-changed' : bind), 'The operation state, conflict list or workspace changed after preflight; nothing was executed. Run preflight again', { decision: ticket.decision || null })
     const plan: any = ticket.plan || {}
     // save-file 与 mark-resolved 先做「不干净不写」的前置检查：真正动文件之前拦住。
     if (op === 'save-file') { const out = await saveFile(cur, ticket, a); remember(requestId, out); return out }
@@ -190,7 +190,7 @@ export function createConflictWrite(deps: any): any {
       }
     }
     const exe: any = await resolveGitExecutable()
-    if (!exe) return wfail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return wfail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const ran: any = await executeSteps(exe, cur.repoRoot, plan)
     if (ran.ok !== true) { remember(requestId, ran.failure); return ran.failure }
     const after: any = await afterScene(cwd)

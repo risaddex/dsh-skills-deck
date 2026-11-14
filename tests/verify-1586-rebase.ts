@@ -427,7 +427,7 @@ async function main() {
     check(out.ok === false && reasonOf(out) === 'unknown-write-failure', 'B47 真失败按失败信封回（不落 unknown 之外的理由）')
     const keys = Object.keys(out.error || {}).sort().join(',')
     eq(keys, 'kind,message,reason', 'B48 失败信封固定三键（kind / reason / message）')
-    check(out.git === 'fatal: bad revision' && out.step !== '' && out.expected !== '' && out.actual === '退出码 128', 'B49 失败信封带现场：git 原话、环节、期望、实际退出码')
+    check(out.git === 'fatal: bad revision' && out.step !== '' && out.expected !== '' && out.actual === 'Exit code 128', 'B49 失败信封带现场：git 原话、环节、期望、实际退出码')
   }
   {
     const rig = makeRig({ tmpMissing: true })

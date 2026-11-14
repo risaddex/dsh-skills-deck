@@ -19,7 +19,7 @@ export function createPlatformMount(host: any): any {
         const reads: any = ms[1].createPlatformReadPhones(host)
         return { check: tickets.check, run: tickets.run, tickets: tickets.tickets, read: reads.read, requestPull: reads.requestPull, patchFiles: reads.patchFiles }
       }).catch(function (e: any): any {
-        const message: string = '平台段那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the platform-section family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { check: failed, run: failed, tickets: new Map(), read: failed, requestPull: failed, patchFiles: failed }
       })

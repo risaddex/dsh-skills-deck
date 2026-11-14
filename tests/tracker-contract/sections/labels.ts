@@ -778,7 +778,7 @@ export async function run() {
     const keysOf = (o) => Object.keys(o).sort().join(',')
     // 文案判据：说清责任在插件运行环境这一侧（宿主模板原话「这是插件运行环境的问题，不是你的操作有误。」，
     //   两句话必须都在），别让用户去翻自己的操作找原因
-    const blameOk = (m) => { const s = String(m == null ? '' : m); return s.includes('插件运行环境的问题') && s.includes('不是你的操作有误') }
+    const blameOk = (m) => { const s = String(m == null ? '' : m); return s.includes("plugin's runtime environment") && s.includes('not a mistake in your action') }
     const mkReg = () => createRegistry({ logEvent: () => {}, isEnabled: () => false }, { matchesTimeout: 200 })
     /**
      * #1138：判定出口读「这个工作区选了谁」那一路要用的最小文件服务。
@@ -932,7 +932,7 @@ export async function run() {
       //   「显式无后端」这条状态今天没有存法（工作区文件里只能写一个后端名，见 src/host/workspaceCwd.js 的
       //   handleBind：收到 null 会如实回失败），所以这里造的是「文件缺席 + 无人认领」这同一条用户可见的路。
       const rlNone = await mkHost(regNone).host.handleListLabels({ cwd: HOST_CWD })
-      await assert('conflict 档正面样本：这个工作区没选定后端 → conflict，并说清先选定后端再试', rlNone.ok === false && rlNone.error.kind === 'conflict' && String(rlNone.error.message).includes('选定'), JSON.stringify(rlNone))
+      await assert('conflict 档正面样本：这个工作区没选定后端 → conflict，并说清先选定后端再试', rlNone.ok === false && rlNone.error.kind === 'conflict' && String(rlNone.error.message).includes('select the backend for this workspace in the panel'), JSON.stringify(rlNone))
 
       const regMulti = mkReg()
       const dm1 = regMulti.register(mod('labels-multi-a', {}))
@@ -951,7 +951,7 @@ export async function run() {
       regMulti.register({ id: 'labels-multi-d', label: 'd', budget: { kind: 'off-network', countsRequests: false, countsPoints: false, independentBuckets: false }, create: () => implMulti('labels-multi-d'), matches: async () => true })
       const hMulti = mkHost(regMulti)
       const rlMulti = await hMulti.host.handleListLabels({ cwd: '/ws/multi' })
-      await assert('conflict 档正面样本：两个后端同时命中 → conflict，并说清是哪个没定下来', rlMulti.ok === false && rlMulti.error.kind === 'conflict' && String(rlMulti.error.message).includes('同时对应'), JSON.stringify(rlMulti))
+      await assert('conflict 档正面样本：两个后端同时命中 → conflict，并说清是哪个没定下来', rlMulti.ok === false && rlMulti.error.kind === 'conflict' && String(rlMulti.error.message).includes('backends currently match this workspace'), JSON.stringify(rlMulti))
 
       // ⑤ #631 追加：客户端**显式声明**了它面板上正在用的那个后端。宿主只做核验——声明的那个确实出现在
       //    这次算出来的候选名单里（multiHit 那份名单）就交给它；核验不通过的一律保持上面那条诚实的失败。
@@ -965,7 +965,7 @@ export async function run() {
       // 读用途不受写用途那条门槛约束（上面刚验过）；写用途在这个还没选定后端的 /ws/multi 上必须如实拒绝。
       const rsDeclared = await hMulti.host.handleSetLabelColors({ cwd: '/ws/multi', backendId: 'labels-multi-d', changes: changes })
       await assert('#1003 还没选定后端（只有自动识别与面板声明）→ 改色如实拒绝，并指路去面板选定',
-        rsDeclared.ok === false && rsDeclared.error.kind === 'conflict' && String(rsDeclared.error.message).includes('先在面板上选定'), JSON.stringify(rsDeclared))
+        rsDeclared.ok === false && rsDeclared.error.kind === 'conflict' && String(rsDeclared.error.message).includes('Select the backend for this workspace in the panel'), JSON.stringify(rsDeclared))
       await assert('#1003 拒绝那一次确实没落到任何后端上（回包说拒绝不等于改动没漏出去，所以要查后端收没收到）',
         writeCalls.length === 0, '这一次被拒了，改动却还是交给了 ' + JSON.stringify(writeCalls))
       // 记下「被拒那一刻后端一共收到过几次写调用」，好让最后那条断言只比较它自己这一趟，
@@ -976,13 +976,13 @@ export async function run() {
         rlOther.ok === true && rlOther.backendId === 'labels-multi-c' && rlOther.labels[0].name === 'labels-multi-c', JSON.stringify(rlOther))
       const rlOutsider = await hMulti.host.handleListLabels({ cwd: '/ws/multi', backendId: 'labels-multi-a' })
       await assert('#631 声明的后端这次没说自己认得这个工作区（不在候选名单里）→ 仍然 conflict，不将就',
-        rlOutsider.ok === false && rlOutsider.error.kind === 'conflict' && String(rlOutsider.error.message).includes('同时对应'), JSON.stringify(rlOutsider))
+        rlOutsider.ok === false && rlOutsider.error.kind === 'conflict' && String(rlOutsider.error.message).includes('backends currently match this workspace'), JSON.stringify(rlOutsider))
       const rlGhost = await hMulti.host.handleListLabels({ cwd: '/ws/multi', backendId: 'labels-never-heard-of' })
       await assert('#631 声明了一个从没听说过的后端 → 仍然 conflict，不将就',
         rlGhost.ok === false && rlGhost.error.kind === 'conflict', JSON.stringify(rlGhost))
       const rlSilent2 = await hMulti.host.handleListLabels({ cwd: '/ws/multi' })
       await assert('#631 什么都没声明 → 仍然 conflict（老行为一个字没松）',
-        rlSilent2.ok === false && rlSilent2.error.kind === 'conflict' && String(rlSilent2.error.message).includes('同时对应'), JSON.stringify(rlSilent2))
+        rlSilent2.ok === false && rlSilent2.error.kind === 'conflict' && String(rlSilent2.error.message).includes('backends currently match this workspace'), JSON.stringify(rlSilent2))
 
       // 用户在面板上选定 d：生产里这一步落在工作区文件 docs/agents/workspace.yaml（用户在工作区入口点确认，
       //   handleBind 把选择写进那份文件；#1138 起这是唯一一份记录，注册表里那份进程内副本已经删了）。
@@ -1010,11 +1010,11 @@ export async function run() {
       // 待定态的假身只验识别未完成时不开工，不断言额度，所以按离网口径声明。
       const dp = regPending.register({ id: 'labels-pending-fake', label: 'p', budget: { kind: 'off-network', countsRequests: false, countsPoints: false, independentBuckets: false }, create: () => ({}), matches: () => new Promise(() => {}) })
       const rlPending = await mkHost(regPending).host.handleListLabels({ cwd: '/ws/pending' })
-      await assert('conflict 档正面样本：身份识别尚未完成（待定）→ conflict，不许静默挑一个后端', rlPending.ok === false && rlPending.error.kind === 'conflict' && String(rlPending.error.message).includes('等识别完成后再重试'), JSON.stringify(rlPending))
+      await assert('conflict 档正面样本：身份识别尚未完成（待定）→ conflict，不许静默挑一个后端', rlPending.ok === false && rlPending.error.kind === 'conflict' && String(rlPending.error.message).includes('wait for it to finish, then retry'), JSON.stringify(rlPending))
       // #631 追加：待定时声明也不许开工 —— 那时名单里的名字只是注册序的暂时赢家，仲裁根本还没完。
       const rlPendingDeclared = await mkHost(regPending).host.handleListLabels({ cwd: '/ws/pending', backendId: 'labels-pending-fake' })
       await assert('#631 身份识别尚未完成时，客户端声明了也不许开工（先等它定下来）',
-        rlPendingDeclared.ok === false && rlPendingDeclared.error.kind === 'conflict' && String(rlPendingDeclared.error.message).includes('等识别完成后再重试'), JSON.stringify(rlPendingDeclared))
+        rlPendingDeclared.ok === false && rlPendingDeclared.error.kind === 'conflict' && String(rlPendingDeclared.error.message).includes('wait for it to finish, then retry'), JSON.stringify(rlPendingDeclared))
       dp.dispose()
     }
   }

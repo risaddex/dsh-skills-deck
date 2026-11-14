@@ -54,7 +54,7 @@ export function createChangesPhone(deps: any): Promise<any> {
 
   /** 读仓库内一个相对路径的文本文件：缺失与读不了分开回，调用方按 reason 决定是「还没有这份文件」还是真失败。 */
   async function readTextFile(root: any, rel: any): Promise<any> {
-    if (!fs || typeof fs.readText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, reason: 'unreadable', message: '文件服务不可用，读不了这个文件' }
+    if (!fs || typeof fs.readText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, reason: 'unreadable', message: 'The file service is unavailable; this file cannot be read' }
     const abs: string = joinRepo(root, rel)
     let target: any
     try { target = await fs.resolve(abs) } catch (e) {
@@ -69,7 +69,7 @@ export function createChangesPhone(deps: any): Promise<any> {
 
   /** 覆写仓库内一个相对路径的文本文件（本票只用于仓库根 .gitignore）：先 resolve 再写，失败如实回。 */
   async function writeTextFile(root: any, rel: any, text: any): Promise<any> {
-    if (!fs || typeof fs.writeText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, error: { message: '文件服务不可用，写不了这个文件' } }
+    if (!fs || typeof fs.writeText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, error: { message: 'The file service is unavailable; this file cannot be written' } }
     const abs: string = joinRepo(root, rel)
     try { const target: any = await fs.resolve(abs); await fs.writeText(target, String(text)); return { ok: true } } catch (e) { return { ok: false, error: { message: String(((e as any) && (e as any).message) || (e as any)) } } }
   }
@@ -77,7 +77,7 @@ export function createChangesPhone(deps: any): Promise<any> {
   /** 把一块补丁写成 0600 的普通临时文件：只落在系统临时目录下，名字带随机段，调用方执行完立刻删。 */
   async function writeTempPatch(text: any): Promise<any> {
     const dir: string = String(osTmpdir() || '').replace(/[\\/]+$/, '')
-    if (dir === '') return { ok: false, message: '系统临时目录不可用' }
+    if (dir === '') return { ok: false, message: 'The system temporary directory is unavailable' }
     const abs: string = dir + '/dsh-vc-patch-' + String(Date.now()) + '-' + String(Math.floor(Math.random() * 1e9)) + '.patch'
     try { await fsWriteFile(abs, String(text), { mode: 0o600, encoding: 'utf8' }); return { ok: true, path: abs } } catch (e) { return { ok: false, message: String(((e as any) && (e as any).message) || (e as any)) } }
   }
@@ -88,7 +88,7 @@ export function createChangesPhone(deps: any): Promise<any> {
   /** 改动页叶子用的命令出口：与读电话同一条固定前缀、同一个 -C 钉仓库、同一条报闸与日志。 */
   async function changesGit(cwd: any, argv: any, opts: any, fallbackMs: number): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { kind: 'spawn-failed', message: '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）' }
+    if (!exe) return { kind: 'spawn-failed', message: 'Cannot find git (platform.resolveExecutable("git") returned no path)' }
     const dir: string = String(cwd || DEFAULT_CWD || '')
     const args: string[] = Array.isArray(argv) ? argv : []
     // 允许的时限：调用方给了正的毫秒数就用它，否则用本命令类别的中央常量（由下面两个包装各自传入）。

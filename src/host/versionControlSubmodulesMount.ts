@@ -40,7 +40,7 @@ export function createSubmoduleMount(host: any): any {
           })
         })
       }).catch(function (e: any): any {
-        const message: string = '子模块域那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the submodule family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { read: failed, check: failed, write: failed, task: failed, tickets: async function (): Promise<any> { return null } }
       })

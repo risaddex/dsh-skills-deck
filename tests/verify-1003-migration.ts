@@ -149,7 +149,7 @@ async function main() {
     const sel = await ws.handleSelection({ cwd: '' });
     check(sel && sel.selection && sel.selection.backendId === null && sel.selection.source === 'unknown', 'M4 空目录选择按未知回', JSON.stringify(sel).slice(0, 200));
     const b = await ws.handleBind({ cwd: '', backendId: 'github' });
-    check(b && b.ok === false && /还没就绪/.test(String(b.error || '')), 'M4 空目录绑定直接说还没就绪（不拿进程目录冒充）', JSON.stringify(b).slice(0, 200));
+    check(b && b.ok === false && /not ready/.test(String(b.error || '')), 'M4 空目录绑定直接说还没就绪（不拿进程目录冒充）', JSON.stringify(b).slice(0, 200));
   }
   console.log(failed ? `\nFAIL（${total} 条）` : `\n全部通过（${total} 条）`);
   process.exit(failed ? 1 : 0);

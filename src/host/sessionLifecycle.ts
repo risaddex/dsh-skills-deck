@@ -136,9 +136,9 @@ export function createSessionLifecycle(deps?: any): any {
   async function handleCwd(args?: any) {
       const sid = args && args.sessionId
       // 失败四种各有机器可读种类（#730：无目录与找不到会话必须分开，否则排查分不清哪一类现场；旧文案一个字不改）。
-      if (!sid) return { ok: false, error: '缺少 sessionId', kind: 'no-sid' }
+      if (!sid) return { ok: false, error: 'Missing sessionId', kind: 'no-sid' }
       const sessions = ctx.get('sessions')
-      if (sessions === undefined || typeof sessions.get !== 'function') return { ok: false, error: 'sessions 服务不可用', kind: 'no-service' }
+      if (sessions === undefined || typeof sessions.get !== 'function') return { ok: false, error: 'The sessions service is unavailable', kind: 'no-service' }
       let liveMissing = false
       try {
         const s = sessions.get(sid)
@@ -152,8 +152,8 @@ export function createSessionLifecycle(deps?: any): any {
       }
       const fromDisk = await persistedCwdOf(sid) // #730 第二段：内存答不出就问落盘；两处都答不出才按原样失败
       if (fromDisk) return await withRoot({ ok: true, cwd: fromDisk }, fromDisk)
-      if (liveMissing) return { ok: false, error: '找不到这个会话', kind: 'not-found' }
-      return { ok: false, error: '会话无 cwd 信息', kind: 'no-cwd' }
+      if (liveMissing) return { ok: false, error: 'This session could not be found', kind: 'not-found' }
+      return { ok: false, error: 'The session has no cwd information', kind: 'no-cwd' }
   }
   // 顺手把「这个会话的工作区根」也带回给客户端（2026-09-19 加，维护者报「面板打开后几十秒才出现归属标志」）。
   //   为什么加在这里：面板头部那枚归属标志只要工作区根这一个值，原先却只能等一整份仓库快照（含全部票与地图）

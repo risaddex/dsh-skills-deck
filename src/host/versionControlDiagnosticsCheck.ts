@@ -20,21 +20,21 @@ const READ_LIMIT: number = 256 * 1024
 
 /** 挡住时给用户的那句话：理由标识符固定，句子给人读。 */
 const REASON_TEXT: Record<string, string> = {
-  'not-a-commit': '有一端解析不成提交：检查两个提交号是不是写错了，或者对象已经被删掉',
-  'already-bisecting': '当前已经在二分中：先结束这趟二分，再开始新的',
-  'same-object': '两个对象是同一个：二分或替换都没有意义',
-  'not-bisecting': '当前不在二分中：先开始二分，再标记好提交与坏提交',
-  'already-replaced': '这个对象已经有替换：先撤销旧的替换，再建新的',
-  'no-replace': '这个对象没有替换记录：没有可撤销的替换',
-  'bad-target': '这次动作的参数不合法：检查提交号或对象名是不是写错了',
+  'not-a-commit': 'One endpoint cannot be resolved to a commit; check the commit IDs or whether the object was deleted',
+  'already-bisecting': 'A bisect is already in progress; finish it before starting another',
+  'same-object': 'Both objects are the same; neither bisect nor replacement would be meaningful',
+  'not-bisecting': 'No bisect is in progress; start one before marking good and bad commits',
+  'already-replaced': 'This object already has a replacement; remove it before creating another',
+  'no-replace': 'This object has no replacement to remove',
+  'bad-target': 'Invalid action parameters; check the commit IDs or object names',
 }
-function reasonTextOf(reason: string): string { return REASON_TEXT[reason] || '这次动作现在不能做（理由：' + reason + '）' }
+function reasonTextOf(reason: string): string { return REASON_TEXT[reason] || 'This action cannot run now (reason: ' + reason + ')' }
 
 /** 票据绑定用的 16 位摘要。
  *  这八份的算法体由 tests/verify-1586-write-contracts.ts 的 C 组逐字节比对：改一处必须八处一起改。 */
 function digest16Of(text: any): string { try { return cryptoCreateHash('sha256').update(String(text === undefined || text === null ? '' : text), 'utf8').digest('hex').slice(0, 16) } catch (e) { return '0000000000000000' } }
 
-function firstLineOf(text: any): string { const t: string = String(text === undefined || text === null ? '' : text).replace(/\r/g, '').trim(); if (!t) return 'git 没有给出说明'; const i: number = t.indexOf('\n'); return (i >= 0 ? t.slice(0, i) : t).slice(0, 300) }
+function firstLineOf(text: any): string { const t: string = String(text === undefined || text === null ? '' : text).replace(/\r/g, '').trim(); if (!t) return 'Git gave no explanation'; const i: number = t.indexOf('\n'); return (i >= 0 ? t.slice(0, i) : t).slice(0, 300) }
 
 /** 造诊断域预检电话。装配处递进进程出口与日志口径；这里不自己起进程。 */
 export function createDiagnosticsCheck(deps: any): any {
@@ -53,7 +53,7 @@ export function createDiagnosticsCheck(deps: any): any {
 
   async function baseOf(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { ok: false, fail: failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { ok: false, fail: failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const root: any = await resolveRepoRoot(exe, cwd)
     if (!root || root.ok !== true) return { ok: false, fail: root }
     return { ok: true, exe: exe, root: String(root.root) }
@@ -65,13 +65,13 @@ export function createDiagnosticsCheck(deps: any): any {
     if (res && res.kind === 'non-zero' && allowNonZero) return { ok: true, stdout: String(res.stdout || ''), exitCode: Number(res.exitCode) }
     const bad: any = failureFromExec(res, what)
     if (bad) return { ok: false, fail: bad }
-    if (res.truncated) return { ok: false, fail: failPhone('truncated', what + '的输出超过上限被截断，结论不可信') }
+    if (res.truncated) return { ok: false, fail: failPhone('truncated', what + ': output was truncated at the limit; the conclusion is not reliable') }
     return { ok: true, stdout: String(res.stdout || ''), exitCode: 0 }
   }
 
   /** 解析一个版本名到 oid：解析不出回 null（这是结论，不是执行失败）。 */
   async function revOid(exe: any, root: any, rev: string): Promise<any> {
-    const r: any = await readOut(exe, root, '解析提交 ' + rev + ' 这一步', ['rev-parse', '-q', '--verify', rev], true)
+    const r: any = await readOut(exe, root, 'Resolving commit ' + rev + '', ['rev-parse', '-q', '--verify', rev], true)
     if (r.ok !== true) return r
     if (r.exitCode !== 0) return { ok: true, oid: null }
     const oid: string = String(r.stdout).trim()
@@ -80,10 +80,10 @@ export function createDiagnosticsCheck(deps: any): any {
 
   /** 现场：二分日志（不在二分时为空串）、现有替换清单。这两样一起构成票据的现场摘要。 */
   async function sceneOf(exe: any, root: any): Promise<any> {
-    const logRes: any = await readOut(exe, root, '读二分日志这一步', ['bisect', 'log'], true)
+    const logRes: any = await readOut(exe, root, 'Reading the bisect log', ['bisect', 'log'], true)
     if (logRes.ok !== true) return logRes
     const logText: string = logRes.exitCode === 0 ? String(logRes.stdout) : ''
-    const replRes: any = await readOut(exe, root, '读替换清单这一步', ['replace', '-l'], false)
+    const replRes: any = await readOut(exe, root, 'Reading the replacement list', ['replace', '-l'], false)
     if (replRes.ok !== true) return replRes
     const state: any = diagnosticsBisectStateOf(logText)
     return { ok: true, log: logText, state: state, replaces: diagnosticsReplaceListOf(replRes.stdout) }
@@ -119,7 +119,7 @@ export function createDiagnosticsCheck(deps: any): any {
     const a: any = args || {}
     const op: string = String(a.op || '')
     const planRes: any = diagnosticsWritePlanOf(op, a)
-    if (!planRes || planRes.ok !== true) return failPhone('args', '这条诊断写动作的参数不合法：' + String((planRes && planRes.message) || '未知原因'))
+    if (!planRes || planRes.ok !== true) return failPhone('args', 'Invalid diagnostic write-action parameters: ' + String((planRes && planRes.message) || 'Unknown reason'))
     const plan: any = planRes.plan
     const base: any = await baseOf(cwdOf(a))
     if (!base.ok) return base.fail

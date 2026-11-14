@@ -38,7 +38,7 @@ export function createUndoWrite(deps: any): any {
 
   /** 把一次非零退出翻成带理由标识符的失败信封。 */
   function failedStep(res: any, reason: any, message: any, extra?: any): any {
-    const env: any = failureFromExec(res, '执行') || failPhone('exit', message || '写命令没有成功结束')
+    const env: any = failureFromExec(res, 'Execute') || failPhone('exit', message || 'The write command did not finish successfully')
     env.error.reason = String(reason || classifyWriteFailure('commit' as any, Number(res && res.exitCode) || 0, String((res && res.stderr) || '')))
     if (extra) Object.assign(env, extra)
     return env
@@ -96,28 +96,28 @@ export function createUndoWrite(deps: any): any {
     const measure = deps.measure
     const m: any = await measure(cwd)
     if (m.ok !== true) return m
-    if (String(m.root) !== String(ticket.repoRoot)) return fail('stale', 'stale-repo', '执行时的仓库和预检时的不是同一个，不执行。', { scene: m.scene })
-    if (String(m.scene.head) !== String(ticket.headOid)) return fail('stale', 'stale-head', 'HEAD 在预检之后换到别的提交了，重新预检一次再确认。', { scene: m.scene })
+    if (String(m.root) !== String(ticket.repoRoot)) return fail('stale', 'stale-repo', 'The repository at execution differs from preflight; nothing was executed.', { scene: m.scene })
+    if (String(m.scene.head) !== String(ticket.headOid)) return fail('stale', 'stale-head', 'HEAD moved to a different commit after preflight; run preflight again and confirm.', { scene: m.scene })
     const pre: any = (ticket.bindings && ticket.bindings.preconditions) || {}
     const digestNow: string = String(undoWorktreeDigestOf(m.screen))
-    if (pre.worktreeDigest !== null && pre.worktreeDigest !== undefined && String(pre.worktreeDigest) !== digestNow) return fail('stale', 'stale-index', '工作区在预检之后有变动（暂存/未暂存的改动变了），重新预检一次再确认。', { scene: m.scene })
+    if (pre.worktreeDigest !== null && pre.worktreeDigest !== undefined && String(pre.worktreeDigest) !== digestNow) return fail('stale', 'stale-index', 'The workspace changed after preflight (staged or unstaged changes differ); run preflight again and confirm.', { scene: m.scene })
     const wants = ticket.target || {}
     if (op === 'cherry-pick') {
       const got: string[] = []
       for (let i = 0; i < plan.commits.length; i += 1) {
         const rev: string = String(plan.commits[i])
         const oid: string | null = await resolveNow(m.exe, m.root, rev)
-        if (oid === null) return fail('stale', 'target-changed', '第 ' + String(i + 1) + ' 条提交在预检之后解析不到了，重新预检一次。', { field: 'commits', index: i + 1 })
+        if (oid === null) return fail('stale', 'target-changed', 'Item ' + String(i + 1) + ': this commit can no longer be resolved after preflight; run preflight again.', { field: 'commits', index: i + 1 })
         got.push(oid)
       }
       plan.commits = got.map(function (oid: string, i: number) { return { rev: String(wants.commits && wants.commits[i] ? wants.commits[i].rev : plan.commits[i]), oid: oid } })
     } else if (String(wants.target || '') !== '' || String(wants.targetOid || '') !== '') {
       const oid: string | null = await resolveNow(m.exe, m.root, String(wants.target || wants.targetOid))
-      if (oid === null || String(oid) !== String(wants.targetOid || '')) return fail('stale', 'target-changed', '目标提交在预检之后换了指向，重新预检一次再确认。', { field: 'target', scene: m.scene })
+      if (oid === null || String(oid) !== String(wants.targetOid || '')) return fail('stale', 'target-changed', 'The target commit points elsewhere after preflight; run preflight again and confirm.', { field: 'target', scene: m.scene })
       plan.targetOid = String(oid)
     }
     const digestNowPlan: string = String(undoPlanDigestOf(plan))
-    if (pre.planDigest !== null && pre.planDigest !== undefined && String(pre.planDigest) !== digestNowPlan) return fail('stale', 'target-changed', '这次要执行的内容和预检时确认的不一致，重新预检一次。')
+    if (pre.planDigest !== null && pre.planDigest !== undefined && String(pre.planDigest) !== digestNowPlan) return fail('stale', 'target-changed', 'The content to execute differs from what preflight confirmed; run preflight again.')
     return { ok: true, exe: m.exe, root: m.root, scene: m.scene }
   }
 
@@ -131,11 +131,11 @@ export function createUndoWrite(deps: any): any {
       const conflicts: string[] = await conflictsOf(exe, root)
       if (conflicts.length > 0) {
         return fail('conflict', op === 'cherry-pick' ? 'cherry-pick-conflict' : 'revert-conflict',
-          'git 报告有冲突文件，面板不自动解决：' + conflicts.join('、'), { conflicts: conflicts, stepsDone: done.length })
+          'Git reports conflicted files; the panel does not resolve them automatically: ' + conflicts.join(', '), { conflicts: conflicts, stepsDone: done.length })
       }
       if (op === 'revert' && i > 0) {
         return fail('partial', 'revert-partial',
-          '反向改动已经进了索引，但提交这一步没成功，仓库停在「还原进行中」。处理完再提交，或放弃这次还原。', { stepsDone: done.length })
+          'The reverse changes are in the index, but the commit step failed and the repository is left with a revert in progress. Resolve it and commit, or abandon this revert.', { stepsDone: done.length })
       }
       return failedStep(res, '', firstLine(res && res.stderr), { stepsDone: done.length })
     }
@@ -151,20 +151,20 @@ export function createUndoWrite(deps: any): any {
     const op: string = String(a.op === undefined || a.op === null ? '' : a.op)
     const requestId: string = String(a.requestId === undefined || a.requestId === null ? '' : a.requestId)
     const badRequest: string | null = requestIdProblem(requestId)
-    if (badRequest !== null) return fail('usage', badRequest, 'requestId 形状不对：只允许字母、数字、下划线和短横线，最长 64 位。')
+    if (badRequest !== null) return fail('usage', badRequest, 'Invalid requestId format: only letters, digits, underscores and hyphens are allowed, up to 64 characters.')
     if (requestId !== '' && results.has(requestId)) return Object.assign({}, results.get(requestId), { replayed: true })
     const def: any = undoOpOf(op)
-    if (!def) return fail('usage', 'unknown-op', '没有这条历史改写动作：' + op)
+    if (!def) return fail('usage', 'unknown-op', 'Unrecognised history-rewrite action: ' + op)
     const ticketId: string = String(a.ticketId === undefined || a.ticketId === null ? '' : a.ticketId)
     const shape: string | null = idShapeProblem(ticketId)
-    if (shape !== null) return fail('usage', 'ticket-missing', '票据编号形状不对，回预检重新拿一张票。')
+    if (shape !== null) return fail('usage', 'ticket-missing', 'Invalid ticket ID format; run preflight again for a new ticket.')
     const ticket: any = tickets.get(ticketId) || null
     const pure: any = ticketPureVerdict(ticket, op as any, now())
     if (pure.ok !== true) {
       const why: string = String(pure.reason)
-      if (why === 'ticket-expired') return fail('stale', why, '这张预检票已经过期（有效期 120 秒），回预检重新拿一张。')
-      if (why === 'ticket-op-mismatch') return fail('stale', why, '票对应的动作和这次要执行的动作不一样，回预检重新拿一张。')
-      return fail('usage', why, '找不到这张预检票，回预检重新拿一张。')
+      if (why === 'ticket-expired') return fail('stale', why, 'This preflight ticket has expired (valid for 120 seconds); run preflight again for a new one.')
+      if (why === 'ticket-op-mismatch') return fail('stale', why, 'The ticket\'s action differs from the action to execute; run preflight again for a new one.')
+      return fail('usage', why, 'This preflight ticket was not found; run preflight again for a new one.')
     }
     const planned: any = undoPlanOf(a)
     if (planned.ok !== true) return fail('usage', planned.reason, planned.message, { field: planned.field, index: planned.index })
@@ -175,7 +175,7 @@ export function createUndoWrite(deps: any): any {
     const checked: any = await revalidate(a, op, plan, ticket)
     if (checked.ok !== true) return checked
     const built: any = undoArgvOf(plan)
-    if (built.ok !== true) return fail('usage', built.reason || 'unknown', '这次动作的命令计划没拼出来，不执行。')
+    if (built.ok !== true) return fail('usage', built.reason || 'unknown', 'The command plan for this action could not be built; nothing was executed.')
     const beforeHead: string = String(ticket.headOid || '')
     const executed: any = await execute(checked.exe, checked.root, op, built.steps)
     const afterHead: string = await headOf(checked.exe, checked.root)

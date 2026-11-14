@@ -348,7 +348,7 @@ async function main(): Promise<void> {
       return null
     })
     const preT = await vcT.handleGitUndoCheck({ cwd: rTrunc, op: 'reset-hard', target: 'HEAD~1' })
-    check(preT.ok === false && preT.error.kind === 'truncated' && String(preT.error.message).indexOf('读不全') >= 0, 'F8 影响读数被截断时宿主拒签票（不给半份计数，也不让硬重置执行）')
+    check(preT.ok === false && preT.error.kind === 'truncated' && String(preT.error.message).indexOf('incomplete data will not be returned') >= 0, 'F8 影响读数被截断时宿主拒签票（不给半份计数，也不让硬重置执行）' + JSON.stringify(preT))
   }
 
   // ---- G 反证：把判据改坏，同一套判断必须判红 ----

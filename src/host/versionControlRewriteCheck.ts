@@ -28,7 +28,7 @@ export function createRewriteCheck(deps: any): any {
     return base
   }
 
-  const argsFail = function (reason: any, extra?: any): any { return fail('args', reason, '这次请求缺东西或者形状不对：' + String(reason), extra) }
+  const argsFail = function (reason: any, extra?: any): any { return fail('args', reason, 'This request is incomplete or malformed: ' + String(reason), extra) }
 
   /** 阻止信封：没起任何写进程，回包告诉界面停在哪个理由上。 */
   function blocked(op: any, reason: any, extra?: any): any {
@@ -71,21 +71,21 @@ export function createRewriteCheck(deps: any): any {
   function confirmOf(plan: any, preview: any, backup: any): any {
     const form: any = rewriteFormOf(plan.form) || {}
     const what: string[] = [
-      '用 filter-repo 的「' + String(form.labelKey || plan.form) + '」表单重写这个仓库的全部 ' + String(preview.counts.commits) + ' 个提交的历史。',
-      '全部提交号都会变：重写之后旧的提交哈希一个都不再存在。',
-      '远端要强推（git push --force）才能和本地对齐。',
-      '每个协作者都必须重新克隆这个仓库，不能继续在旧克隆上推拉。',
+      'Use filter-repo\'s "' + String(form.labelKey || plan.form) + '" form to rewrite the history of all ' + String(preview.counts.commits) + ' commits in this repository.',
+      'Every commit ID will change: none of the old commit hashes will remain after the rewrite.',
+      'The remote will need a force-push (git push --force) to match local history.',
+      'Every collaborator must clone the repository again; they cannot keep pushing or pulling from old clones.',
     ]
     const wont: string[] = [
-      '不执行 filter-branch 本体：它只作为只读说明保留。',
-      '不提供自动恢复：备份只是给你一条可自己执行的还原路径。',
-      '不改 replace 与 fast-export/import 两件事，它们归别的票。',
+      'filter-branch itself is not run; it is kept only as read-only documentation.',
+      'No automatic recovery is provided; the backup only gives you a restoration path to run yourself.',
+      'Replace and fast-export/import are not changed; they belong to other tickets.',
     ]
     return {
       what: what,
       wont: wont,
       reversible: true,
-      verb: '备份成功后执行整仓重写',
+      verb: 'Rewrite the entire repository after a successful backup',
       backup: {
         kind: backup && backup.kind === 'bundle' ? 'bundle' : 'mirror',
         path: String((backup && backup.path) || ''),

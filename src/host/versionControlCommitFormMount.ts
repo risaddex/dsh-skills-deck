@@ -16,7 +16,7 @@ export function createCommitFormMount(host: any): any {
       assembling = import('./versionControlCommitForm.js').then(function (m: any): any {
         return m.createCommitFormPhone(host)
       }).catch(function (e: any): any {
-        const message: string = '提交表单读取那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the commit-form reader family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { handleGitCommitForm: failed }
       })
