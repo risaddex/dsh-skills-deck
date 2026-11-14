@@ -140,7 +140,7 @@ const STATUS_EXCEPTIONS = [
   },
   {
     file: 'src/client/views/IssueDetail.ts',
-    segment: '显示快照降级',
+    segment: 'Showing a cached snapshot',
     reason: '「显示快照降级」提示文字的琥珀色：数据降级状态提示。',
   },
   {

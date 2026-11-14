@@ -248,8 +248,8 @@ function render (st: any): string {
     snapshot: { issues: [gitlabRow], maps: [] },
   }
   const html = render(st)
-  check(html.indexOf('评论 (20)') >= 0, 'E1 详情页标题写真实条数「评论 (20)」（实得片段 ' + html.slice(0, 120) + '）')
-  check(html.indexOf('评论 (0)') < 0, 'E2 不再显示「评论 (0)」')
+  check(html.indexOf('Comments (20)') >= 0, 'E1 详情页标题写真实条数「评论 (20)」（实得片段 ' + html.slice(0, 120) + '）')
+  check(html.indexOf('Comments (0)') < 0, 'E2 不再显示「评论 (0)」')
   check(html.indexOf('<textarea') >= 0, 'E3 详情取回评论后给出发评论输入框')
   check(html.indexOf('detail.readOnlyHint') < 0, 'E4 不显示只读提示（评论齐全且来源是这一趟详情）')
   check(html.indexOf('detail.noComments') < 0, 'E5 不显示「无评论」（真的有 56 条）')
@@ -268,7 +268,7 @@ function render (st: any): string {
   }
   const html = render(st)
   check(html.indexOf('这张票用来验评论列表、加载更多与发评论写回。') >= 0, 'F1 快照行里的正文先画出来（秒开）')
-  check(html.indexOf('评论 (0)') < 0, 'F2 没取到评论时不说「评论 (0)」')
+  check(html.indexOf('Comments (0)') < 0, 'F2 没取到评论时不说「评论 (0)」')
   check(html.indexOf('detail.noComments') < 0, 'F3 没取到评论时不说「无评论」')
   check(html.indexOf('detail.readOnlyHint') < 0, 'F4 没取到评论时不说「只读」')
   check(html.indexOf('<textarea') < 0, 'F5 评论未知时不给输入框')
@@ -290,21 +290,21 @@ function renderGithubShape (mode: string): string {
 {
   const html = renderGithubShape('loading')
   check(html.indexOf('GitHub 常规列表行：有正文、没有评论数组、没有评论总数。') >= 0, 'G1 GitHub 形状首帧先把正文画出来')
-  check(html.indexOf('评论 (0)') < 0, 'G2 GitHub 形状首帧不说「评论 (0)」')
+  check(html.indexOf('Comments (0)') < 0, 'G2 GitHub 形状首帧不说「评论 (0)」')
   check(html.indexOf('detail.noComments') < 0, 'G3 GitHub 形状首帧不说「无评论」')
   check(html.indexOf('detail.readOnlyHint') < 0, 'G4 GitHub 形状首帧不说「只读」')
   check(html.indexOf('<textarea') < 0, 'G5 GitHub 形状首帧不给输入框（评论还没取到）')
-  check(html.indexOf('评论 · list.loading') >= 0, 'G6 GitHub 形状首帧评论区说加载中')
+  check(html.indexOf('Comments · list.loading') >= 0, 'G6 GitHub 形状首帧评论区说加载中')
 }
 {
   // 取数失败回退：评论区仍要说「还没取到」，不能退化成「评论 (0) / 无评论 / 只读」；
   // 与 loading 的唯一区别是评论区把「加载中」换成「尚未取到」（mode 确实进了界面）。
   const html = renderGithubShape('err')
-  check(html.indexOf('评论 (0)') < 0, 'G7 GitHub 形状取数失败回退不说「评论 (0)」')
+  check(html.indexOf('Comments (0)') < 0, 'G7 GitHub 形状取数失败回退不说「评论 (0)」')
   check(html.indexOf('detail.noComments') < 0, 'G8 GitHub 形状取数失败回退不说「无评论」')
   check(html.indexOf('detail.readOnlyHint') < 0, 'G9 GitHub 形状取数失败回退不说「只读」')
   check(html.indexOf('<textarea') < 0, 'G10 GitHub 形状取数失败回退不给输入框')
-  check(html.indexOf('评论 · detail.notYet') >= 0, 'G11 GitHub 形状取数失败回退评论区说「尚未取到」')
+  check(html.indexOf('Comments · detail.notYet') >= 0, 'G11 GitHub 形状取数失败回退评论区说「尚未取到」')
 }
 
 if (failed) {

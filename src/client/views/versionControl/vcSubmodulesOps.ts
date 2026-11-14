@@ -149,7 +149,7 @@ export function createSubmodulesOpsOf(deps: any): any {
     const base: any = vcSubmodulesUiOf(uiOf())
     const input: any = Object.assign({}, base.field, preset || {})
     const action: any = vcSubmoduleActionOfId(id)
-    if (!action) { patch({ mode: 'failed', error: { kind: 'invalid', reason: 'unknown-action', message: '页面里没有这个动作' } }); return null }
+    if (!action) { patch({ mode: 'failed', error: { kind: 'invalid', reason: 'unknown-action', message: 'This action is not available on this page' } }); return null }
     if (action.kind === 'read') return refresh()
     // 批量身份有两种来源：动作表里 place=batch 的逐条动作（抓取），以及固定批量菜单里的同名动作
     // （初始化、检出记录的提交）。后者也属于菜单，必须把 batch=true 送进预检——只按动作表判会把它们
@@ -168,7 +168,7 @@ export function createSubmodulesOpsOf(deps: any): any {
       return null
     }
     const ticket: any = vcSubmoduleTicketOf(reply)
-    if (!ticket) { patch({ mode: 'failed', error: { kind: 'shape', message: '预检回包里没有票号' } }); return null }
+    if (!ticket) { patch({ mode: 'failed', error: { kind: 'shape', message: 'The preflight response contains no confirmation ticket' } }); return null }
     const plan: any = reply.plan && typeof reply.plan === 'object' ? reply.plan : { action: id }
     patch({ mode: 'confirm', op: id, batch: batch, ticket: ticket, plan: plan, decision: reply.decision || null, reasons: Array.isArray(reply.reasons) ? reply.reasons : [], error: null })
     return reply
@@ -184,7 +184,7 @@ export function createSubmodulesOpsOf(deps: any): any {
   /** 点确认：按计划决定走执行电话还是任务电话；成功就重读面板并贴结果。 */
   async function confirmNow(): Promise<any> {
     const base: any = vcSubmodulesUiOf(uiOf())
-    if (base.mode !== 'confirm' || !base.ticket) { patch({ mode: 'failed', error: { kind: 'invalid', reason: 'confirm-required', message: '还没有预检过，或确认卡已经关了' } }); return null }
+    if (base.mode !== 'confirm' || !base.ticket) { patch({ mode: 'failed', error: { kind: 'invalid', reason: 'confirm-required', message: 'Preflight has not run, or the confirmation card is closed' } }); return null }
     const plan: any = base.plan || {}
     const op: string = String(plan.action || base.op || '')
     const task: boolean = plan.kind === 'task'

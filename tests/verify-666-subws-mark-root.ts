@@ -14,7 +14,7 @@
  *      大小写或斜杠写法不同仍算同一条目录。
  *   C. 出现时是哪几行：拿真实 locale 里的 panel.wsMarkTip 拼（中英各跑一遍），{root} / {rel} 都填好、
  *      相对尾巴用 › 连、不吐反斜杠；第四行「…还未初始化」只在根确实没初始化时才有，且排在最后一行。
- *   D. 组件与产物：组件确实走这几个纯函数、aria-label 是三行用「；」连起来、点击调的是 wf.openFolder；
+ *   D. 组件与产物：组件确实走这几个纯函数、aria-label 是三行用「; 」连起来、点击调的是 wf.openFolder；
  *      两份产物都带上这几个函数名。
  *   E. 真渲染一遍：把组件放进真浏览器环境（真 jsdom + 真 React）画一次，断言「画出来了没有、画成什么样、
  *      点一下干什么、根会话里一行都不画、自动展开只一次」。本票的病因恰恰是「纯函数全对、源码全在，
@@ -270,8 +270,8 @@ try {
   else bad('E3c2 图形还在用 currentColor，会跟着外层字色变')
 
   const aria = (/aria-label="([^"]*)"/.exec(r.html) || [])[1] || ''
-  const ariaLines = aria.split('；')
-  if (ariaLines.length === 3) ok('E4 aria-label 把三句话用「；」连成一句念出来（读屏用户没有悬停这个动作）')
+  const ariaLines = aria.split('; ')
+  if (ariaLines.length === 3) ok('E4 aria-label 把三句话用「; 」连成一句念出来（读屏用户没有悬停这个动作）')
   else bad('E4 aria-label 不是三句拼一句，实际 ' + ariaLines.length + ' 句：' + JSON.stringify(aria))
   if (ariaLines[0] === '面板数据来自工作区 ' + ROOT_DIR && ariaLines[1] === '当前目录是它的子目录：packages › skill-calorie' && ariaLines[2] === '点一下打开 ' + ROOT_DIR)
     ok('E5 aria-label 三句话逐字对（含 › 连接的相对尾巴，不吐反斜杠）')

@@ -156,9 +156,9 @@ const vcConflictsReadNode = function (h: any, t: any, meta: any, read: any, stat
     if (r.kind === 'binary') kids.push(h('p', { key: 'binary', className: 'vcs-conflicts-read-text', 'data-vc-conflicts-view-binary': '1' }, t('vc.conflicts.view.binary')))
     else kids.push(vcConflictsHunksNode(h, t, meta, r, state, handlers))
   } else if (meta.op === 'merge-preview') {
-    kids.push(h('p', { key: 'text', className: 'vcs-conflicts-read-text', 'data-vc-conflicts-preview-clean': r.clean === true ? '1' : '0' }, r.clean === true ? t('vc.conflicts.read.previewClean', { target: String(r.target || '') }) : t('vc.conflicts.read.previewConflicts', { n: String((r.paths || []).length), paths: (r.paths || []).join('、') })))
+    kids.push(h('p', { key: 'text', className: 'vcs-conflicts-read-text', 'data-vc-conflicts-preview-clean': r.clean === true ? '1' : '0' }, r.clean === true ? t('vc.conflicts.read.previewClean', { target: String(r.target || '') }) : t('vc.conflicts.read.previewConflicts', { n: String((r.paths || []).length), paths: (r.paths || []).join(', ') })))
   } else if (meta.op === 'rerere-view') {
-    kids.push(h('p', { key: 'text', className: 'vcs-conflicts-read-text', 'data-vc-conflicts-rerere-enabled': r.enabled === true ? '1' : '0' }, r.enabled === true ? t('vc.conflicts.read.rerereOn', { n: String((r.paths || []).length), paths: (r.paths || []).join('、') }) : t('vc.conflicts.read.rerereOff')))
+    kids.push(h('p', { key: 'text', className: 'vcs-conflicts-read-text', 'data-vc-conflicts-rerere-enabled': r.enabled === true ? '1' : '0' }, r.enabled === true ? t('vc.conflicts.read.rerereOn', { n: String((r.paths || []).length), paths: (r.paths || []).join(', ') }) : t('vc.conflicts.read.rerereOff')))
   } else {
     const worktree: any[] = Array.isArray(r.worktree) ? r.worktree : []
     const staged: any[] = Array.isArray(r.staged) ? r.staged : []

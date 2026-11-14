@@ -226,7 +226,7 @@ export const mdEffortRowNode = function (h: any, st: any, effortNames: any, meas
       }), mdEffortLabelOf(nm, measureTextWidth)))
     }),
     // 折叠时多出来的那一截收进 +N：蓝色虚线，悬停列出全部目录名，点一下展开。
-    hidden.length ? h(Tip, { content: tr('list.effortsTitle', { names: names.join('、') }) }, h('span', chipProps({
+    hidden.length ? h(Tip, { content: tr('list.effortsTitle', { names: names.join(', ') }) }, h('span', chipProps({
       key: 'eff-more',
       className: 'dsws-chip',
       'data-press': 'chip',

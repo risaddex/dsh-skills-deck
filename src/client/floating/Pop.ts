@@ -37,7 +37,7 @@ export     const showPop = function (trig: any, host: any, labels: any, title: a
         pl.appendChild(s)
       })
       const ptitle = document.createElement('div'); ptitle.className = 'ptitle'
-      ptitle.innerHTML = '<b>' + tr('list.popTitle') + '：</b>' + String(title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      ptitle.innerHTML = '<b>' + tr('list.popTitle') + ': </b>' + String(title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       pop.appendChild(pt); pop.appendChild(pl); pop.appendChild(ptitle)
       document.body.appendChild(pop)
       const pr = host ? host.getBoundingClientRect() : { left: 8, right: window.innerWidth - 8, top: 8, bottom: window.innerHeight - 8 }

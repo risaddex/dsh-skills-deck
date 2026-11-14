@@ -234,12 +234,12 @@ const st = {
 const html = renderToStaticMarkup(
   React.createElement(DswsCtx.Provider as any, { value: fakeCx }, React.createElement(IssueDetail as any, { st }))
 )
-check(html.indexOf('评论 (3)') >= 0, '界面：评论区标题写真实条数「评论 (3)」')
+check(html.indexOf('Comments (3)') >= 0, '界面：评论区标题写真实条数「评论 (3)」')
 check(html.indexOf('第一条评论') >= 0 && html.indexOf('第三条评论') >= 0, '界面：评论正文看得见')
 check(html.indexOf('@bob') >= 0, '界面：评论作者看得见（@bob 只出现在评论里）')
 check(html.indexOf('https://example.com/shot-1519.png') >= 0, '界面：截图地址进了渲染结果（<img> 里）')
 check(/data-log="md\.img\.zoom\.\d+"/.test(html), '界面：截图带放大定位串（点得开大图）')
-check(html.indexOf('评论 (0)') < 0, '界面：不再显示「评论 (0)」')
+check(html.indexOf('Comments (0)') < 0, '界面：不再显示「评论 (0)」')
 
 console.log(failed ? '\n#1519 门禁失败 ' + failed + ' 项' : '\n#1519 门禁全部通过')
 process.exit(failed ? 1 : 0)

@@ -268,7 +268,7 @@ export function VC_UNDO_PANEL(props: any): any {
   const ref: any = React.useRef(state)
   ref.current = state
   const callOf = function (method: string, args: any): Promise<any> {
-    if (typeof host === 'undefined' || !host || typeof host.call !== 'function') return Promise.resolve({ ok: false, error: { kind: 'env', message: '宿主电话口不可用' } })
+    if (typeof host === 'undefined' || !host || typeof host.call !== 'function') return Promise.resolve({ ok: false, error: { kind: 'env', message: 'The host connection is unavailable' } })
     try { return Promise.resolve(host.call(method, args)) } catch (e) { return Promise.resolve({ ok: false, error: { kind: 'throw', message: String((e && (e as any).message) || e) } }) }
   }
   const input = function (field: string, value: any): void {

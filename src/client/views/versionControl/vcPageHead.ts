@@ -176,6 +176,27 @@ export const vcPageFactGridNode = function (h: any, t: any, o: any) {
 const VC_PAGE_LEVEL_TONE: Record<string, string> = {
   '读': 'is-read', '写': 'is-write', '改写': 'is-rewrite', '毁': 'is-danger', '非 git': 'is-info',
 }
+// The ledger keeps level and final-form codes in Chinese because they are an internal contract
+//   (comparisons, tones and gates read them). Only the visible text is translated here, through the
+//   copy table, so the active locale decides what a person reads; an unknown code is shown as-is so a
+//   missing ledger entry stays visible instead of disappearing.
+const VC_CAP_LEVEL_KEYS: Record<string, string> = {
+  '读': 'vc.shell.cap.levelName.read', '写': 'vc.shell.cap.levelName.write', '改写': 'vc.shell.cap.levelName.rewrite',
+  '毁': 'vc.shell.cap.levelName.destroy', '非 git': 'vc.shell.cap.levelName.nonGit',
+}
+const VC_CAP_FORM_KEYS: Record<string, string> = {
+  '操作': 'vc.shell.cap.formName.action', '只读': 'vc.shell.cap.formName.readonly', '说明': 'vc.shell.cap.formName.note',
+}
+export const vcCapLevelTextOf = function (t: any, level: any): string {
+  const code: string = String(level === undefined || level === null ? '' : level)
+  const key: string = VC_CAP_LEVEL_KEYS[code] || ''
+  return key !== '' && typeof t === 'function' ? String(t(key)) : code
+}
+export const vcCapFormTextOf = function (t: any, form: any): string {
+  const code: string = String(form === undefined || form === null ? '' : form)
+  const key: string = VC_CAP_FORM_KEYS[code] || ''
+  return key !== '' && typeof t === 'function' ? String(t(key)) : code
+}
 // label 可选：动作行要写的是「这个动作」而不是「整条能力」（例如 11.13 的三行离线包），
 //   传进来就代替账本里的能力名；不传时用账本名。编号与强度始终取账本，页面不另写。
 export const vcPageCapSummaryNode = function (h: any, t: any, capId: any, label: any) {
@@ -192,9 +213,9 @@ export const vcPageCapSummaryNode = function (h: any, t: any, capId: any, label:
     kids.push(h('span', {
       key: 'level',
       className: 'obj-cap-level ' + (VC_PAGE_LEVEL_TONE[level] || 'is-read'),
-      title: t('vc.shell.cap.level') + '：' + level,
-      'aria-label': t('vc.shell.cap.level') + '：' + level,
-    }, level))
+      title: t('vc.shell.cap.level') + ': ' + vcCapLevelTextOf(t, level),
+      'aria-label': t('vc.shell.cap.level') + ': ' + vcCapLevelTextOf(t, level),
+    }, vcCapLevelTextOf(t, level)))
   }
   return h('span', { key: 'cap', className: 'obj-cap', 'data-vc-cap-summary': id }, kids)
 }

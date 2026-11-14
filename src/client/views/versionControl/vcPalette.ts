@@ -40,20 +40,25 @@ export const vcCapabilityAliasOf = function (cap: any) {
  * 「工作树页」「贮藏页」这两组旧叫法（账本是记账用的，按票面不改）。命令面板的「去这里」显示的是
  * 用户真能看到的页签名，所以这里按页面 id 覆盖一次，只影响显示，不改账本里的任何一条。
  */
-const PAGE_VISIBLE_NAMES: Record<string, string> = { worktrees: '工作区', stash: '储藏' }
+// The override points at the tab's copy key, so the palette shows the same word as the tab strip in the
+//   active locale. Callers that pass no translator (gates compiling this leaf alone) get the ledger name.
+const PAGE_VISIBLE_NAME_KEYS: Record<string, string> = { worktrees: 'vc.shell.tab.worktrees', stash: 'vc.shell.tab.stash' }
+declare function vcCapFormTextOf(t: any, form: any): string
 
-export const vcCapabilityPageNameOf = function (cap: any) {
+export const vcCapabilityPageNameOf = function (cap: any, t?: any) {
   const id = String((cap && cap.page) || '')
-  if (PAGE_VISIBLE_NAMES[id]) return PAGE_VISIBLE_NAMES[id]
+  if (PAGE_VISIBLE_NAME_KEYS[id] && typeof t === 'function') return String(t(PAGE_VISIBLE_NAME_KEYS[id]))
   for (let i = 0; i < PAGE_SURFACES.length; i += 1) {
     if (PAGE_SURFACES[i] && PAGE_SURFACES[i].id === id) return PAGE_SURFACES[i].name
   }
   return ''
 }
 
-export const vcCapabilitySummaryOf = function (cap: any) {
+export const vcCapabilitySummaryOf = function (cap: any, t?: any) {
   if (!cap) return ''
-  return String(cap.domainName || '') + '｜' + vcCapabilityPageNameOf(cap) + '｜' + String(cap.finalForm || '')
+  // finalForm is an internal code; show it in the active locale when a translator is available.
+  const form: string = typeof t === 'function' && typeof vcCapFormTextOf === 'function' ? vcCapFormTextOf(t, cap.finalForm) : String(cap.finalForm || '')
+  return String(cap.domainName || '') + ' | ' + vcCapabilityPageNameOf(cap, t) + ' | ' + form
 }
 
 // 写 / 毁 / 改写的动作需要对象上下文（选哪条分支、哪笔提交），命令面板只跳入口，不直接执行。
@@ -88,7 +93,7 @@ const vcPaletteVersionNoteOf = function (cap: any, version: any) {
   }
 }
 
-export const vcPaletteRowOf = function (cap: any, version: any) {
+export const vcPaletteRowOf = function (cap: any, version: any, t?: any) {
   const alias = vcCapabilityAliasOf(cap)
   const note = vcPaletteVersionNoteOf(cap, version)
   return {
@@ -96,8 +101,8 @@ export const vcPaletteRowOf = function (cap: any, version: any) {
     name: String(cap.name || ''),
     alias: alias,
     command: String(cap.command || ''),
-    summary: vcCapabilitySummaryOf(cap),
-    pageName: vcCapabilityPageNameOf(cap),
+    summary: vcCapabilitySummaryOf(cap, t),
+    pageName: vcCapabilityPageNameOf(cap, t),
     page: String(cap.page || ''),
     primaryEntry: String(cap.primaryEntry || ''),
     level: String(cap.level || ''),
@@ -109,9 +114,9 @@ export const vcPaletteRowOf = function (cap: any, version: any) {
   }
 }
 
-export const vcPaletteMatchOf = function (query: any, version: any) {
+export const vcPaletteMatchOf = function (query: any, version: any, t?: any) {
   const q = String(query === undefined || query === null ? '' : query).trim().toLowerCase()
-  const all = CAPABILITIES.map(function (cap: any) { return vcPaletteRowOf(cap, version) })
+  const all = CAPABILITIES.map(function (cap: any) { return vcPaletteRowOf(cap, version, t) })
   if (!q) return all
   return all.filter(function (row: any) {
     const hay = [row.id, row.name, row.alias, row.command, row.summary, row.pageName].join(' ').toLowerCase()
@@ -119,8 +124,8 @@ export const vcPaletteMatchOf = function (query: any, version: any) {
   })
 }
 
-export const vcPaletteRowsOf = function (query: any, limit: any, version: any) {
-  const rows = vcPaletteMatchOf(query, version)
+export const vcPaletteRowsOf = function (query: any, limit: any, version: any, t?: any) {
+  const rows = vcPaletteMatchOf(query, version, t)
   const n = Number(limit) > 0 ? Math.min(Number(limit), VC_PALETTE_MAX) : VC_PALETTE_RENDER_MAX
   return rows.slice(0, n)
 }
@@ -184,8 +189,8 @@ export const vcPaletteRowNode = function (h: any, t: any, row: any, hit: boolean
 export const vcPaletteNode = function (h: any, t: any, o: any) {
   const opts = o || {}
   const version = vcPaletteVersionOf(opts.reads)
-  const matches = vcPaletteMatchOf(opts.query, version)
-  const rows = vcPaletteRowsOf(opts.query, opts.limit, version)
+  const matches = vcPaletteMatchOf(opts.query, version, t)
+  const rows = vcPaletteRowsOf(opts.query, opts.limit, version, t)
   const hitId = opts.highlight ? String(opts.highlight) : ''
   const body: any[] = []
   body.push(h('div', { key: 'head', className: 'vcs-pal-head' }, [

@@ -32,7 +32,7 @@ export const RefreshFailMark = ({ st }: any) => {
   const tone = (typeof freshnessToneColor === 'function') ? freshnessToneColor('red') : ''
   return h(Tip, { content: full }, h('span', {
     'data-head-fail': fail.reason,
-    'aria-label': label + '：' + full,
+    'aria-label': label + ': ' + full,
     style: { display: 'inline-flex', alignItems: 'center', gap: 3, flex: 'none', fontSize: 10, lineHeight: '14px', color: tone, whiteSpace: 'nowrap' },
   }, [
     Ic({ n: 'alert', size: 10, key: 'icon' }),

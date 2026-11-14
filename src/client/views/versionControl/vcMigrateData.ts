@@ -73,7 +73,7 @@ export const vcApplyMigrateReply = function (reads: any, reply: any) {
   if (reply && reply.ok === true) {
     return vcMigrateMerge(base, { migrate: { state: 'ok', data: reply, error: null } })
   }
-  const error: any = (reply && reply.error) || { kind: 'host', message: '预检没有返回结果' }
+  const error: any = (reply && reply.error) || { kind: 'host', message: 'Preflight returned no result' }
   return vcMigrateMerge(base, { migrate: { state: 'err', data: (base.migrate && base.migrate.data) || null, error: error } })
 }
 
@@ -86,7 +86,7 @@ export const vcApplyMigrateWriteReply = function (reads: any, reply: any) {
       task: { state: 'ok', data: reply.task || null, error: null }
     })
   }
-  const error: any = (reply && reply.error) || { kind: 'host', message: '执行没有返回结果' }
+  const error: any = (reply && reply.error) || { kind: 'host', message: 'The operation returned no result' }
   return vcMigrateMerge(base, { task: { state: 'err', data: (base.task && base.task.data) || null, error: error } })
 }
 

@@ -151,7 +151,7 @@ export const vcBranchCheck = function (reads: any, call: any, cwd: any, op: any,
       else vcBrFailLog(VC_BRANCH_CHECK_PHONE, req.op, t0, { kind: shapeOk ? String(((reply || {}).error || {}).kind || 'blocked') : 'shape', message: '' })
       const check = shapeOk
         ? { state: good ? 'ok' : 'err', data: reply, error: good ? null : { kind: String((reply.error || {}).kind || 'blocked'), message: String((reply.error || {}).message || '') } }
-        : { state: 'err', data: null, error: { kind: 'shape', message: '预检回包形状不对' } }
+        : { state: 'err', data: null, error: { kind: 'shape', message: 'The preflight response has an invalid shape' } }
       return Object.assign({}, base, { branch: { state: prev.state, data: prev.data, error: prev.error, check: check, write: prev.write || null } })
     })
     .catch(function (e: any) {

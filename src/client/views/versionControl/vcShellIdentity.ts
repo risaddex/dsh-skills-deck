@@ -80,7 +80,7 @@ export const vcRailReasonsOf = function (screen: any, t: any): any[] {
     rows.push({
       id: id,
       act: t('vc.shell.sync.' + id),
-      text: keys.map(function (k: string) { return t(k) }).join('；'),
+      text: keys.map(function (k: string) { return t(k) }).join('; '),
       tone: decision && decision.verdict === 'block' ? 'block' : 'warn',
     })
   })
@@ -186,7 +186,7 @@ export const vcShellIdentityNode = function (h: any, t: any, o: any) {
       ]),
       h('button', {
         key: 'reload', className: 'icon-text-btn', type: 'button', 'data-vc-refresh': '1',
-        title: t('vc.shell.identity.reload') + '（' + when + '）',
+        title: t('vc.shell.identity.reload') + ' (' + when + ')',
       }, [
         h('span', { key: 'i', className: 'icon-text-btn-icon', 'aria-hidden': 'true' }, vcRailIconOf(h, 'refresh', 13)),
         h('span', { key: 'label', className: 'icon-text-btn-label' }, t('vc.shell.identity.reload')),

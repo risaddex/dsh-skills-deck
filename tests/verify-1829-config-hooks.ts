@@ -287,7 +287,7 @@ async function main() {
   const mailmapRow = byAttr(readonlySec, 'data-vc-config-mailmap')[0]
   check(!!attrRow && attrRow.props['data-vc-config-attr'] === '1' && !!mailmapRow && mailmapRow.props['data-vc-config-mailmap'] === '1', 'E7 属性规则与邮件映射各一行（data-vc-config-attr / data-vc-config-mailmap）')
   check(attrVals(attrRow, 'data-vc-config-cap').join(',') === '12.7' && attrVals(mailmapRow, 'data-vc-config-cap').join(',') === '12.8', 'E8 两行的查询按钮各标 12.7 与 12.8（实得 ' + attrVals(attrRow, 'data-vc-config-cap').join(',') + ' / ' + attrVals(mailmapRow, 'data-vc-config-cap').join(',') + '）')
-  check(attrVals(attrRow, 'data-vc-config-attr-result')[0] === 'ok' && textOf(pick(attrRow, 'vcs-config-query-result')) === 'text=auto；eol=lf', 'E9 属性规则结果贴行内，按 key=value 原样印（实得「' + textOf(pick(attrRow, 'vcs-config-query-result')) + '」）')
+  check(attrVals(attrRow, 'data-vc-config-attr-result')[0] === 'ok' && textOf(pick(attrRow, 'vcs-config-query-result')) === 'text=auto; eol=lf', 'E9 属性规则结果贴行内，按 key=value 原样印（实得「' + textOf(pick(attrRow, 'vcs-config-query-result')) + '」）')
   check(attrVals(mailmapRow, 'data-vc-config-mailmap-result')[0] === 'ok' && textOf(pick(mailmapRow, 'vcs-config-query-result')) === 'FeatherHunter <975559549@qq.com>', 'E10 邮件映射结果贴行内，映射后的地址原样印（实得「' + textOf(pick(mailmapRow, 'vcs-config-query-result')) + '」）')
   const attrNoneState = ops.vcConfigApplyRead(configState, readReply({ attr: { state: 'ok', entries: [] } }))
   const attrNonePage = configLeaf.vcConfigPageNode(h, trZh, { state: attrNoneState })

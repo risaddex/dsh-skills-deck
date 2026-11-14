@@ -59,7 +59,7 @@ declare const CONTAINER_ACCENT: any;
     // React.useContext(DswsCtx) 消费 cx（h/storeSvc 等），渲染输出与接线前一致（verify-* 全绿证明）。
     export const apiCall = function (endpoint: any, args: any) {
       if (typeof host === 'undefined' || typeof host.call !== 'function') {
-        return Promise.reject(new Error('host.call 不可用（Host 半未加载）'))
+        return Promise.reject(new Error('host.call is unavailable (the host module has not loaded)'))
       }
       return host.call(endpoint, args)
     }

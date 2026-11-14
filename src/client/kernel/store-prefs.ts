@@ -217,8 +217,8 @@ export const workspaceFileNoteOf = function (wf: any): string {
   try {
     if (!wf || typeof wf !== 'object') return ''
     if (wf.ok !== true) return ''
-    if (wf.reason === 'overwritten') return '已把这次选择写进工作区里的配置文件（覆盖了原来那一条）。'
-    return '已把这次选择写进工作区里的配置文件。'
+    if (wf.reason === 'overwritten') return 'This selection was saved in the workspace configuration file, replacing the previous selection.'
+    return 'This selection was saved in the workspace configuration file.'
   } catch (e) { return '' }
 }
 // 状态栏那一行小灰字的节点：有结果才有这一行，没有结果回空（不占位，现有布局一个像素都不动）。

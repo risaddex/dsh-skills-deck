@@ -80,7 +80,7 @@ declare function resolveFailText(...args: any[]): any;
           const method = isDir ? 'wf.pickDirectory' : 'wf.pickFile'
           try {
             if (typeof host === 'undefined' || !host.call) {
-              try { if (typeof flash === 'function') flash(st, '宿主选择器不可用，请手动输入路径', 'warn') } catch(_){}
+              try { if (typeof flash === 'function') flash(st, 'The host picker is unavailable. Enter the path manually.', 'warn') } catch(_){}
               return
             }
             m.pending = true
@@ -91,7 +91,7 @@ declare function resolveFailText(...args: any[]): any;
             if (res && res.ok && typeof res.path === 'string' && res.path) {
               const nxt = Object.assign({}, vals); nxt[f.name] = res.path; setVals(nxt)
               if (isWizard && m.valuesByStep && m.valuesByStep[stepIndex]) { m.valuesByStep[stepIndex] = Object.assign({}, nxt) }
-              try { if (typeof flash === 'function') flash(st, '已选择：' + res.path, 'ok') } catch(_){}
+              try { if (typeof flash === 'function') flash(st, 'Selected: ' + res.path, 'ok') } catch(_){}
             } else if (res && res.ok === false && res.error && String(res.error).toLowerCase().indexOf('cancel') < 0) {
               try { if (typeof flash === 'function') flash(st, String(res.error).slice(0,200), 'warn') } catch(_){}
             }
@@ -106,8 +106,8 @@ declare function resolveFailText(...args: any[]): any;
       const validateCurrent = function () {
         for (let i = 0; i < curSchema.length; i++) {
           const f = curSchema[i]
-          if (f && f.required) { const v = String(vals[f.name] || '').trim(); if (!v) { try { if (typeof flash === 'function') flash(st, String(f.label || f.name) + ' 必填', 'warn') } catch(_){} return false } }
-          if (f && f.pattern) { try { const re = new RegExp(f.pattern); if (!re.test(String(vals[f.name] || ''))) { try { if (typeof flash === 'function') flash(st, String(f.label || f.name) + ' 格式不正确', 'warn') } catch(_){} return false } } catch(_){} }
+          if (f && f.required) { const v = String(vals[f.name] || '').trim(); if (!v) { try { if (typeof flash === 'function') flash(st, String(f.label || f.name) + ' is required', 'warn') } catch(_){} return false } }
+          if (f && f.pattern) { try { const re = new RegExp(f.pattern); if (!re.test(String(vals[f.name] || ''))) { try { if (typeof flash === 'function') flash(st, String(f.label || f.name) + ' has an invalid format', 'warn') } catch(_){} return false } } catch(_){} }
         }
         return true
       }
@@ -164,14 +164,14 @@ declare function resolveFailText(...args: any[]): any;
         const allSchemas = isWizard ? (function(){ const a: any[]=[]; for(let i=0;i<wizardSteps.length;i++) a.push(...wizardSteps[i].schema); return a })() : curSchema
         for (let i = 0; i < allSchemas.length; i++) {
           const f = allSchemas[i]
-          if (f && f.required) { const v = String(merged[f.name] || '').trim(); if (!v) { try { if (typeof flash === 'function') flash(st, String(f.label || f.name) + ' 必填', 'warn') } catch(_){}
+          if (f && f.required) { const v = String(merged[f.name] || '').trim(); if (!v) { try { if (typeof flash === 'function') flash(st, String(f.label || f.name) + ' is required', 'warn') } catch(_){}
             // Q8 自动回跳到含该字段的步骤
             if (isWizard) {
               for (let si=0; si<wizardSteps.length; si++) { const sch=wizardSteps[si].schema; for(let fi=0;fi<sch.length;fi++) if(sch[fi].name===f.name){ m.stepIndex=si; try{ if(typeof emit==='function') emit(st)}catch(_){}; return } }
             } else return
           }}
         }
-        if (!m.onSubmit) { try { if (typeof flash === 'function') flash(st, '表单缺少提交句柄', 'warn') } catch(_){} return }
+        if (!m.onSubmit) { try { if (typeof flash === 'function') flash(st, 'The form has no submit handler', 'warn') } catch(_){} return }
         const cb = m.onSubmit
         m.pending = true
         try { if (typeof emit === 'function') emit(st) } catch(_){}
@@ -194,7 +194,7 @@ declare function resolveFailText(...args: any[]): any;
             if (repo && (repo.owner || repo.name)) {
               m.success = { owner: repo.owner || '', name: repo.name || '', url: (repoData && repoData.repoUrl) ? repoData.repoUrl : '', visLabel: visLabelOf(m.lastVis) }
             } else {
-              try { if (typeof flash === 'function') flash(st, '已提交，链条重查中…', 'ok') } catch(_){}
+              try { if (typeof flash === 'function') flash(st, 'Submitted. Rechecking setup…', 'ok') } catch(_){}
             }
             try { if (typeof emit === 'function') emit(st) } catch(_){}
           })
@@ -241,7 +241,7 @@ declare function resolveFailText(...args: any[]): any;
       const onSubmit = isWizard ? onWizardSubmit : async function () {
         if (m.pending || m.justSent) return
         if (!validateCurrent()) return
-        if (!m.onSubmit) { try { if (typeof flash === 'function') flash(st, '表单缺少提交句柄', 'warn') } catch(_){} return }
+        if (!m.onSubmit) { try { if (typeof flash === 'function') flash(st, 'The form has no submit handler', 'warn') } catch(_){} return }
         const cb = m.onSubmit
         m.pending = true
         try { if (typeof emit === 'function') emit(st) } catch(_){}
@@ -251,7 +251,7 @@ declare function resolveFailText(...args: any[]): any;
           // #952：宽按钮成功换字后再走原来的关闭与提示；链条重查成功即开始，不等节拍
           sentBeat(function () {
             try { closeFormModal(st) } catch(_){ m.open = false; try { if (typeof emit === 'function') emit(st) } catch(__){} }
-            try { if (typeof flash === 'function') flash(st, '已提交，链条重查中…', 'ok') } catch(_){}
+            try { if (typeof flash === 'function') flash(st, 'Submitted. Rechecking setup…', 'ok') } catch(_){}
           })
           try {
             if (typeof host !== 'undefined' && host.call) {
@@ -308,7 +308,7 @@ declare function resolveFailText(...args: any[]): any;
         const done = i < stepIndex
         const bg = done ? '#16a34a' : active ? '#58a6ff' : '#2a2d35'
         const color = done || active ? '#fff' : '#8b8b95'
-        const title = s.title || ('步骤 ' + String(i+1))
+        const title = s.title || ('Step ' + String(i+1))
         return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 6 } }, [
           h('span', { style: { width: 22, height: 22, borderRadius: '50%', background: bg, color: color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 } }, done ? '✓' : String(i+1)),
           h('span', { style: { fontSize: 11, color: active ? '#e6edf3' : '#8b8b95', fontWeight: active ? 600 : 400 } }, title),
@@ -319,25 +319,25 @@ declare function resolveFailText(...args: any[]): any;
       //   但日志名仍分开写，免得看日志时猜不出是哪一步点的。
       const navRow = isWizard ? h('div', { style: { display: 'flex', gap: 6, justifyContent: 'space-between', marginTop: 8, alignItems: 'center' } }, [
         h('div', { style: { display: 'flex', gap: 6 } }, [
-          h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.wizard.cancel', onClick: onClose, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px' } }, '取消'),
-          stepIndex > 0 ? h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.wizard.prev', onClick: onPrev, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px' } }, '上一步') : null
+          h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.wizard.cancel', onClick: onClose, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px' } }, 'Cancel'),
+          stepIndex > 0 ? h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.wizard.prev', onClick: onPrev, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px' } }, 'Back') : null
         ]),
         h('div', { style: { display: 'flex', gap: 6, alignItems: 'center' } }, [
           h('span', { style: { fontSize: 10, color: '#8b8b95' } }, String(stepIndex+1) + ' / ' + String(totalSteps)),
-          stepIndex < totalSteps - 1 ? h('button', { className: 'dsws-btn primary dsws-hov', 'data-press': 'button', 'data-log': 'modal.wizard.next', onClick: onNext, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px', background: '#58a6ff', borderColor: '#58a6ff', color: '#0b1220', fontWeight: 600 } }, '下一步') : h('button', { className: 'dsws-btn primary dsws-hov' + (m.pending ? ' dsws-fb-busy' : '') + (m.justSent ? ' dsws-fb-result' : ''), 'data-press': 'button', 'data-log': 'modal.wizard.submit', onClick: onSubmit, disabled: !!m.pending || !!m.justSent, style: { fontSize: 11, padding: '4px 10px', background: m.pending ? '#6b7280' : '#58a6ff', borderColor: m.pending ? '#6b7280' : '#58a6ff', color: '#0b1220', fontWeight: 600, opacity: m.pending ? 0.7 : 1 } }, m.pending ? [h('span', { key: 't', className: 'fb-t', 'aria-hidden': 'true' }, tr('panel.submitting')), h('span', { key: 's', className: 'fb-spin', 'aria-hidden': 'true' }, h('span', { className: 'dsws-spinner', style: { width: 11, height: 11, borderWidth: 2 } }))] : (m.justSent ? tr('panel.submitted') : '提交'))
+          stepIndex < totalSteps - 1 ? h('button', { className: 'dsws-btn primary dsws-hov', 'data-press': 'button', 'data-log': 'modal.wizard.next', onClick: onNext, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px', background: '#58a6ff', borderColor: '#58a6ff', color: '#0b1220', fontWeight: 600 } }, 'Next') : h('button', { className: 'dsws-btn primary dsws-hov' + (m.pending ? ' dsws-fb-busy' : '') + (m.justSent ? ' dsws-fb-result' : ''), 'data-press': 'button', 'data-log': 'modal.wizard.submit', onClick: onSubmit, disabled: !!m.pending || !!m.justSent, style: { fontSize: 11, padding: '4px 10px', background: m.pending ? '#6b7280' : '#58a6ff', borderColor: m.pending ? '#6b7280' : '#58a6ff', color: '#0b1220', fontWeight: 600, opacity: m.pending ? 0.7 : 1 } }, m.pending ? [h('span', { key: 't', className: 'fb-t', 'aria-hidden': 'true' }, tr('panel.submitting')), h('span', { key: 's', className: 'fb-spin', 'aria-hidden': 'true' }, h('span', { className: 'dsws-spinner', style: { width: 11, height: 11, borderWidth: 2 } }))] : (m.justSent ? tr('panel.submitted') : 'Submit'))
         ])
       ]) : h('div', { style: { display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 8 } }, [
-        h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.form.cancel', onClick: onClose, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px' } }, '取消'),
-        h('button', { className: 'dsws-btn primary dsws-hov' + (m.pending ? ' dsws-fb-busy' : '') + (m.justSent ? ' dsws-fb-result' : ''), 'data-press': 'button', 'data-log': 'modal.form.submit', onClick: onSubmit, disabled: !!m.pending || !!m.justSent, style: { fontSize: 11, padding: '4px 10px', background: m.pending ? '#6b7280' : '#58a6ff', borderColor: m.pending ? '#6b7280' : '#58a6ff', color: '#0b1220', fontWeight: 600, opacity: m.pending ? 0.7 : 1 } }, m.pending ? [h('span', { key: 't', className: 'fb-t', 'aria-hidden': 'true' }, tr('panel.submitting')), h('span', { key: 's', className: 'fb-spin', 'aria-hidden': 'true' }, h('span', { className: 'dsws-spinner', style: { width: 11, height: 11, borderWidth: 2 } }))] : (m.justSent ? tr('panel.submitted') : '提交')),
+        h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.form.cancel', onClick: onClose, disabled: !!m.pending, style: { fontSize: 11, padding: '4px 10px' } }, 'Cancel'),
+        h('button', { className: 'dsws-btn primary dsws-hov' + (m.pending ? ' dsws-fb-busy' : '') + (m.justSent ? ' dsws-fb-result' : ''), 'data-press': 'button', 'data-log': 'modal.form.submit', onClick: onSubmit, disabled: !!m.pending || !!m.justSent, style: { fontSize: 11, padding: '4px 10px', background: m.pending ? '#6b7280' : '#58a6ff', borderColor: m.pending ? '#6b7280' : '#58a6ff', color: '#0b1220', fontWeight: 600, opacity: m.pending ? 0.7 : 1 } }, m.pending ? [h('span', { key: 't', className: 'fb-t', 'aria-hidden': 'true' }, tr('panel.submitting')), h('span', { key: 's', className: 'fb-spin', 'aria-hidden': 'true' }, h('span', { className: 'dsws-spinner', style: { width: 11, height: 11, borderWidth: 2 } }))] : (m.justSent ? tr('panel.submitted') : 'Submit')),
       ])
       // 接线（#1335 界面反馈）：弹窗盒本身不是控件（它的点击只是不让遮罩那条关闭判定生效），
       //   但遮罩已经接了日志，点在盒内会被记成「点了遮罩」；盒上单独挂一个日志名好区分，不挂按压形状（免得一按整块弹窗变暗）。
-      const box = h('div', { className: 'dsws-modalbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': m.label || (isWizard ? '向导' : '表单'), 'data-log': 'modal.form.dialog', style: { width: 480, maxWidth: '94vw' }, onClick: function (e: any) { e.stopPropagation() } }, [
+      const box = h('div', { className: 'dsws-modalbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': m.label || (isWizard ? 'Wizard' : 'Form'), 'data-log': 'modal.form.dialog', style: { width: 480, maxWidth: '94vw' }, onClick: function (e: any) { e.stopPropagation() } }, [
         h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } }, [
-          h('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary,#e6edf3)' } }, m.label || (isWizard ? '向导' : '填写表单')),
-          h('button', { className: 'dsws-btn ghost', 'data-press': 'icon', 'data-log': 'modal.form.close', 'aria-label': '关闭', onClick: onClose, disabled: !!m.pending, style: { fontSize: 12, padding: '2px 8px' } }, '✕'),
+          h('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--dsw-alias-label-primary,#e6edf3)' } }, m.label || (isWizard ? 'Wizard' : 'Fill in the form')),
+          h('button', { className: 'dsws-btn ghost', 'data-press': 'icon', 'data-log': 'modal.form.close', 'aria-label': 'Close', onClick: onClose, disabled: !!m.pending, style: { fontSize: 12, padding: '2px 8px' } }, '✕'),
         ]),
-        isWizard ? h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-caption,#8b8b95)', marginBottom: 4 } }, (wizardSteps[stepIndex].title || ('步骤 ' + String(stepIndex+1))) + ' — 请填写后继续' + (_queueLen(st) > 0 ? '（队列中还有 ' + String(_queueLen(st)) + ' 个待处理）' : '')) : h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-caption,#8b8b95)', marginBottom: 8, lineHeight: 1.5 } }, '请填写后提交，提交后将自动重查。' + (_queueLen(st) > 0 ? '（队列中还有 ' + String(_queueLen(st)) + ' 个待处理）' : '')),
+        isWizard ? h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-caption,#8b8b95)', marginBottom: 4 } }, (wizardSteps[stepIndex].title || ('Step ' + String(stepIndex+1))) + ' — Complete this step to continue' + (_queueLen(st) > 0 ? ' (' + String(_queueLen(st)) + ' pending in the queue)' : '')) : h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-caption,#8b8b95)', marginBottom: 8, lineHeight: 1.5 } }, 'Fill in the form and submit. Checks run again automatically.' + (_queueLen(st) > 0 ? ' (' + String(_queueLen(st)) + ' pending in the queue)' : '')),
         stepper,
         ...fields,
         // #420/#426：失败内联错误条（常驻；链接 + 半成功重试入口；关闭/重新提交时清除）
@@ -353,7 +353,7 @@ declare function resolveFailText(...args: any[]): any;
       // #419/#425：成功弹窗（复用 modal-seat，向导关闭后成功态独占展示）
       if (isSuccess) {
         const sv = m.success || {}
-        const sBody = sv.url ? (function(){ try { return tr('panel.successModal.body', { owner: sv.owner || '...', repo: sv.name || '...', vis: sv.visLabel || '公开' }) } catch(_){ return 'Repository created' } })() : (function(){ try { return tr('panel.successModal.bodyFallback', { repo: sv.name || '...', vis: sv.visLabel || '公开' }) } catch(_){ return 'Repository created' } })()
+        const sBody = sv.url ? (function(){ try { return tr('panel.successModal.body', { owner: sv.owner || '...', repo: sv.name || '...', vis: sv.visLabel || 'public' }) } catch(_){ return 'Repository created' } })() : (function(){ try { return tr('panel.successModal.bodyFallback', { repo: sv.name || '...', vis: sv.visLabel || 'public' }) } catch(_){ return 'Repository created' } })()
         // 接线（#1335 界面反馈）：成功弹窗的盒子同理：只挂日志名用来和遮罩区分，不挂按压形状。
         const sBox = h('div', { className: 'dsws-modalbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': (typeof tr === 'function' ? tr('panel.successModal.title') : 'Repository created'), 'data-log': 'modal.success.dialog', style: { width: 480, maxWidth: '94vw', borderColor: '#2b4a33' }, onClick: function (e: any) { e.stopPropagation() } }, [
           h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } }, [

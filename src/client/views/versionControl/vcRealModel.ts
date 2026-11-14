@@ -429,7 +429,7 @@ export const vcRealAiEntriesOf = function (reads: any, nav: any, t: any): any[] 
   if (repo.rebasing === true) midos.push(t('vc.band.rebase'))
   if (repo.cherryPicking === true) midos.push(t('vc.band.cherryPick'))
   if (repo.reverting === true) midos.push(t('vc.band.revert'))
-  if (midos.length) out.push({ kind: 'midop', summary: midos.join('、'), detail: t('vc.band.terminalTip') })
+  if (midos.length) out.push({ kind: 'midop', summary: midos.join(', '), detail: t('vc.band.terminalTip') })
   const err: any = (reads && reads.firstScreen && reads.firstScreen.error) || {}
   const failKind: string = String(err.kind || '')
   if (String(vcFirstScreenStateOf(reads) || '') === 'err' && VC_AI_READ_FAIL_KINDS.indexOf(failKind) >= 0) {

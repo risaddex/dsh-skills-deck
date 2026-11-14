@@ -221,7 +221,7 @@ const vcBranchDegradedOfNode = function (h: any, t: any, board: any) {
   const degraded: any[] = board ? vcBranchDegradedOf(board) : []
   if (degraded.length === 0) return null
   const gitVersion: string = String((board.capabilities || {}).gitVersion || '')
-  const alternatives: string = degraded.map(function (a: any) { return String(a.alternative || '') }).filter(function (s: string) { return s !== '' }).join('；')
+  const alternatives: string = degraded.map(function (a: any) { return String(a.alternative || '') }).filter(function (s: string) { return s !== '' }).join('; ')
   return h('p', { key: 'degraded', className: 'vcs-branch2-warn vcs-branch2-degraded', 'data-vc-branch-degraded': String(degraded.length), 'data-vc-branch-git-version': gitVersion }, t('vc.shell.branch2.degraded', { version: gitVersion, alternatives: alternatives }))
 }
 
@@ -286,9 +286,9 @@ const vcBranchBranchesSectionOf = function (h: any, t: any, board: any, view: an
     kids.push(h('details', { key: 'lists', className: 'vcs-branch2-lists', 'data-vc-branch-merged': String(merged.length), 'data-vc-branch-notmerged': String(notMerged.length) }, [
       h('summary', { key: 'sum', className: 'vcs-branch2-summary', 'data-press': 'button', 'data-log': 'vc.branch.page.lists' }, t('vc.shell.branch2.listsTitle')),
       h('p', { key: 'mh', className: 'vcs-branch2-h' }, t('vc.shell.branch2.merged')),
-      h('p', { key: 'm', className: 'vcs-branch2-names', 'data-vc-branch-merged-list': merged.join(',') }, merged.join('、') || t('vc.shell.branch2.none')),
+      h('p', { key: 'm', className: 'vcs-branch2-names', 'data-vc-branch-merged-list': merged.join(',') }, merged.join(', ') || t('vc.shell.branch2.none')),
       h('p', { key: 'nh', className: 'vcs-branch2-h' }, t('vc.shell.branch2.notMerged')),
-      h('p', { key: 'n', className: 'vcs-branch2-names', 'data-vc-branch-notmerged-list': notMerged.join(',') }, notMerged.join('、') || t('vc.shell.branch2.none')),
+      h('p', { key: 'n', className: 'vcs-branch2-names', 'data-vc-branch-notmerged-list': notMerged.join(',') }, notMerged.join(', ') || t('vc.shell.branch2.none')),
     ]))
   }
   return vcPageSectionNode(h, t, {

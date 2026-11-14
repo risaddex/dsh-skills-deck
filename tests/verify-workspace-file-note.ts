@@ -115,10 +115,10 @@ const prefsSrc = spliceableJs(PREFS_REL)
 //   B 组也不再为那一档生成判据 —— 改成「没写成」那一档：翻译函数回空串，那一行不占位。
 
 // 判据认的同义表达：写成数组，命中任意一个就算有这层意思（理由见文件头「判据钉到什么程度」）。
-const W_WORKSPACE = ['工作区']
-const W_CONFIG_FILE = ['配置文件', '设置文件']
-const W_COVER = ['覆盖', '换掉', '换成']
-const W_ORIGINAL = ['原来', '原有', '原本']
+const W_WORKSPACE = ['workspace']
+const W_CONFIG_FILE = ['configuration file', 'settings file']
+const W_COVER = ['replacing', 'replaced', 'overwriting', 'overwritten']
+const W_ORIGINAL = ['previous', 'original', 'existing']
 const anyOf = (t, words) => words.some((w) => t.includes(w))
 const isSentence = (t) => typeof t === 'string' && t !== ''
 //   已创建：说得清是写进了工作区里的配置文件，且不许谎称覆盖。

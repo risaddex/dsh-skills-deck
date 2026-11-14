@@ -274,7 +274,7 @@ export const vcChangesFileRowNode = function (h: any, t: any, row: any, ctx: any
   const rowKids: any[] = [
     h('div', {
       key: 'main', className: 'file-main', role: 'button', tabIndex: 0,
-      'aria-expanded': open ? 'true' : 'false', 'aria-label': path + '：' + statusText,
+      'aria-expanded': open ? 'true' : 'false', 'aria-label': path + ': ' + statusText,
       'data-vc-file-open': path, 'data-press': 'button', 'data-log': 'vc.changes.file.open', title: path,
       onClick: toggle,
       onKeyDown: function (ev: any) {

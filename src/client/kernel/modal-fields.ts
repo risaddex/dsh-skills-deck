@@ -34,10 +34,10 @@ export const modalFormFields = function (curSchema: any, ctx: any): any {
           return h('div', { key: f.name || idx, style: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 } }, [
             h('label', { htmlFor: id, style: { fontSize: 11, color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: 4 } }, [ h('span', null, label), f && f.required ? h('span', { style: { color: '#f87171' } }, '*') : null ]),
             h('div', { style: { display: 'flex', gap: 6, alignItems: 'center' } }, [
-              h('input', { id: id, type: 'text', value: String(vals[f.name] || ''), placeholder: placeholder || (isDirectory ? '请选择目录或手动输入' : '请选择文件或手动输入'), disabled: !!m.pending, onChange: function (e: any): void { const nxt: any = Object.assign({}, vals); nxt[f.name] = e.target.value; setVals(nxt) }, style: { flex: 1, minWidth: 0, fontSize: 12, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--dsw-alias-border-l1,#2a2d35)', background: 'var(--dsw-alias-bg-layer-1,#10131a)', color: 'var(--dsw-alias-label-primary,#e6edf3)' } }),
+              h('input', { id: id, type: 'text', value: String(vals[f.name] || ''), placeholder: placeholder || (isDirectory ? 'Choose a folder or enter its path' : 'Choose a file or enter its path'), disabled: !!m.pending, onChange: function (e: any): void { const nxt: any = Object.assign({}, vals); nxt[f.name] = e.target.value; setVals(nxt) }, style: { flex: 1, minWidth: 0, fontSize: 12, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--dsw-alias-border-l1,#2a2d35)', background: 'var(--dsw-alias-bg-layer-1,#10131a)', color: 'var(--dsw-alias-label-primary,#e6edf3)' } }),
               // 接线（#1335 界面反馈）：这颗按钮调起宿主的目录/文件选择器。日志名按字段类型分两枚
               //   （选目录与选文件是两种动作），都不写按钮上那句文字。
-              h('button', { type: 'button', className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.field.browse.' + (isDirectory ? 'dir' : 'file'), disabled: !!m.pending, onClick: onPick(f), style: { fontSize: 11, padding: '4px 10px', flex: 'none' } }, isDirectory ? '浏览目录…' : '浏览文件…')
+              h('button', { type: 'button', className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'modal.field.browse.' + (isDirectory ? 'dir' : 'file'), disabled: !!m.pending, onClick: onPick(f), style: { fontSize: 11, padding: '4px 10px', flex: 'none' } }, isDirectory ? 'Browse folders…' : 'Browse files…')
             ]),
           ])
         }

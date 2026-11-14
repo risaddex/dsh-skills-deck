@@ -6,7 +6,7 @@
 // 这里只负责「怎么摆」——所以它不画版本说明、不画主入口标记，也不执行任何动作。
 // 命令面板那一套（遮罩、Esc、焦点回入口）在 vcPalette.ts / vcRealShell.ts，不在这份文件里。
 
-declare function vcPaletteMatchOf(query: any, version: any): any[]
+declare function vcPaletteMatchOf(query: any, version: any, t?: any): any[]
 
 // 一次最多画几行：这是渲染上限，不是命中上限；命中总数另外写在计数行里。
 // 原型搜索结果按 40 条截断，这里沿用同一个数，超过时末尾提示「再输入几个字缩小范围」。
@@ -58,7 +58,7 @@ export const vcSearchPageNode = function (h: any, t: any, o: any) {
   const opts = o || {}
   const query = String(opts.query === undefined || opts.query === null ? '' : opts.query)
   // 版本说明留空：搜索页不画「当前 git 版本不支持」那一行（原型第 51 张没有它，版本说明仍由命令面板负责）。
-  const matches = vcPaletteMatchOf(query, '')
+  const matches = vcPaletteMatchOf(query, '', t)
   const limit = Number(opts.limit) > 0 ? Math.min(Number(opts.limit), VC_SEARCH_RENDER_MAX) : VC_SEARCH_RENDER_MAX
   const rows = matches.slice(0, limit)
   const state = vcSearchStateOf(query, matches)

@@ -178,7 +178,7 @@ export const IssueDetail = function (props: any): any {
               h('span', { style: { flex: 1 } }),
               // 本次界面反馈需求：错误态里「重试」与「在追踪器中查看」是用户此时仅有的两个出口，
               //   各自带按压态、悬停反馈与点击日志；附近没有带 data-log 的祖先，不接就完全没有日志。
-              h('button', { className: 'dsws-btn primary dsws-hov', 'data-press': 'button', 'data-log': 'detail.err.retry', onClick: doRetry, style: { padding: '1px 8px', fontSize: 11, background: '#f87171', borderColor: 'transparent', color: '#fff' } }, '重试'),
+              h('button', { className: 'dsws-btn primary dsws-hov', 'data-press': 'button', 'data-log': 'detail.err.retry', onClick: doRetry, style: { padding: '1px 8px', fontSize: 11, background: '#f87171', borderColor: 'transparent', color: '#fff' } }, 'Retry'),
                             // 本地票的 url 是文件路径不是网址：https 走新页，本地走宿主打开（裸 href 点了没反应，#1145）
               (function () {
                 const _u = issueUrlFor(st, issueNumber, issueEffort)
@@ -407,9 +407,9 @@ export const IssueDetail = function (props: any): any {
             h('span', { style: { flex: 1 } }),
             // 本次界面反馈需求：顶部错误横幅的「重试」与详情页错误态的「重试」会出现在同一屏，
             //   两处定位串必须不同，否则日志分不出是哪一颗被点了。
-            h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'detail.err.retry.banner', onClick: doRetry, style: { padding: '1px 6px', fontSize: 11 } }, '重试'),
+            h('button', { className: 'dsws-btn dsws-hov', 'data-press': 'button', 'data-log': 'detail.err.retry.banner', onClick: doRetry, style: { padding: '1px 6px', fontSize: 11 } }, 'Retry'),
             // #1379 收口：这句「显示快照降级」也压在 8% 红底上（原色是写死的警告橙，只有约 2:1），同样挂类名走浅色层。
-            !detail && snapIssue ? h('span', { className: 'dsws-detail-err-degraded', style: { fontSize: 10, color: '#f59e0b' } }, '（显示快照降级）') : null,
+            !detail && snapIssue ? h('span', { className: 'dsws-detail-err-degraded', style: { fontSize: 10, color: '#f59e0b' } }, '(Showing a cached snapshot)') : null,
           ]),
           (errView ? errView.rawBlock : null),
         ]) : null,
@@ -430,29 +430,29 @@ export const IssueDetail = function (props: any): any {
             const login = (typeof a === 'string') ? a : (a.login || '')
             return h('span', { key: 'a' + i, className: 'dsws-chip', style: { fontSize: 10, background: 'rgba(88,166,255,.12)', color: '#58a6ff', border: '1px solid rgba(88,166,255,.4)' } }, [Ic({ n: 'person', size: 9 }), h('span', { style: { marginLeft: 3 } }, '@' + login)])
           }),
-          src.updatedAt ? h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, '· 更新 ' + String(src.updatedAt).slice(0,10)) : null,
-          src.createdAt ? h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, '· 创建 ' + String(src.createdAt).slice(0,10)) : null,
+          src.updatedAt ? h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, '· Updated ' + String(src.updatedAt).slice(0,10)) : null,
+          src.createdAt ? h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, '· Created ' + String(src.createdAt).slice(0,10)) : null,
           // #155 Q6 2🟡新增：author + closedAt（仅当字段存在时显示，undefined → 不渲染；符合 §2 不新增隐藏逻辑）
           (src.author && src.author.login) ? h('span', { style:{ fontSize:10, color:'#8b8b95', display:'inline-flex', alignItems:'center', gap:3 } }, [
             src.author.avatarUrl ? h('img', { src: src.author.avatarUrl, style:{ width:12, height:12, borderRadius:'50%' } }) : Ic({n:'person',size:10}),
             h('span', null, '@' + src.author.login)
           ]) : null,
-          (!isOpen && src.closedAt) ? h('span', { style:{ fontSize:10, color:'#8b8b95' } }, '· 关闭 ' + String(src.closedAt).slice(0,10)) : null,
+          (!isOpen && src.closedAt) ? h('span', { style:{ fontSize:10, color:'#8b8b95' } }, '· Closed ' + String(src.closedAt).slice(0,10)) : null,
         ]),
         parentMap ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', background: 'rgba(188,140,255,.06)', border: '1px solid rgba(188,140,255,.2)', borderRadius: 6, fontSize: 11 } }, [
           Ic({ n: 'map', size: 11, color: (typeof CONTAINER_ACCENT === 'object' && CONTAINER_ACCENT) ? CONTAINER_ACCENT.map : '' }),
-          h('span', { style: { color: 'var(--dsw-alias-label-secondary,#a1a1aa)' } }, '属于'),
+          h('span', { style: { color: 'var(--dsw-alias-label-secondary,#a1a1aa)' } }, 'Part of'),
           // T4 #554：所属地图链接压栈进下一层（保留返回路径，不断掉上一级）。
           h('a', { href: '#', className: 'dsws-hov', 'data-press': 'row', 'data-log': 'issue.parent.' + parentMap.number, onClick: function (e: any) { e.preventDefault(); pushNav(st, 'map', parentMap.number, effortOf(parentMap)) }, style: { color: (typeof CONTAINER_ACCENT === 'object' && CONTAINER_ACCENT) ? CONTAINER_ACCENT.map : '', textDecoration: 'underline', fontWeight: 600, display: 'inline-block', borderRadius: 3 } }, '#' + parentMap.number + ' ' + parentMap.title),
         ]) : null,
         // body
         h('div', { style: { padding: '8px 0', borderTop: '1px solid var(--dsw-alias-border-l1,#2a2d35)', borderBottom: '1px solid var(--dsw-alias-border-l1,#2a2d35)' } }, [
-          h('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-secondary,#a1a1aa)', marginBottom: 4 } }, '描述'),
+          h('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-secondary,#a1a1aa)', marginBottom: 4 } }, 'Description'),
           bodySlot,
         ]),
         // sub-issues
         subNodes.length || subTotal ? h('div', { style: { padding: '6px 0' } }, [
-          h('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-secondary,#a1a1aa)', marginBottom: 6 } }, '子票 ' + subTotal + (subNodes.length ? '' : '（无加载）')),
+          h('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-secondary,#a1a1aa)', marginBottom: 6 } }, 'Child tickets ' + subTotal + (subNodes.length ? '' : '(not loaded)')),
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } }, subNodes.map(function (s: any) {
             const sc = s.state === 'CLOSED' ? '#3fb950' : '#8b8b95'
             // T4 整改 #554：子票走 views/subIssueRouting.ts 的 enterSubDetail 分流（有标签按标签，无标签按快照找图）。
@@ -460,7 +460,7 @@ export const IssueDetail = function (props: any): any {
               h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } }, [
                 h('span', { className: 'dsws-idnum', style: { color: sc, borderColor: sc, fontSize: 11 } }, '#' + s.number),
                 h(Tip, { className: 'dsws-tip', content: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } }, [h('div', { style: { fontSize: 10, color: '#8b8b95', lineHeight: '14px' } }, tr('tip.header.fullTitle')), h('div', { style: { fontSize: 11, color: '#e6edf3', lineHeight: '16px', wordBreak: 'break-word', whiteSpace: 'normal' } }, s.title)]) }, h('span', { className: 'dsws-tt-wrap', style: { flex: 1, fontSize: 12 } }, s.title)),
-                h('span', { className: 'dsws-chip', style: { fontSize: 10, background: s.state === 'CLOSED' ? 'rgba(63,185,80,.12)' : 'rgba(139,148,158,.12)', color: sc, border: '1px solid ' + sc } }, s.state === 'CLOSED' ? '已关闭' : 'Open'),
+                h('span', { className: 'dsws-chip', style: { fontSize: 10, background: s.state === 'CLOSED' ? 'rgba(63,185,80,.12)' : 'rgba(139,148,158,.12)', color: sc, border: '1px solid ' + sc } }, s.state === 'CLOSED' ? 'Closed' : 'Open'),
               ])
             ])
           })),

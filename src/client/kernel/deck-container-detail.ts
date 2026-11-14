@@ -103,7 +103,7 @@ export function fetchContainerProjection(scope: any, st: any, key: any, opts?: a
     return Promise.resolve({ ok: false, error: bucket.error })
   }
   if (!phone || typeof phone.call !== 'function') {
-    return failBucket({ mode: 'err', version: version, key: String(key), effortId: effortId, container: null, items: [], stats: null, error: dswsNormalizeError({ error: '宿主电话不可用，取不到这张容器的子票。' }, '取不到这张容器的子票。'), ts: Date.now() })
+    return failBucket({ mode: 'err', version: version, key: String(key), effortId: effortId, container: null, items: [], stats: null, error: dswsNormalizeError({ error: 'The host connection is unavailable; child tickets could not be loaded.' }, 'Child tickets could not be loaded.'), ts: Date.now() })
   }
   st.containerProjection[bucketKey] = { mode: 'loading', version: version, key: String(key), effortId: effortId, container: null, items: [], stats: null, error: null, ts: Date.now() }
   try { emit(st) } catch (e2) {}
@@ -132,14 +132,14 @@ export function fetchContainerProjection(scope: any, st: any, key: any, opts?: a
       try { log('info', 'host.call', { method: 'wf.containerProjection', latencyMs: Date.now() - startedAt, ok: true, kind: 'container-projection' }) } catch (e5) {}
       return { ok: true, bucket: bucket }
     }
-    const err = dswsNormalizeError({ kind: (res && res.errorKind), error: (res && res.error) }, '本地快照库读不到这张容器的子票。')
+    const err = dswsNormalizeError({ kind: (res && res.errorKind), error: (res && res.error) }, 'Child tickets could not be read from the local snapshot store.')
     st.containerProjection[bucketKey] = { mode: 'err', version: version, key: String(key), effortId: effortId, container: null, items: [], stats: null, error: err, ts: Date.now() }
     try { emit(st) } catch (e6) {}
     try { log('warn', 'host.call.fail', { method: 'wf.containerProjection', kind: 'container-projection', errorHash: dswsLogHash(dswsLogTrunc(err.message, 120, 'error')) }) } catch (e7) {}
     return { ok: false, error: err }
   }, function (e: any): any {
     try { delete inflight[bucketKey] } catch (eD) {}
-    const err = dswsNormalizeError(e, '取不到这张容器的子票。')
+    const err = dswsNormalizeError(e, 'Child tickets could not be loaded.')
     st.containerProjection[bucketKey] = { mode: 'err', version: version, key: String(key), effortId: effortId, container: null, items: [], stats: null, error: err, ts: Date.now() }
     try { emit(st) } catch (e6) {}
     try { log('warn', 'host.call.fail', { method: 'wf.containerProjection', kind: 'container-projection', errorHash: dswsLogHash(dswsLogTrunc(err.message, 120, 'error')) }) } catch (e7) {}

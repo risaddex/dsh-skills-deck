@@ -15,12 +15,12 @@
  */
 declare const h: any;
     export const ICON_SCHEMES = [
-      { id: 'compass', label: '罗盘' },
-      { id: 'beacon', label: '灯塔' },
-      { id: 'radar', label: '雷达' },
-      { id: 'pin', label: '图钉' },
+      { id: 'compass', label: 'Compass' },
+      { id: 'beacon', label: 'Beacon' },
+      { id: 'radar', label: 'Radar' },
+      { id: 'pin', label: 'Pin' },
     ]
-    export const WORD_SCHEMES = ['沉淀', '落纸', '存档', '快照']
+    export const WORD_SCHEMES = ['Consolidate', 'Write down', 'Archive', 'Snapshot']
 
     export const Icon = ({ scheme, size }: any) => {
       const s = size || 16

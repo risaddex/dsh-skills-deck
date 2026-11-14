@@ -101,7 +101,7 @@ export function createActionDispatcher(ctx: any) {
         // 承载宿主业务失败（wf.initPublish 的已分档错误：already-exists/bad-name/network 等）——宿主内返回 {ok:false, errorKind, error} 经外层 ok:true 透传，需在此翻译为诚实失败以便上层走 catch 回跳
         if (res && typeof res === 'object' && res.ok === false) {
           const kind = res.errorKind || (res.error && res.error.kind) || res.kind || 'internal'
-          const msg = res.error ? (typeof res.error === 'string' ? res.error : (res.error.message || String(res.error))) : (res.message || 'RPC 业务失败：' + method)
+          const msg = res.error ? (typeof res.error === 'string' ? res.error : (res.error.message || String(res.error))) : (res.message || 'RPC operation failed: ' + method)
           const err: any = new Error(String(msg).slice(0,600))
           err.code = kind; err.kind = kind; err.errorKind = kind
           // #420/#426：保留 repoUrl/repo/halfCreated 上下文供上层展示（半成功链接、重试入口）——绝不静默
@@ -134,7 +134,7 @@ export function createActionDispatcher(ctx: any) {
         const res = await ctx.hostCall('wf.contractOp', payload)
         if (res && typeof res === 'object' && res.ok === false) {
           const kind = res.errorKind || (res.error && res.error.kind) || res.kind || 'internal'
-          const msg = res.error ? (typeof res.error === 'string' ? res.error : (res.error.message || String(res.error))) : (res.message || '契约操作失败：' + String(op))
+          const msg = res.error ? (typeof res.error === 'string' ? res.error : (res.error.message || String(res.error))) : (res.message || 'Contract operation failed: ' + String(op))
           const failure: any = { kind: kind, message: String(msg).slice(0, 600) }
           if (res.repoUrl) failure.repoUrl = res.repoUrl
           if (res.repo) failure.repo = res.repo

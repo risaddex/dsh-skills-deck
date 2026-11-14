@@ -138,7 +138,7 @@ export const vcPageTabsNode = function (h: any, t: any, o: any) {
       role: 'tab',
       className: 'tab' + (selected ? ' is-on' : ''),
       'data-vc-tab': id,
-      title: known ? t(VC_TAB_LABEL_KEYS[id]) + '：' + one.n + ' ' + t(VC_TAB_UNIT_KEYS[id]) : t(VC_TAB_LABEL_KEYS[id]),
+      title: known ? t(VC_TAB_LABEL_KEYS[id]) + ': ' + one.n + ' ' + t(VC_TAB_UNIT_KEYS[id]) : t(VC_TAB_LABEL_KEYS[id]),
       'aria-selected': selected ? 'true' : 'false',
       'aria-controls': 'vc-page-' + id,
       tabIndex: selected ? 0 : -1,

@@ -204,7 +204,7 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
       // v15-26：被阻塞判定（open 阻塞者）→ 隐藏动作按钮 + 红色「被阻塞」标签（地图子票点击跳所属 map 详情；#544 独立票无所属地图，只展示不跳转）
       const blk = blockOf[idOf(x)]
       const blocked = !!(blk && blk.by && blk.by.length)
-      const blockedTip = blocked ? blk.by.map(function (b: any) { return '#' + b }).join('、') : ''
+      const blockedTip = blocked ? blk.by.map(function (b: any) { return '#' + b }).join(', ') : ''
       // #691（阶段 3）：已关闭的地图行不带子票（打开那张地图时才按需取，见 views/MapDetailHead.js），
       //   所以既不画进度环、也不把它当「空地图」上橙色 —— 没有子票不等于一张子票都没有。
       const mapClosed=!!(isMap&&containerObj&&String(containerObj.state||'').toUpperCase()==='CLOSED')
@@ -304,7 +304,7 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
         : (mapEmpty ? '#140a1e' : mapDone ? '#0c1a10' : (isLightHex(actionColorOf(x, colorOf)) ? '#140a1e' : '#ffffff'))
       // v1.3.3 UI：全部标签渲染（渲染后贪心折叠，放不下的隐藏进 +N；+N 弹窗显示全部）
       const labels = x.labels || []
-      const allNames = labels.map(function (l: any) { return l.name }).join('、')
+      const allNames = labels.map(function (l: any) { return l.name }).join(', ')
       const openPop = function (e: any) {
         e.stopPropagation()
         const trig = e.currentTarget
