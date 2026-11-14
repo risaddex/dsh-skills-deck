@@ -279,13 +279,13 @@ export function createNamingGuardian(deps?: any): any {
   /** 受踪登记唯一实现：#265 兼容名与 #266 复原名共用同一本体。基准收两种：占位（[New] …）与编号档（[#n] …）。 */
   async function namingEnsureTracked(args?: any) {
     const sid = args && args.sessionId, baseline = args && args.baselineTitle
-    if (!sid || !baseline) return { ok: false, error: { kind: 'parse', message: '缺少 sessionId/baselineTitle' } }
+    if (!sid || !baseline) return { ok: false, error: { kind: 'parse', message: 'Missing sessionId/baselineTitle' } }
     const core = await getNamingCore()
-    if (!core) return { ok: false, error: { kind: 'parse', message: '命名核心未就绪' } }
+    if (!core) return { ok: false, error: { kind: 'parse', message: 'The naming core is not ready' } }
     const numbered = core.parseNumberedTitle ? core.parseNumberedTitle(baseline) : null
-    if (!core.isPlaceholderTitle(baseline) && !numbered) return { ok: false, error: { kind: 'parse', message: 'baselineTitle 非占位四式或编号档' } }
+    if (!core.isPlaceholderTitle(baseline) && !numbered) return { ok: false, error: { kind: 'parse', message: 'baselineTitle matches neither the four placeholder forms nor the numbered form' } }
     // 编号档的编号要能当真：负数与非数字拒收（本地 Markdown 后端的地图编号是 00，即 0，合法）。
-    if (numbered && !(isFinite(numbered.number) && numbered.number >= 0)) return { ok: false, error: { kind: 'parse', message: '编号档编号非法' } }
+    if (numbered && !(isFinite(numbered.number) && numbered.number >= 0)) return { ok: false, error: { kind: 'parse', message: 'Invalid number in the numbered form' } }
     const wroteOurs = !(args && args.wroteTitle === false)   // 客户端报告这次改名到底成功没有；缺省按成功（老调用方与旧账行为不变）
     const cwd = (args && args.cwd) || DEFAULT_CWD
     let repoKey = namingRepoKeyOf(args)
@@ -398,7 +398,7 @@ export function createNamingGuardian(deps?: any): any {
 
   async function handleNamingResult(args?: any) {
     const sid = args && args.sessionId, outcome = args && args.outcome
-    if (!sid || !outcome) return { ok: false, error: { kind: 'parse', message: '缺少 sessionId/outcome' } }
+    if (!sid || !outcome) return { ok: false, error: { kind: 'parse', message: 'Missing sessionId/outcome' } }
     const st = await loadNamingState(), entry = st.sessions[sid]
     if (!entry) return { ok: true }
     const core = await getNamingCore()
@@ -456,7 +456,7 @@ export function createNamingGuardian(deps?: any): any {
   }
     async function handleCancelNewSessionWatcher(args?: any) {
     const sid = args && args.sessionId
-    if (!sid) return { ok: false, error: { kind: 'parse', message: '缺少 sessionId' } }
+    if (!sid) return { ok: false, error: { kind: 'parse', message: 'Missing sessionId' } }
     const st = await loadNamingState()
     if (!st.sessions[sid]) return { ok: true, cancelled: false }
     delete st.sessions[sid]
@@ -465,7 +465,7 @@ export function createNamingGuardian(deps?: any): any {
   }
   async function handleAwaitCreatedIssue(args?: any) {
     const sid = args && args.sessionId
-    if (!sid) return { ok: false, error: { kind: 'parse', message: '缺少 sessionId' } }
+    if (!sid) return { ok: false, error: { kind: 'parse', message: 'Missing sessionId' } }
     const core = await getNamingCore()
     const st = await loadNamingState(), entry = st.sessions[sid]
     const watching = !!(core && entry && core.isNumberAwaitStage(entry))

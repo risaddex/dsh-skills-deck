@@ -64,12 +64,12 @@ const hasNone = (text: string, parts: string[]): boolean => parts.every((p) => t
 
 /** 宿主建仓失败时给的那段长文里的关键步骤（两处各存一份，内容一致是硬要求）。 */
 const NO_GH_PROMPT_MARKERS = [
-  '该结果不等同于 gh 未安装',
-  '用户级或系统级 PATH',
+  'This does not mean gh is not installed',
+  'user or system PATH',
   'DSH_GH_PATH',
-  '从开始菜单、桌面或资源管理器启动',
-  '不重新读取进程环境变量',
-  '不能替代重启 DSH',
+  'Launch from the Start menu, desktop or file manager',
+  'does not reload process environment variables',
+  'cannot replace restarting DSH',
 ]
 
 function main(): void {
@@ -142,11 +142,11 @@ function main(): void {
   check(!!noGhPrompt, '宿主 publishFlow 里还找得到 NO_GH_PROMPT（这段长文的来源之一）')
   check(!!initPrompt, 'init-project 的 no-gh 回包仍带着 prompt 长文')
   check(!!noGhPrompt && noGhPrompt === initPrompt, '宿主长文与 init-project 回包里的 prompt 逐字一致（两处各存一份，必须一起改）')
-  check(initMessage === '未在 DSH 启动时继承的 PATH 中解析到 gh 可执行文件（可能未安装，也可能安装后未重启 DSH）',
+  check(initMessage === 'The gh executable was not resolved from the PATH DSH inherited at startup (it may not be installed, or it was installed without restarting DSH)',
     'init-project 的短句如实说「可能安装后未重启」（实得「' + String(initMessage) + '」）')
   const promptText = noGhPrompt || ''
   check(hasAll(promptText, NO_GH_PROMPT_MARKERS), '宿主长文写清「不等同于未安装」、PATH 的两级、DSH_GH_PATH、重启入口与「重新检查」的边界')
-  check(hasNone(promptText, ['winget', 'brew', 'sudo apt', '请为 DSH 安装']), '宿主长文不再是「请为 DSH 安装」那套安装说明（会让人重装）')
+  check(hasNone(promptText, ['winget', 'brew', 'sudo apt', 'Please install for DSH']), '宿主长文不再是「请为 DSH 安装」那套安装说明（会让人重装）')
 
   console.log('== 5. 分类 token 保留：新消息仍被认成「缺 gh 可执行」 ==')
   // #1686 阶段 1：preflight 随 read 层搬进 read/，文案看真身而不是旧路径的转发壳。
@@ -169,9 +169,9 @@ function main(): void {
   console.log('== 6. 宿主 gh 执行器与 issue-tracker 文档：排查步骤也换新说法 ==')
   const ghExecSrc = read('src/refresh/rooms/host/gh-execution.ts')
   const lastErr = literalAfter(ghExecSrc, /setGhLastError\('((?:[^'\\]|\\.)*)'\)/)
-  check(!!lastErr && hasAll(lastErr, ['DSH 启动时继承的 PATH 中未解析到 gh 可执行文件', '不代表未安装', 'DSH_GH_PATH']),
+  check(!!lastErr && hasAll(lastErr, ['the gh executable was not found on the PATH DSH inherited at startup', 'this does not mean it is not installed', 'DSH_GH_PATH']),
     '宿主 gh 执行器的失败原因说清「不代表未安装」并给出 PATH 与 DSH_GH_PATH（实得「' + String(lastErr) + '」）')
-  check(!!lastErr && lastErr.indexOf('PATH 无 gh') < 0, '不再只说「PATH 无 gh」（那听起来就是没装）')
+  check(!!lastErr && lastErr.indexOf('no gh on PATH') < 0, '不再只说「PATH 无 gh」（那听起来就是没装）')
   // issue-tracker.md 在 #1561 之后是英文，判据认英文原句（中文原句只在提交历史里）。
   const docs = read('docs/agents/issue-tracker.md')
   check(docs.indexOf('It reports `gh not found` but `gh --version` prints output') >= 0,

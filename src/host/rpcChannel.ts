@@ -131,8 +131,8 @@ export function createRpcChannel(deps?: any): any {
   // 按附录 1.6 的枚举纪律，errorKind 只取 auth/network/notfound/exit，通道注册失败归不上，一律记 internal；
   // 那这次是什么失败写进 method 尾巴（注册是 wf.* 之外的调用，没有电话名可写），这样日志里仍能一眼认出来。
   const reportRegisterFail = function(kind?: any, failMsg?: any) {
-    const say = kind + (typeof failMsg === 'string' && failMsg !== '' ? ('：' + failMsg.slice(0, 120)) : '')
-    try { fireLog('error', 'host.dispatch.error', { method: DSW_RPC_ROUTE + ' 通道注册', argsHash: '', errorKind: 'internal' }) } catch (eLog) {}
+    const say = kind + (typeof failMsg === 'string' && failMsg !== '' ? (': ' + failMsg.slice(0, 120)) : '')
+    try { fireLog('error', 'host.dispatch.error', { method: DSW_RPC_ROUTE + ' channel registration', argsHash: '', errorKind: 'internal' }) } catch (eLog) {}
     return say
   }
 

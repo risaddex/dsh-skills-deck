@@ -44,10 +44,10 @@ export function createRewriteScene(deps: any): any {
   /** 跑一条只读命令并翻成 {ok:true,stdout,truncated} 或失败信封；非零退出不当作成功。 */
   async function readOut(exe: string, root: string, args: string[], opts?: any): Promise<any> {
     let res: any
-    try { res = await deps.runPinned(exe, root, args, { timeoutMs: readTimeoutMs, stdoutLimit: (opts && opts.stdoutLimit) || READ_LIMIT }) } catch (e) { return fail('env', 'unknown', '只读命令没有起进程：' + firstLine(String((e && (e as any).message) || e))) }
+    try { res = await deps.runPinned(exe, root, args, { timeoutMs: readTimeoutMs, stdoutLimit: (opts && opts.stdoutLimit) || READ_LIMIT }) } catch (e) { return fail('env', 'unknown', 'The read-only command did not start a process: ' + firstLine(String((e && (e as any).message) || e))) }
     if (res && res.kind === 'ok') return { ok: true, stdout: String(res.stdout || ''), truncated: res.truncated === true }
-    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || '只读命令以非零退出码结束了')
-    return fail('read', 'unknown', firstLine(res && res.message) || '只读命令没有正常结束')
+    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || 'The read-only command exited with a non-zero exit code')
+    return fail('read', 'unknown', firstLine(res && res.message) || 'The read-only command did not finish normally')
   }
 
   /** 允许非零的读：例如老版本 git 不认某个开关时按「没有这个事实」处理。 */
@@ -59,11 +59,11 @@ export function createRewriteScene(deps: any): any {
   async function repoOf(cwd: string): Promise<any> {
     let exe: any = null
     try { exe = await deps.resolveGitExecutable() } catch (e) { exe = null }
-    if (!exe) return fail('env', 'unknown', '找不到 git 命令，读不了仓库现场。')
+    if (!exe) return fail('env', 'unknown', 'Cannot find git; repository state cannot be read.')
     const repo: any = await deps.resolveRepoRoot(exe, cwd)
-    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', '当前目录不是 git 仓库：' + cwd)
+    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', 'The current directory is not a git repository: ' + cwd)
     // 裸仓库没有工作区，filter-repo 也不能在裸仓库里按维护页的方式跑：明确拒，不让人等一条注定失败的任务。
-    if (repo.kind === 'bare') return fail('blocked', 'repo-bare', '这是一个裸仓库：维护页的整仓重写要在有工作区的仓库里做，请换一个普通仓库。')
+    if (repo.kind === 'bare') return fail('blocked', 'repo-bare', 'This is a bare repository. Full-history rewrite requires a repository with a worktree; select a regular repository.')
     return { ok: true, exe: String(exe), root: String(repo.root) }
   }
 
@@ -118,15 +118,15 @@ export function createRewriteScene(deps: any): any {
     const root: string = repo.root
     let sc: any = null
     try { sc = await deps.readScreenOf(cwd) } catch (e) { sc = null }
-    if (!sc || sc.ok !== true) return fail('read', 'unknown', '读不到仓库首屏，判断不了现场（' + firstLine(String((sc && sc.error && sc.error.message) || sc)) + '）')
+    if (!sc || sc.ok !== true) return fail('read', 'unknown', 'Cannot read the initial screen to determine repository state (' + firstLine(String((sc && sc.error && sc.error.message) || sc)) + ')')
     const screen: any = sc.screen
     const headOid: string = String((screen && screen.identity && screen.identity.oid) || '')
-    if (headOid === '') return fail('blocked', 'nothing-to-do', '这个仓库还没有任何提交：没有历史可重写。')
+    if (headOid === '') return fail('blocked', 'nothing-to-do', 'This repository has no commits yet; there is no history to rewrite.')
 
     const countRes: any = await readOut(exe, root, ['rev-list', '--count', '--all'], { stdoutLimit: 64 * 1024 })
     if (countRes.ok !== true) return countRes
     const commitCount: number = Number(String(countRes.stdout || '').trim())
-    if (!isFinite(commitCount)) return fail('read', 'unknown', '提交数读不出来：' + firstLine(countRes.stdout))
+    if (!isFinite(commitCount)) return fail('read', 'unknown', 'Cannot read the commit count: ' + firstLine(countRes.stdout))
     const branchRes: any = await readOut(exe, root, ['rev-parse', '--abbrev-ref', 'HEAD'], { stdoutLimit: 4096 })
     if (branchRes.ok !== true) return branchRes
     const branch: string = String(branchRes.stdout || '').trim()
@@ -254,7 +254,7 @@ export function createRewriteScene(deps: any): any {
     const root: string = scene.scene.repoRoot
     const form: string = String((plan || {}).form || '')
     const meta: any = rewriteFormOf(form)
-    if (!meta) return fail('args', 'bad-form', '不认识的重写表单：' + form)
+    if (!meta) return fail('args', 'bad-form', 'Unrecognised rewrite form: ' + form)
     const counts: any = {
       commits: scene.scene.commitCount,
       matchedCommits: null,

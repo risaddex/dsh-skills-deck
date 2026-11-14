@@ -51,11 +51,11 @@ export function createSyncCheck(d: any): any {
 
   async function readText(exe: any, root: string, argv: string[], step: string): Promise<any> {
     const res: any = await runPinned(exe, root, argv, { stdoutLimit: 1024 * 1024, timeoutMs: READ_TIMEOUT_MS })
-    if (res && res.truncated === true) return { ok: false, fail: fail('truncated', 'truncated', 'git 输出被截断，读不全就不给半份', { git: gitSays(res), step: step }) }
+    if (res && res.truncated === true) return { ok: false, fail: fail('truncated', 'truncated', 'Git output was truncated; partial output will not be returned', { git: gitSays(res), step: step }) }
     if (!res || res.kind !== 'ok') {
       const bad: any = failureFromExec(res, step)
       if (bad) return { ok: false, fail: bad }
-      return { ok: false, fail: fail('git', 'git-failed', '读仓库现场失败', { git: gitSays(res), step: step }) }
+      return { ok: false, fail: fail('git', 'git-failed', 'Reading repository state failed', { git: gitSays(res), step: step }) }
     }
     return { ok: true, text: String(res.stdout || '') }
   }
@@ -81,47 +81,47 @@ export function createSyncCheck(d: any): any {
   // 强制租约：先按占位 oid 过一遍形状校验拿到远端与分支名，再用真实基准重新规划。
   async function leaseBaseline(exe: any, root: string, plan: any): Promise<any> {
     const res: any = await runPinned(exe, root, ['ls-remote', plan.remote, 'refs/heads/' + plan.branch], { stdoutLimit: 1024 * 1024, timeoutMs: READ_TIMEOUT_MS })
-    if (res && res.truncated === true) return { ok: false, fail: fail('truncated', 'truncated', 'ls-remote 输出被截断，强推没有可信的租约基准', { step: '读取远端租约基准' }) }
+    if (res && res.truncated === true) return { ok: false, fail: fail('truncated', 'truncated', 'ls-remote output was truncated; force-push has no reliable lease baseline', { step: 'Read the remote lease baseline' }) }
     if (!res || res.kind !== 'ok') {
       const classified: any = classifyLsRemoteFailure(res || {})
       if (classified && classified.kind) {
-        return { ok: false, fail: fail(classified.kind, classified.kind, String(classified.message || '联网读取远端失败'), { git: gitSays(res), step: '读取远端租约基准', hint: String(classified.hint || '') }) }
+        return { ok: false, fail: fail(classified.kind, classified.kind, String(classified.message || 'Reading the remote over the network failed'), { git: gitSays(res), step: 'Read the remote lease baseline', hint: String(classified.hint || '') }) }
       }
-      const bad: any = failureFromExec(res, '读取远端租约基准这一步')
+      const bad: any = failureFromExec(res, 'Reading the remote lease baseline')
       if (bad) return { ok: false, fail: bad }
-      return { ok: false, fail: fail('network', 'ls-remote-failed', '联网读取远端失败', { git: gitSays(res), step: '读取远端租约基准' }) }
+      return { ok: false, fail: fail('network', 'ls-remote-failed', 'Reading the remote over the network failed', { git: gitSays(res), step: 'Read the remote lease baseline' }) }
     }
     const parsed: any = parseLsRemote(res.stdout)
-    if (parsed.ok !== true) return { ok: false, fail: fail('parse', 'baseline-bad', 'ls-remote 的输出读不懂，不能当租约基准：' + String(parsed.error || ''), { step: '解析远端租约基准' }) }
+    if (parsed.ok !== true) return { ok: false, fail: fail('parse', 'baseline-bad', 'ls-remote output cannot be used as a lease baseline: ' + String(parsed.error || ''), { step: 'Parse the remote lease baseline' }) }
     const ref: string = 'refs/heads/' + plan.branch
     let oid: string = ''
     for (let i = 0; i < parsed.refs.length; i = i + 1) if (parsed.refs[i].ref === ref) oid = String(parsed.refs[i].oid || '')
-    if (oid === '') return { ok: false, fail: fail('blocked', 'baseline-missing', syncReasonTextOf('baseline-missing'), { step: '读取远端租约基准' }) }
-    if (!/^[0-9a-fA-F]{7,64}$/.test(oid)) return { ok: false, fail: fail('parse', 'baseline-bad', syncReasonTextOf('baseline-bad'), { step: '解析远端租约基准' }) }
+    if (oid === '') return { ok: false, fail: fail('blocked', 'baseline-missing', syncReasonTextOf('baseline-missing'), { step: 'Read the remote lease baseline' }) }
+    if (!/^[0-9a-fA-F]{7,64}$/.test(oid)) return { ok: false, fail: fail('parse', 'baseline-bad', syncReasonTextOf('baseline-bad'), { step: 'Parse the remote lease baseline' }) }
     return { ok: true, oid: oid, readAtMs: now() }
   }
 
   async function handleGitSyncCheck(rawArgs: any): Promise<any> {
     const a: any = rawArgs && typeof rawArgs === 'object' ? rawArgs : {}
     const cwd: string = typeof a.cwd === 'string' ? a.cwd : ''
-    if (cwd === '') return fail('bad-target', 'bad-target', '缺少仓库目录（cwd）')
+    if (cwd === '') return fail('bad-target', 'bad-target', 'Missing repository directory (cwd)')
     const entry: any = syncActionOf(a.action)
     if (entry === null) {
       const probe: any = syncPlanOf(a.action, {})
       return fail('bad-target', probe.reason, probe.message)
     }
     const exe: any = await resolveGitExecutable()
-    if (!exe) return fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const sr: any = await readScreenOf(cwd)
     if (!sr || sr.ok !== true) return sr
     const screen: any = sr.screen
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return base
     const root: string = String(base.root)
-    const remoteText: any = await readText(exe, root, ['remote', '-v'], '读远端清单这一步')
+    const remoteText: any = await readText(exe, root, ['remote', '-v'], 'Reading the remote list')
     if (!remoteText.ok) return remoteText.fail
     const remoteParsed: any = parseRemoteList(remoteText.text)
-    if (remoteParsed.ok !== true) return fail('parse', 'parse', '远端清单读不懂：' + String(remoteParsed.error || ''), { step: '解析远端清单' })
+    if (remoteParsed.ok !== true) return fail('parse', 'parse', 'Cannot parse the remote list: ' + String(remoteParsed.error || ''), { step: 'Parse the remote list' })
     const remoteNames: string[] = []
     for (let i = 0; i < remoteParsed.remotes.length; i = i + 1) {
       const name: string = String(remoteParsed.remotes[i].name || '')
@@ -144,7 +144,7 @@ export function createSyncCheck(d: any): any {
       plan = planned.plan
     }
     const argvCheck: any = taskArgsFor(plan.op, plan.taskArgs)
-    if (argvCheck.ok !== true) return fail('bad-args', String(argvCheck.reason || 'bad-args'), String(argvCheck.message || '长任务参数不合法'))
+    if (argvCheck.ok !== true) return fail('bad-args', String(argvCheck.reason || 'bad-args'), String(argvCheck.message || 'Invalid long-running task parameters'))
     const judge: any = judgeSync(scene, plan)
     const readAtMs: number = now()
     const reasonRows: any[] = judge.reasons.map(function (id: string) { return { id: id, text: syncReasonTextOf(id), blocking: judge.blockingReasons.indexOf(id) >= 0 } })
@@ -156,10 +156,10 @@ export function createSyncCheck(d: any): any {
     let oldOid: string = baseline ? String(baseline.oid) : ''
     let newOid: string = ''
     if (entry.action === 'force-push') {
-      const local: any = await readText(exe, root, ['rev-parse', 'refs/heads/' + plan.localBranch], '读本地分支提交号这一步')
+      const local: any = await readText(exe, root, ['rev-parse', 'refs/heads/' + plan.localBranch], 'Reading local branch commit IDs')
       if (!local.ok) return local.fail
       newOid = String(local.text).trim().split('\n')[0]
-      if (!/^[0-9a-fA-F]{7,64}$/.test(newOid)) return fail('parse', 'parse', '本地分支的提交号读不懂，不能点名强推目标', { step: '解析本地分支提交号' })
+      if (!/^[0-9a-fA-F]{7,64}$/.test(newOid)) return fail('parse', 'parse', 'Local branch commit IDs cannot be parsed, so force-push targets cannot be named', { step: 'Parse local branch commit IDs' })
     }
     const confirm: any = syncConfirmOf(plan, { oldOid: oldOid, newOid: newOid })
     seq = seq + 1
@@ -203,7 +203,7 @@ export function createSyncCheck(d: any): any {
   // 执行前复核用同一个读数口：仓库根、HEAD、工作区形状都要重新读一遍，现场变了就拒绝。
   async function measure(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { ok: false, envelope: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { ok: false, envelope: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const sr: any = await readScreenOf(cwd)
     if (!sr || sr.ok !== true) return { ok: false, envelope: sr }
     const base: any = await resolveRepoRoot(exe, cwd)

@@ -23,7 +23,7 @@ export function createBranchMount(host: any): any {
   // 第一次拨电话时才装配整族，装完缓存；装配失败只影响分支域，不拖垮宿主其它电话。
   let assembling: any = null
   function failedPhone(): any {
-    const message: string = '分支与标签域那一族加载失败：' + String((host && host.loadError && host.loadError.message) || '未知原因')
+    const message: string = 'Failed to load the branch-and-tag family: ' + String((host && host.loadError && host.loadError.message) || 'Unknown reason')
     return function (): any { return host.failPhone('env', message) }
   }
   function branchPhones(): Promise<any> {
@@ -39,7 +39,7 @@ export function createBranchMount(host: any): any {
           })
         })
       }).catch(function (e: any): any {
-        const message: string = '分支与标签域那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the branch-and-tag family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { read: failed, check: failed, write: failed, tickets: async function (): Promise<any> { return null } }
       })

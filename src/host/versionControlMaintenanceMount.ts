@@ -26,12 +26,12 @@ export function createMaintenanceMount(host: any): any {
       ]).then(function (mods: any[]) {
         const read: any = mods[0].createMaintenanceRead(host)
         const check: any = mods[1].createMaintenanceCheck({ read: read, failPhone: host.failPhone, now: host.now, randomId: host.randomId })
-        const backup: any = createBackupRunner({ runPinned: host.runPinned, now: host.now, failurePrefix: '整仓备份失败，已中止清理（这次没有起 prune）：' })
+        const backup: any = createBackupRunner({ runPinned: host.runPinned, now: host.now, failurePrefix: 'Full-repository backup failed; cleanup stopped without starting prune: ' })
         const write: any = mods[2].createMaintenanceWrite({ read: read, failPhone: host.failPhone, runPinned: host.runPinned, taskStart: host.taskStart, backup: backup, now: host.now, tickets: check.tickets, results: check.results })
         return { read: read, check: check, write: write }
       }).catch(function (err: any) {
         const said: string = String((err && (err.stack || err.message)) || err)
-        const failure: any = failPhone('env', '维护页这一层装配失败：' + said)
+        const failure: any = failPhone('env', 'Failed to assemble the maintenance page: ' + said)
         const failFn: any = function () { return failure }
         return { read: { readOf: failFn }, check: { handleMaintenanceRead: failFn, handleMaintenanceCheck: failFn, tickets: new Map() }, write: { handleMaintenanceWrite: failFn } }
       })

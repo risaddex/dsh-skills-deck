@@ -242,6 +242,16 @@ async function main() {
   const rIgnNo: any = await cIgnNo.impl.handleChangesCheck({ cwd: REPO, op: 'explain-ignored', path: 'x.log' })
   check(rIgnNo.ok === true && rIgnNo.ignored === false, 'C14 查为什么被忽略：没命中回「没有规则命中」而不是失败')
 
+  // #6：英文提示与历史中文 stderr 都不能把「未忽略」误判为读取失败。
+  for (const stderr of ['Git exited with a non-zero exit code', 'git 以非零退出码结束了这条只读命令']) {
+    const cLang: any = mkCheck(makeScreen(), { runRead: function (args: any) { return args[0] === 'check-ignore' ? { kind: 'non-zero', exitCode: 1, stderr } : null } })
+    const rLang: any = await cLang.impl.handleChangesCheck({ cwd: REPO, op: 'explain-ignored', path: 'x.log' })
+    check(rLang.ok === true && rLang.ignored === false && rLang.hint === 'No ignore rule matches this path', 'C21 #6 English and legacy Chinese exit messages preserve the not-ignored result: ' + stderr)
+  }
+  const cIgnError: any = mkCheck(makeScreen(), { runRead: function (args: any) { return args[0] === 'check-ignore' ? { kind: 'non-zero', exitCode: 128, stderr: 'fatal: permission denied' } : null } })
+  const rIgnError: any = await cIgnError.impl.handleChangesCheck({ cwd: REPO, op: 'explain-ignored', path: 'x.log' })
+  check(rIgnError.ok === false && rIgnError.error.message === 'fatal: permission denied', 'C22 #6 Unrelated git errors are still failures')
+
   // ===== D 宿主执行 =====
   const ticketFor = async function (op: string, values: any, cOver?: any, screen?: any) {
     const sc = screen || screenStage

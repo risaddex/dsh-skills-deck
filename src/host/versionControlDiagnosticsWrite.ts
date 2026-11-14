@@ -19,32 +19,32 @@ const WRITE_LIMIT: number = 1024 * 1024
 
 /** 执行失败时按动作给一句人话，说明这一步在做什么。 */
 const STEP_TEXT: Record<string, string> = {
-  'bisect-start': '开始二分', 'bisect-bad': '标记坏提交', 'bisect-good': '标记好提交',
-  'bisect-skip': '跳过这个提交', 'bisect-reset': '结束二分', 'replace-create': '建立替换', 'replace-delete': '撤销替换',
+  'bisect-start': 'Start bisect', 'bisect-bad': 'Mark bad commit', 'bisect-good': 'Mark good commit',
+  'bisect-skip': 'Skip this commit', 'bisect-reset': 'End bisect', 'replace-create': 'Create replacement', 'replace-delete': 'Remove replacement',
 }
-function stepOf(op: string): string { return STEP_TEXT[op] || '这次诊断动作' }
+function stepOf(op: string): string { return STEP_TEXT[op] || 'This diagnostic action' }
 
 /** 失败原因标识符 → 给人看的原因句（与界面词表分开：这里是执行层的排查说明）。 */
 const CAUSE_TEXT: Record<string, string> = {
-  'already-bisecting': '仓库里已经有一趟二分在跑',
-  'not-bisecting': '仓库当前不在二分中',
-  'not-a-commit': '提交号或对象名解析不成提交',
-  'already-replaced': '这个对象已经有替换记录',
-  'no-replace': '这个对象没有可撤销的替换',
-  'no-permission': '文件权限不允许写 .git 里的记录',
-  'not-a-repo': '这个目录不在任何 git 仓库里',
-  'unknown-write-failure': 'git 原话没有落进已知的失败类别',
+  'already-bisecting': 'A bisect is already running in this repository',
+  'not-bisecting': 'No bisect is in progress in this repository',
+  'not-a-commit': 'The commit ID or object name cannot be resolved to a commit',
+  'already-replaced': 'This object already has a replacement record',
+  'no-replace': 'This object has no replacement to remove',
+  'no-permission': 'File permissions prevent writing records in .git',
+  'not-a-repo': 'This directory is not inside a git repository',
+  'unknown-write-failure': 'Git\'s message does not match a known failure category',
 }
-function causeOf(reason: string): string { return CAUSE_TEXT[reason] || '未归类的失败' }
+function causeOf(reason: string): string { return CAUSE_TEXT[reason] || 'Unclassified failure' }
 
 /** 失败话术：票据那几类理由与共享层同一份写法（writeHintFor），诊断自己的理由给一句本地说明。 */
 const DIAG_HINTS: Record<string, string> = {
-  'already-bisecting': '先结束这趟二分，再开始新的二分',
-  'not-bisecting': '先开始二分，再标好提交与坏提交',
-  'not-a-commit': '检查提交号或对象名是不是写错了',
-  'already-replaced': '先撤销旧的替换，再建新的',
-  'no-replace': '先列出替换清单，确认要撤销哪个对象',
-  'unknown-write-failure': '重试一次；仍然失败就看后台日志里那条 git.exec 的退出码与错误类',
+  'already-bisecting': 'Finish this bisect before starting another',
+  'not-bisecting': 'Start a bisect before marking good and bad commits',
+  'not-a-commit': 'Check the commit ID or object name',
+  'already-replaced': 'Remove the old replacement before creating a new one',
+  'no-replace': 'List replacements first to confirm which object to remove',
+  'unknown-write-failure': 'Retry once; if it still fails, inspect the git.exec exit code and error class in the diagnostic log',
 }
 function hintOf(reason: string): string { return DIAG_HINTS[reason] || writeHintFor(reason) }
 
@@ -59,7 +59,7 @@ function classifyFailure(argv0: string, exitCode: number, stderrText: string): s
   return 'unknown-write-failure'
 }
 
-function firstLineOf(text: any): string { const t: string = String(text === undefined || text === null ? '' : text).replace(/\r/g, '').trim(); if (!t) return 'git 没有给出说明'; const i: number = t.indexOf('\n'); return (i >= 0 ? t.slice(0, i) : t).slice(0, 300) }
+function firstLineOf(text: any): string { const t: string = String(text === undefined || text === null ? '' : text).replace(/\r/g, '').trim(); if (!t) return 'Git gave no explanation'; const i: number = t.indexOf('\n'); return (i >= 0 ? t.slice(0, i) : t).slice(0, 300) }
 
 /** 造诊断域执行电话：票据表与结果表由装配处从预检叶子递进来，两边必须是同一张表。 */
 export function createDiagnosticsWrite(deps: any): any {
@@ -93,37 +93,37 @@ export function createDiagnosticsWrite(deps: any): any {
     const a: any = args || {}
     if (a.requestId !== undefined && results.has(String(a.requestId))) return { ok: true, reused: true, result: results.get(String(a.requestId)) }
     const idBad: any = idShapeProblem(a.ticketId)
-    if (idBad) return wfail('args', idBad, '票据号形状不对：它只该由预检发出来')
+    if (idBad) return wfail('args', idBad, 'Invalid ticket ID format; it must come from preflight')
     const ridBad: any = requestIdProblem(a.requestId)
-    if (ridBad) return wfail('args', ridBad, '这次请求的编号不合法：只允许字母、数字、下划线与短横线')
+    if (ridBad) return wfail('args', ridBad, 'Invalid request ID: only letters, digits, underscores and hyphens are allowed')
     const ticket: any = tickets.get(String(a.ticketId)) || null
-    if (!ticket) return wfail('blocked', 'ticket-missing', '这张票不在宿主内存里：重新点一次预检，再确认')
+    if (!ticket) return wfail('blocked', 'ticket-missing', 'This ticket is not in host memory; run preflight and confirm again')
     const op: string = String(ticket.op || '')
-    if (a.op !== undefined && String(a.op) !== op) return wfail('blocked', 'ticket-op-mismatch', '这张票不是给这个动作签的：重新预检')
-    if (DIAGNOSTICS_WRITE_OPS.indexOf(op) < 0) return wfail('args', 'bad-target', '这张票里的动作不在诊断域清单里')
+    if (a.op !== undefined && String(a.op) !== op) return wfail('blocked', 'ticket-op-mismatch', 'This ticket was not issued for this action; run preflight again')
+    if (DIAGNOSTICS_WRITE_OPS.indexOf(op) < 0) return wfail('args', 'bad-target', 'The ticket\'s action is not in the diagnostic action list')
     const pure: any = ticketPureVerdict(ticket, op as any, nowFn())
-    if (!pure || pure.ok !== true) return wfail('blocked', (pure && pure.reason) || 'ticket-missing', '这张票已经过期或对不上：重新预检')
-    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('blocked', 'need-confirm', '这个动作会改仓库状态：先点确认卡上的确认')
+    if (!pure || pure.ok !== true) return wfail('blocked', (pure && pure.reason) || 'ticket-missing', 'This ticket has expired or does not match; run preflight again')
+    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('blocked', 'need-confirm', 'This action changes repository state; confirm on the confirmation card first')
     const cwd: any = a.cwd
-    if (typeof cwd !== 'string' || cwd.trim() === '') return wfail('args', 'bad-target', '没说清在哪个仓库里执行：带上网关给的目录')
+    if (typeof cwd !== 'string' || cwd.trim() === '') return wfail('args', 'bad-target', 'The execution repository is unspecified; supply the directory returned by the gateway')
     const cur: any = await measure(cwd, ticket.plan)
-    if (!cur || cur.ok !== true) return cur || failPhone('env', '执行前复核仓库现场失败，没有给出原因')
-    if (String(cur.repoRoot) !== String(ticket.repoRoot)) return wfail('blocked', 'stale-repo', '票里记的仓库与此刻的不一致：重新预检')
-    if (String(cur.headOid) !== String(ticket.headOid)) return wfail('blocked', 'target-changed', '预检之后 HEAD 变了：重新预检')
+    if (!cur || cur.ok !== true) return cur || failPhone('env', 'Failed to recheck repository state before execution; no reason was given')
+    if (String(cur.repoRoot) !== String(ticket.repoRoot)) return wfail('blocked', 'stale-repo', 'The ticket\'s repository differs from the current one; run preflight again')
+    if (String(cur.headOid) !== String(ticket.headOid)) return wfail('blocked', 'target-changed', 'HEAD changed after preflight; run preflight again')
     const bindBad: any = bindingsVerdict(ticket, cur.bindings)
-    if (bindBad) return wfail('blocked', bindBad, '预检之后仓库状态变了（二分记录或替换清单不一致）：重新预检')
+    if (bindBad) return wfail('blocked', bindBad, 'Repository state changed after preflight (bisect record or replacement list differs); run preflight again')
     const argv: string[] = diagnosticsWriteArgvOf(ticket.plan)
     const exe: any = await resolveGitExecutable()
-    if (!exe) return failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const res: any = await runPinned(exe, cur.repoRoot, argv, { stdoutLimit: WRITE_LIMIT, timeoutMs: WRITE_TIMEOUT_MS })
     if (!res || res.kind !== 'ok') {
       if (res && res.kind === 'non-zero') {
         const reason: string = classifyFailure(argv[0], Number(res.exitCode), String(res.stderr || ''))
         const says: string = firstLineOf(res.stderr)
-        return wfail('git-failed', reason, stepOf(op) + '失败：git 原话「' + says + '」', { git: says, step: stepOf(op), expected: 'git 按计划写下这次诊断记录', actual: 'git 拒绝了这次写（退出码 ' + String(res.exitCode) + '）', cause: causeOf(reason), exitCode: Number(res.exitCode), decision: ticket.decision, argv: argv })
+        return wfail('git-failed', reason, stepOf(op) + ': failed; git reported: "' + says + '"', { git: says, step: stepOf(op), expected: 'Git writes this diagnostic record as planned', actual: 'Git refused this write (exit code ' + String(res.exitCode) + ')', cause: causeOf(reason), exitCode: Number(res.exitCode), decision: ticket.decision, argv: argv })
       }
-      const bad: any = failureFromExec(res, stepOf(op) + '这条命令')
-      return bad || failPhone('env', stepOf(op) + '没有跑完，也没有给出原因')
+      const bad: any = failureFromExec(res, stepOf(op) + ': this command')
+      return bad || failPhone('env', stepOf(op) + ': did not finish and gave no reason')
     }
     const out: any = Object.assign({ ok: true, op: op, command: argv.slice(0, 2).join(' '), argv: argv, ticketId: ticket.id, decision: ticket.decision, atMs: nowFn() }, fieldsOf(ticket.plan))
     remember(a.requestId, out)

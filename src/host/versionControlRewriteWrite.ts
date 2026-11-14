@@ -33,7 +33,7 @@ export function createRewriteWrite(deps: any): any {
   const writeTimeoutMs: number = Number(deps.writeTimeoutMs) || VC_REWRITE_WRITE_TIMEOUT_MS
   const now = function (): number { try { return typeof deps.now === 'function' ? Number(deps.now()) : Date.now() } catch (e) { return Date.now() } }
   // 备份实现与清除不可达对象共用一份（versionControlBackup.ts），两边口径一致才好互相佐证。
-  const backupRunner = createBackupRunner({ runPinned: deps.runPinned, now: now, writeTimeoutMs: writeTimeoutMs, failurePrefix: '整仓备份失败，已中止重写（这次没有起 filter-repo）：' })
+  const backupRunner = createBackupRunner({ runPinned: deps.runPinned, now: now, writeTimeoutMs: writeTimeoutMs, failurePrefix: 'Full-repository backup failed; rewrite stopped without starting filter-repo: ' })
 
   /** 失败信封：与预检层同一形状，reason 同时写进 error 与顶层。 */
   function wfail(kind: any, reason: any, message: any, extra?: any): any {
@@ -55,7 +55,7 @@ export function createRewriteWrite(deps: any): any {
   async function writeTemp(tag: string, text: string): Promise<any> {
     const name: string = tag + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.txt'
     const path: string = String(tmpdir()).replace(/\\/g, '/') + '/' + name
-    try { await writeFile(path, text, { mode: 0o600, encoding: 'utf8' }) } catch (e) { return wfail('env', 'temp-unavailable', '写不了临时说明文件：' + firstLine(String((e && (e as any).message) || e))) }
+    try { await writeFile(path, text, { mode: 0o600, encoding: 'utf8' }) } catch (e) { return wfail('env', 'temp-unavailable', 'Cannot write the temporary message file: ' + firstLine(String((e && (e as any).message) || e))) }
     return { ok: true, path: path }
   }
 
@@ -100,27 +100,27 @@ export function createRewriteWrite(deps: any): any {
     const requestId: any = a.requestId
     if (requestId && results.has(String(requestId))) return { ok: true, reused: true, result: results.get(String(requestId)) }
     const idBad: any = idShapeProblem(a.ticketId)
-    if (idBad) return wfail('args', idBad, '票号形状不对：' + String(idBad))
+    if (idBad) return wfail('args', idBad, 'Invalid ticket ID format: ' + String(idBad))
     const rid: any = requestIdProblem(a.requestId)
-    if (rid) return wfail('args', rid, '请求号形状不对：' + String(rid))
+    if (rid) return wfail('args', rid, 'Invalid request ID format: ' + String(rid))
     const ticket: any = tickets.get(String(a.ticketId))
-    if (!ticket) return wfail('args', 'ticket-missing', '找不到这张票：可能已经过期，请重新预检。')
-    if (String(ticket.op) !== 'rewrite') return wfail('args', 'ticket-op-mismatch', '这张票不是整仓重写的票。')
+    if (!ticket) return wfail('args', 'ticket-missing', 'This ticket was not found; it may have expired. Run preflight again.')
+    if (String(ticket.op) !== 'rewrite') return wfail('args', 'ticket-op-mismatch', 'This ticket is not a full-history rewrite ticket.')
     const pure: any = ticketPureVerdict(ticket, 'rewrite' as any, now())
-    if (pure && pure.ok !== true) return wfail('blocked', String(pure.reason || 'ticket-expired'), '票不能用了：' + String(pure.reason || ''))
-    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', '整仓重写不可逆，要先看过确认卡并明确确认。')
-    if (!a.cwd || typeof a.cwd !== 'string') return wfail('args', 'bad-target', '缺少仓库目录。')
+    if (pure && pure.ok !== true) return wfail('blocked', String(pure.reason || 'ticket-expired'), 'The ticket is no longer usable: ' + String(pure.reason || ''))
+    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', 'Full-history rewrite is irreversible; review the confirmation card and confirm explicitly first.')
+    if (!a.cwd || typeof a.cwd !== 'string') return wfail('args', 'bad-target', 'Missing repository directory.')
     const plan: any = ticket.rewrite || ticket.plan || {}
     const form: any = rewriteFormOf(plan.form)
-    if (!form) return wfail('args', 'bad-form', '票里的重写表单认不出来：' + String(plan.form || ''))
+    if (!form) return wfail('args', 'bad-form', 'The ticket\'s rewrite form is unrecognised: ' + String(plan.form || ''))
     const cur: any = await deps.scene.measure(a.cwd, plan)
     if (cur.ok !== true) return cur
-    if (String(cur.repoRoot) !== String(ticket.repoRoot)) return wfail('blocked', 'stale-repo', '预检之后仓库换了目录，请重新预检。')
-    if (String(cur.headOid) !== String(ticket.headOid)) return wfail('blocked', 'target-changed', '预检之后 HEAD 变了（有新提交或切换了分支），请重新预检。')
+    if (String(cur.repoRoot) !== String(ticket.repoRoot)) return wfail('blocked', 'stale-repo', 'The repository directory changed after preflight; run preflight again.')
+    if (String(cur.headOid) !== String(ticket.headOid)) return wfail('blocked', 'target-changed', 'HEAD changed after preflight (new commits or a branch switch); run preflight again.')
     const bv: any = bindingsVerdict(ticket, cur.bindings)
-    if (bv) return wfail('blocked', bv === 'stale-index' ? 'target-changed' : String(bv), '预检之后现场变了（' + String(bv) + '），已零进程拒绝，请重新预检。')
+    if (bv) return wfail('blocked', bv === 'stale-index' ? 'target-changed' : String(bv), 'Repository state changed after preflight (' + String(bv) + '); refused without starting any process. Run preflight again.')
     const guard: any = rewriteGuardProblem(cur.scene, plan)
-    if (guard) return wfail('blocked', String(guard), '现场又不满足重写条件了：' + String(guard))
+    if (guard) return wfail('blocked', String(guard), 'Repository state no longer meets the rewrite requirements: ' + String(guard))
     const backupPlan: any = ticket.backup || deps.scene.backupPlanOf(cur.scene)
     const materials: any = await makeMaterials(plan)
     if (materials.ok !== true) return materials
@@ -128,17 +128,17 @@ export function createRewriteWrite(deps: any): any {
     const backup: any = await runBackup(cur, plan, backupPlan)
     if (backup.ok !== true) { cleanup(); remember(requestId, backup.out); return backup.out }
     const tokensRes: any = rewriteTaskTokensOf(plan.form, plan, { mailmapPath: materials.mailmapPath, replacePath: materials.replacePath })
-    if (tokensRes.ok !== true) { cleanup(); const out: any = wfail('args', String(tokensRes.reason || 'bad-form'), '拼不出 filter-repo 的参数：' + String(tokensRes.reason || '')); remember(requestId, out); return out }
+    if (tokensRes.ok !== true) { cleanup(); const out: any = wfail('args', String(tokensRes.reason || 'bad-form'), 'Cannot build filter-repo arguments: ' + String(tokensRes.reason || '')); remember(requestId, out); return out }
     const point: any = backup.point
     let task: any = null
     try {
       task = await deps.taskStart({ cwd: String(cur.repoRoot), op: 'filter-repo', args: tokensRes.tokens, confirm: true, requestId: String(requestId || '') })
     } catch (e) {
-      task = wfail('env', 'task-start-failed', '备份已成功，但起长任务失败：' + firstLine(String((e && (e as any).message) || e)), { backup: point, backupSummary: backupSummaryOf(point) })
+      task = wfail('env', 'task-start-failed', 'Backup succeeded, but the long-running task failed to start: ' + firstLine(String((e && (e as any).message) || e)), { backup: point, backupSummary: backupSummaryOf(point) })
     }
     if (!task || task.ok !== true) {
-      const said: string = firstLine(String((task && task.error && task.error.message) || (task && task.message) || '')) || '长任务通道没有接受这次请求'
-      const out: any = wfail('env', 'task-start-failed', '备份已成功，但 filter-repo 任务没有起来：' + said, {
+      const said: string = firstLine(String((task && task.error && task.error.message) || (task && task.message) || '')) || 'The long-running task channel did not accept this request'
+      const out: any = wfail('env', 'task-start-failed', 'Backup succeeded, but the filter-repo task did not start: ' + said, {
         backup: point,
         backupSummary: backupSummaryOf(point),
         backupHuman: backupSummaryOf(point),

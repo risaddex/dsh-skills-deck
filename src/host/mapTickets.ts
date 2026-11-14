@@ -166,21 +166,21 @@ export function createMapTickets(deps?: any): any {
     const logged = { opId: opId, cwd: '' }
     // #1003 空目录闸：不拿进程目录冒充去取子票，诚实失败等就绪。
     const _rawMapCwd = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawMapCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。', logged: logged }
+    if (!_rawMapCwd) return { ok: false, error: 'This workspace is not ready (its directory has not been identified). Retry once the panel recognises the workspace.', logged: logged }
     const cwd = await canonicalKey(_rawMapCwd)
     logged.cwd = cwd
     const key = String((args && (args.key != null ? args.key : args.number)) || '').trim()
-    if (!key) return { ok: false, error: { kind: 'parse', message: '缺少地图编号（key）' }, logged: logged }
+    if (!key) return { ok: false, error: { kind: 'parse', message: 'Missing map key' }, logged: logged }
     const sel = await selectEarly({ cwd, backendId: (args && args.backendId) || undefined })
     // #1636：只放开门卫对 GitHub 的排除，其余拦法原样不动。
     // isComposerSelection 是快照、刷新、探针、评论四条路共用的通道选择，今天对 backendId=github 永远返回假；
     // 但首屏快照本来就不装已关闭容器的已关闭子票，而 GitHub 有按需取子票的读路径，所以这里给 github 单独开口。
     // 有没有取子票的能力仍由后端自己回答：注册表里没这条读路径就回不支持（下一句），后端自己说不支持也如实透出。
-    if ((!sel || sel.backendId !== 'github') && !isComposerSelection(sel)) return unsupported('这个后端不能按需取一张地图的子票（在它自己的网页上看全部）', logged)
+    if ((!sel || sel.backendId !== 'github') && !isComposerSelection(sel)) return unsupported('This backend cannot fetch a single map\'s children on demand (view the complete list on its website)', logged)
     const reg = await getTrackerRegistry()
     const backendId = sel.backendId
     const tracker = reg.get(backendId)
-    if (!tracker || typeof tracker.listSubIssues !== 'function') return unsupported('这个后端不支持按需取一张地图的子票', logged)
+    if (!tracker || typeof tracker.listSubIssues !== 'function') return unsupported('This backend does not support fetching a single map\'s children on demand', logged)
     let repoRef: any = null
     try { repoRef = reg.describe({ cwd }, backendId) } catch (e) { repoRef = null }
     // #1584 F2：空 refId 的壳不算身份（GitHub / GitLab 只给目录时 describe 只回显示名）；
@@ -202,10 +202,10 @@ export function createMapTickets(deps?: any): any {
     const ctx2 = { cwd, opId: opId, platform: await getPlatform(), fs: ctx.get('fs'), exec: function(c?: any, a?: any, o?: any) { return detectionExec(c, a, o, 'map-tickets') }, logEvent: backendLogEvent, isEnabled: backendLogEnabled }
     const res = await tracker.listSubIssues(repoRef, key, {}, ctx2)
     if (!res || res.ok !== true) {
-      const err = (res && res.error) || { kind: 'network', message: '子票没取回来' }
+      const err = (res && res.error) || { kind: 'network', message: 'Could not fetch child tickets' }
       // 「这个后端不做这件事」要给人一句能读的话：注册表补的桩与后端自己回的那条都是内部英文
       // （`backend X does not implement op Y`），直接端到界面上没人看得懂在说什么。
-      if (err.kind === 'unsupported') return unsupported('这个后端不支持按需取一张地图的子票', logged)
+      if (err.kind === 'unsupported') return unsupported('This backend does not support fetching a single map\'s children on demand', logged)
       return { ok: false, error: err, logged: logged }
     }
     const d = res.data || {}

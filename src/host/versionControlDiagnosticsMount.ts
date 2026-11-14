@@ -17,7 +17,7 @@ export function createDiagnosticsMount(host: any): any {
         const write: any = ms[2].createDiagnosticsWrite({ failPhone: h.failPhone, failureFromExec: h.failureFromExec, runPinned: h.runPinned, resolveGitExecutable: h.resolveGitExecutable, measure: check.measure, now: h.now, tickets: check.tickets, results: check.results })
         return { read: read.handleGitDiagnosticsRead, check: check.handleGitDiagnosticsCheck, write: write.handleGitDiagnosticsWrite, tickets: check.tickets }
       }).catch(function (e: any): any {
-        const message: string = '诊断页三条电话那一族加载失败：' + String((e && (e as any).message) || e)
+        const message: string = 'Failed to load the diagnostic page\'s three handlers: ' + String((e && (e as any).message) || e)
         const failed: any = function (): any { return h.failPhone('env', message) }
         return { read: failed, check: failed, write: failed, tickets: async function (): Promise<any> { return null } }
       })

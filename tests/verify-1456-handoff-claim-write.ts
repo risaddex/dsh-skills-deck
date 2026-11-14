@@ -163,7 +163,7 @@ async function main(): Promise<void> {
   let threw12 = false
   let r12: any = null
   try { r12 = await w12.api.handleClaim({ cwd: 'D:/ws', number: 7 }) } catch (e) { threw12 = true }
-  check(!threw12 && r12 && r12.ok === false && r12.error && r12.error.kind === 'unknown' && String(r12.error.error).indexOf('写会话调用失败') >= 0,
+  check(!threw12 && r12 && r12.ok === false && r12.error && r12.error.kind === 'unknown' && String(r12.error.error).indexOf('Write-session call failed') >= 0,
     '会话调用抛错收成 unknown，不抛给调用点（实得 ' + JSON.stringify(r12) + '）')
 
   // —— ⑧ 静态：写路径不直调 gh ——

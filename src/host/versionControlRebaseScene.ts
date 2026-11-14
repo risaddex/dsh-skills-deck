@@ -53,12 +53,12 @@ export function createRebaseScene(deps: any): any {
     const res: any = await runPinned(exe, root, args, { stdoutLimit: o.stdoutLimit || READ_LIMIT, timeoutMs: o.timeoutMs || VC_REBASE_READ_TIMEOUT_MS })
     const bad: any = res.kind === 'ok' || (o.allowNonZero === true && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     return { ok: true, stdout: String(res.stdout || ''), stderr: String(res.stderr || ''), exitCode: typeof res.exitCode === 'number' ? res.exitCode : (res.kind === 'ok' ? 0 : -1) }
   }
   async function baseOf(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, String(cwd || ''))
     if (!base || base.ok !== true) return { fail: base }
     return { exe: exe, root: String(base.root) }
@@ -66,11 +66,11 @@ export function createRebaseScene(deps: any): any {
   /** 解析一个基座目标（分支名、标签名或提交号）到完整提交号；解析不到就是明确的 target-missing。 */
   async function oidOf(exe: any, root: any, target: any, what: string): Promise<any> {
     const bad: any = rebaseTargetProblem(target)
-    if (bad) return { ok: false, envelope: fail('args', bad, what + '的名字形状不对：面板只接受分支名、标签名或完整提交号', { target: target }) }
-    const r: any = await readOut(exe, root, what + '这一步', ['rev-parse', '--verify', '--quiet', String(target) + '^{commit}'], { allowNonZero: true })
+    if (bad) return { ok: false, envelope: fail('args', bad, what + ' name is invalid: the panel accepts only a branch name, tag name or full commit ID', { target: target }) }
+    const r: any = await readOut(exe, root, what + '', ['rev-parse', '--verify', '--quiet', String(target) + '^{commit}'], { allowNonZero: true })
     if (r.ok !== true) return r
     const oid: string = String(r.stdout || '').trim()
-    if (r.exitCode !== 0 || oid === '') return { ok: false, envelope: fail('args', 'target-missing', '找不到这个分支或提交：' + String(target) + '；请刷新清单后重新选', { target: String(target) }) }
+    if (r.exitCode !== 0 || oid === '') return { ok: false, envelope: fail('args', 'target-missing', 'Cannot find this branch or commit: ' + String(target) + '; refresh the list and select again', { target: String(target) }) }
     return { ok: true, oid: oid }
   }
   /** 读一次完整现场：仓库根、HEAD、首屏读数、进行中操作、当前分支、rebase.updateRefs 开关。 */
@@ -82,10 +82,10 @@ export function createRebaseScene(deps: any): any {
     const screen: any = sr.screen || {}
     const headOid: string = String((screen.identity && screen.identity.oid) || '')
     const state: any = conflictStateOfScreen(screen)
-    const br: any = await readOut(b.exe, b.root, '读当前分支这一步', ['rev-parse', '--abbrev-ref', 'HEAD'], { allowNonZero: true })
+    const br: any = await readOut(b.exe, b.root, 'Reading the current branch', ['rev-parse', '--abbrev-ref', 'HEAD'], { allowNonZero: true })
     if (br.ok !== true) return br
     const branch: string = String(br.stdout || '').trim()
-    const cfg: any = await readOut(b.exe, b.root, '读 rebase.updateRefs 开关这一步', ['config', '--get', 'rebase.updateRefs'], { allowNonZero: true })
+    const cfg: any = await readOut(b.exe, b.root, 'Reading the rebase.updateRefs setting', ['config', '--get', 'rebase.updateRefs'], { allowNonZero: true })
     if (cfg.ok !== true) return cfg
     const updateRefs: boolean = cfg.exitCode === 0 && /^(true|1|yes|on)$/i.test(String(cfg.stdout || '').trim())
     return { ok: true, exe: b.exe, repoRoot: b.root, headOid: headOid, screen: screen, state: state, branch: branch, updateRefs: updateRefs, gitVersion: String(sr.gitVersion || ''), readAtMs: nowFn() }
@@ -109,9 +109,9 @@ export function createRebaseScene(deps: any): any {
   async function windowOf(cwd: any, base: any): Promise<any> {
     const b: any = await baseOf(cwd)
     if (b.fail) return { ok: false, envelope: b.fail }
-    const o: any = await oidOf(b.exe, b.root, base, '读待办窗口的基座')
+    const o: any = await oidOf(b.exe, b.root, base, 'Reading the todo window\'s base')
     if (o.ok !== true) return o
-    const r: any = await readOut(b.exe, b.root, '读待办窗口这一步', ['log', '--reverse', '--format=%H%x1f%s', o.oid + '..HEAD'])
+    const r: any = await readOut(b.exe, b.root, 'Reading the todo window', ['log', '--reverse', '--format=%H%x1f%s', o.oid + '..HEAD'])
     if (r.ok !== true) return r
     const commits: any[] = commitsOf(r.stdout)
     const headOid: string = commits.length > 0 ? String(commits[commits.length - 1].oid) : o.oid
@@ -122,13 +122,13 @@ export function createRebaseScene(deps: any): any {
   async function ontoRangeOf(cwd: any, oldBase: any, newBase: any): Promise<any> {
     const b: any = await baseOf(cwd)
     if (b.fail) return { ok: false, envelope: b.fail }
-    const o1: any = await oidOf(b.exe, b.root, oldBase, '读换基座的旧基座')
+    const o1: any = await oidOf(b.exe, b.root, oldBase, 'Reading the old base for the move')
     if (o1.ok !== true) return o1
-    const o2: any = await oidOf(b.exe, b.root, newBase, '读换基座的新基座')
+    const o2: any = await oidOf(b.exe, b.root, newBase, 'Reading the new base for the move')
     if (o2.ok !== true) return o2
-    const moved: any = await readOut(b.exe, b.root, '读要搬走的提交这一步', ['log', '--reverse', '--format=%H%x1f%s', o1.oid + '..HEAD'])
+    const moved: any = await readOut(b.exe, b.root, 'Reading the commits to move', ['log', '--reverse', '--format=%H%x1f%s', o1.oid + '..HEAD'])
     if (moved.ok !== true) return moved
-    const incoming: any = await readOut(b.exe, b.root, '读新基座带来的提交这一步', ['log', '--reverse', '--format=%H%x1f%s', o1.oid + '..' + o2.oid])
+    const incoming: any = await readOut(b.exe, b.root, 'Reading the commits introduced by the new base', ['log', '--reverse', '--format=%H%x1f%s', o1.oid + '..' + o2.oid])
     if (incoming.ok !== true) return incoming
     const movedList: any[] = commitsOf(moved.stdout)
     const incomingList: any[] = commitsOf(incoming.stdout)
@@ -147,17 +147,17 @@ export function createRebaseScene(deps: any): any {
     const sr: any = await readScreenOf(cwd)
     if (!sr || sr.ok !== true) return { ok: false, envelope: sr }
     const state: any = conflictStateOfScreen(sr.screen || {})
-    if (state !== null) return { ok: false, envelope: fail('blocked', 'operation-in-progress', '仓库正在 ' + String(state) + ' 中，先把当前操作处理完再看自动吸收清单', { state: state }) }
-    const o: any = await oidOf(b.exe, b.root, base, '读自动吸收清单的基座')
+    if (state !== null) return { ok: false, envelope: fail('blocked', 'operation-in-progress', 'The repository is in the middle of a ' + String(state) + '; finish the current operation before viewing the autosquash list', { state: state }) }
+    const o: any = await oidOf(b.exe, b.root, base, 'Reading the autosquash base')
     if (o.ok !== true) return o
-    if (!tmp || typeof tmp.write !== 'function' || typeof tmp.read !== 'function' || typeof tmp.remove !== 'function') return { ok: false, envelope: fail('env', 'env', '临时文件服务不可用，读不了自动吸收清单') }
+    if (!tmp || typeof tmp.write !== 'function' || typeof tmp.read !== 'function' || typeof tmp.remove !== 'function') return { ok: false, envelope: fail('env', 'env', 'The temporary-file service is unavailable; the autosquash list cannot be read') }
     const cap: any = await tmp.write('')
-    if (!cap || cap.ok !== true) return { ok: false, envelope: fail('env', 'env', '建不了临时文件，读不了自动吸收清单：' + String((cap && cap.message) || '')) }
+    if (!cap || cap.ok !== true) return { ok: false, envelope: fail('env', 'env', 'Cannot create a temporary file; the autosquash list cannot be read: ' + String((cap && cap.message) || '')) }
     const editor: string = "sh -c 'cp \"$0\" \"" + String(cap.path) + "\"; exit 1'"
     const res: any = await runPinned(b.exe, b.root, ['rebase', '-i', '--autosquash', o.oid], { stdoutLimit: READ_LIMIT, timeoutMs: VC_REBASE_READ_TIMEOUT_MS, env: { GIT_SEQUENCE_EDITOR: editor } })
     const got: any = await tmp.read(cap.path)
     await tmp.remove(cap.path)
-    if (!got || got.ok !== true || String(got.text || '').trim() === '') return { ok: false, envelope: fail('git-failed', 'unknown-write-failure', '读自动吸收的待办这一步失败：git 没有生成待办，原话「' + gitSays(res) + '」', { git: gitSays(res), step: '读自动吸收的待办这一步', actual: '退出码 ' + String(res && res.exitCode) }) }
+    if (!got || got.ok !== true || String(got.text || '').trim() === '') return { ok: false, envelope: fail('git-failed', 'unknown-write-failure', 'Reading the autosquash todo failed: git produced no todo; git reported: "' + gitSays(res) + '"', { git: gitSays(res), step: 'Reading the autosquash todo', actual: 'Exit code ' + String(res && res.exitCode) }) }
     const parsed: any = rebaseAutosquashPairsOf(got.text)
     return { ok: true, base: String(base), baseOid: o.oid, pairs: parsed.pairs, todoText: String(got.text), readAtMs: nowFn() }
   }
@@ -169,10 +169,10 @@ export function createRebaseScene(deps: any): any {
     const sr: any = await readScreenOf(cwd)
     if (!sr || sr.ok !== true) return { ok: false, envelope: sr }
     const ver: string = String(sr.gitVersion || '')
-    if (!gitVersionAtLeast(ver, 2, 18)) return { ok: false, envelope: fail('unsupported', 'version-unsupported', '保留合并结构要 git ' + REBASE_MERGES_MIN_VERSION + ' 及以上（--rebase-merges）；当前是 ' + (ver || '未知版本') + '，升级后再来', { needed: REBASE_MERGES_MIN_VERSION, gitVersion: ver }) }
-    const o: any = await oidOf(b.exe, b.root, base, '读保留合并结构代价的基座')
+    if (!gitVersionAtLeast(ver, 2, 18)) return { ok: false, envelope: fail('unsupported', 'version-unsupported', 'Preserving merge structure requires git ' + REBASE_MERGES_MIN_VERSION + ' or newer (--rebase-merges); current version: ' + (ver || 'Unknown version') + '; upgrade and retry', { needed: REBASE_MERGES_MIN_VERSION, gitVersion: ver }) }
+    const o: any = await oidOf(b.exe, b.root, base, 'Reading the base for the merge-structure cost')
     if (o.ok !== true) return o
-    const r: any = await readOut(b.exe, b.root, '读合并提交清单这一步', ['log', '--merges', '--reverse', '--format=%H%x1f%s', o.oid + '..HEAD'])
+    const r: any = await readOut(b.exe, b.root, 'Reading the merge-commit list', ['log', '--merges', '--reverse', '--format=%H%x1f%s', o.oid + '..HEAD'])
     if (r.ok !== true) return r
     const merges: any[] = commitsOf(r.stdout)
     return { ok: true, base: String(base), baseOid: o.oid, mergeCommits: merges, count: merges.length, gitVersion: ver, readAtMs: nowFn() }
@@ -202,23 +202,23 @@ export function createRebaseScene(deps: any): any {
     let oldBaseOid: any = null
     let newBaseOid: any = null
     if (p.base !== null) {
-      const o: any = await oidOf(scene.exe, scene.repoRoot, p.base, '核对基座')
+      const o: any = await oidOf(scene.exe, scene.repoRoot, p.base, 'Checking the base')
       if (o.ok !== true) return { ok: false, envelope: o.envelope }
       baseOid = o.oid
     }
     if (p.oldBase !== null) {
-      const o: any = await oidOf(scene.exe, scene.repoRoot, p.oldBase, '核对旧基座')
+      const o: any = await oidOf(scene.exe, scene.repoRoot, p.oldBase, 'Checking the old base')
       if (o.ok !== true) return { ok: false, envelope: o.envelope }
       oldBaseOid = o.oid
     }
     if (p.newBase !== null) {
-      const o: any = await oidOf(scene.exe, scene.repoRoot, p.newBase, '核对新基座')
+      const o: any = await oidOf(scene.exe, scene.repoRoot, p.newBase, 'Checking the new base')
       if (o.ok !== true) return { ok: false, envelope: o.envelope }
       newBaseOid = o.oid
     }
     let windowOids: string[] = []
     if (baseOid !== null && p.op === 'rebase-todo') {
-      const r: any = await readOut(scene.exe, scene.repoRoot, '核对待办窗口这一步', ['log', '--reverse', '--format=%H', String(baseOid) + '..HEAD'])
+      const r: any = await readOut(scene.exe, scene.repoRoot, 'Checking the todo window', ['log', '--reverse', '--format=%H', String(baseOid) + '..HEAD'])
       if (r.ok !== true) return r
       windowOids = String(r.stdout || '').split(/\r?\n/).filter(function (s: string): boolean { return s !== '' })
     }

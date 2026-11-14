@@ -81,12 +81,12 @@ export function createConfigPhones(deps: any): any {
     const res: any = await runPinned(exe, root, args, { stdoutLimit: 8 * 1024 * 1024, timeoutMs: READ_TIMEOUT_MS })
     const bad: any = res.kind === 'ok' || (allowNonZero && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     return { ok: true, stdout: res.stdout, stderr: res.stderr, exitCode: res.exitCode }
   }
   async function baseOf(cwd: string): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return { fail: base }
     return { exe: exe, root: String(base.root) }
@@ -99,10 +99,10 @@ export function createConfigPhones(deps: any): any {
   }
   /** 读配置清单：--show-origin -z 一次读全，解析失败整份失败，不给半份配置。 */
   async function entriesOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读配置清单这一步', configListArgs())
+    const r: any = await readOut(exe, root, 'Reading the configuration list', configListArgs())
     if (r.ok !== true) return r
     const parsed: any = parseConfigList(r.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', '配置清单解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: fail('parse', 'parse', 'Configuration list parse failed: ' + parsed.detail) }
     return { ok: true, entries: parsed.entries }
   }
   async function textOf(exe: any, root: any, what: string, args: string[]): Promise<any> {
@@ -132,13 +132,13 @@ export function createConfigPhones(deps: any): any {
   async function sceneOf(exe: any, root: any, args: any): Promise<any> {
     const list: any = await entriesOf(exe, root)
     if (list.ok !== true) return list
-    const ver: any = await textOf(exe, root, '读 git 版本这一步', versionArgs())
+    const ver: any = await textOf(exe, root, 'Reading the git version', versionArgs())
     if (ver.ok !== true) return ver
-    const head: any = await textOf(exe, root, '读 HEAD 这一步', ['rev-parse', '--verify', 'HEAD'])
+    const head: any = await textOf(exe, root, 'Reading HEAD', ['rev-parse', '--verify', 'HEAD'])
     if (head.ok !== true) return head
-    const cfgPath: any = await textOf(exe, root, '读本地配置文件位置这一步', gitPathArgs('config'))
+    const cfgPath: any = await textOf(exe, root, 'Reading the local config-file location', gitPathArgs('config'))
     if (cfgPath.ok !== true) return cfgPath
-    const hooksRel: any = await textOf(exe, root, '读钩子目录位置这一步', gitPathArgs('hooks'))
+    const hooksRel: any = await textOf(exe, root, 'Reading the hooks-directory location', gitPathArgs('hooks'))
     if (hooksRel.ok !== true) return hooksRel
     const localConfigPath: string = resolveAt(root, cfgPath.text)
     const rows: any[] = configRowsOf(list.entries, localConfigPath)
@@ -149,18 +149,18 @@ export function createConfigPhones(deps: any): any {
     let attr: any = { state: 'idle' }
     const pathArg: string = String(a.path === undefined || a.path === null ? '' : a.path)
     if (pathArg !== '') {
-      const r: any = await readOut(exe, root, '查属性规则这一步', checkAttrArgs(pathArg), true)
-      if (r.ok !== true) attr = { state: 'err', message: '属性规则读不出来：这次先不给读数' }
+      const r: any = await readOut(exe, root, 'Checking attribute rules', checkAttrArgs(pathArg), true)
+      if (r.ok !== true) attr = { state: 'err', message: 'Attribute rules could not be read; no result is returned' }
       else {
         const parsed: any = parseCheckAttr(r.stdout)
-        attr = parsed.ok === true ? { state: 'ok', path: pathArg, entries: parsed.entries } : { state: 'err', message: '属性规则解析失败：' + parsed.detail }
+        attr = parsed.ok === true ? { state: 'ok', path: pathArg, entries: parsed.entries } : { state: 'err', message: 'Attribute rules parse failed: ' + parsed.detail }
       }
     }
     let mailmap: any = { state: 'idle' }
     const address: string = String(a.address === undefined || a.address === null ? '' : a.address)
     if (address !== '') {
-      const r2: any = await readOut(exe, root, '查邮件映射这一步', checkMailmapArgs(address), true)
-      if (r2.ok !== true) mailmap = { state: 'err', message: '邮件映射读不出来：这次先不给读数' }
+      const r2: any = await readOut(exe, root, 'Checking mailmap', checkMailmapArgs(address), true)
+      if (r2.ok !== true) mailmap = { state: 'err', message: 'Mailmap could not be read; no result is returned' }
       else mailmap = { state: 'ok', address: address, mapped: parseCheckMailmap(r2.stdout), exitCode: r2.exitCode }
     }
     const known: string[] = []
@@ -273,9 +273,9 @@ export function createConfigPhones(deps: any): any {
    */
   async function handleConfigCheck(args: any): Promise<any> {
     const a: any = args || {}
-    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'bad-target', '缺少工作目录：预检必须先说清在哪个仓库做')
+    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'bad-target', 'Missing working directory: preflight must identify the repository')
     const op: string = String(a.op || '')
-    if (CONFIG_WRITE_OPS.indexOf(op) < 0) return fail('args', 'bad-target', '这个动作不走预检：' + op)
+    if (CONFIG_WRITE_OPS.indexOf(op) < 0) return fail('args', 'bad-target', 'This action does not use preflight: ' + op)
     const planRes: any = configCheckPlanOf(op, a)
     if (!planRes.ok) return fail('args', planRes.reason, planRes.message, { reasons: [planRes.reason] })
     const plan: any = planRes.plan
@@ -288,12 +288,12 @@ export function createConfigPhones(deps: any): any {
     }
     if (op === 'hook-run') {
       const gate: any = configHookRunStateOf(scene.gitVersion)
-      if (gate.state !== 'full') return blocked('hook-version', '当前 git 版本不支持 git hook run（需要 ' + gate.needed + '）：' + String(gate.alternative || ''))
+      if (gate.state !== 'full') return blocked('hook-version', 'This git version does not support git hook run (requires ' + gate.needed + '): ' + String(gate.alternative || ''))
       const file: any = hookFileOf(scene, String(plan.name || ''))
-      if (!file) return blocked('hook-not-found', '这个钩子在当前钩子目录里没有对应文件（钩子目录：' + String(scene.hooks.dir || '') + '）')
+      if (!file) return blocked('hook-not-found', 'This hook has no file in the current hooks directory (directory: ' + String(scene.hooks.dir || '') + ')')
     } else {
       const facts: any = factsOf(scene, plan)
-      if (op === 'config-unset' && (facts.oldValue === null || facts.oldValue === undefined)) return blocked('config-missing', '这个键在当前作用域里本来就没有值，没有可删的')
+      if (op === 'config-unset' && (facts.oldValue === null || facts.oldValue === undefined)) return blocked('config-missing', 'This key already has no value in the current scope; there is nothing to delete')
     }
     const facts: any = factsOf(scene, plan)
     const confirmRequired: boolean = configNeedsConfirmOf(plan)

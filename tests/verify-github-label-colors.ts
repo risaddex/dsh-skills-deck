@@ -613,7 +613,7 @@ function fakeSessionOpener(deps) {
   const host = createWorkspaceCwd(Object.assign({}, ctxHost, { openSession: fakeSessionOpener(ctxHost) }))
 
   const rlAlone = await host.handleListLabels({ cwd: HOST_CWD })
-  check(rlAlone.ok === false && rlAlone.error.kind === 'conflict' && String(rlAlone.error.message).includes('同时对应'),
+  check(rlAlone.ok === false && rlAlone.error.kind === 'conflict' && String(rlAlone.error.message).includes('currently match this workspace'),
     '#631 两边都认领、面板又没说用哪个 → 仍然 conflict，宿主自己不挑（实得 ' + JSON.stringify(rlAlone).slice(0, 160) + '）')
 
   const listsBefore = lists(gh).length
@@ -632,7 +632,7 @@ function fakeSessionOpener(deps) {
   //   （两个后端都认领它，面板只是显示着 github），所以必须一个字节都不动地拒绝，并指路去面板选定。
   const bugColorBefore = gh.labels.find((x) => x.name === 'bug').color
   const rsUnpicked = await host.handleSetLabelColors({ cwd: HOST_CWD, backendId: 'github', changes: [{ name: 'bug', color: '0b7285' }] })
-  check(rsUnpicked.ok === false && rsUnpicked.error.kind === 'conflict' && String(rsUnpicked.error.message).includes('先在面板上选定'),
+  check(rsUnpicked.ok === false && rsUnpicked.error.kind === 'conflict' && String(rsUnpicked.error.message).includes('Select the backend for this workspace in the panel'),
     '#631 用户还没选定（这个工作区没有人的记录）→ 改色如实拒绝，并指路去面板选定（实得 ' + JSON.stringify(rsUnpicked).slice(0, 160) + '）')
   check(gh.labels.find((x) => x.name === 'bug').color === bugColorBefore,
     '#631 拒绝那一次确实没动仓库（bug 的颜色还是 ' + bugColorBefore + '）')

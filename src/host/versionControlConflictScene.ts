@@ -61,12 +61,12 @@ export function createConflictScene(deps: any): any {
     const res: any = await runPinned(exe, root, args, { stdoutLimit: o.stdoutLimit || READ_LIMIT, timeoutMs: o.timeoutMs || VC_CONFLICT_READ_TIMEOUT_MS })
     const bad: any = res.kind === 'ok' || (o.allowNonZero === true && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     return { ok: true, stdout: String(res.stdout || ''), stderr: String(res.stderr || ''), exitCode: typeof res.exitCode === 'number' ? res.exitCode : (res.kind === 'ok' ? 0 : -1) }
   }
   async function baseOf(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, String(cwd || ''))
     if (!base || base.ok !== true) return { fail: base }
     return { exe: exe, root: String(base.root) }
@@ -78,7 +78,7 @@ export function createConflictScene(deps: any): any {
    * 只留阶段非 0 的行——阶段 0 是普通已跟踪文件，不是冲突。
    */
   async function unmergedOf(exe: any, root: any): Promise<any> {
-    const r: any = await readOut(exe, root, '读冲突文件清单这一步', ['ls-files', '--stage', '-z'])
+    const r: any = await readOut(exe, root, 'Reading the conflicted-file list', ['ls-files', '--stage', '-z'])
     if (r.ok !== true) return r
     const records: string[] = r.stdout.split('\u0000')
     const byPath: any = {}
@@ -112,7 +112,7 @@ export function createConflictScene(deps: any): any {
     for (let i = 0; i < tryOid.length; i += 1) {
       const oid: string = String(tryOid[i] || '')
       if (oid === '') continue
-      const r: any = await readOut(exe, root, '读冲突文件内容这一步', ['cat-file', '-p', oid], { stdoutLimit: CAT_LIMIT, allowNonZero: true })
+      const r: any = await readOut(exe, root, 'Reading conflict-file content', ['cat-file', '-p', oid], { stdoutLimit: CAT_LIMIT, allowNonZero: true })
       if (r.ok !== true) return 'binary'
       if (r.truncated) return 'binary'
       if (r.stdout.indexOf('\u0000') >= 0) return 'binary'
@@ -166,7 +166,7 @@ export function createConflictScene(deps: any): any {
 
   /** 读仓库内一个相对路径的文本文件：缺失与读不了分开回报（整份编辑要先拿旧内容算摘要）。 */
   async function readTextFile(root: any, rel: any): Promise<any> {
-    if (!fs || typeof fs.readText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, reason: 'unreadable', message: '文件服务不可用，读不了这个文件' }
+    if (!fs || typeof fs.readText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, reason: 'unreadable', message: 'The file service is unavailable; this file cannot be read' }
     let target: any
     try { target = await fs.resolve(joinRepo(root, rel)) } catch (e) {
       try { if ((await fsAbsence()).isAbsenceError(e)) return { ok: false, reason: 'missing' } } catch (eA) { /* 灭失判定本身失败时按读不了处理 */ }
@@ -179,14 +179,14 @@ export function createConflictScene(deps: any): any {
   }
   /** 覆写仓库内一个相对路径的文本文件（整份编辑保存用）；失败如实回，不假装写成功。 */
   async function writeTextFile(root: any, rel: any, text: any): Promise<any> {
-    if (!fs || typeof fs.writeText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, message: '文件服务不可用，写不了这个文件' }
+    if (!fs || typeof fs.writeText !== 'function' || typeof fs.resolve !== 'function') return { ok: false, message: 'The file service is unavailable; this file cannot be written' }
     try { const target: any = await fs.resolve(joinRepo(root, rel)); await fs.writeText(target, String(text)); return { ok: true } } catch (e) { return { ok: false, message: String(((e as any) && (e as any).message) || (e as any)) } }
   }
 
   /** 冲突视图（能力 6.9 的面板实现）：读工作区那份文件，按冲突块切开；二进制不切块只回普通文本。 */
   async function fileViewOf(root: any, rel: any): Promise<any> {
     const txt: any = await readTextFile(root, rel)
-    if (txt.ok !== true) return { ok: false, envelope: fail('read', txt.reason === 'missing' ? 'path-not-conflicted' : 'unreadable', txt.reason === 'missing' ? '这个文件已经不在工作区了：刷新冲突清单再看' : '读不了这个文件：' + String(txt.message || '')) }
+    if (txt.ok !== true) return { ok: false, envelope: fail('read', txt.reason === 'missing' ? 'path-not-conflicted' : 'unreadable', txt.reason === 'missing' ? 'This file is no longer in the workspace; refresh the conflict list' : 'Cannot read this file: ' + String(txt.message || '')) }
     const kind: string = conflictTextKindOf(txt.text)
     const hunks: any = kind === 'text' ? splitConflictHunks(txt.text) : { ok: false, reason: 'binary' }
     return { ok: true, path: String(rel), kind: kind, text: txt.text, hunks: hunks.ok === true ? hunks.hunks : null, hunkCount: hunks.ok === true ? hunks.hunks.length : 0, hunksReason: hunks.ok === true ? null : String(hunks.reason) }
@@ -206,7 +206,7 @@ export function createConflictScene(deps: any): any {
   async function markerCheckPathOf(cwd: any, rel: any): Promise<any> {
     const b: any = await baseOf(cwd)
     if (b.fail) return { ok: false, envelope: b.fail }
-    const r: any = await readOut(b.exe, b.root, '查这个文件的残留冲突标记这一步', ['diff', '--check', '--', String(rel)], { allowNonZero: true })
+    const r: any = await readOut(b.exe, b.root, 'Checking this file for leftover conflict markers', ['diff', '--check', '--', String(rel)], { allowNonZero: true })
     if (r.ok !== true) return r
     const markers: any[] = markerLinesOf(r.stdout)
     return { ok: true, clean: markers.length === 0, markers: markers, exitCode: r.exitCode }
@@ -215,9 +215,9 @@ export function createConflictScene(deps: any): any {
   async function markerCheckOf(cwd: any): Promise<any> {
     const b: any = await baseOf(cwd)
     if (b.fail) return { ok: false, envelope: b.fail }
-    const work: any = await readOut(b.exe, b.root, '查工作区残留冲突标记这一步', ['diff', '--check'], { allowNonZero: true })
+    const work: any = await readOut(b.exe, b.root, 'Checking the workspace for leftover conflict markers', ['diff', '--check'], { allowNonZero: true })
     if (work.ok !== true) return work
-    const cached: any = await readOut(b.exe, b.root, '查已暂存内容残留冲突标记这一步', ['diff', '--cached', '--check'], { allowNonZero: true })
+    const cached: any = await readOut(b.exe, b.root, 'Checking staged content for leftover conflict markers', ['diff', '--cached', '--check'], { allowNonZero: true })
     if (cached.ok !== true) return cached
     const workMarkers: any[] = markerLinesOf(work.stdout)
     const cachedMarkers: any[] = markerLinesOf(cached.stdout)
@@ -235,16 +235,16 @@ export function createConflictScene(deps: any): any {
     if (m) {
       const major: number = parseInt(m[1], 10)
       const minor: number = parseInt(m[2], 10)
-      if (major < 2 || (major === 2 && minor < 38)) return { ok: false, envelope: fail('unsupported', 'version-unsupported', '预演合并要 git 2.38 及以上（merge-tree --write-tree）；当前是 ' + (ver || '未知版本') + '，升级后再来', { needed: '2.38', gitVersion: ver }) }
+      if (major < 2 || (major === 2 && minor < 38)) return { ok: false, envelope: fail('unsupported', 'version-unsupported', 'Merge preview requires git 2.38 or newer (merge-tree --write-tree); current version: ' + (ver || 'Unknown version') + '; upgrade and retry', { needed: '2.38', gitVersion: ver }) }
     } else {
-      return { ok: false, envelope: fail('unsupported', 'version-unsupported', '读不出 git 版本，预演合并这一步先不做（它需要 2.38 及以上）', { needed: '2.38', gitVersion: ver }) }
+      return { ok: false, envelope: fail('unsupported', 'version-unsupported', 'Cannot read the git version; merge preview is unavailable (requires 2.38 or newer)', { needed: '2.38', gitVersion: ver }) }
     }
     // merge-tree 要两个分支名：第一个钉死当前 HEAD，第二个是面板选的合并目标；只传一个会被 git 当用法错误。
     const argv: string[] = ['merge-tree', '--write-tree', '--name-only', 'HEAD', String(target)]
     const res: any = await runPinned(b.exe, b.root, argv, { stdoutLimit: READ_LIMIT, timeoutMs: VC_CONFLICT_READ_TIMEOUT_MS })
-    const bad: any = res.kind === 'ok' || res.kind === 'non-zero' ? null : failureFromExec(res, '预演合并这一步')
+    const bad: any = res.kind === 'ok' || res.kind === 'non-zero' ? null : failureFromExec(res, 'Previewing the merge')
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', '预演合并的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', 'Merge preview output exceeded the byte limit; partial data will not be returned') }
     const exitCode: number = typeof res.exitCode === 'number' ? res.exitCode : -1
     const lines: string[] = String(res.stdout || '').split(/\r?\n/)
     const treeOid: string = String(lines[0] || '').trim()
@@ -260,19 +260,19 @@ export function createConflictScene(deps: any): any {
       }
       return { ok: true, clean: false, treeOid: treeOid, paths: paths, messages: messages, command: argv.join(' '), readAtMs: nowFn() }
     }
-    return { ok: false, envelope: fail('git-failed', 'unknown-write-failure', '预演合并这一步失败：git 原话「' + gitSays(res) + '」', { git: gitSays(res), step: '预演合并这一步', actual: '退出码 ' + exitCode }) }
+    return { ok: false, envelope: fail('git-failed', 'unknown-write-failure', 'Merge preview failed; git reported: "' + gitSays(res) + '"', { git: gitSays(res), step: 'Previewing the merge', actual: 'Exit code ' + exitCode }) }
   }
 
   /** rerere 读数（能力 6.14，只读）：开没开、有没有记着的解法路径；不替用户应用也不改配置。 */
   async function rerereOf(cwd: any): Promise<any> {
     const b: any = await baseOf(cwd)
     if (b.fail) return { ok: false, envelope: b.fail }
-    const cfg: any = await readOut(b.exe, b.root, '读 rerere 开关这一步', ['config', '--get', 'rerere.enabled'], { allowNonZero: true })
+    const cfg: any = await readOut(b.exe, b.root, 'Reading the rerere setting', ['config', '--get', 'rerere.enabled'], { allowNonZero: true })
     if (cfg.ok !== true) return cfg
     const enabled: boolean = cfg.exitCode === 0 && /^(true|1|yes|on)$/i.test(String(cfg.stdout || '').trim())
     let paths: string[] = []
     if (enabled) {
-      const st: any = await readOut(b.exe, b.root, '读 rerere 解法清单这一步', ['rerere', 'status'], { allowNonZero: true })
+      const st: any = await readOut(b.exe, b.root, 'Reading the rerere resolution list', ['rerere', 'status'], { allowNonZero: true })
       if (st.ok !== true) return st
       paths = String(st.stdout || '').split(/\r?\n/).filter(function (s: string): boolean { return s.trim() !== '' })
     }

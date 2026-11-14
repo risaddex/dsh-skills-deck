@@ -94,7 +94,7 @@ async function main() {
     check(w.ok === false && w.reason === 'version-newer', 'M4 高版本拒绝写', JSON.stringify(w))
     const mem2 = makeMemFs({})
     const r2 = await readWorkspaceConfig(ROOT_DIR, mem2.io)
-    check(r2.ok === false && r2.reason === 'missing' && /还没选后端/.test(r2.message), 'M4 两个都没有时回 missing（界面引导去选）', JSON.stringify(r2))
+    check(r2.ok === false && r2.reason === 'missing' && /has not selected a backend/.test(r2.message), 'M4 两个都没有时回 missing（界面引导去选）', JSON.stringify(r2))
   }
   {
     // 新文件坏了、老文件好的：先用老的顶着并警告，不崩。

@@ -76,7 +76,7 @@ export function createHandoffClaim(deps: HandoffClaimDeps): any {
   }
   // 共享目录扫描（handoffLatest + handoffResolve 共用）—— 任何 fs 调用异常都降级为空数组
   const scanHandoffDir = async function (cwd: any): Promise<any> {
-    if (fs === undefined) return { error: 'fs 服务不可用', mds: [] }
+    if (fs === undefined) return { error: 'The fs service is unavailable', mds: [] }
     try {
       const dir: any = await fs.resolve('.scratch/handoff', { cwd: cwd })
       const entries: any = await fs.listDir(dir)
@@ -104,7 +104,7 @@ export function createHandoffClaim(deps: HandoffClaimDeps): any {
   async function handleHandoffLatest(args: any): Promise<any> {
     // #1003 空目录闸：不拿进程目录冒充去读交接目录，诚实失败等就绪。
     const _rawLatestCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawLatestCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!_rawLatestCwd) return { ok: false, error: 'This workspace is not ready (its directory has not been identified). Retry once the panel recognises the workspace.' }
     const cwd: any = await normCwd(_rawLatestCwd)
     const r: any = await scanHandoffDir(cwd)
     if (r.error) return { ok: false, error: r.error }
@@ -119,7 +119,7 @@ export function createHandoffClaim(deps: HandoffClaimDeps): any {
   async function handleHandoffResolve(args: any): Promise<any> {
     // #1003 空目录闸：同上。
     const _rawResolveCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawResolveCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!_rawResolveCwd) return { ok: false, error: 'This workspace is not ready (its directory has not been identified). Retry once the panel recognises the workspace.' }
     const cwd: any = await normCwd(_rawResolveCwd)
     const r: any = await scanHandoffDir(cwd)
     if (r.error) return { ok: false, error: r.error }
@@ -146,26 +146,26 @@ export function createHandoffClaim(deps: HandoffClaimDeps): any {
     const n: any = args && args.number
     // #1003 空目录闸：写操作不冒充（会写到错的仓库），直接拒绝等就绪。
     const _rawClaimCwd: string = (args && typeof args.cwd === 'string' && args.cwd.trim()) ? args.cwd : ''
-    if (!_rawClaimCwd) return { ok: false, error: '这个工作区还没就绪（还没认出是哪个目录），等面板认出工作区后再试。' }
+    if (!_rawClaimCwd) return { ok: false, error: 'This workspace is not ready (its directory has not been identified). Retry once the panel recognises the workspace.' }
     const cwd: any = await normCwd(_rawClaimCwd)
-    if (!n) return { ok: false, error: '缺少参数 number（ticket 号）' }
+    if (!n) return { ok: false, error: 'Missing number parameter (ticket number)' }
     // 写会话没接上时如实回环境失败（调用点按 kind:'env' 提示），不抛、也不退回直调 gh 的老路。
     if (typeof openSession !== 'function') {
-      return { ok: false, error: { kind: 'env', error: '写会话没接上（宿主没有注入 openSession），这次认领没有发出。' } }
+      return { ok: false, error: { kind: 'env', error: 'The write session is not connected (the host did not inject openSession); no claim request was sent.' } }
     }
     let opened: any = null
     try { opened = await openSession(cwd, { write: true }) } catch (eOpen: any) { opened = null }
     if (!opened || !opened.ok) {
       const why: string = (opened && opened.reason) ? String(opened.reason) : 'unknown'
-      return { ok: false, error: { kind: 'env', error: '写会话没开起来（' + why + '），这次认领没有发出。' } }
+      return { ok: false, error: { kind: 'env', error: 'Could not open the write session (' + why + '); no claim request was sent.' } }
     }
     // 仓库身份以会话交过来的为准。GitHub 房必须给出 owner/repo：认领要落到具体那张票上，认不出仓库就不发写。
     const repoRef: any = opened.repoRef
     if (!repoRef || typeof repoRef !== 'object' || !repoRef.backend) {
-      return { ok: false, error: { kind: 'env', error: '无法解析 owner/repo（写会话没有给出仓库身份）' } }
+      return { ok: false, error: { kind: 'env', error: 'Cannot resolve owner/repo (the write session provided no repository identity)' } }
     }
     if (repoRef.backend === 'github' && String(repoRef.refId || '').indexOf('/') < 0) {
-      return { ok: false, error: { kind: 'env', error: '无法解析 owner/repo（写会话没有给出仓库身份）' } }
+      return { ok: false, error: { kind: 'env', error: 'Cannot resolve owner/repo (the write session provided no repository identity)' } }
     }
     // 票号按后端取：GitHub 的票号就是纯数字（旧实现两位补零只服务于本地 Markdown 房的文件名约定，
     //   对 GitHub 传 '07' 会查不到票）；其它后端沿用两位补零，不要因为这次统一口径把它们改坏。
@@ -204,10 +204,10 @@ export function createHandoffClaim(deps: HandoffClaimDeps): any {
       })
     } catch (e: any) {
       const msg: string = String((e && e.message) || e).slice(0, 200)
-      return { ok: false, error: { kind: 'unknown', error: '写会话调用失败：' + msg } }
+      return { ok: false, error: { kind: 'unknown', error: 'Write-session call failed: ' + msg } }
     }
     if (!r || !r.ok) {
-      const errObj: any = (r && r.error) ? r.error : { kind: 'unknown', error: '认领失败（写会话没有给出原因）' }
+      const errObj: any = (r && r.error) ? r.error : { kind: 'unknown', error: 'Claim failed (the write session gave no reason)' }
       return { ok: false, error: errObj }
     }
     // 认领成功 → 只清自己根（#696），让面板下次快照拉到新的指派人。

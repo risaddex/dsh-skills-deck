@@ -109,12 +109,12 @@ export function createIssuePage(deps: IssuePageDeps): any {
   async function pageOnce(a: any): Promise<any> {
     const cwd: any = await normCwd(a.cwd || DEFAULT_CWD)
     const sel: any = await selectEarly({ cwd, backendId: a.backendId || undefined })
-    if (!sel || !sel.backendId) return { ok: false, error: { kind: 'unsupported', message: '这个工作区还没有可用的后端，按页取票用不了' } }
+    if (!sel || !sel.backendId) return { ok: false, error: { kind: 'unsupported', message: 'This workspace has no usable backend; paged ticket reads are unavailable' } }
     const reg: any = await getTrackerRegistry()
-    if (!reg || typeof reg.get !== 'function') return { ok: false, error: { kind: 'unsupported', message: '后端注册表不可用，按页取票用不了' } }
+    if (!reg || typeof reg.get !== 'function') return { ok: false, error: { kind: 'unsupported', message: 'The backend registry is unavailable; paged ticket reads are unavailable' } }
     const backendId: any = sel.backendId
     const tracker: any = reg.get(backendId)
-    if (!tracker || typeof tracker.listPage !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + backendId + "' 未实现 listPage" } }
+    if (!tracker || typeof tracker.listPage !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + backendId + '\' does not implement listPage' } }
     let repoRef: any = null
     try { repoRef = reg.describe({ cwd }, backendId) } catch {}
     if (!repoRef || !repoRef.refId) {
@@ -130,7 +130,7 @@ export function createIssuePage(deps: IssuePageDeps): any {
         if (rk && rk.owner && rk.name) repoRef = { backend: backendId, refId: rk.owner + '/' + rk.name, name: rk.owner + '/' + rk.name, url: 'https://github.com/' + rk.owner + '/' + rk.name }
       } catch (e: any) { /* 拿不到就按下面如实失败 */ }
     }
-    if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'env', message: '认不出这个工作区对应的仓库（缺远端信息），按页取票用不了' } }
+    if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'env', message: 'Cannot identify this workspace\'s repository (remote information is missing); paged ticket reads are unavailable' } }
     // 工作单元（effort）是寻址范围：带上就放进 ref（不带 = 全仓库，单工作单元的后端行为不变）。
     if (a.effortId !== undefined && a.effortId !== null && a.effortId !== '') repoRef.effortId = String(a.effortId)
     const opCtx: any = {
@@ -143,7 +143,7 @@ export function createIssuePage(deps: IssuePageDeps): any {
     }
     const filter: any = { state: a.state || undefined, labels: a.labels && a.labels.length ? a.labels : undefined }
     const r: any = await tracker.listPage(repoRef, filter, { cursor: a.cursor || '', limit: a.limit }, opCtx)
-    if (!r || !r.ok) return { ok: false, error: (r && r.error) || { kind: 'network', message: 'listPage 没有回包' } }
+    if (!r || !r.ok) return { ok: false, error: (r && r.error) || { kind: 'network', message: 'listPage returned no response' } }
     const d: any = r.data || {}
     const items: any = Array.isArray(d.items) ? d.items.map(clientRowOf) : []
     return { ok: true, items: items, nextCursor: (typeof d.nextCursor === 'string' && d.nextCursor) ? d.nextCursor : null, total: d.total }

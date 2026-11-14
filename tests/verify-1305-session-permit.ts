@@ -99,7 +99,7 @@ async function main() {
     const r = await h.api.handleBind({ cwd: dir, backendId: 'github' })
     check(r.ok === false && r.kind === 'workspace-file-failed', 'A 两个活会话、不带会话号：如实回失败（不再回 ok）', JSON.stringify({ ok: r.ok, kind: r.kind }))
     check(r.errorKind === 'no-session-permit', 'A 失败原因分到「没拿到会话许可」这一档（不是磁盘只读）', String(r.errorKind))
-    check(/没拿到这次请求的会话号/.test(String(r.error)), 'A 失败提示说清为什么：宿主不知道这次写入算哪个会话的', String(r.error))
+    check(/did not receive this request's session ID/.test(String(r.error)), 'A 失败提示说清为什么：宿主不知道这次写入算哪个会话的', String(r.error))
     check(!fs.existsSync(wsFile(dir)), 'A 确实一个字都没写进工作区文件')
     check(!h.placed.length, 'A 写文件都没成，就不往下走配色那一步')
     check(h.events.some((e) => e.event === 'host.call.fail' && e.fields && e.fields.method === 'wf.bind' && e.fields.errorKind === 'no-session-permit'), 'A 日志里记下这一趟失败与原因档（可事后排查）')
@@ -153,7 +153,7 @@ async function main() {
     const body = fs.readFileSync(wsFile(dir), 'utf8')
     check(g1.ok === true && g1.workspaceFile === 'written' && /layout: multi/.test(body), 'G 布局电话带会话号：写进工作区文件', JSON.stringify(g1))
     const g2 = await h.api.handleSetupLayout({ cwd: dir, layout: 'single' })
-    check(g2.ok === false && g2.workspaceFile === 'no-permit' && /没有生效/.test(String(g2.error)), 'G 不带会话号写不进时如实回失败：说清这次选择没有生效（#1449 起不留本机备份）', JSON.stringify(g2))
+    check(g2.ok === false && g2.workspaceFile === 'no-permit' && /did not take effect/.test(String(g2.error)), 'G 不带会话号写不进时如实回失败：说清这次选择没有生效（#1449 起不留本机备份）', JSON.stringify(g2))
     check(/layout: multi/.test(fs.readFileSync(wsFile(dir), 'utf8')), 'G 失败那一次没有改动文件里原有的布局答案')
   }
   // H：旧选择迁移（wf.selection 捎带）—— 带会话号才落得进文件

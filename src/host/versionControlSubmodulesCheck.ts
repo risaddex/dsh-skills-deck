@@ -68,12 +68,12 @@ export function createSubmoduleCheck(deps: any): any {
     const res: any = await runPinned(exe, root, args, { stdoutLimit: STDOUT_LIMIT, timeoutMs: READ_TIMEOUT_MS })
     const bad: any = res.kind === 'ok' || (allowNonZero && res.kind === 'non-zero') ? null : failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + '的输出超过了字节上限，读不全就不给现场') }
+    if (res.truncated) return { ok: false, envelope: fail('truncated', 'truncated', what + ': output exceeded the byte limit; repository state will not be returned') }
     return { ok: true, stdout: res.stdout, stderr: res.stderr, exitCode: res.exitCode }
   }
   async function baseOf(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { fail: fail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { fail: fail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return { fail: base }
     return { exe: exe, root: base.root, gitDir: base.gitDir }
@@ -117,7 +117,7 @@ export function createSubmoduleCheck(deps: any): any {
     if (board.ok !== true) return { ok: false, envelope: board.envelope }
     let targetExists: any = undefined
     if (plan.action === 'add') { const facts: any = await targetFactsOf(joinPath(base.root, plan.path)); targetExists = facts.exists === true }
-    const head: any = await readOut(base.exe, base.root, '读仓库当前位置这一步', ['rev-parse', 'HEAD'], true)
+    const head: any = await readOut(base.exe, base.root, 'Reading the repository\'s current position', ['rev-parse', 'HEAD'], true)
     const headOid: string = head.ok === true ? String(firstLine(head.stdout)).trim() : ''
     const markers: string[] = await markersOf(cwd)
     return { ok: true, exe: base.exe, repoRoot: base.root, headOid: headOid, bindings: bindingsFor(board.rows, plan, markers, targetExists), rows: board.rows, scene: submoduleSceneSummary(board.rows) }
@@ -130,8 +130,8 @@ export function createSubmoduleCheck(deps: any): any {
     let plan: any = null
     if (batch) {
       const menu: any = submoduleBatchMenuOf(req.op)
-      if (!menu) return fail('invalid', 'unknown-action', '批量菜单里没有这一项：只认固定的四项菜单，不接受别的命令')
-      if (!menu.taskOp) return fail('invalid', 'unknown-action', '「看状态」不签票：直接重读子模块面板即可')
+      if (!menu) return fail('invalid', 'unknown-action', 'This item is not in the batch menu: only the four fixed menu items are accepted, not other commands')
+      if (!menu.taskOp) return fail('invalid', 'unknown-action', 'View status does not issue a ticket; reread the submodule panel directly')
       plan = { action: menu.id, capId: '10.4', kind: 'task', batch: true, path: '', url: '', branch: '' }
     } else {
       const planRes: any = submodulePlanOf(req.op, { path: req.path, url: req.url, branch: req.branch })
@@ -153,9 +153,9 @@ export function createSubmoduleCheck(deps: any): any {
     const decision: any = batch ? { decision: 'allow', reasons: [] } : submoduleJudge(plan.action, { rows: rows, path: plan.path, url: plan.url, branch: plan.branch, targetExists: targetExists, targetEmpty: targetEmpty })
     const scene: string = submoduleSceneSummary(rows)
     if (decision.decision === 'block') {
-      return fail('blocked', decision.reasons[0], '这个动作现在不能做（理由标识符 ' + String(decision.reasons[0]) + '，界面按 vc.sub.why.<理由> 取词条显示原因）', { contract: SUBMODULE_CHECK_CONTRACT, version: SUBMODULE_CHECK_VERSION, op: plan.action, decision: decision.decision, reasons: decision.reasons, scene: scene, plan: shownPlanOf(plan) })
+      return fail('blocked', decision.reasons[0], 'This action cannot run now (reason identifier ' + String(decision.reasons[0]) + '; the interface displays the reason from the vc.sub.why.<reason> entry)', { contract: SUBMODULE_CHECK_CONTRACT, version: SUBMODULE_CHECK_VERSION, op: plan.action, decision: decision.decision, reasons: decision.reasons, scene: scene, plan: shownPlanOf(plan) })
     }
-    const head: any = await readOut(base.exe, base.root, '读仓库当前位置这一步', ['rev-parse', 'HEAD'], true)
+    const head: any = await readOut(base.exe, base.root, 'Reading the repository\'s current position', ['rev-parse', 'HEAD'], true)
     const headOid: string = head.ok === true ? String(firstLine(head.stdout)).trim() : ''
     const markers: string[] = await markersOf(cwd)
     if (plan.action === 'absorb') { const row: any = rowOf(rows, plan.path); if (row) { plan.absorbFrom = row.absorbFrom || ''; plan.absorbTo = row.absorbTo || '' } }

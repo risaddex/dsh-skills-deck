@@ -163,7 +163,7 @@ const REPO = { backend: 'github', refId: 'acme/demo', name: 'demo', url: '' }
       { key: '621', state: 'closed', body: '', url: '', assignees: [], blockedBy: [] },
     ], total: 1, fetched: 1, capped: false, missing: 0 } }),
   }
-  const FIRST_MSG = '这个后端不能按需取一张地图的子票'
+  const FIRST_MSG = 'This backend cannot fetch a single map\'s children on demand'
   const makePhone = (selectEarly: any) => createMapTickets({
     canonicalKey: async (c: any) => c || '/ws/fake', selectEarly: selectEarly, isComposerSelection: realGate,
     getTrackerRegistry: async () => ({ get: () => githubTracker, describe: () => ({ backend: 'github', refId: 'acme/demo', name: 'demo', url: '' }) }),

@@ -70,10 +70,10 @@ async function main(): Promise<void> {
     const r1 = await makePhone({ header: { cwd: 'D:\\ilife' } })({ sessionId: 's-ok' })
     ok(r1 && r1.ok === true && r1.cwd === 'D:\\ilife', '电话体正常会话成功')
     const r2 = await makePhone({ header: {} })({ sessionId: 's-empty' })
-    ok(r2 && r2.ok === false && r2.error === '会话无 cwd 信息' && r2.kind === 'no-cwd', '电话体空头会话报无目录种类（文案不变）')
+    ok(r2 && r2.ok === false && r2.error === 'The session has no cwd information' && r2.kind === 'no-cwd', '电话体空头会话报无目录种类（文案不变）')
     // 真机对照：空分支的错误散列就是票面 5 次失败的 43cbab2a（与宿主电话日志同一只散列函数）。
     const hash8 = (s: string): string => { try { const t = String(s || ''); let h = 5381; for (let i = 0; i < t.length; i++) h = (((h << 5) + h + t.charCodeAt(i)) >>> 0); return ('0000000' + h.toString(16)).slice(-8) } catch (e) { return '00000000' } }
-    ok(hash8(r2.error) === '43cbab2a', '空分支散列锚定真机现场（43cbab2a）')
+    ok(hash8('会话无 cwd 信息') === '43cbab2a' && hash8(r2.error) === 'af289f67', '空分支散列锚定真机现场（43cbab2a），#6 英文文案的新散列是 af289f67')
     const r3 = await makePhone(null)({ sessionId: 's-ghost' })
     ok(r3 && r3.ok === false && r3.kind === 'not-found', '电话体未知会话报找不到种类（不混同无目录）')
     const r4 = await makePhone(null, undefined)({ sessionId: '' })

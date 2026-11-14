@@ -73,13 +73,13 @@ export function createRebaseCheck(deps: any): any {
   /** 确认卡四段（规格要求：做了什么、不会做什么、能不能回退、按哪个词执行）。 */
   function confirmOf(plan: any, s: any, extra: any): any {
     const base: string = String(plan.base || plan.newBase || '')
-    let what: string = '把 ' + base + ' 之后的提交按面板排好的待办清单重放一遍（改说明、压缩、丢弃、重排都在这一步生效）'
-    if (plan.op === 'rebase-onto') what = '把旧基座 ' + String(plan.oldBase) + ' 之后的 ' + String(extra.movedCount) + ' 个提交搬到新基座 ' + String(plan.newBase) + ' 上重新放一遍'
-    if (plan.op === 'rebase-autosquash') what = '把 ' + base + ' 之后带 fixup!/squash! 标记的 ' + String(extra.pairCount) + ' 个提交按 git 的配对自动吸收进目标提交，然后重放一遍'
-    if (plan.op === 'rebase-merges') what = '把 ' + base + ' 之后的提交连同 ' + String(extra.mergeCount) + ' 个合并提交的结构一起重放一遍（--rebase-merges）'
-    const wont: string = '不会碰其他分支（这版面板不做 --update-refs），不会丢提交（旧 HEAD 留在 reflog 里），也不会替你解决冲突'
-    const reversible: string = '可回退：旧提交都还在；中途失败或冲突时到冲突向导点中止就回到操作前，执行完也可以从 reflog 找回旧 HEAD'
-    const verb: string = plan.op === 'rebase-onto' ? '开始换基座' : (plan.op === 'rebase-merges' ? '带合并结构变基' : '开始变基')
+    let what: string = '' + base + ': replay the commits after it using the panel\'s todo list (reword, squash, drop and reorder take effect here)'
+    if (plan.op === 'rebase-onto') what = 'Move the commits after old base ' + String(plan.oldBase) + ', ' + String(extra.movedCount) + ' commits, onto new base ' + String(plan.newBase) + ' and replay them'
+    if (plan.op === 'rebase-autosquash') what = '' + base + ': absorb the ' + String(extra.pairCount) + ' commits after it marked fixup!/squash! into their targets as git pairs them, then replay'
+    if (plan.op === 'rebase-merges') what = '' + base + ': replay the commits after it together with the structure of ' + String(extra.mergeCount) + ' merge commits (--rebase-merges)'
+    const wont: string = 'Other branches are untouched (this panel does not use --update-refs), no commits are lost (the old HEAD stays in the reflog), and conflicts are not resolved for you'
+    const reversible: string = 'Reversible: old commits remain. If it fails or stops on conflicts, Abort in the conflict wizard returns to the previous state; after completion, the old HEAD is recoverable from the reflog'
+    const verb: string = plan.op === 'rebase-onto' ? 'Start rebase onto new base' : (plan.op === 'rebase-merges' ? 'Rebase with merge structure' : 'Start rebase')
     return { what: what, wont: wont, reversible: reversible, verb: verb }
   }
   /** 按动作造计划：先把形状校验过，再读现场解析基座，把确切提交号写进计划（票据绑定到具体提交）。 */
@@ -90,48 +90,48 @@ export function createRebaseCheck(deps: any): any {
     const newBase: any = payload.newBase
     if (op === 'rebase-todo' || op === 'rebase-autosquash' || op === 'rebase-merges') {
       const bad: any = rebaseTargetProblem(base)
-      if (bad) return { fail: argsFail(bad, '变基基座的形状不对：只接受分支名、标签名或完整提交号', { target: base }) }
+      if (bad) return { fail: argsFail(bad, 'Invalid rebase base: only a branch name, tag name or full commit ID is accepted', { target: base }) }
     }
     if (op === 'rebase-onto') {
       const b1: any = rebaseTargetProblem(oldBase)
-      if (b1) return { fail: argsFail(b1, '旧基座的形状不对：只接受分支名、标签名或完整提交号', { target: oldBase }) }
+      if (b1) return { fail: argsFail(b1, 'Invalid old base: only a branch name, tag name or full commit ID is accepted', { target: oldBase }) }
       const b2: any = rebaseTargetProblem(newBase)
-      if (b2) return { fail: argsFail(b2, '新基座的形状不对：只接受分支名、标签名或完整提交号', { target: newBase }) }
+      if (b2) return { fail: argsFail(b2, 'Invalid new base: only a branch name, tag name or full commit ID is accepted', { target: newBase }) }
     }
     if (op === 'rebase-todo') {
       const rowsBad: any = rebaseRowsProblem(rows, null)
-      if (rowsBad) return { fail: argsFail(rowsBad, '待办清单的形状不对：每一行要有提交号与 pick/reword/squash/fixup/drop 之一', { rowsProblem: rowsBad }) }
+      if (rowsBad) return { fail: argsFail(rowsBad, 'Invalid todo list: each line needs a commit ID and one of pick/reword/squash/fixup/drop', { rowsProblem: rowsBad }) }
       const msgBad: any = rebaseMessageProblemOf(rows)
-      if (msgBad) return { fail: argsFail(msgBad, msgBad === 'message-too-long' ? '改说明的正文太长了（最多 5000 字）' : '有要改说明的提交没填新说明', {}) }
+      if (msgBad) return { fail: argsFail(msgBad, msgBad === 'message-too-long' ? 'The new message for reword is too long (at most 5000 characters)' : 'Some commits to reword have no new message', {}) }
     }
     const plan0: any = rebasePlanOf({ op: op, base: op === 'rebase-onto' ? null : base, rows: op === 'rebase-todo' ? rows : null, oldBase: op === 'rebase-onto' ? oldBase : null, newBase: op === 'rebase-onto' ? newBase : null, merges: op === 'rebase-merges', autosquash: op === 'rebase-autosquash' })
     const m0: any = await scene.measure(cwd, plan0)
-    if (!m0 || m0.ok !== true) return { fail: m0 ? m0.envelope : failAt('env', 'env', '读不到仓库现场') }
-    if (m0.updateRefs === true) return { fail: blocked(op, 'update-refs-on', '这个仓库开着 rebase.updateRefs：变基时 git 会自动搬动其他分支的指针，面板不提供这种做法。请到侧栏终端先把它关掉（git config --local rebase.updateRefs false）再回来', { setting: 'rebase.updateRefs' }) }
-    if (m0.state !== null) return { fail: blocked(op, 'operation-in-progress', '仓库正在 ' + String(m0.state) + ' 中，先把当前操作处理完再变基（冲突向导里可以继续、跳过或中止）', { state: m0.state }) }
+    if (!m0 || m0.ok !== true) return { fail: m0 ? m0.envelope : failAt('env', 'env', 'Cannot read repository state') }
+    if (m0.updateRefs === true) return { fail: blocked(op, 'update-refs-on', 'This repository has rebase.updateRefs enabled: git would move other branch pointers during rebase, which the panel does not support. Disable it in the sidebar terminal (git config --local rebase.updateRefs false), then return', { setting: 'rebase.updateRefs' }) }
+    if (m0.state !== null) return { fail: blocked(op, 'operation-in-progress', 'The repository is in the middle of a ' + String(m0.state) + '; finish the current operation before rebasing (the conflict wizard can continue, skip or abort it)', { state: m0.state }) }
     if (op === 'rebase-todo') {
       const winBad: any = rebaseRowsProblem(rows, m0.windowOids)
-      if (winBad) return { fail: blocked(op, winBad === 'todo-mismatch' ? 'todo-mismatch' : 'bad-todo', '待办清单与这个基座到 HEAD 的提交对不上（窗口在确认后又变了）。请刷新后重新排一次', { windowCount: (m0.windowOids || []).length }) }
+      if (winBad) return { fail: blocked(op, winBad === 'todo-mismatch' ? 'todo-mismatch' : 'bad-todo', 'The todo list no longer matches the commits from this base to HEAD (the window changed after confirmation). Refresh and arrange it again', { windowCount: (m0.windowOids || []).length }) }
     }
-    if (op === 'rebase-onto' && String(m0.oldBaseOid) === String(m0.newBaseOid)) return { fail: blocked(op, 'nothing-to-do', '新旧基座指向同一个提交，没有需要搬走的范围', {}) }
+    if (op === 'rebase-onto' && String(m0.oldBaseOid) === String(m0.newBaseOid)) return { fail: blocked(op, 'nothing-to-do', 'The old and new bases point to the same commit; there is nothing to move', {}) }
     const extra: any = {}
     if (op === 'rebase-onto') {
       const range: any = await scene.ontoRangeOf(cwd, oldBase, newBase)
-      if (!range || range.ok !== true) return { fail: range ? range.envelope : failAt('env', 'env', '读不到换基座的范围') }
-      if (range.movedCount === 0) return { fail: blocked(op, 'nothing-to-do', '旧基座之后没有可搬走的提交（HEAD 就停在旧基座附近）', {}) }
+      if (!range || range.ok !== true) return { fail: range ? range.envelope : failAt('env', 'env', 'Cannot read the range to move') }
+      if (range.movedCount === 0) return { fail: blocked(op, 'nothing-to-do', 'There are no commits after the old base to move (HEAD is at or near the old base)', {}) }
       extra.movedCount = range.movedCount
       extra.incomingCount = range.incomingCount
     }
     if (op === 'rebase-autosquash') {
       const pairs: any = await scene.autosquashPairsOf(cwd, base)
-      if (!pairs || pairs.ok !== true) return { fail: pairs ? pairs.envelope : failAt('env', 'env', '读不到自动吸收清单') }
-      if (pairs.pairs.length === 0) return { fail: blocked(op, 'nothing-to-do', '这个基座之后没有带 fixup!/squash! 标记的提交，没有可自动吸收的对象', {}) }
+      if (!pairs || pairs.ok !== true) return { fail: pairs ? pairs.envelope : failAt('env', 'env', 'Cannot read the autosquash list') }
+      if (pairs.pairs.length === 0) return { fail: blocked(op, 'nothing-to-do', 'There are no fixup!/squash! commits after this base; nothing can be autosquashed', {}) }
       extra.pairCount = pairs.pairs.length
       extra.pairs = pairs.pairs
     }
     if (op === 'rebase-merges') {
       const cost: any = await scene.mergesCostOf(cwd, base)
-      if (!cost || cost.ok !== true) return { fail: cost ? cost.envelope : failAt('env', 'env', '读不到保留合并结构的代价') }
+      if (!cost || cost.ok !== true) return { fail: cost ? cost.envelope : failAt('env', 'env', 'Cannot read the cost of preserving merge structure') }
       extra.mergeCount = cost.count
       extra.mergeCommits = cost.mergeCommits
     }
@@ -157,34 +157,34 @@ export function createRebaseCheck(deps: any): any {
     const a: any = args || {}
     const op: string = String(a.op || '')
     const meta: any = rebaseOpMetaOf(op)
-    if (!meta || meta.kind !== 'read') return argsFail('bad-target', '不认识这个只读动作：' + op, { op: op })
+    if (!meta || meta.kind !== 'read') return argsFail('bad-target', 'Unrecognised read-only action: ' + op, { op: op })
     const cwd: string = String(a.cwd || '')
-    if (cwd === '') return argsFail('bad-target', '缺少仓库目录')
+    if (cwd === '') return argsFail('bad-target', 'Missing repository directory')
     const payload: any = a.payload && typeof a.payload === 'object' ? a.payload : a
     // 只读回包也要带 ok:true：界面与门禁靠它区分「读到了」与「拒绝/失败」，缺了会被当成失败。
     const body: any = { ok: true, contract: REBASE_CHECK_CONTRACT, version: REBASE_CHECK_VERSION, op: op }
     if (op === 'rebase-state') {
       const s: any = await scene.sceneOf(cwd)
-      if (!s || s.ok !== true) return s && s.envelope ? s.envelope : failAt('env', 'env', '读不到仓库状态')
+      if (!s || s.ok !== true) return s && s.envelope ? s.envelope : failAt('env', 'env', 'Cannot read repository status')
       return Object.assign(body, { state: s.state, branch: s.branch, headOid: s.headOid, repoRoot: s.repoRoot, updateRefs: s.updateRefs, gitVersion: s.gitVersion, canRebase: s.state === null && s.updateRefs !== true, readAtMs: nowFn() })
     }
     if (op === 'rebase-window') {
       const r: any = await scene.windowOf(cwd, payload.base)
-      if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', '读不到待办窗口')
+      if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', 'Cannot read the todo window')
       return Object.assign(body, { base: r.base, baseOid: r.baseOid, headOid: r.headOid, commits: r.commits, commitCount: r.commitCount, readAtMs: r.readAtMs })
     }
     if (op === 'rebase-onto-range') {
       const r: any = await scene.ontoRangeOf(cwd, payload.oldBase, payload.newBase)
-      if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', '读不到换基座范围')
+      if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', 'Cannot read the range for the new base')
       return Object.assign(body, { oldBase: r.oldBase, oldBaseOid: r.oldBaseOid, newBase: r.newBase, newBaseOid: r.newBaseOid, moved: r.moved, incoming: r.incoming, movedCount: r.movedCount, incomingCount: r.incomingCount, readAtMs: r.readAtMs })
     }
     if (op === 'rebase-autosquash-pairs') {
       const r: any = await scene.autosquashPairsOf(cwd, payload.base)
-      if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', '读不到自动吸收清单')
+      if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', 'Cannot read the autosquash list')
       return Object.assign(body, { base: r.base, baseOid: r.baseOid, pairs: r.pairs, pairCount: r.pairs.length, readAtMs: r.readAtMs })
     }
     const r: any = await scene.mergesCostOf(cwd, payload.base)
-    if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', '读不到保留合并结构的代价')
+    if (!r || r.ok !== true) return r && r.envelope ? r.envelope : failAt('env', 'env', 'Cannot read the cost of preserving merge structure')
     return Object.assign(body, { base: r.base, baseOid: r.baseOid, mergeCommits: r.mergeCommits, count: r.count, gitVersion: r.gitVersion, readAtMs: r.readAtMs })
   }
 
@@ -193,10 +193,10 @@ export function createRebaseCheck(deps: any): any {
     const a: any = args || {}
     const op: string = String(a.op || '')
     const meta: any = rebaseOpMetaOf(op)
-    if (!meta) return argsFail('bad-target', '不认识这个动作：' + op, { op: op })
+    if (!meta) return argsFail('bad-target', 'Unrecognised action: ' + op, { op: op })
     if (meta.kind === 'read') return handleRebaseRead(a)
     const cwd: string = String(a.cwd || '')
-    if (cwd === '') return argsFail('bad-target', '缺少仓库目录')
+    if (cwd === '') return argsFail('bad-target', 'Missing repository directory')
     const payload: any = a.payload && typeof a.payload === 'object' ? a.payload : a
     const made: any = await planFor(op, payload, cwd)
     if (made.fail) return made.fail

@@ -127,10 +127,10 @@ export function createVersionControl(deps: any): any {
     // stdin 的唯一例外：stdinFile 只许配 fast-import，且 fast-import 必须配（不能空着管道跑）。
     // 这两条与文件校验都在起进程之前完成，失败时一个进程都不起。
     const wantStdin: boolean = !!(opts && opts.stdinFile)
-    if (!wantStdin && cmd === STDIN_FILE_COMMAND) return { kind: 'stdin-failed', reason: 'stdin-required', message: 'fast-import 必须由宿主送一个只读文件流，没有配 stdinFile 就不能跑' }
+    if (!wantStdin && cmd === STDIN_FILE_COMMAND) return { kind: 'stdin-failed', reason: 'stdin-required', message: 'fast-import requires a read-only file stream from the host; it cannot run without stdinFile' }
     let stdinPrep: any = null
     if (wantStdin) {
-      if (cmd !== STDIN_FILE_COMMAND) return { kind: 'stdin-failed', reason: 'not-allowed', message: 'stdinFile 只允许配 fast-import，其余命令的标准输入一律忽略' }
+      if (cmd !== STDIN_FILE_COMMAND) return { kind: 'stdin-failed', reason: 'not-allowed', message: 'stdinFile is allowed only for fast-import; all other commands ignore standard input' }
       stdinPrep = await prepareStdinFile(opts.stdinFile)
       if (!stdinPrep.ok) return { kind: 'stdin-failed', reason: stdinPrep.reason, message: stdinPrep.message }
     }
@@ -164,7 +164,7 @@ export function createVersionControl(deps: any): any {
       if (!sink || typeof sink.write !== 'function') {
         try { if (handle && typeof handle.terminate === 'function') handle.terminate() } catch (eT) {}
         fire('warn', 'git.exec.fail', { argv0: GIT_NAME, cwdHash: dirHash(dir), via: VIA, cmd: cmd, errorKind: 'stdin' })
-        return { kind: 'stdin-failed', reason: 'stdin-unsupported', message: '这条传输层服务不支持给 git 送标准输入，fast-import 跑不了' }
+        return { kind: 'stdin-failed', reason: 'stdin-unsupported', message: 'This transport service cannot send standard input to git; fast-import cannot run' }
       }
       try { if (typeof sink.on === 'function') sink.on('error', onStdinError) } catch (eOn) {}
       try {
@@ -176,7 +176,7 @@ export function createVersionControl(deps: any): any {
         const reason: string = (code === 'EPIPE') ? 'epipe' : 'stdin-write-failed'
         try { if (handle && typeof handle.terminate === 'function') handle.terminate() } catch (eT) {}
         fire('warn', 'git.exec.fail', { argv0: GIT_NAME, cwdHash: dirHash(dir), via: VIA, cmd: cmd, errorKind: reason })
-        return { kind: 'stdin-failed', reason: reason, message: '给 git 送 fast-import 输入时失败：' + String(((eW as any) && (eW as any).message) || eW), stdinBytes: stdinBytes }
+        return { kind: 'stdin-failed', reason: reason, message: 'Failed to send fast-import input to git: ' + String(((eW as any) && (eW as any).message) || eW), stdinBytes: stdinBytes }
       }
     }
     const watch: any = (opts && opts.stallMs) ? makeStallWatch(handle, Math.max(1000, Math.min(600000, Math.floor(opts.stallMs))), budget, timer) : null
@@ -196,7 +196,7 @@ export function createVersionControl(deps: any): any {
     if (outcome && outcome.kind === 'epipe') {
       try { if (handle && typeof handle.terminate === 'function') handle.terminate() } catch (eT) {}
       fire('warn', 'git.exec.fail', { argv0: GIT_NAME, cwdHash: dirHash(dir), via: VIA, cmd: cmd, errorKind: 'epipe' })
-      return { kind: 'stdin-failed', reason: 'epipe', message: 'git fast-import 提前退出，输入没有送完（EPIPE）', stdinBytes: stdinBytes }
+      return { kind: 'stdin-failed', reason: 'epipe', message: 'Git fast-import exited before all input was sent (EPIPE)', stdinBytes: stdinBytes }
     }
     if (outcome && outcome.signal === 'stalled') {
       fire('warn', 'git.exec.fail', { argv0: GIT_NAME, cwdHash: dirHash(dir), via: VIA, cmd: cmd, errorKind: 'stalled', timeoutMs: outcome.stallMs })
@@ -219,7 +219,7 @@ export function createVersionControl(deps: any): any {
     //   拿到一句空话、把「有冲突/有残留」误判成读不出东西，所以两个流都回，各自带上限与截断标记。
     if (exitCode !== 0) { return { kind: 'non-zero', exitCode: exitCode, stdout: out.text, truncated: out.truncated, stderr: err.text } }
     return { kind: 'ok', stdout: out.text, stderr: err.text, truncated: out.truncated, stdinBytes: stdinBytes } // stderr 照带：`git hook run` 把钩子输出写标准错误，成功时丢掉界面就看不到钩子说了什么（#1760）
-    }, function (): any { return { kind: 'cancelled', cancelled: true, message: '已取消排队，可重试' } })
+    }, function (): any { return { kind: 'cancelled', cancelled: true, message: 'Removed from the queue; retry is allowed' } })
   }
   /** 找 git 命令；找不到或平台服务缺席都转成明确失败值，不抛。 */
   async function resolveGitExecutable(): Promise<any> {
@@ -235,16 +235,16 @@ export function createVersionControl(deps: any): any {
   /** 第 0 步 + 仓库根：先确认这里是不是仓库，再问出后续命令要钉死的那个目录（裸仓库的根就是它的 git 目录）。 */
   async function resolveRepoRoot(exe: any, cwd: any): Promise<any> {
     const step0: any = await runPinned(exe, cwd, stepZeroArgs(), { stdoutLimit: STDERR_LIMIT })
-    if (step0.kind === 'timeout' || step0.kind === 'spawn-failed') return failureFromExec(step0, '确认仓库这一步')
+    if (step0.kind === 'timeout' || step0.kind === 'spawn-failed') return failureFromExec(step0, 'Checking the repository')
     const cls: any = classifyStepZero(step0.kind === 'ok' ? 0 : step0.exitCode, step0.stdout, step0.stderr)
-    if (!cls.ok) { const says: string = String(step0.kind === 'ok' ? '' : step0.stderr || '').replace(/\r/g, '').trim().split('\n')[0].slice(0, 300); return failPhone('parse', '确认仓库这一步读不懂：' + cls.detail + (says ? '；git 说：' + says : '')) }
-    if (cls.kind === 'not-repo') return failPhone('not-repo', '这个目录不在任何 git 仓库里')
+    if (!cls.ok) { const says: string = String(step0.kind === 'ok' ? '' : step0.stderr || '').replace(/\r/g, '').trim().split('\n')[0].slice(0, 300); return failPhone('parse', 'Cannot interpret the repository check: ' + cls.detail + (says ? '; git reported: ' + says : '')) }
+    if (cls.kind === 'not-repo') return failPhone('not-repo', 'This directory is not inside a git repository')
     if (cls.kind === 'bare') return { ok: true, kind: 'bare', root: cls.gitDir, gitDir: cls.gitDir }
     const top: any = await runPinned(exe, cwd, ['rev-parse', '--show-toplevel'], { stdoutLimit: STDERR_LIMIT })
-    const badTop: any = failureFromExec(top, '解析仓库根这一步')
+    const badTop: any = failureFromExec(top, 'Resolving the repository root')
     if (badTop) return badTop
     const root: string = firstLine(top.stdout)
-    if (!root) return failPhone('parse', '仓库根是空的，后面那些命令没法钉死在这个仓库上')
+    if (!root) return failPhone('parse', 'The repository root is empty; subsequent commands cannot be pinned to this repository')
     return { ok: true, kind: 'worktree', root: root, gitDir: cls.gitDir }
   }
 
@@ -253,9 +253,9 @@ export function createVersionControl(deps: any): any {
     const res: any = await runPinned(exe, root, args, opts)
     const bad: any = failureFromExec(res, what)
     if (bad) return { ok: false, envelope: bad }
-    if (res.truncated) return { ok: false, envelope: failPhone('truncated', what + '的输出超过了字节上限，读不全就不给半份数据') }
+    if (res.truncated) return { ok: false, envelope: failPhone('truncated', what + ': output exceeded the byte limit; incomplete data will not be returned') }
     const parsed: any = parse(res.stdout)
-    if (parsed.ok !== true) return { ok: false, envelope: failPhone('parse', what + '解析失败：' + parsed.detail) }
+    if (parsed.ok !== true) return { ok: false, envelope: failPhone('parse', what + ': parse failed: ' + parsed.detail) }
     return { ok: true, parsed: parsed }
   }
 
@@ -315,11 +315,11 @@ export function createVersionControl(deps: any): any {
     const base: any = await resolveRepoRoot(exe, cwd)
     if (base.ok !== true) return base
     const verRes: any = await runPinned(exe, base.root, ['--version'], { stdoutLimit: 4096 })
-    const badVer: any = failureFromExec(verRes, '读 git 版本这一步')
+    const badVer: any = failureFromExec(verRes, 'Reading the git version')
     if (badVer) return badVer
     const gitVersion: string = firstLine(verRes.stdout)
     const tier: any = capabilityTierFor(parseVersion(gitVersion))
-    if (tier === 'unsupported') return failPhone('unsupported', '这台机器上的 git 版本太旧（' + gitVersion + '），第一版需要 2.11 以上', { tier: tier, gitVersion: gitVersion })
+    if (tier === 'unsupported') return failPhone('unsupported', 'Git on this machine is too old (' + gitVersion + '); the first release requires 2.11 or newer', { tier: tier, gitVersion: gitVersion })
 
     if (base.kind === 'bare') {
       // 裸仓库没有工作树：核心只问「有没有提交」，问一次历史就够，读不到就当没有（回包里 bare 是真的）。
@@ -328,11 +328,11 @@ export function createVersionControl(deps: any): any {
       if (lg.kind === 'ok' && !lg.truncated) { const p: any = parseLog(lg.stdout); if (p.ok) commits = p.commits }
       const bareInput: any = { repoRoot: base.root, bare: true, statusHead: '', statusDetached: false, statusOid: null, statusUpstream: null, statusAhead: 0, statusBehind: 0, statusEntries: [], worktrees: [], refs: [], commits: commits, diffFiles: [], merging: false, rebasing: false, cherryPicking: false, reverting: false, tier: tier, autocrlf: null, nowMs: Date.now(), basisMs: null }
       const asmBare: any = assemble(bareInput)
-      if (asmBare.ok !== true) return failPhone('parse', '首屏组装失败：' + asmBare.detail)
+      if (asmBare.ok !== true) return failPhone('parse', 'Initial screen assembly failed: ' + asmBare.detail)
       return { ok: true, screen: asmBare.screen, tier: tier, gitVersion: gitVersion, worktreesNul: true, readAtMs: Date.now() }
     }
 
-    const st: any = await collect(exe, base.root, '读工作区改动这一步', (commandFor('status', {}) as any).args, parseStatus)
+    const st: any = await collect(exe, base.root, 'Reading workspace changes', (commandFor('status', {}) as any).args, parseStatus)
     if (st.ok !== true) return st.envelope
     const status: any = st.parsed
     const hasHead: any = status.branch.oid !== null
@@ -341,29 +341,29 @@ export function createVersionControl(deps: any): any {
     let worktreesNul: boolean = true
     let wtRes: any = await runPinned(exe, base.root, (commandFor('worktrees', {}) as any).args)
     if (wtRes.kind === 'non-zero') { worktreesNul = false; wtRes = await runPinned(exe, base.root, (commandFor('worktrees', { useNulWorktrees: false }) as any).args) }
-    const badWt: any = failureFromExec(wtRes, '读工作树清单这一步')
+    const badWt: any = failureFromExec(wtRes, 'Reading the worktree list')
     if (badWt) return badWt
-    if (wtRes.truncated) return failPhone('truncated', '工作树清单读不全，不给半份列表')
+    if (wtRes.truncated) return failPhone('truncated', 'The worktree list is incomplete; a partial list will not be returned')
     const worktrees: any = parseWorktrees(wtRes.stdout, worktreesNul)
-    if (worktrees.ok !== true) return failPhone('parse', '工作树清单解析失败：' + worktrees.detail)
+    if (worktrees.ok !== true) return failPhone('parse', 'Worktree list parse failed: ' + worktrees.detail)
 
-    const rf: any = await collect(exe, base.root, '读本地分支这一步', (commandFor('refs', {}) as any).args, parseRefs)
+    const rf: any = await collect(exe, base.root, 'Reading local branches', (commandFor('refs', {}) as any).args, parseRefs)
     if (rf.ok !== true) return rf.envelope
 
     // 没有第一次提交时历史与逐文件行数都没有基线：不起这两条进程，按零提交如实组装（核心对零提交有边界）。
     let commits: any[] = []
     let diffFiles: any[] = []
     if (hasHead) {
-      const lg2: any = await collect(exe, base.root, '读提交历史这一步', (commandFor('log', { logCount: FIRST_SCREEN_LOG_COUNT }) as any).args, parseLog)
+      const lg2: any = await collect(exe, base.root, 'Reading commit history', (commandFor('log', { logCount: FIRST_SCREEN_LOG_COUNT }) as any).args, parseLog)
       if (lg2.ok !== true) return lg2.envelope
       commits = lg2.parsed.commits
-      const df: any = await collect(exe, base.root, '读每个文件改了行数这一步', (commandFor('diffFiles', {}) as any).args, parseDiffFiles)
+      const df: any = await collect(exe, base.root, 'Reading per-file line-change counts', (commandFor('diffFiles', {}) as any).args, parseDiffFiles)
       if (df.ok !== true) return df.envelope
       diffFiles = df.parsed.files
     }
 
     const mres: any = await (await markersPhone()).read(base.gitDir, { exe: exe, root: base.root })
-    if (mres.ok !== true) return failPhone(mres.kind === 'env-fs' ? 'env-fs' : 'env', '宿主的文件服务现在用不了（' + String(mres.detail || '没有给出原因') + '），判断不了是不是正在合并或变基；这一项读不到就不给数')
+    if (mres.ok !== true) return failPhone(mres.kind === 'env-fs' ? 'env-fs' : 'env', 'The host file service is unavailable (' + String(mres.detail || 'No reason was given') + '); cannot determine whether a merge or rebase is in progress, so no count is returned')
     const markers: any = mres.markers
     const asm: any = assemble({
       repoRoot: base.root, bare: false,
@@ -373,14 +373,14 @@ export function createVersionControl(deps: any): any {
       merging: markers.merging, rebasing: markers.rebasing, cherryPicking: markers.cherryPicking, reverting: markers.reverting,
       tier: tier, autocrlf: await readAutocrlf(exe, base.root), nowMs: Date.now(), basisMs: await (await basisReader()).readBasisMs(exe, base.root, base.gitDir, status.branch.upstream),
     })
-    if (asm.ok !== true) return failPhone('parse', '首屏组装失败：' + asm.detail)
+    if (asm.ok !== true) return failPhone('parse', 'Initial screen assembly failed: ' + asm.detail)
     return { ok: true, screen: asm.screen, tier: tier, gitVersion: gitVersion, worktreesNul: worktreesNul, readAtMs: Date.now() }
   }
 
   /** 电话 wf.gitStatus 的处理体：首屏一次拿全。 */
   async function handleGitStatus(args: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     return readScreen(exe, cwdOf(args))
   }
 
@@ -407,17 +407,17 @@ export function createVersionControl(deps: any): any {
     const count: number = clampInt(args && args.count, FIRST_SCREEN_LOG_COUNT, 1, LOG_BATCH_MAX)
     const skip: number = clampInt(args && args.skip, 0, 0, 1000000)
     const exe: any = await resolveGitExecutable()
-    if (!exe) return failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const base: any = await resolveRepoRoot(exe, cwdOf(args))
     if (base.ok !== true) return base
-    const hasHead: any = await readHasHead(exe, base.root); if (hasHead === null) return failPhone('env', '问不出这个仓库有没有第一次提交，读历史这一步做不了')
+    const hasHead: any = await readHasHead(exe, base.root); if (hasHead === null) return failPhone('env', 'Cannot determine whether this repository has its first commit; history cannot be read')
     if (hasHead === false) return { ok: true, commits: [], skip: skip, requested: count, returned: 0, hasMore: false }
     const res: any = await runPinned(exe, base.root, (commandFor('log', { logCount: count + 1, logSkip: skip }) as any).args)
-    const bad: any = failureFromExec(res, '读提交历史这一步')
+    const bad: any = failureFromExec(res, 'Reading commit history')
     if (bad) return bad
-    if (res.truncated) return failPhone('truncated', '这一批提交历史超过了 ' + Math.round(STDOUT_LIMIT / 1048576) + ' MB，读不全就不给半份列表，请把每批条数调小再取')
+    if (res.truncated) return failPhone('truncated', 'This history batch exceeds ' + Math.round(STDOUT_LIMIT / 1048576) + ' MB; a partial list will not be returned. Reduce the batch size and retry')
     const parsed: any = parseLog(res.stdout)
-    if (parsed.ok !== true) return failPhone('parse', '提交历史解析失败：' + parsed.detail)
+    if (parsed.ok !== true) return failPhone('parse', 'Commit history parse failed: ' + parsed.detail)
     const hasMore: boolean = parsed.commits.length > count
     const commits: any[] = hasMore ? parsed.commits.slice(0, count) : parsed.commits
     // #1903：界面要「按这次提交改到的文件」搜时带 names:true，这一批补上路径清单（读不到就留空）。
@@ -441,11 +441,11 @@ export function createVersionControl(deps: any): any {
   function loggedPhone(method: any, kind: any, fn: any): any { return async function (): Promise<any> { const t0: number = Date.now(); try { const r: any = await fn.apply(null, arguments); phoneLog(method, kind, t0, r); return r } catch (e) { phoneLog(method, kind, t0, null, e); throw e } } }
 
   /** 首屏读数（#841）：写模块的预检要的就是这一份——同一个 readScreen，不另起一套读法。 */
-  async function readScreenOf(cwd: any): Promise<any> { const exe: any = await resolveGitExecutable(); if (!exe) return failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）'); return readScreen(exe, cwd) }
+  async function readScreenOf(cwd: any): Promise<any> { const exe: any = await resolveGitExecutable(); if (!exe) return failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)'); return readScreen(exe, cwd) }
 
   // 写操作那一族（#841 起 1 预检 + 5 执行，#865 再加更新远方记录 1 条）住另两文件；本文件只做装配与日志包装（动态加载、同层单向，同一出口、同一信封、同一读数、同一 loggedPhone）。
   let _writeP: any = null
-  function writePhone(): any { if (!_writeP) _writeP = Promise.all([import('../refresh/rooms/host/gh-execution.js'), import('./versionControlCheck.js'), import('./versionControlWrite.js')]).then(function (ms: any) { const sg: any = ms[0].createCredentialSafeGit({ runGit: runGit, getPlatform: getPlatform, DEFAULT_CWD: DEFAULT_CWD }); const nowFn: any = (deps && typeof deps.now === 'function') ? deps.now : Date.now; const c: any = ms[1].createWriteCheck({ vc: { readScreenOf: readScreenOf }, safeGit: sg, failPhone: failPhone, nowMs: nowFn, randomId: function (): string { return Math.random().toString(36).slice(2) } }); const w: any = ms[2].createWritePhones({ vc: { readScreenOf: readScreenOf }, safeGit: sg, tickets: c.tickets, results: c.results, nowMs: nowFn }); return { check: loggedPhone('wf.gitWriteCheck', 'git-write-check', c.handleGitWriteCheck), stage: loggedPhone('wf.gitStage', 'git-stage', w.handleGitStage), unstage: loggedPhone('wf.gitUnstage', 'git-unstage', w.handleGitUnstage), commit: loggedPhone('wf.gitCommit', 'git-commit', w.handleGitCommit), pull: loggedPhone('wf.gitPull', 'git-pull', w.handleGitPull), fetch: loggedPhone('wf.gitFetch', 'git-fetch', w.handleGitFetch), push: loggedPhone('wf.gitPush', 'git-push', w.handleGitPush), tickets: c.tickets } }).catch(function (e: any): any { const f: any = function (): any { return failPhone('env', '写操作那一族加载失败：' + String(((e as any) && (e as any).message) || (e as any))) }; return { check: f, stage: f, unstage: f, commit: f, pull: f, fetch: f, push: f } }); return _writeP }
+  function writePhone(): any { if (!_writeP) _writeP = Promise.all([import('../refresh/rooms/host/gh-execution.js'), import('./versionControlCheck.js'), import('./versionControlWrite.js')]).then(function (ms: any) { const sg: any = ms[0].createCredentialSafeGit({ runGit: runGit, getPlatform: getPlatform, DEFAULT_CWD: DEFAULT_CWD }); const nowFn: any = (deps && typeof deps.now === 'function') ? deps.now : Date.now; const c: any = ms[1].createWriteCheck({ vc: { readScreenOf: readScreenOf }, safeGit: sg, failPhone: failPhone, nowMs: nowFn, randomId: function (): string { return Math.random().toString(36).slice(2) } }); const w: any = ms[2].createWritePhones({ vc: { readScreenOf: readScreenOf }, safeGit: sg, tickets: c.tickets, results: c.results, nowMs: nowFn }); return { check: loggedPhone('wf.gitWriteCheck', 'git-write-check', c.handleGitWriteCheck), stage: loggedPhone('wf.gitStage', 'git-stage', w.handleGitStage), unstage: loggedPhone('wf.gitUnstage', 'git-unstage', w.handleGitUnstage), commit: loggedPhone('wf.gitCommit', 'git-commit', w.handleGitCommit), pull: loggedPhone('wf.gitPull', 'git-pull', w.handleGitPull), fetch: loggedPhone('wf.gitFetch', 'git-fetch', w.handleGitFetch), push: loggedPhone('wf.gitPush', 'git-push', w.handleGitPush), tickets: c.tickets } }).catch(function (e: any): any { const f: any = function (): any { return failPhone('env', 'Failed to load the write-operation family: ' + String(((e as any) && (e as any).message) || (e as any))) }; return { check: f, stage: f, unstage: f, commit: f, pull: f, fetch: f, push: f } }); return _writeP }
 
   // ---- #1740 长任务通道（执行层已搬进同层叶子 versionControlTask.ts）----
   // 父文件只剩装配：把进程、计时、文件、闸与日志这些宿主依赖递进去，三条电话与写电话同一个
@@ -511,7 +511,7 @@ export function createVersionControl(deps: any): any {
     handleGitTaskStart: async function (a: any): Promise<any> { const t: any = await taskPhone(); return t.handleGitTaskStart(a) }, handleGitTaskQuery: async function (a: any): Promise<any> { const t: any = await taskPhone(); return t.handleGitTaskQuery(a) }, handleGitTaskCancel: async function (a: any): Promise<any> { const t: any = await taskPhone(); return t.handleGitTaskCancel(a) }, // 三条独立成行是 353 有效行，超过 350 上限 3 行；写在同一物理行、用逗号接续，代码与独立成行时逐字一致。
     // #1751 贮藏页十条（域 7）：第一次调用时才装配执行层，键名与写电话、长任务那几条同形。
     // #1752 工作树页八条能力：预检与执行两条电话（装配壳在 ./versionControlWorktreesMount.ts，懒加载、失败兜底与日志包装都在那里）。
-    ...createWorktreesMount({ resolveGitExecutable: resolveGitExecutable, resolveRepoRoot: resolveRepoRoot, runPinned: runPinned, failPhone: failPhone, firstLine: firstLine, failureFromExec: failureFromExec, cwdOf: cwdOf, pathExists: pathExists, loggedPhone: loggedPhone, now: (deps && typeof deps.now === 'function') ? deps.now : Date.now, randomId: function (): string { return Math.random().toString(36).slice(2) } }), handleGitStashCheck: async function (a: any): Promise<any> { try { const m: any = await import('./versionControlStash.js'); const s: any = await m.stashPhonesOf({ runPinned: runPinned, resolveGitExecutable: resolveGitExecutable, resolveRepoRoot: resolveRepoRoot, timeoutMs: timeoutMs, stdoutLimit: STDOUT_LIMIT, patchLimit: PATCH_LIMIT, defaultCwd: DEFAULT_CWD, nowMs: (deps && typeof deps.now === 'function') ? deps.now : Date.now, loggedPhone: loggedPhone }); return s.check(a) } catch (e) { return failPhone('env', '贮藏页十条能力的执行层加载失败：' + firstLine(String((e && (e as any).message) || e))) } }, handleGitStash: async function (a: any): Promise<any> { try { const m: any = await import('./versionControlStash.js'); const s: any = await m.stashPhonesOf({ runPinned: runPinned, resolveGitExecutable: resolveGitExecutable, resolveRepoRoot: resolveRepoRoot, timeoutMs: timeoutMs, stdoutLimit: STDOUT_LIMIT, patchLimit: PATCH_LIMIT, defaultCwd: DEFAULT_CWD, nowMs: (deps && typeof deps.now === 'function') ? deps.now : Date.now, loggedPhone: loggedPhone }); return s.write(a) } catch (e) { return failPhone('env', '贮藏页十条能力的执行层加载失败：' + firstLine(String((e && (e as any).message) || e))) } }, handleGitBranches: branches.read, handleGitBranchCheck: branches.check, handleGitBranchWrite: branches.write, branchTickets: branches.tickets, handleGitConfigRead: config.read, handleGitConfigCheck: config.check, handleGitConfigWrite: config.write, configTickets: config.tickets, // #1760 配置与钩子域三条电话与票据表（读一次取全 / 预检签票 / 凭票执行）；#1751 贮藏两条电话与 #1752 工作树的装配写在同一物理行、用逗号接续：本文件有效行以 350 为上限，合并时独立成行是 351，单独立行会超线；两个条目的代码与独立成行时逐字一致。
+    ...createWorktreesMount({ resolveGitExecutable: resolveGitExecutable, resolveRepoRoot: resolveRepoRoot, runPinned: runPinned, failPhone: failPhone, firstLine: firstLine, failureFromExec: failureFromExec, cwdOf: cwdOf, pathExists: pathExists, loggedPhone: loggedPhone, now: (deps && typeof deps.now === 'function') ? deps.now : Date.now, randomId: function (): string { return Math.random().toString(36).slice(2) } }), handleGitStashCheck: async function (a: any): Promise<any> { try { const m: any = await import('./versionControlStash.js'); const s: any = await m.stashPhonesOf({ runPinned: runPinned, resolveGitExecutable: resolveGitExecutable, resolveRepoRoot: resolveRepoRoot, timeoutMs: timeoutMs, stdoutLimit: STDOUT_LIMIT, patchLimit: PATCH_LIMIT, defaultCwd: DEFAULT_CWD, nowMs: (deps && typeof deps.now === 'function') ? deps.now : Date.now, loggedPhone: loggedPhone }); return s.check(a) } catch (e) { return failPhone('env', 'Failed to load the stash page\'s ten-operation execution layer: ' + firstLine(String((e && (e as any).message) || e))) } }, handleGitStash: async function (a: any): Promise<any> { try { const m: any = await import('./versionControlStash.js'); const s: any = await m.stashPhonesOf({ runPinned: runPinned, resolveGitExecutable: resolveGitExecutable, resolveRepoRoot: resolveRepoRoot, timeoutMs: timeoutMs, stdoutLimit: STDOUT_LIMIT, patchLimit: PATCH_LIMIT, defaultCwd: DEFAULT_CWD, nowMs: (deps && typeof deps.now === 'function') ? deps.now : Date.now, loggedPhone: loggedPhone }); return s.write(a) } catch (e) { return failPhone('env', 'Failed to load the stash page\'s ten-operation execution layer: ' + firstLine(String((e && (e as any).message) || e))) } }, handleGitBranches: branches.read, handleGitBranchCheck: branches.check, handleGitBranchWrite: branches.write, branchTickets: branches.tickets, handleGitConfigRead: config.read, handleGitConfigCheck: config.check, handleGitConfigWrite: config.write, configTickets: config.tickets, // #1760 配置与钩子域三条电话与票据表（读一次取全 / 预检签票 / 凭票执行）；#1751 贮藏两条电话与 #1752 工作树的装配写在同一物理行、用逗号接续：本文件有效行以 350 为上限，合并时独立成行是 351，单独立行会超线；两个条目的代码与独立成行时逐字一致。
     // #1742 改动页两条电话（预检、执行）与票据表：装配在 ./versionControlChangesMount.ts，进程出口照旧是上面那条固定前缀与报闸。
     // 只读动作 1.13（查为什么被忽略）走预检电话的 op，不再单开第三条电话；changesTickets 只给门禁与测试读票据表（与 #1741 的 writeTickets 同一条口径，不注册成电话、客户端拿不到）。
     handleGitChangesCheck: changes.check, handleGitChangesWrite: changes.write, changesTickets: changes.tickets, handleGitCommitForm: createCommitFormMount({ fs: fs, failPhone: failPhone, fsAbsence: fsAbsence, resolveGitExecutable: resolveGitExecutable, runGit: runGit, fixedPrefix: fixedPrefix, DEFAULT_CWD: DEFAULT_CWD, timeoutMs: timeoutMs, STDOUT_LIMIT: STDOUT_LIMIT, loggedPhone: loggedPhone, now: (deps && typeof deps.now === 'function') ? deps.now : Date.now }).handleGitCommitForm, handleGitUndoCheck: undo.handleGitUndoCheck, handleGitUndoWrite: undo.handleGitUndoWrite, undoTickets: undo.undoTickets, ...submodules, handleGitDiagnosticsRead: diagnostics.read, handleGitDiagnosticsCheck: diagnostics.check, handleGitDiagnosticsWrite: diagnostics.write, diagnosticsTickets: diagnostics.tickets, // #1761 诊断域三条电话与票据表：装配在 ./versionControlDiagnosticsMount.ts；diagnosticsTickets 只给门禁与测试读票据表（与 #1741 的 writeTickets 同一条口径，不注册成电话、客户端拿不到）；#1748 历史改写五条动作（域 5）：预检与凭票执行两条电话的装配壳在 ./versionControlUndoMount.ts（懒加载、失败兜底、日志包装都在那里），本文件只留一行装配调用；票表与 requestId 结果表留在宿主进程内存里。

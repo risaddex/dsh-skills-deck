@@ -47,7 +47,7 @@ export function createDiagnosticsReadPhone(deps: any): any {
   /** 找到 git 与仓库根：所有查询都钉在同一个仓库上，换目录不会偷偷换仓库。 */
   async function baseOf(cwd: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { ok: false, fail: failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { ok: false, fail: failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const root: any = await resolveRepoRoot(exe, cwd)
     if (!root || root.ok !== true) return { ok: false, fail: root }
     return { ok: true, exe: exe, root: String(root.root) }
@@ -60,13 +60,13 @@ export function createDiagnosticsReadPhone(deps: any): any {
     try {
       await fsWriteFile(file, String(plan.patch || ''), { encoding: 'utf8', mode: 0o600 })
       const res: any = await runPinned(base.exe, base.root, ['apply', '--check', file], { stdoutLimit: READ_LIMIT, timeoutMs: READ_TIMEOUT_MS })
-      if (res && res.kind === 'non-zero') return { ok: true, kind: 'apply-check', mode: 'check', atMs: nowFn(), clean: false, exitCode: Number(res.exitCode), gitSays: firstLine(res.stderr), args: ['apply', '--check', '<临时补丁文件>'] }
-      const bad: any = failureFromExec(res, '预演这个补丁这一步')
+      if (res && res.kind === 'non-zero') return { ok: true, kind: 'apply-check', mode: 'check', atMs: nowFn(), clean: false, exitCode: Number(res.exitCode), gitSays: firstLine(res.stderr), args: ['apply', '--check', '<temporary patch file>'] }
+      const bad: any = failureFromExec(res, 'Previewing this patch')
       if (bad) return bad
-      if (res.truncated) return failPhone('truncated', '补丁预演的输出超过上限被截断，结论不可信')
-      return { ok: true, kind: 'apply-check', mode: 'check', atMs: nowFn(), clean: true, exitCode: 0, gitSays: '', args: ['apply', '--check', '<临时补丁文件>'] }
+      if (res.truncated) return failPhone('truncated', 'Patch-preview output was truncated at the limit; the conclusion is not reliable')
+      return { ok: true, kind: 'apply-check', mode: 'check', atMs: nowFn(), clean: true, exitCode: 0, gitSays: '', args: ['apply', '--check', '<temporary patch file>'] }
     } catch (e) {
-      return failPhone('env', '补丁文件写不进系统临时目录：' + firstLine(String((e && (e as any).message) || e)))
+      return failPhone('env', 'Cannot write the patch file in the system temporary directory: ' + firstLine(String((e && (e as any).message) || e)))
     } finally {
       try { await fsUnlink(file) } catch (eDel) { /* 删不掉不影响结论；临时目录本来会被系统清理 */ }
     }
@@ -142,7 +142,7 @@ export function createDiagnosticsReadPhone(deps: any): any {
     const a: any = args || {}
     const kind: string = String(a.kind || '')
     const planRes: any = diagnosticsReadPlanOf(kind, a.params || {})
-    if (!planRes || planRes.ok !== true) return failPhone('args', '这条诊断查询的参数不合法：' + String((planRes && planRes.message) || '未知原因'))
+    if (!planRes || planRes.ok !== true) return failPhone('args', 'Invalid diagnostic query parameters: ' + String((planRes && planRes.message) || 'Unknown reason'))
     const plan: any = planRes.plan
     const cwd: any = cwdOf(a)
     const base: any = await baseOf(cwd)
@@ -154,9 +154,9 @@ export function createDiagnosticsReadPhone(deps: any): any {
       const out: any = { ok: true, kind: kind, atMs: nowFn(), args: plan.args }
       return Object.assign(out, payloadOf(kind, plan, { stdout: '', exitCode: Number(res.exitCode) }))
     }
-    const bad: any = failureFromExec(res, '这条诊断查询')
+    const bad: any = failureFromExec(res, 'This diagnostic query')
     if (bad) return bad
-    if (res.truncated) return failPhone('truncated', '这次输出超过上限被截断了，换更窄的条件（加路径或换目标）再读')
+    if (res.truncated) return failPhone('truncated', 'Output was truncated at the limit; narrow the query (add a path or change the target) and retry')
     const out: any = { ok: true, kind: kind, atMs: nowFn(), args: plan.args }
     return Object.assign(out, payloadOf(kind, plan, res))
   }

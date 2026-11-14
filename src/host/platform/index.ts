@@ -227,7 +227,7 @@ export async function composePlatform(ctx: HostCtx, osName: string, adapter: Ada
   const spawnOpen = function (argv: string[], cwd?: string): OpenResult {
     let subprocess: any = null
     try { subprocess = ctx.get('subprocess') } catch { subprocess = null }
-    if (!subprocess || typeof subprocess.spawn !== 'function') return { ok: false, error: '当前环境不支持调起' }
+    if (!subprocess || typeof subprocess.spawn !== 'function') return { ok: false, error: 'Launching is not supported in this environment' }
     try {
       const handle = subprocess.spawn({ argv: argv, cwd: cwd, stdio: { stdin: 'ignore', stdout: { maxBytes: 64 * 1024 }, stderr: { maxBytes: 64 * 1024 } }, graceMs: PROC_GRACE_MS })
       if (handle && handle.done) handle.done.catch(function () {})
@@ -239,12 +239,12 @@ export async function composePlatform(ctx: HostCtx, osName: string, adapter: Ada
   const openTarget = async function (kind: string, raw: string, cwd?: string): Promise<OpenResult> {
     try {
       const recipe = spec.shellOpen || null
-      if (!recipe || typeof recipe.normalize !== 'function') return { ok: false, error: '当前平台不支持打开' }
+      if (!recipe || typeof recipe.normalize !== 'function') return { ok: false, error: 'Opening is not supported on this platform' }
       const target = recipe.normalize(String(raw || ''))
-      if (!target) return { ok: false, error: '路径为空' }
-      if (typeof recipe.allowOpen === 'function' && !recipe.allowOpen(target)) return { ok: false, error: '路径含不可调起字符' }
+      if (!target) return { ok: false, error: 'The path is empty' }
+      if (typeof recipe.allowOpen === 'function' && !recipe.allowOpen(target)) return { ok: false, error: 'The path contains characters that cannot be passed to the launcher' }
       const exe = await resolveExecutable(recipe.opener)
-      if (!exe) return { ok: false, error: '找不到打开器：' + recipe.opener }
+      if (!exe) return { ok: false, error: 'Cannot find an opener: ' + recipe.opener }
       const home = cwd || target
       if (kind === 'file' && typeof recipe.fileArgs === 'function') {
         const fileArgv = recipe.fileArgs(target)

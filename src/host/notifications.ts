@@ -25,7 +25,7 @@ export function createNotifications(deps?: any): any {
     if (!storeP) {
       storeP = (async function (): Promise<any> {
         // 房间的加载钩子由装配点注入；没给就当作事件库不可用（记录类静默跳过、只读电话回空历史）。
-        if (typeof d.loadStore !== 'function') throw new Error('notifications: 缺少 loadStore 装配钩子')
+        if (typeof d.loadStore !== 'function') throw new Error('notifications: missing loadStore assembly hook')
         const mod = await d.loadStore()
         return mod.createNotificationStore({
           fs: d.fs,

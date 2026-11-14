@@ -71,7 +71,7 @@ export function createWriteCheck(deps: any): any {
   }
   /** 跑一条只读命令（走安全执行层；票据与指纹都不许截断）。 */
   async function readOut(cwd: any, args: any, timeoutMs: any, stdoutLimit: any): Promise<any> {
-    if (!safeGit || typeof safeGit.startCall !== 'function') return { ok: false, kind: 'env', message: '没有拿到安全执行层' }
+    if (!safeGit || typeof safeGit.startCall !== 'function') return { ok: false, kind: 'env', message: 'The safe execution layer is unavailable' }
     const call: any = safeGit.startCall({ totalBudgetMs: CHECK_CALL_BUDGET_MS })
     const r: any = await call.run({ args: fixedPrefix().concat(args), cwd: cwd, timeoutMs: timeoutMs, stdoutLimit: stdoutLimit })
     return r
@@ -84,11 +84,11 @@ export function createWriteCheck(deps: any): any {
   async function handleGitWriteCheck(args: any): Promise<any> {
     const a: any = args || {}
     const op: string = String(a.op || '')
-    if (op !== 'commit' && op !== 'pull' && op !== 'push' && op !== 'fetch') return fail('args', 'bad-target', '预检要知道是哪种写操作（op）')
+    if (op !== 'commit' && op !== 'pull' && op !== 'push' && op !== 'fetch') return fail('args', 'bad-target', 'Preflight requires the write operation (op)')
     const cwd: string = String(a.cwd || '')
     // ① 首屏（只读）：判定、身份、分支与上游都从这一份读数来，不另起一套读法。
     const sr: any = await vc.readScreenOf(cwd)
-    if (!sr || sr.ok !== true) return sr || fail('env', 'unknown-write-failure', '读不到这个仓库的首屏')
+    if (!sr || sr.ok !== true) return sr || fail('env', 'unknown-write-failure', 'Cannot read this repository\'s initial screen')
     const screen: any = sr.screen
     let decision: any = judge(screen, op)
     // #1743：提交计划先归一、再校验（缺目标 / 坏目标当场拒，不起任何进程），然后按模式修正判定。
@@ -111,7 +111,7 @@ export function createWriteCheck(deps: any): any {
         const st0: any = await readOut(cwd, ['status', '--porcelain=v2', '-z', '--untracked-files=all', '--find-renames'], LSFILES_TIMEOUT_MS, LSFILES_LIMIT)
         if (st0 && st0.ok === true && st0.truncated !== true && hasIntentToAdd(st0.stdout) === true) return fail('args', 'intent-to-add', writeHintFor('intent-to-add'))
       }
-      return Object.assign(fail('blocked', 'blocked', '这次操作现在做不了', { reasons: decision.reasons }), { decision: decision })
+      return Object.assign(fail('blocked', 'blocked', 'This operation cannot be performed now', { reasons: decision.reasons }), { decision: decision })
     }
     const branch: string = screen.identity && screen.identity.branch ? String(screen.identity.branch) : ''
     let plan: any = null
@@ -123,12 +123,12 @@ export function createWriteCheck(deps: any): any {
     if (op === 'push') {
       // ② 远端清单（只读）：多远端时列出去让用户选，不替用户挑。
       const rr: any = await readOut(cwd, remoteListArgs(), REMOTE_TIMEOUT_MS, REMOTE_LIMIT)
-      if (!rr || rr.ok !== true) return fail(rr && rr.kind ? rr.kind : 'other', 'unknown-write-failure', (rr && rr.message) || '读远端清单失败', { hint: (rr && rr.hint) || undefined })
+      if (!rr || rr.ok !== true) return fail(rr && rr.kind ? rr.kind : 'other', 'unknown-write-failure', (rr && rr.message) || 'Failed to read the remote list', { hint: (rr && rr.hint) || undefined })
       const remotes: string[] = String(rr.stdout || '').split('\n').map(function (x: any) { return x.replace(/\r/g, '').trim() }).filter(function (x: any) { return x !== '' })
       const cur: any = (screen.branches || []).filter(function (b: any) { return b.short === branch })[0] || null
       const pp: any = pushPlanOf({ branch: branch, upstream: cur ? cur.upstream : null, upstreamGone: !!(cur && cur.upstreamGone), remotes: remotes, requestedRemote: a.remote ? String(a.remote) : null })
       if (pp.ok !== true) {
-        if (pp.reason === 'need-remote-choice') return fail('args', 'need-remote-choice', '这个仓库有多个远端，请选一个', { remotes: pp.candidates })
+        if (pp.reason === 'need-remote-choice') return fail('args', 'need-remote-choice', 'This repository has multiple remotes; select one', { remotes: pp.candidates })
         return fail('args', pp.reason, writeHintFor(pp.reason))
       }
       plan = pp.plan
@@ -145,7 +145,7 @@ export function createWriteCheck(deps: any): any {
     }
     if (op === 'pull') {
       const cur: any = (screen.branches || []).filter(function (b: any) { return b.short === branch })[0] || null
-      if (!cur || !cur.upstream) return Object.assign(fail('blocked', 'blocked', '这个分支没有上游', { reasons: ['no-upstream'] }), { decision: { verdict: 'block', reasons: ['no-upstream'] } })
+      if (!cur || !cur.upstream) return Object.assign(fail('blocked', 'blocked', 'This branch has no upstream', { reasons: ['no-upstream'] }), { decision: { verdict: 'block', reasons: ['no-upstream'] } })
       plan = { mode: 'existing', remote: '', branch: '', localBranch: branch, upstream: cur.upstream }
       // 拉取绑五格：工作树形状（拉取会不会冲突取决于它）、目标计划摘要、旧配置原值、远端跟踪引用、运行中标记文件名单。
       const cfgRemote: string = await readConfigValue(cwd, 'branch.' + branch + '.remote')
@@ -166,7 +166,7 @@ export function createWriteCheck(deps: any): any {
     if (op === 'fetch') {
       // 更新远方记录只定远端，不定分支：远端名由上游解析或单远端默认，多远端请人选，不替人挑。
       const rr: any = await readOut(cwd, remoteListArgs(), REMOTE_TIMEOUT_MS, REMOTE_LIMIT)
-      if (!rr || rr.ok !== true) return fail(rr && rr.kind ? rr.kind : 'other', 'unknown-write-failure', (rr && rr.message) || '读远端清单失败', { hint: (rr && rr.hint) || undefined })
+      if (!rr || rr.ok !== true) return fail(rr && rr.kind ? rr.kind : 'other', 'unknown-write-failure', (rr && rr.message) || 'Failed to read the remote list', { hint: (rr && rr.hint) || undefined })
       const remotes: string[] = String(rr.stdout || '').split('\n').map(function (x: any) { return x.replace(/\r/g, '').trim() }).filter(function (x: any) { return x !== '' })
       if (remotes.length === 0) return fail('args', 'no-remote', writeHintFor('no-remote'))
       const cur: any = (screen.branches || []).filter(function (b: any) { return b.short === branch })[0] || null
@@ -181,7 +181,7 @@ export function createWriteCheck(deps: any): any {
       } else if (remotes.length === 1) {
         plan = { mode: 'fetch', remote: remotes[0], branch: '', localBranch: branch, upstream: upstream || null }
       } else {
-        return fail('args', 'need-remote-choice', '这个仓库有多个远端，请选一个', { remotes: remotes })
+        return fail('args', 'need-remote-choice', 'This repository has multiple remotes; select one', { remotes: remotes })
       }
       // 更新远方记录只绑目标计划摘要：它只改远端跟踪引用，不碰工作树、不改上游配置，其余格子留 null。
       bindings = makeBindings({ preconditions: { planDigest: digest16(planBindingInput(plan)) } })
@@ -201,8 +201,8 @@ export function createWriteCheck(deps: any): any {
       if (msgBad) return fail('args', msgBad, writeHintFor(msgBad))
       // ③ 索引指纹与 i-t-a：两条都只读，且与执行前那次逐字节同一口径（同一固定前缀、同一 -z、不截断）。
       const lf: any = await readOut(cwd, lsFilesStageArgs(), LSFILES_TIMEOUT_MS, LSFILES_LIMIT)
-      if (!lf || lf.ok !== true) return fail(lf && lf.kind ? lf.kind : 'other', 'fingerprint-unavailable', (lf && lf.message) || '读不到暂存区清单', { hint: writeHintFor('fingerprint-unavailable') })
-      if (lf.truncated === true) return fail('other', 'fingerprint-unavailable', '暂存区清单太大，被截断了')
+      if (!lf || lf.ok !== true) return fail(lf && lf.kind ? lf.kind : 'other', 'fingerprint-unavailable', (lf && lf.message) || 'Cannot read the index listing', { hint: writeHintFor('fingerprint-unavailable') })
+      if (lf.truncated === true) return fail('other', 'fingerprint-unavailable', 'The index listing is too large and was truncated')
       const text: any = fingerprintInputOf(lf.stdout)
       indexFingerprint = createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16)
       indexEntries = indexRecordCount(lf.stdout)
@@ -214,8 +214,8 @@ export function createWriteCheck(deps: any): any {
       bindings = makeBindings({ counters: { indexEntries: indexEntries }, preconditions: pre })
       // i-t-a（git add -N）：与「真暂存一个空文件」指纹相同但提交结局不同，直接拒绝（总工订正 3）。
       const st: any = await readOut(cwd, ['status', '--porcelain=v2', '-z', '--untracked-files=all', '--find-renames'], LSFILES_TIMEOUT_MS, LSFILES_LIMIT)
-      if (!st || st.ok !== true) return fail(st && st.kind ? st.kind : 'other', 'unknown-write-failure', (st && st.message) || '读不到工作区状态')
-      if (st.truncated === true) return fail('other', 'fingerprint-unavailable', '工作区状态太大，被截断了')
+      if (!st || st.ok !== true) return fail(st && st.kind ? st.kind : 'other', 'unknown-write-failure', (st && st.message) || 'Cannot read the workspace status')
+      if (st.truncated === true) return fail('other', 'fingerprint-unavailable', 'The workspace status is too large and was truncated')
       if (hasIntentToAdd(st.stdout) === true) return fail('args', 'intent-to-add', writeHintFor('intent-to-add'))
     }
     const ticket: any = makeTicket({ id: mkId(), op: op, nowMs: now(), headOid: String(screen.identity.oid || ''), indexFingerprint: indexFingerprint, indexEntries: indexEntries, target: plan, repoRoot: String((screen.identity && screen.identity.worktreePath) || ''), bindings: bindings })

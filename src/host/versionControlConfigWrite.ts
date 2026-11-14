@@ -51,14 +51,14 @@ export function createConfigWrite(deps: any): any {
     return hookRunArgs(plan.name)
   }
   function stepOf(op: string): string {
-    if (op === 'config-set') return '写配置这一步'
-    if (op === 'config-unset') return '删配置这一步'
-    return '手动跑钩子这一步'
+    if (op === 'config-set') return 'Writing configuration'
+    if (op === 'config-unset') return 'Deleting configuration'
+    return 'Running a hook manually'
   }
   function expectedOf(op: string, plan: any): string {
-    if (op === 'config-set') return '配置项 ' + String(plan.key || '') + '（' + String(plan.scope || 'local') + '）变成新值'
-    if (op === 'config-unset') return '配置项 ' + String(plan.key || '') + '（' + String(plan.scope || 'local') + '）被删掉'
-    return '钩子 ' + String(plan.name || '') + ' 跑完并回退出码'
+    if (op === 'config-set') return 'Configuration entry ' + String(plan.key || '') + ' (' + String(plan.scope || 'local') + ') changes to the new value'
+    if (op === 'config-unset') return 'Configuration entry ' + String(plan.key || '') + ' (' + String(plan.scope || 'local') + ') is deleted'
+    return 'Hook ' + String(plan.name || '') + ' completes and returns an exit code'
   }
   function remember(requestId: any, out: any): void {
     if (!requestId) return
@@ -85,30 +85,30 @@ export function createConfigWrite(deps: any): any {
     const ticketId: string = String(a.ticketId || '')
     const op: string = String(a.op || '')
     const idProblem: any = idShapeProblem(ticketId)
-    if (idProblem) return wfail('args', 'bad-target', '票号格式不合法：' + String(ticketId).slice(0, 80))
+    if (idProblem) return wfail('args', 'bad-target', 'Invalid ticket ID: ' + String(ticketId).slice(0, 80))
     const ridProblem: any = requestIdProblem(requestId)
-    if (ridProblem) return wfail('args', ridProblem, 'requestId 格式不合法：只能用字母、数字、下划线与连字符，长度不超过 64')
+    if (ridProblem) return wfail('args', ridProblem, 'Invalid requestId: use only letters, digits, underscores and hyphens, at most 64 characters')
     const ticket: any = tickets.get(ticketId)
-    if (!ticket) return wfail('blocked', 'ticket-missing', '这张票不存在或已经被执行过：重新预检拿一张新票')
-    if (String(ticket.op || '') !== op) return wfail('args', 'ticket-op-mismatch', '这张票不是为这个动作签的：重新预检')
-    if (CONFIG_WRITE_OPS.indexOf(op) < 0) return wfail('args', 'bad-target', '这个动作不需要凭票执行：' + op)
+    if (!ticket) return wfail('blocked', 'ticket-missing', 'This ticket does not exist or has already been executed; run preflight again for a new ticket')
+    if (String(ticket.op || '') !== op) return wfail('args', 'ticket-op-mismatch', 'This ticket was not issued for this action; run preflight again')
+    if (CONFIG_WRITE_OPS.indexOf(op) < 0) return wfail('args', 'bad-target', 'This action does not require a ticket: ' + op)
     const pure: any = ticketPureVerdict(ticket, ticket.op, nowFn())
-    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), '这张票已经过期或不能用：重新预检')
-    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', '这个动作要先确认（确认卡上写清后果），确认后带 confirmed:true 再发一次', { decision: { verdict: 'allow', reasons: ['ok'] } })
+    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), 'This ticket has expired or is unusable; run preflight again')
+    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', 'This action requires confirmation (the card states the consequences); confirm, then resend with confirmed:true', { decision: { verdict: 'allow', reasons: ['ok'] } })
     const cwd: string = typeof a.cwd === 'string' && a.cwd.trim() !== '' ? a.cwd : ''
-    if (!cwd) return wfail('args', 'bad-target', '缺少工作目录：执行必须说清在哪个仓库做')
+    if (!cwd) return wfail('args', 'bad-target', 'Missing working directory: execution must identify the repository')
     // ⑧ 按预检同一口径重算现场，逐格比对绑定表（HEAD、旧值/钩子文件摘要、仓库）。
     const cur: any = await measure(cwd, ticket.plan || {})
-    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', '执行前读不回现场：这次不执行，先刷新')
-    if (String(cur.repoRoot || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', '这张票不是给这个仓库签的：重新预检')
-    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'target-changed', '预检之后 HEAD 变了：这次不执行，重新预检')
+    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', 'Cannot reread repository state before execution; nothing was executed. Refresh first')
+    if (String(cur.repoRoot || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', 'This ticket was not issued for this repository; run preflight again')
+    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'target-changed', 'HEAD changed after preflight; nothing was executed. Run preflight again')
     const bind: any = bindingsVerdict(ticket, cur.bindings)
-    if (bind) return wfail('blocked', String(bind === 'stale-index' ? 'target-changed' : bind), '预检之后要动的东西变了（旧值或钩子文件）：这次不执行，重新预检')
+    if (bind) return wfail('blocked', String(bind === 'stale-index' ? 'target-changed' : bind), 'The old value or hook file changed after preflight; nothing was executed. Run preflight again')
     const e: any = (cur.facts || {})
-    if (op === 'config-unset' && (e.oldValue === null || e.oldValue === undefined)) return wfail('blocked', 'config-missing', '预检之后这个值已经被删掉了：刷新配置页再操作')
+    if (op === 'config-unset' && (e.oldValue === null || e.oldValue === undefined)) return wfail('blocked', 'config-missing', 'This value was deleted after preflight; refresh the configuration page')
     // ⑨ 唯一一次写命令。
     const exe: any = await resolveGitExecutable()
-    if (!exe) return wfail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return wfail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const plan: any = ticket.plan || {}
     const argv: string[] = argvOf(plan)
     const timeoutMs: number = op === 'hook-run' ? HOOK_TIMEOUT_MS : WRITE_TIMEOUT_MS
@@ -122,8 +122,8 @@ export function createConfigWrite(deps: any): any {
       out = Object.assign({ ok: true, op: op, kind: hookFailed ? 'hook-failed' : 'done', command: argv.slice(0, 3).join(' '), argv: argv, ticketId: ticketId, atMs: nowFn(), scene: ticket.sceneSummary || null }, extra)
     } else {
       const says: string = firstLineOf(String((res && res.stderr) || '').trim() !== '' ? res.stderr : (res && res.stdout))
-      out = wfail('git-failed', 'config-failed', stepOf(op) + '失败：git 原话「' + says.slice(0, 400) + '」，这次没有改动生效', {
-        git: says.slice(0, 400), step: stepOf(op), expected: expectedOf(op, plan), actual: '退出码 ' + String(res && res.exitCode), cause: (res && res.kind) || '', exitCode: res && typeof res.exitCode === 'number' ? res.exitCode : null,
+      out = wfail('git-failed', 'config-failed', stepOf(op) + ': failed; git reported: "' + says.slice(0, 400) + '"; no changes took effect', {
+        git: says.slice(0, 400), step: stepOf(op), expected: expectedOf(op, plan), actual: 'Exit code ' + String(res && res.exitCode), cause: (res && res.kind) || '', exitCode: res && typeof res.exitCode === 'number' ? res.exitCode : null,
       })
     }
     remember(requestId, out)

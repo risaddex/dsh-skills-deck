@@ -52,7 +52,7 @@ export function createRunningMarkers(deps?: any): any {
         try { viaGit = await runProbe(rel, probeCtx) } catch (e) { if (fsDetail === '') fsDetail = String((e && (e as any).message) || e) }
         if (viaGit === true) hit = true
         else if (viaGit === false) hit = false
-        else return { ok: false, kind: 'env-fs', detail: fsDetail || (typeof deps.getFsDetail === 'function' ? String(deps.getFsDetail() || '') : '') || '文件服务与 git 兜底都没给出结论' }
+        else return { ok: false, kind: 'env-fs', detail: fsDetail || (typeof deps.getFsDetail === 'function' ? String(deps.getFsDetail() || '') : '') || 'Neither the file service nor the git fallback returned a conclusion' }
       }
       if (!hit) continue
       if (rel === 'MERGE_HEAD') out.merging = true

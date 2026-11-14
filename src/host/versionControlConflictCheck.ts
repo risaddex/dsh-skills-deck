@@ -48,18 +48,18 @@ export function createConflictCheck(deps: any): any {
     const path: string = String(plan.path || '')
     const side: string = String(plan.side || '')
     const state: string = String(plan.state || '')
-    const sideText: string = side === 'ours' ? '当前边' : (side === 'theirs' ? '对方边' : '保留删除')
-    if (op === 'merge') return { kind: op, target: target, verb: '把 ' + target + ' 合并进当前分支' }
-    if (op === 'merge-ff-only') return { kind: op, target: target, verb: '只允许快进地把 ' + target + ' 合并进来（不能快进就失败）' }
-    if (op === 'merge-no-ff') return { kind: op, target: target, verb: '禁止快进，为这次合并单独生成一个合并提交（' + target + '）' }
-    if (op === 'merge-squash') return { kind: op, target: target, verb: '把 ' + target + ' 的改动挤压成工作区改动，不生成合并提交' }
-    if (op === 'take-side') return { kind: op, target: path, verb: '对 ' + path + ' 选' + sideText + '并登记进暂存区' }
-    if (op === 'save-file') return { kind: op, target: path, verb: '把面板里编辑好的整份内容写回 ' + path + '（保存前会查残留冲突标记）' }
-    if (op === 'mark-resolved') return { kind: op, target: path, verb: '把 ' + path + ' 标记为已解决（git add）' }
-    if (op === 'op-continue') return { kind: op, target: state, verb: '继续这次 ' + state + '（用默认提交说明，不弹编辑器）' }
-    if (op === 'op-skip') return { kind: op, target: state, verb: '跳过这次 ' + state + ' 的这一步（这一步的改动会丢掉，不能撤销）' }
-    if (op === 'op-abort') return { kind: op, target: state, verb: '中止这次 ' + state + '（回到操作前，途中做过的事会丢）' }
-    return { kind: op, target: target, verb: '执行 ' + op }
+    const sideText: string = side === 'ours' ? 'our side' : (side === 'theirs' ? 'their side' : 'keep deletion')
+    if (op === 'merge') return { kind: op, target: target, verb: '' + target + ': merge into the current branch' }
+    if (op === 'merge-ff-only') return { kind: op, target: target, verb: 'Merge ' + target + ' by fast-forward only (fail if fast-forward is not possible)' }
+    if (op === 'merge-no-ff') return { kind: op, target: target, verb: 'Disable fast-forward and create a dedicated merge commit (' + target + ')' }
+    if (op === 'merge-squash') return { kind: op, target: target, verb: '' + target + ': squash its changes into the workspace without creating a merge commit' }
+    if (op === 'take-side') return { kind: op, target: path, verb: 'For ' + path + ', choose ' + sideText + ' and stage it' }
+    if (op === 'save-file') return { kind: op, target: path, verb: 'Write the entire edited content from the panel to ' + path + ' (check for leftover conflict markers before saving)' }
+    if (op === 'mark-resolved') return { kind: op, target: path, verb: '' + path + ': mark as resolved (git add)' }
+    if (op === 'op-continue') return { kind: op, target: state, verb: 'Continue this ' + state + ' (use the default commit message without opening an editor)' }
+    if (op === 'op-skip') return { kind: op, target: state, verb: 'Skip this ' + state + ' step (its changes will be lost and cannot be undone)' }
+    if (op === 'op-abort') return { kind: op, target: state, verb: 'Abort this ' + state + ' (return to the previous state; intermediate work will be lost)' }
+    return { kind: op, target: target, verb: 'Execute ' + op }
   }
   /** 签票：计划与判定随票保存，执行层只按票里的计划拼 argv。 */
   function sign(plan: any, s: any, decision: any, confirm: any, confirmRequired: boolean): any {
@@ -167,7 +167,7 @@ export function createConflictCheck(deps: any): any {
     if (op === 'merge' || op === 'merge-ff-only' || op === 'merge-no-ff' || op === 'merge-squash') {
       const tProblem: any = conflictTargetProblem(plan.target)
       if (tProblem) return argsFail(tProblem, { op: op })
-      const rev: any = await scene.readOut(s.exe, s.repoRoot, '确认合并目标这一步', ['rev-parse', '-q', '--verify', String(plan.target) + '^{commit}'], { allowNonZero: true })
+      const rev: any = await scene.readOut(s.exe, s.repoRoot, 'Checking the merge target', ['rev-parse', '-q', '--verify', String(plan.target) + '^{commit}'], { allowNonZero: true })
       if (rev.ok !== true) return rev.envelope
       if (rev.exitCode !== 0) return blocked(op, 'target-missing', { scene: sceneSummaryOf(s), confirm: confirmOf(plan) })
     }

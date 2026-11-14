@@ -23,7 +23,7 @@ export function createConfigMount(host: any): any {
   // 第一次拨电话时才装配整族，装完缓存；装配失败只影响配置域，不拖垮宿主其它电话。
   let assembling: any = null
   function failedPhone(): any {
-    const message: string = '配置与钩子域那一族加载失败：' + String((host && host.loadError && host.loadError.message) || '未知原因')
+    const message: string = 'Failed to load the configuration-and-hooks family: ' + String((host && host.loadError && host.loadError.message) || 'Unknown reason')
     return function (): any { return host.failPhone('env', message) }
   }
   function configPhones(): Promise<any> {
@@ -36,7 +36,7 @@ export function createConfigMount(host: any): any {
           return { read: check.handleGitConfigRead, check: check.handleConfigCheck, write: write.handleConfigWrite, tickets: check.tickets }
         })
       }).catch(function (e: any): any {
-        const message: string = '配置与钩子域那一族加载失败：' + String((e && e.message) || e)
+        const message: string = 'Failed to load the configuration-and-hooks family: ' + String((e && e.message) || e)
         const failed: any = function (): any { return host.failPhone('env', message) }
         return { read: failed, check: failed, write: failed, tickets: async function (): Promise<any> { return null } }
       })

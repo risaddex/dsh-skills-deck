@@ -187,7 +187,7 @@ export function createSettingsPhones(deps?: any): any {
 
   // 写高版本文件时的同一句只读文案，读前检查与写后遇到 version-newer 都复用它，不让两种只读说两种话。
   function readonlyUpgrade(): any {
-    return { ok: false, error: { kind: 'readonly', message: '这份本机设置文件是新版本插件写的，当前插件只认识到版本一，可以读来展示，不许写回去，请升级插件到最新版本后再改。' } }
+    return { ok: false, error: { kind: 'readonly', message: 'This local settings file was written by a newer plugin. This version understands only version one and may display it but cannot write it back. Upgrade the plugin before editing it.' } }
   }
 
   // #1802：补丁写搬成独立叶子（手机文件本就贴着文件粒度门禁的上限），
@@ -204,13 +204,13 @@ export function createSettingsPhones(deps?: any): any {
   // 读本机设置，成功保留值与警告与只读标记与来源四个字段，失败按映射表分档。
   async function handleGetSettings() {
     const home = await resolveHome()
-    if (!home) return { ok: false, error: { kind: 'environment', message: '拿不到用户主目录，所以读不出本机设置文件。请检查平台主目录能力是否可用，然后重试。' } }
-    if (typeof readLocalSettings !== 'function') return { ok: false, error: { kind: 'environment', message: '读本机设置这一步没有装好，所以没有读任何文件。请重试一次，如果仍然失败请把这条提示原文报告给插件维护者。' } }
+    if (!home) return { ok: false, error: { kind: 'environment', message: 'The user home directory could not be resolved, so local settings cannot be read. Check the platform home-directory capability and retry.' } }
+    if (typeof readLocalSettings !== 'function') return { ok: false, error: { kind: 'environment', message: 'The local-settings reader is not connected, so no files were read. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
     let raw: any = null
     try {
       raw = await readLocalSettings(home, buildIo())
     } catch (e) {
-      return { ok: false, error: { kind: 'environment', message: '读本机设置文件这一步出错了，可能是当前账号读不到它，也可能是它正被别的程序占用。请检查后重试。错误原文：' + String((e && (e as any).message) || e).slice(0, 120) } }
+      return { ok: false, error: { kind: 'environment', message: 'Reading the local settings file failed. The current account may lack read permission, or another program may be using the file. Check and retry. Original error: ' + String((e && (e as any).message) || e).slice(0, 120) } }
     }
     if (raw && raw.ok === true) {
       // #1612：读成功就把这份归一后的设置文档发布给 deck 工具闸门（闸门据此决定哪些工作区要收掉 deck 工具）。
@@ -220,8 +220,8 @@ export function createSettingsPhones(deps?: any): any {
     const reason = String((raw && raw.reason) || 'env')
     // #1802：文件还没建时也给出「空文档的内容指纹」，让客户端第一次保存能拿它当基底比对；
     // 空文档的样子由核里的 settingsEmptyDocument 定义，宿主与客户端算出来是同一个指纹。
-    if (reason === 'missing') return { ok: false, error: { kind: 'absent', message: String((raw && raw.message) || '本机设置文件还没有。') }, contentHash: settingsContentHash(settingsEmptyDocument()) }
-    return { ok: false, error: { kind: mapSettingsKind(reason), message: String((raw && raw.message) || '读本机设置文件这一步出错了。') } }
+    if (reason === 'missing') return { ok: false, error: { kind: 'absent', message: String((raw && raw.message) || 'The local settings file does not exist yet.') }, contentHash: settingsContentHash(settingsEmptyDocument()) }
+    return { ok: false, error: { kind: mapSettingsKind(reason), message: String((raw && raw.message) || 'Reading the local settings file failed.') } }
   }
 
   // 写本机设置，写之前先读一次，只读为真直接回升级文案，不动盘上任何字节。
@@ -229,14 +229,14 @@ export function createSettingsPhones(deps?: any): any {
   async function handleSetSettings(args?: any) {
     return serialWrite(async function() {
       const home = await resolveHome()
-      if (!home) return { ok: false, error: { kind: 'environment', message: '拿不到用户主目录，所以保存不了本机设置文件。请检查平台主目录能力是否可用，然后重试。' } }
-      if (typeof readLocalSettings !== 'function' || typeof writeLocalSettings !== 'function') return { ok: false, error: { kind: 'environment', message: '写本机设置这一步没有装好，所以没有动盘上的任何文件。请重试一次，如果仍然失败请把这条提示原文报告给插件维护者。' } }
+      if (!home) return { ok: false, error: { kind: 'environment', message: 'The user home directory could not be resolved, so local settings cannot be saved. Check the platform home-directory capability and retry.' } }
+      if (typeof readLocalSettings !== 'function' || typeof writeLocalSettings !== 'function') return { ok: false, error: { kind: 'environment', message: 'The local-settings writer is not connected, so no files on disk were changed. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
       // #1802：新客户端只送「改动的格 + 读到的那一版的指纹」，走补丁写；
       // 旧客户端仍然送整份文档，继续走下面原来的整份覆盖路径，形状不改。
       const patch = (args && typeof args.patch === 'object' && args.patch !== null && !Array.isArray(args.patch)) ? args.patch : null
       if (patch !== null) return patchWriter.writeSettingsPatch(home, patch, args && args.baseHash)
       const inputValue = (args && typeof args.value === 'object' && args.value !== null) ? args.value : ((args && typeof args.settings === 'object' && args.settings !== null) ? args.settings : null)
-      if (inputValue === null) return { ok: false, error: { kind: 'invalid', message: '要保存的本机设置不是一份名字到值的组合，请回到设置界面重新保存一次。' } }
+      if (inputValue === null) return { ok: false, error: { kind: 'invalid', message: 'The local settings to save are not a name-to-value object. Return to settings and save again.' } }
       let before: any = null
       try {
         before = await readLocalSettings(home, buildIo())
@@ -248,7 +248,7 @@ export function createSettingsPhones(deps?: any): any {
       try {
         made = await writeLocalSettings(inputValue, home, buildIo())
       } catch (e) {
-        return { ok: false, error: { kind: 'environment', message: '保存失败，写不进本机设置文件，请检查它的上一级目录在不在与当前账号能不能写入，然后重试。错误原文：' + String((e && (e as any).message) || e).slice(0, 120) } }
+        return { ok: false, error: { kind: 'environment', message: 'Save failed: could not write the local settings file. Check that its parent directory exists and the current account can write to it, then retry. Original error: ' + String((e && (e as any).message) || e).slice(0, 120) } }
       }
       if (made && made.ok === true) {
         // #1612：写成功同样发布一次 —— 用户刚改的 deckTools 要让闸门立刻跟上，不必等下一次读设置。
@@ -259,7 +259,7 @@ export function createSettingsPhones(deps?: any): any {
       // 写时遇到高版本同样按只读拒绝，文案与读前检查同一句，不让两种只读说两种话。
       if (reason === 'version-newer') return readonlyUpgrade()
       // out 后面可能按条件追加 keys（一句内核返回的键清单）；先标成 any，追加语义与原来一致。
-      const out: any = { kind: mapSettingsKind(reason), message: String((made && made.message) || '保存失败，写不进本机设置文件。') }
+      const out: any = { kind: mapSettingsKind(reason), message: String((made && made.message) || 'Save failed: could not write the local settings file.') }
       if (made && Array.isArray(made.keys)) out.keys = made.keys
       return { ok: false, error: out }
     })

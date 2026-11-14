@@ -35,9 +35,9 @@ export function createRewriteMount(host: any): any {
       }).catch(function (e: any): any {
         const said: string = String((e && e.message) || e)
         const failed: any = {
-          handleRewritePreview: function (): any { return h.failPhone('env', '维护页整仓重写这一层装配失败：' + said) },
-          handleRewriteCheck: function (): any { return h.failPhone('env', '维护页整仓重写这一层装配失败：' + said) },
-          handleRewriteRun: function (): any { return h.failPhone('env', '维护页整仓重写这一层装配失败：' + said) },
+          handleRewritePreview: function (): any { return h.failPhone('env', 'Failed to assemble the maintenance page\'s full-history rewrite layer: ' + said) },
+          handleRewriteCheck: function (): any { return h.failPhone('env', 'Failed to assemble the maintenance page\'s full-history rewrite layer: ' + said) },
+          handleRewriteRun: function (): any { return h.failPhone('env', 'Failed to assemble the maintenance page\'s full-history rewrite layer: ' + said) },
         }
         return { check: failed, write: failed, tickets: null }
       })

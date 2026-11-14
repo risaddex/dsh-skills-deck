@@ -46,12 +46,12 @@ export function createMaintenanceRead(deps: any): any {
   /** 跑一条只读命令并翻成 {ok:true,stdout,truncated} 或失败信封；非零退出默认不算成功。 */
   async function readOut(exe: string, root: string, args: string[], opts?: any): Promise<any> {
     let res: any
-    try { res = await deps.runPinned(exe, root, args, { timeoutMs: readTimeoutMs, stdoutLimit: (opts && opts.stdoutLimit) || READ_LIMIT }) } catch (e) { return fail('env', 'unknown', '只读命令没有起进程：' + firstLine(String((e && (e as any).message) || e))) }
+    try { res = await deps.runPinned(exe, root, args, { timeoutMs: readTimeoutMs, stdoutLimit: (opts && opts.stdoutLimit) || READ_LIMIT }) } catch (e) { return fail('env', 'unknown', 'The read-only command did not start a process: ' + firstLine(String((e && (e as any).message) || e))) }
     const view: any = opts || {}
     if (res && res.kind === 'ok') return { ok: true, stdout: String(res.stdout || ''), stderr: String(res.stderr || ''), truncated: res.truncated === true }
     if (res && res.kind === 'non-zero' && view.allowNonZero === true) return { ok: true, nonZero: true, exitCode: Number(res.exitCode) || 0, stdout: String(res.stdout || ''), stderr: String(res.stderr || ''), truncated: res.truncated === true }
-    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || '只读命令以非零退出码结束了')
-    return fail('read', 'unknown', firstLine(res && res.message) || '只读命令没有正常结束')
+    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || 'The read-only command exited with a non-zero exit code')
+    return fail('read', 'unknown', firstLine(res && res.message) || 'The read-only command did not finish normally')
   }
 
   /** 允许非零的读：老版本 git 不认某个开关时按「没有这个事实」处理，不判失败。 */
@@ -63,9 +63,9 @@ export function createMaintenanceRead(deps: any): any {
   async function repoOf(cwd: string): Promise<any> {
     let exe: any = null
     try { exe = await deps.resolveGitExecutable() } catch (e) { exe = null }
-    if (!exe) return fail('env', 'unknown', '找不到 git 命令，读不了仓库现场。')
+    if (!exe) return fail('env', 'unknown', 'Cannot find git; repository state cannot be read.')
     const repo: any = await deps.resolveRepoRoot(exe, cwd)
-    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', '当前目录不是 git 仓库：' + cwd)
+    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', 'The current directory is not a git repository: ' + cwd)
     return { ok: true, exe: String(exe), root: String(repo.root), bare: repo.kind === 'bare' }
   }
 
@@ -300,15 +300,15 @@ export function createMaintenanceRead(deps: any): any {
   async function sceneOf(cwd: string): Promise<any> {
     const repo: any = await repoOf(cwd)
     if (repo.ok !== true) return repo
-    if (repo.bare === true) return fail('blocked', 'repo-bare', '这是一个裸仓库：维护页要在有工作区的仓库里做，请换一个普通仓库。')
+    if (repo.bare === true) return fail('blocked', 'repo-bare', 'This is a bare repository. The maintenance page requires a repository with a worktree; select a regular repository.')
     const exe: string = repo.exe
     const root: string = repo.root
     let sc: any = null
     try { sc = await deps.readScreenOf(cwd) } catch (e) { sc = null }
-    if (!sc || sc.ok !== true) return fail('read', 'unknown', '读不到仓库首屏，判断不了现场（' + firstLine(String((sc && sc.error && sc.error.message) || sc)) + '）')
+    if (!sc || sc.ok !== true) return fail('read', 'unknown', 'Cannot read the initial screen to determine repository state (' + firstLine(String((sc && sc.error && sc.error.message) || sc)) + ')')
     const screen: any = sc.screen
     const gitVersion: string = await versionOf(exe, root)
-    if (gitVersion === '') return fail('read', 'unknown', '读不出 git 版本：版本门没法判，先停在这里。')
+    if (gitVersion === '') return fail('read', 'unknown', 'Cannot read the git version; the version requirement cannot be checked. Stopped.')
     const statsRes: any = await objectStatsOf(exe, root)
     if (statsRes.ok !== true) return statsRes
     const maintRes: any = await maintenanceStatusOf(exe, root, gitVersion)
@@ -370,15 +370,15 @@ export function createMaintenanceRead(deps: any): any {
    */
   async function readOf(cwd: string, op: string): Promise<any> {
     const metaFound: any = maintenanceOpMetaOf(op)
-    if (metaFound === null || metaFound.kind !== 'read') return fail('args', 'bad-target', '认不出的只读动作：' + String(op))
-    if (typeof cwd !== 'string' || cwd.trim() === '') return fail('args', 'bad-target', '缺少仓库目录，不知道该读哪个仓库。')
+    if (metaFound === null || metaFound.kind !== 'read') return fail('args', 'bad-target', 'Unrecognised read-only action: ' + String(op))
+    if (typeof cwd !== 'string' || cwd.trim() === '') return fail('args', 'bad-target', 'Missing repository directory; cannot identify which repository to read.')
     const repo: any = await repoOf(cwd)
     if (repo.ok !== true) return repo
     const exe: string = repo.exe
     const root: string = repo.root
     const gitVersion: string = await versionOf(exe, root)
-    if (gitVersion === '') return fail('read', 'unknown', '读不出 git 版本：不知道这个版本的 git 支不支持这条读数。')
-    if (op !== 'overview' && !maintenanceVisibleOf(metaFound.capId, gitVersion)) return fail('blocked', 'version-unsupported', '这个 git 版本（' + gitVersion + '）还没有这条能力，已按版本门隐藏。', { op: op, capId: metaFound.capId, gitVersion: gitVersion })
+    if (gitVersion === '') return fail('read', 'unknown', 'Cannot read the git version; support for this query cannot be determined.')
+    if (op !== 'overview' && !maintenanceVisibleOf(metaFound.capId, gitVersion)) return fail('blocked', 'version-unsupported', 'This git version (' + gitVersion + ') does not support this capability; it was hidden by the version check.', { op: op, capId: metaFound.capId, gitVersion: gitVersion })
     let data: any = null
     if (op === 'objects') data = await objectStatsOf(exe, root)
     else if (op === 'unreachable') data = await unreachableOf(exe, root)

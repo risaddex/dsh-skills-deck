@@ -42,7 +42,7 @@ export function createPlatformReadPhones(deps: any): any {
     const a: any = args && typeof args === 'object' ? args : {}
     const cwd: any = cwdOf(a)
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { ok: false, error: failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）') }
+    if (!exe) return { ok: false, error: failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)') }
     const rootReply: any = await resolveRepoRoot(exe, cwd)
     if (!rootReply || rootReply.ok !== true) return { ok: false, error: rootReply }
     return { ok: true, exe: exe, cwd: cwd, root: String(rootReply.root || cwd) }
@@ -53,8 +53,8 @@ export function createPlatformReadPhones(deps: any): any {
     const res: any = await runPinned(prep.exe, prep.root, argv, { stdoutLimit: 64 * 1024, timeoutMs: VC_CHANGES_READ_TIMEOUT_MS })
     if (res && res.kind === 'ok') return { ok: true, set: String(res.stdout || '').trim() !== '', text: String(res.stdout || '') }
     if (res && res.kind === 'non-zero' && res.exitCode === 1) return { ok: true, set: false, text: '' }
-    const failed: any = failureFromExec(res, '读 git 配置')
-    return { ok: false, error: failed || failPhone('other', '读 git 配置失败') }
+    const failed: any = failureFromExec(res, 'Read git configuration')
+    return { ok: false, error: failed || failPhone('other', 'Reading git configuration failed') }
   }
 
   /** 平台页读取：凭据助手链 + rebase.updateRefs。两个查询各自成败分明，一个失败不连坐另一个。 */
@@ -98,10 +98,10 @@ export function createPlatformReadPhones(deps: any): any {
     const res: any = await runPinned(prep.exe, prep.root, built.args, { stdoutLimit: RP_STDOUT_LIMIT, timeoutMs: VC_CHANGES_READ_TIMEOUT_MS })
     const ms: number = Math.max(0, nowMs() - t0)
     if (!res || res.kind !== 'ok') {
-      const failed: any = failureFromExec(res, '生成请求拉取说明')
-      return failed || fail('other', 'request-pull-failed', 'git request-pull 没有成功')
+      const failed: any = failureFromExec(res, 'Generate pull-request summary')
+      return failed || fail('other', 'request-pull-failed', 'Git request-pull did not succeed')
     }
-    if (res.truncated === true) return fail('truncated', 'truncated', 'request-pull 输出太长被截断，不给你半份；换更短的区间再试')
+    if (res.truncated === true) return fail('truncated', 'truncated', 'Request-pull output was too long and was truncated; partial output will not be returned. Retry with a shorter range')
     return { ok: true, text: String(res.stdout || ''), truncated: false, ms: ms, cmd: 'request-pull', range: String(a.start || '') }
   }
 
@@ -120,7 +120,7 @@ export function createPlatformReadPhones(deps: any): any {
       const absence: any = fsAbsence && typeof fsAbsence === 'function' ? await fsAbsence() : null
       const absent: boolean = !!(absence && typeof absence.isAbsenceError === 'function' && absence.isAbsenceError(e))
       if (absent) return { ok: true, dir: dir, exists: false, patches: [], others: 0, total: 0, truncated: false, readAtMs: nowMs() }
-      return fail('env', 'env', '输出目录列不出来：' + firstLine(String(((e as any) && (e as any).message) || e)))
+      return fail('env', 'env', 'Cannot list the output directory: ' + firstLine(String(((e as any) && (e as any).message) || e)))
     }
     const summary: any = vcPatchSummaryOf(entries)
     return { ok: true, dir: dir, exists: true, patches: summary.patches, others: summary.others, total: summary.total, truncated: summary.truncated, readAtMs: nowMs() }

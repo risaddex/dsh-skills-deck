@@ -96,27 +96,27 @@ export function createTaskRunner(deps: any): any {
     if (rec.cancelRequested) {
       rec.conclusion = 'cancelled'
       rec.failureKind = 'cancelled'
-      rec.residual = forcedResidual || entry.residual || '任务被取消，可能有未完成的产物留在工作区'
+      rec.residual = forcedResidual || entry.residual || 'The task was cancelled; incomplete output may remain in the workspace'
       rec.failureLine = null
     } else if (stdinError) {
       rec.conclusion = 'failed'
       rec.failureKind = 'stdin-failed'
-      rec.failureLine = '输入文件在送入过程中被 git 提前关闭（EPIPE）'
+      rec.failureLine = 'Git closed the input file early while it was being sent (EPIPE)'
       rec.residual = null
     } else if (result && result.timedOut) {
       rec.conclusion = 'failed'
       rec.failureKind = 'timeout'
-      rec.failureLine = '进程超过允许时长没有结束，已终止'
+      rec.failureLine = 'The process exceeded its time limit and was terminated'
       rec.residual = null
     } else if (rec.exitCode !== null && rec.exitCode !== 0) {
       rec.conclusion = 'failed'
       rec.failureKind = 'non-zero'
-      rec.failureLine = firstLine(result && result.stderr) || 'git 退出码 ' + rec.exitCode
+      rec.failureLine = firstLine(result && result.stderr) || 'Git exit code ' + rec.exitCode
       rec.residual = null
     } else if (rec.exitCode === null && !(result && result.signalled)) {
       rec.conclusion = 'failed'
       rec.failureKind = 'spawn-failed'
-      rec.failureLine = '进程没有正常结束，也没有给出退出码'
+      rec.failureLine = 'The process did not finish normally and returned no exit code'
       rec.residual = null
     } else {
       rec.conclusion = 'succeeded'
@@ -145,9 +145,9 @@ export function createTaskRunner(deps: any): any {
     const req: any = request && typeof request === 'object' ? request : {}
     const meta: any = taskOpMetaOf(req.op)
     if (!meta) {
-      return taskFail('invalid-request', '长任务清单里没有这个动作', {
+      return taskFail('invalid-request', 'This action is not in the long-running task list', {
         reason: 'unknown-op',
-        hint: '只接受票面点名的十七种动作',
+        hint: 'Only the seventeen actions named by the ticket are accepted',
       })
     }
     const built: any = taskArgsFor(req.op, req.args)
@@ -155,41 +155,41 @@ export function createTaskRunner(deps: any): any {
       return taskFail('invalid-request', built.message, { reason: built.reason, hint: built.hint })
     }
     if (meta.requiresConfirm && req.confirm !== true) {
-      return taskFail('invalid-request', '这个动作会改写仓库历史或清理对象，需要显式确认', {
+      return taskFail('invalid-request', 'This action rewrites repository history or removes objects and requires explicit confirmation', {
         reason: 'confirm-required',
-        hint: '确认风险后带 confirm: true 重新开始',
+        hint: 'After confirming the risk, restart with confirm: true',
       })
     }
     let stdinBytes: any = null
     if (req.stdinFile !== undefined && req.stdinFile !== null) {
       if (!meta.stdinFile) {
-        return taskFail('invalid-request', '只有 fast-import 允许从文件送输入', {
+        return taskFail('invalid-request', 'Only fast-import may receive input from a file', {
           reason: 'stdin-not-allowed',
-          hint: '其它动作的输入一律走参数，标准输入保持忽略',
+          hint: 'All other actions receive input through arguments; standard input remains ignored',
         })
       }
       const specProblem: string | null = stdinSpecProblem(req.stdinFile)
       if (specProblem) {
         return taskFail('invalid-request', specProblem, {
           reason: 'stdin-spec',
-          hint: '输入文件要给出路径、非负整数大小与 64 位十六进制摘要',
+          hint: 'The input file must provide a path, a non-negative integer size and a 64-character hexadecimal digest',
         })
       }
       const prepared: any = await prepareStdinFile(req.stdinFile)
       if (!prepared || prepared.ok !== true) {
         const reason: any = (prepared && prepared.reason) || 'invalid'
-        return taskFail('invalid-request', '输入文件没有通过校验：' + reason, {
+        return taskFail('invalid-request', 'The input file failed verification: ' + reason, {
           reason: 'stdin-' + reason,
-          hint: '确认文件是普通文件、大小与摘要一致后重试',
+          hint: 'Make sure it is a regular file with the matching size and digest, then retry',
         })
       }
       stdinBytes = prepared.bytes
     }
     // fast-import 靠标准输入吃饭：没给文件引用就不能空着管道跑，否则 git 会一直等输入、界面一直转圈。
     if (meta.stdinFile && (req.stdinFile === undefined || req.stdinFile === null)) {
-      return taskFail('invalid-request', 'fast-import 必须给出输入文件引用，输入文件不能缺', {
+      return taskFail('invalid-request', 'fast-import requires an input file reference; the input file is mandatory', {
         reason: 'stdin-required',
-        hint: '给出普通文件的绝对路径、大小与摘要，文件内容由宿主自己打开并校验',
+        hint: 'Provide the absolute path, size and digest of a regular file; the host opens and verifies its contents',
       })
     }
     const cwd: string = typeof req.cwd === 'string' && req.cwd.length > 0 ? req.cwd : repoRoot
@@ -247,7 +247,7 @@ export function createTaskRunner(deps: any): any {
         endedAt: now(),
         elapsedMs: Math.max(0, now() - startedAt),
         failureKind,
-        failureLine: firstLine((launched && launched.message) || '进程没有起来'),
+        failureLine: firstLine((launched && launched.message) || 'The process did not start'),
       }
       await store.put(failedRecord)
       emit('error', failedRecord, { elapsedMs: failedRecord.elapsedMs, exitCode: null, truncated: false })
@@ -305,20 +305,20 @@ export function createTaskRunner(deps: any): any {
     const req: any = request && typeof request === 'object' ? request : {}
     const taskId: any = req.taskId
     if (typeof taskId !== 'string' || taskId.length === 0) {
-      return taskFail('invalid-request', '取消任务要给出任务 id', { reason: 'bad-task-id' })
+      return taskFail('invalid-request', 'Cancelling a task requires a task id', { reason: 'bad-task-id' })
     }
     const entry: any = inflight.get(taskId)
     if (!entry) {
       const record: any = await store.get(taskId)
-      if (!record) return taskFail('not-found', '任务库里没有这个任务', { reason: 'no-such-task' })
-      return taskFail('conflict', '这个任务已经结束，不能再取消', { reason: 'task-ended' })
+      if (!record) return taskFail('not-found', 'The task store has no such task', { reason: 'no-such-task' })
+      return taskFail('conflict', 'This task has already finished and cannot be cancelled', { reason: 'task-ended' })
     }
     if (entry.record && entry.record.cancelRequested) {
       return { ok: true, task: entry.summary || summaryOf(entry.record) }
     }
     const meta: any = taskOpMetaOf(entry.record.op)
     entry.record = { ...entry.record, cancelRequested: true }
-    entry.residual = meta ? meta.residual : '任务被取消，可能有未完成的产物留在工作区'
+    entry.residual = meta ? meta.residual : 'The task was cancelled; incomplete output may remain in the workspace'
     try { entry.handle.terminate() } catch {}
     const outcome: string = await Promise.race([
       entry.donePromise.then(() => 'done'),
@@ -327,7 +327,7 @@ export function createTaskRunner(deps: any): any {
     if (outcome === 'done' && entry.summary) return { ok: true, task: entry.summary }
     // 宽限期内没退：补一次强杀，结论仍是被取消，但残留说明要写清楚。
     try { entry.handle.terminate() } catch {}
-    const forcedResidual: string = entry.residual + '；进程没有在宽限期内响应终止信号，已强制结束，工作区可能仍有残留'
+    const forcedResidual: string = entry.residual + '; the process did not respond to the termination signal within the grace period and was killed. Leftovers may remain in the workspace'
     // 强杀后再给一次很短的对账时间，仍不结束就按取消收尾，不让界面一直转圈。
     const settled: any = await Promise.race([
       entry.donePromise,
@@ -353,8 +353,8 @@ export function createTaskRunner(deps: any): any {
         endedAt,
         elapsedMs: Math.max(0, endedAt - (record.startedAt || endedAt)),
         failureKind: 'interrupted',
-        failureLine: '上一次任务已中断（宿主进程重启）',
-        residual: '上一次任务在宿主进程重启时中断，无法确认最后停在哪一步，请按命令手册核对产物后再重试',
+        failureLine: 'The previous task was interrupted (host process restarted)',
+        residual: 'The previous task was interrupted when the host process restarted, and its last step cannot be determined. Check the outputs against the command manual before retrying',
       })
       if (!patched) continue
       interrupted += 1

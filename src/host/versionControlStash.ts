@@ -62,11 +62,11 @@ export function createStashPhones(deps: any): { handle: (args: any) => Promise<a
   /** 读一次贮藏列表；失败回信封，成功回 { ok:true, entries }。 */
   const readEntries = async function (exe: string, root: string): Promise<any> {
     const res = await runPinned(exe, root, stashListArgs(), { timeoutMs: timeoutMs, stdoutLimit: stdoutLimit })
-    const failure = failureFromExec(res, '读贮藏列表')
+    const failure = failureFromExec(res, 'Read the stash list')
     if (failure) return failure
     const parsed = parseStashList(res.stdout)
     if (!parsed.ok) {
-      return failPhone('read', '贮藏列表读不出来：' + String(parsed.detail || parsed.error || '格式不对'))
+      return failPhone('read', 'Cannot read the stash list: ' + String(parsed.detail || parsed.error || 'Malformed format'))
     }
     return { ok: true, entries: parsed.entries || [] }
   }
@@ -106,7 +106,7 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
     const floor: string = String(def.minVersion || STASH_VERSION_FLOOR)
     if (!def.versionPolicy && (floor === STASH_VERSION_FLOOR || floor === '2.11')) return null
     const res = await runPinned(exe, root, ['--version'], { timeoutMs: timeoutMs, stdoutLimit: 64 * 1024 })
-    const failure = failureFromExec(res, '读 git 版本')
+    const failure = failureFromExec(res, 'Read the git version')
     if (failure) return failure
     const versionText = String(res.stdout || '').trim()
     const avail = capabilityAvailability(
@@ -114,7 +114,7 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
       versionText
     )
     if (avail.state === 'full') return null
-    return failPhone('version-hidden', '这条动作要 git ' + String(avail.needed || def.minVersion) + ' 及以上；当前是 ' + (versionText || '未知版本') + '。', {
+    return failPhone('version-hidden', 'This action requires git ' + String(avail.needed || def.minVersion) + ' or newer; current version: ' + (versionText || 'Unknown version') + '.', {
       op: op,
       needed: avail.needed,
       gitVersion: versionText,
@@ -124,18 +124,18 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
   /** 建分支前的两道校验：名字合法（交给 git 的 check-ref-format 判）与名字不存在（本地分支）。 */
   const branchGateOf = async function (exe: string, root: string, branch: string): Promise<any> {
     const check = await runPinned(exe, root, checkRefArgs(branch), { timeoutMs: timeoutMs, stdoutLimit: 64 * 1024 })
-    if (check.kind === 'non-zero') return failPhone('branch', '分支名不合法：' + branch, { branch: branch })
+    if (check.kind === 'non-zero') return failPhone('branch', 'Invalid branch name: ' + branch, { branch: branch })
     if (check.kind !== 'ok') {
-      const failure = failureFromExec(check, '检查分支名')
+      const failure = failureFromExec(check, 'Check the branch name')
       if (failure) return failure
-      return failPhone('branch', '检查分支名失败：' + branch, { branch: branch })
+      return failPhone('branch', 'Checking the branch name failed: ' + branch, { branch: branch })
     }
     const lookup = await runPinned(exe, root, ['show-ref', '--verify', '--quiet', 'refs/heads/' + branch], { timeoutMs: timeoutMs, stdoutLimit: 64 * 1024 })
-    if (lookup.kind === 'ok') return failPhone('branch-exists', '这个分支名已经存在：' + branch, { branch: branch })
+    if (lookup.kind === 'ok') return failPhone('branch-exists', 'This branch name already exists: ' + branch, { branch: branch })
     if (lookup.kind === 'non-zero' && Number(lookup.exitCode) === 1) return null
-    const failure = failureFromExec(lookup, '检查分支是否存在')
+    const failure = failureFromExec(lookup, 'Check whether the branch exists')
     if (failure) return failure
-    return failPhone('branch-exists', '这个分支名已经存在：' + branch, { branch: branch })
+    return failPhone('branch-exists', 'This branch name already exists: ' + branch, { branch: branch })
   }
 
   /** 查看贮藏内容时带上未跟踪文件（7.2 贮藏的就是它们，不带就看不到）。
@@ -150,14 +150,14 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
   /** 查看贮藏内容：先取涉及的文件名（界面要显示文件数），再取完整差异。 */
   const showOne = async function (exe: string, root: string, selector: string, entry: StashEntry): Promise<any> {
     const names = await showWithUntracked(exe, root, ['--name-only'], selector, stdoutLimit)
-    const nameFailure = failureFromExec(names, '读贮藏涉及的文件')
+    const nameFailure = failureFromExec(names, 'Read the files in the stash')
     if (nameFailure) return nameFailure
     const fileList = String(names.stdout || '')
       .replace(/\r/g, '')
       .split('\n')
       .filter(function (line: string) { return line !== '' })
     const patch = await showWithUntracked(exe, root, ['-p'], selector, patchLimit)
-    const patchFailure = failureFromExec(patch, '读贮藏差异')
+    const patchFailure = failureFromExec(patch, 'Read the stash diff')
     if (patchFailure) return patchFailure
     return okReply('show', [], {
       selector: selector,
@@ -178,10 +178,10 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
     // 「恢复丢弃」不在十条里，是 drop/clear 的撤销路径，先单独认。
     const restoring = op === 'restore'
     const def = restoring ? null : stashOpOf(op)
-    if (!restoring && !def) return failPhone('usage', '不认识的贮藏动作：' + op)
-    if (def && def.danger && a.confirm !== true) return failPhone('confirm', '删除类动作要确认：' + op, { op: op })
+    if (!restoring && !def) return failPhone('usage', 'Unrecognised stash action: ' + op)
+    if (def && def.danger && a.confirm !== true) return failPhone('confirm', 'Delete actions require confirmation: ' + op, { op: op })
     const selector = String(a.selector || '')
-    if (def && def.needsSelector && !vcStashSelectorOk(selector)) return failPhone('selector', '贮藏选择器不合法：' + selector)
+    if (def && def.needsSelector && !vcStashSelectorOk(selector)) return failPhone('selector', 'Invalid stash selector: ' + selector)
 
     let exe: any = null
     try {
@@ -189,9 +189,9 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
     } catch (err: any) {
       exe = null
     }
-    if (!exe) return failPhone('env', '找不到 git 命令，读不了贮藏记录。')
+    if (!exe) return failPhone('env', 'Cannot find git; stash records cannot be read.')
     const repo = await resolveRepoRoot(exe, cwd)
-    if (!repo || repo.ok !== true) return repo && repo.error ? repo : failPhone('not-repo', '当前目录不是 git 仓库：' + cwd)
+    if (!repo || repo.ok !== true) return repo && repo.error ? repo : failPhone('not-repo', 'The current directory is not a git repository: ' + cwd)
     const root = String(repo.root)
 
     // 恢复：把「最近丢弃」记下的提交重新挂回 refs/stash，不改本地引用以外的任何东西。
@@ -199,10 +199,10 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
       const built = stashRestoreArgs(a.subject, a.oid)
       if (!built.ok) {
         const why = built.error || { kind: 'oid', message: '' }
-        return failPhone(why.kind, why.message || '恢复贮藏的参数不对')
+        return failPhone(why.kind, why.message || 'Invalid stash-restore parameters')
       }
       const res = await runPinned(exe, root, built.args, { timeoutMs: timeoutMs, stdoutLimit: stdoutLimit })
-      const failure = failureFromExec(res, '恢复丢弃的贮藏')
+      const failure = failureFromExec(res, 'Restore dropped stash')
       if (failure) return failure
       const oid = String(a.oid || '')
       for (let i = recent.length - 1; i >= 0; i -= 1) if (recent[i].oid === oid) recent.splice(i, 1)
@@ -228,7 +228,7 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
       if (!listed.ok) return listed
       const entries: StashEntry[] = listed.entries || []
       for (let i = 0; i < entries.length; i += 1) if (entries[i].selector === selector) found = entries[i]
-      if (!found) return failPhone('stash-missing', '这条贮藏记录不存在（可能已经被丢弃）：' + selector, { selector: selector })
+      if (!found) return failPhone('stash-missing', 'This stash record does not exist (it may have been dropped): ' + selector, { selector: selector })
       if (def.op === 'show') return showOne(exe, root, selector, found)
     }
 
@@ -258,7 +258,7 @@ const okReply = function (op: string, entries: StashEntry[], extra: any): any {
     const untrackedBefore: number = countsUntracked ? await untrackedCountOf(exe, root) : -1
 
     const res = await runPinned(exe, root, built.args, { timeoutMs: timeoutMs, stdoutLimit: stdoutLimit })
-    const failure = failureFromExec(res, '贮藏动作「' + (def ? def.op : op) + '」')
+    const failure = failureFromExec(res, 'Stash action "' + (def ? def.op : op) + '"')
     if (failure) return failure
     const untrackedLeft: number = countsUntracked ? await untrackedCountOf(exe, root) : -1
 
@@ -291,7 +291,7 @@ export function stashPhonesOf(deps: any): any {
       return { check: deps.loggedPhone('wf.gitStashCheck', 'git-stash-check', tickets.check), write: deps.loggedPhone('wf.gitStash', 'git-stash', tickets.write) }
     }).catch(function (e: any): any {
       _stashPhonesP = null
-      const failed: any = function (): any { return failPhone('env', '贮藏页十条能力的执行层装配失败：' + firstLine(String((e && e.message) || e))) }
+      const failed: any = function (): any { return failPhone('env', 'Failed to assemble the stash page\'s ten-operation execution layer: ' + firstLine(String((e && e.message) || e))) }
       return { check: failed, write: failed }
     })
   }

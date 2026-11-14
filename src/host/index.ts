@@ -235,7 +235,7 @@ export default {
     // v13：按 sessionId 反查会话工作目录（client 切换对话时用；宿主 sessions.meta 是权威字段， 不再依赖 client 猜测 ConversationSnapshot 字段名）
     // 错误对象 → 可读文本：取数那几个宿主方法抛出的是 {kind, error} 对象，String() 会变 [object Object]
     const errText = function (e: any) {
-      if (e === undefined || e === null) return '未知错误'
+      if (e === undefined || e === null) return 'Unknown error'
       if (typeof e === 'string') return e
       if (typeof e.message === 'string') return e.message
       if (typeof e.error === 'string') return e.error
@@ -339,7 +339,7 @@ export default {
     // ---- #490 底座 + #564 切包 + #1374 进程单例 + #1620 槽只定义一处：全进程一份（globalThis 唯一一份），服务活委托跟当前装配走 ----
     let _slotMod: any = null
     async function _log(): Promise<any> {
-      if (!_slotMod) { try { _slotMod = await import('../shared/host-log-slot.js') } catch (eP) { const eC: any = new Error('[log] 宿主日志槽模块不可用，日志已禁用，不回退旧实现（#1143）：' + String((eP as any)?.message || eP)); eC.cause = eP; throw eC } }
+      if (!_slotMod) { try { _slotMod = await import('../shared/host-log-slot.js') } catch (eP) { const eC: any = new Error('[log] The host log-slot module is unavailable; logging is disabled without falling back to the old implementation (#1143): ' + String((eP as any)?.message || eP)); eC.cause = eP; throw eC } }
       const H = _slotMod.ensureHostLogSlot()
       H.svc = { fs: fs, timer: timer, gc: function (...a: any[]) { return getCacheDir.apply(null, a) }, gp: function (...a: any[]) { return getPlatform.apply(null, a) }, st: _settings, cwd: DEFAULT_CWD };
       if (H.p) return H.p;
@@ -348,7 +348,7 @@ export default {
         const tmL: any = {}; ['timeout','interval'].forEach(function (m: string) { Object.defineProperty(tmL, m, { configurable: true, get: function () { const t = H.svc.timer; return (t && typeof t[m] === 'function') ? function (...a: any[]) { return t[m].apply(t, a) } : undefined } }) });
         const gcL = function (...a: any[]) { return H.svc.gc.apply(null, a) }, gpL = function (...a: any[]) { return H.svc.gp.apply(null, a) };
         const ss = { get: function () { return H.svc.st().then(function (s: any) { return s.readDebugSwitchEnabled() }) }, set: function (on: any) { return H.svc.st().then(function (s: any) { return typeof s.writeDebugSwitchEnabled === 'function' ? s.writeDebugSwitchEnabled(on) : null }) } };
-        try { const ad = await import('./logFromPackage.js'); const rc: any = await import('./rpcChannel.js'); return await ad.createLogFromPackage({ fs: fsL, timer: tmL, getCacheDir: gcL, getPlatform: gpL, DEFAULT_CWD: H.svc.cwd, pluginVersion: rc.readServingPackageVersion(), switchSource: ss }) } catch (eP) { const eC: any = new Error('[log] dsh-log 包不可用，日志已禁用，不回退旧实现（#1143）：' + String((eP as any)?.message || eP)); eC.cause = eP; throw eC }
+        try { const ad = await import('./logFromPackage.js'); const rc: any = await import('./rpcChannel.js'); return await ad.createLogFromPackage({ fs: fsL, timer: tmL, getCacheDir: gcL, getPlatform: gpL, DEFAULT_CWD: H.svc.cwd, pluginVersion: rc.readServingPackageVersion(), switchSource: ss }) } catch (eP) { const eC: any = new Error('[log] The dsh-log package is unavailable; logging is disabled without falling back to the old implementation (#1143): ' + String((eP as any)?.message || eP)); eC.cause = eP; throw eC }
       })();
       const cur = H.p; cur.catch(function () { if (H.p === cur) H.p = null });
       return H.p;
@@ -376,7 +376,7 @@ export default {
     _rpcChannel().then(function (ch: any) {
       ch.createRpcChannel({ ctx: ctx, handlers: __DSW_HANDLERS__, fireLog: fireLog, dispatchMeta: function () { return _dispatchMeta() } })
     }).catch(function (eLoad: any) {
-      try { fireLog('error', 'host.dispatch.error', { method: '/api/dsws 通道注册', argsHash: '', errorKind: 'internal' }) } catch (eR2) {}
+      try { fireLog('error', 'host.dispatch.error', { method: 'Registering the /api/dsws channel', argsHash: '', errorKind: 'internal' }) } catch (eR2) {}
     })
     return true
     }

@@ -53,12 +53,12 @@ export function createGitDiffPhone(deps: any): (args: any) => Promise<any> {
   /** 一次提交的提交号与父提交清单：一条命令同时回答「仓库里有没有这个提交号」与「它是不是合并提交」。 */
   async function readCommitShape(exe: any, root: any, rev: any): Promise<any> {
     const res: any = await runPinned(exe, root, ['rev-list', '--parents', '-n', '1', rev], { stdoutLimit: 8192 })
-    if (res.kind === 'timeout' || res.kind === 'spawn-failed') return { ok: false, envelope: failureFromExec(res, '确认这一次提交这一步') }
-    if (res.kind !== 'ok') return { ok: false, envelope: failPhone('args', '这个提交号在当前仓库里找不到：' + rev) }
+    if (res.kind === 'timeout' || res.kind === 'spawn-failed') return { ok: false, envelope: failureFromExec(res, 'Checking this commit') }
+    if (res.kind !== 'ok') return { ok: false, envelope: failPhone('args', 'This commit ID is not in the current repository: ' + rev) }
     const fields: string[] = String(res.stdout).replace(/\r/g, '').trim().split(/\s+/).filter(function (s: any) { return s !== '' })
     const oid: string = fields[0] || ''
     // 完整提交号是 40 位（SHA-256 仓库是 64 位）：形状不对就当这一步没读成，不拿它往下走。
-    if (!/^[0-9a-fA-F]{40,64}$/.test(oid)) return { ok: false, envelope: failPhone('parse', '读出来的提交号不像一个提交号：' + oid.slice(0, 80)) }
+    if (!/^[0-9a-fA-F]{40,64}$/.test(oid)) return { ok: false, envelope: failPhone('parse', 'The returned commit ID is malformed: ' + oid.slice(0, 80)) }
     return { ok: true, oid: oid, parents: fields.slice(1) }
   }
 
@@ -71,7 +71,7 @@ export function createGitDiffPhone(deps: any): (args: any) => Promise<any> {
     if (res.stdout === '') return withRev({ ok: true, path: path, lines: [], truncated: false, reason: 'no-diff' }, rev)
     if (/^Binary files /m.test(res.stdout) || /^GIT binary patch$/m.test(res.stdout)) return withRev({ ok: true, path: path, lines: [], truncated: false, reason: 'binary-diff' }, rev)
     const parsed: any = parsePatch(res.stdout)
-    if (parsed.ok !== true) return failPhone('parse', '这个文件的差异解析失败：' + parsed.detail)
+    if (parsed.ok !== true) return failPhone('parse', 'Failed to parse this file\'s diff: ' + parsed.detail)
     return withRev({ ok: true, path: path, lines: parsed.lines, truncated: false, reason: 'ok' }, rev)
   }
 
@@ -81,19 +81,19 @@ export function createGitDiffPhone(deps: any): (args: any) => Promise<any> {
     if (shape.ok !== true) return shape.envelope
     if (path !== '') {
       const res: any = await runPinned(exe, base.root, (commandFor('patch', { patchPath: path, rev: rev }) as any).args, { stdoutLimit: patchLimit })
-      const bad: any = failureFromExec(res, '取这一次提交里这个文件的差异这一步')
+      const bad: any = failureFromExec(res, 'Reading this file\'s diff in this commit')
       if (bad) return bad
       // 合并提交的补丁 git 默认不展开（空输出）：这时说 merge-commit，绝不说成「这个文件没有改动」。
       if (!res.truncated && res.stdout === '' && shape.parents.length > 1) return withRev({ ok: true, path: path, lines: [], truncated: false, reason: 'merge-commit' }, rev)
-      return patchEnvelope(res, path, rev, '取这一次提交里这个文件的差异这一步')
+      return patchEnvelope(res, path, rev, 'Reading this file\'s diff in this commit')
     }
     const res: any = await runPinned(exe, base.root, (commandFor('diffFiles', { rev: rev }) as any).args)
-    const bad: any = failureFromExec(res, '读这一次提交改了哪些文件这一步')
+    const bad: any = failureFromExec(res, 'Reading the files changed by this commit')
     if (bad) return bad
     // 读不全就明说读不全，绝不假装完整（契约：ok + truncated + 空清单 + reason=truncated）。
     if (res.truncated) return withRev({ ok: true, files: [], truncated: true, reason: 'truncated' }, rev)
     const parsed: any = parseDiffFiles(res.stdout)
-    if (parsed.ok !== true) return failPhone('parse', '这一次提交改了哪些文件解析失败：' + parsed.detail)
+    if (parsed.ok !== true) return failPhone('parse', 'Failed to parse the files changed by this commit: ' + parsed.detail)
     if (parsed.files.length === 0) return withRev({ ok: true, files: [], truncated: false, reason: 'no-diff' }, rev)
     return withRev({ ok: true, files: parsed.files, truncated: false, reason: 'ok' }, rev)
   }
@@ -103,12 +103,12 @@ export function createGitDiffPhone(deps: any): (args: any) => Promise<any> {
     const rev: string = (args && typeof args.rev === 'string') ? args.rev : ''
     const path: string = (args && typeof args.path === 'string') ? args.path : ''
     // 提交号只许是十六进制：不合形状的一律当场拒绝（看不懂的 rev 绝不忽略、绝不当 git 选项拼进命令行）。
-    if (rev !== '' && !REV_PATTERN.test(rev)) return failPhone('args', '提交号只能是 4 到 64 位十六进制字符，这一条给的不是：' + rev.slice(0, 64))
+    if (rev !== '' && !REV_PATTERN.test(rev)) return failPhone('args', 'Commit IDs must contain 4 to 64 hexadecimal characters; this value does not: ' + rev.slice(0, 64))
     if (rev === '') {
-      if (!path || path.indexOf('\u0000') >= 0) return failPhone('args', '取差异要知道是哪个文件（path），这一条没给')
-    } else if (path.indexOf('\u0000') >= 0) return failPhone('args', '文件路径里不许有 NUL 字符，这一条给的不是一个正常的路径')
+      if (!path || path.indexOf('\u0000') >= 0) return failPhone('args', 'A file path is required to read a diff; path was not supplied')
+    } else if (path.indexOf('\u0000') >= 0) return failPhone('args', 'A file path cannot contain NUL; the supplied path is invalid')
     const exe: any = await resolveGitExecutable()
-    if (!exe) return failPhone('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return failPhone('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     // 未跟踪的文件没有可比基线（对 HEAD 求差异恒为空）。界面在首屏里已经知道它是未跟踪，把这件事原样带过来，
     // 这里直说，不去起一条进程拿一份空差异冒充「没有改动」；带 rev 时看的是提交里的那一份，未跟踪这个说法不适用。
     if (rev === '' && args && args.untracked === true) return { ok: true, path: path, lines: [], truncated: false, reason: 'untracked-no-diff' }
@@ -116,17 +116,17 @@ export function createGitDiffPhone(deps: any): (args: any) => Promise<any> {
     if (base.ok !== true) return base
     // 带 rev 的两条路不需要工作树，裸仓库也能看提交之间改了什么。
     if (rev !== '') return await commitDiff(exe, base, rev, path)
-    if (base.kind === 'bare') return failPhone('args', '裸仓库没有工作树，取不了文件差异')
+    if (base.kind === 'bare') return failPhone('args', 'A bare repository has no worktree; file diffs are unavailable')
     const hasHead: any = await readHasHead(exe, base.root)
-    if (hasHead === null) return failPhone('env', '问不出这个仓库有没有第一次提交，取差异这一步做不了')
+    if (hasHead === null) return failPhone('env', 'Cannot determine whether the repository has its first commit; the diff cannot be read')
     if (hasHead === false) return { ok: true, path: path, lines: [], truncated: false, reason: 'no-commit-baseline' }
     // 三份读法各回答一件事，不能混：
     //   默认   工作区相对 HEAD（一行文件的全部改动）；
     //   staged 索引相对 HEAD（已暂存的那一份）；
     //   unstaged 索引相对工作区（还没进索引的那一份，逐块暂存用的正是这一份）。
-    if (args && args.staged === true && args.unstaged === true) return failPhone('args', 'staged 与 unstaged 只能选一个：这两份差异看的是不同的两边')
+    if (args && args.staged === true && args.unstaged === true) return failPhone('args', 'Select either staged or unstaged; they compare different pairs of versions')
     const res: any = await runPinned(exe, base.root, (commandFor('patch', { patchPath: path, staged: args && args.staged === true, unstaged: args && args.unstaged === true }) as any).args, { stdoutLimit: patchLimit })
-    return patchEnvelope(res, path, '', '取这个文件的差异这一步')
+    return patchEnvelope(res, path, '', 'Reading this file\'s diff')
   }
 
   return handleGitDiff

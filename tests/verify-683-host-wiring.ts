@@ -297,7 +297,7 @@ console.log('== G wf.setupLayout 只写/只读工作区文件 ==')
   const g4 = await api.handleSetupLayout({ cwd: ws, layout: '不认识' })
   check(g4.ok === false && g4.error === 'not-stored', '不认识的取值不写进去（如实回 not-stored）—— 实得 ' + JSON.stringify(g4))
   const g5 = await mkApi({}).handleSetupLayout({ cwd: ws, layout: 'multi' })
-  check(g5.ok === false && g5.workspaceFile === 'no-channel' && /没有生效/.test(String(g5.error)), '文件通道不可用时如实回失败：这次选择没有生效（不再留本机备份）—— 实得 ' + JSON.stringify(g5))
+  check(g5.ok === false && g5.workspaceFile === 'no-channel' && /did not take effect/.test(String(g5.error)), '文件通道不可用时如实回失败：这次选择没有生效（不再留本机备份）—— 实得 ' + JSON.stringify(g5))
 }
 
 // ── F 反证 ───────────────────────────────────────────────────────────────────────

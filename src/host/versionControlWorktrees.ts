@@ -162,27 +162,27 @@ export function createWorktreePhones(deps: any): any {
    */
   async function readBase(cwd: any): Promise<any> {
     const exe: any = await d.resolveGitExecutable()
-    if (!exe) return fail('env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return fail('env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const base: any = await d.resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return base
-    if (base.kind === 'bare') return fail('bare-repo', '这是一个裸仓库：它没有工作树，工作树八条在这里没有可操作的对象')
+    if (base.kind === 'bare') return fail('bare-repo', 'This is a bare repository: it has no worktree, so the eight worktree actions have nothing to act on')
     const ver: any = await d.runPinned(exe, base.root, ['--version'], { stdoutLimit: 4096 })
-    const badVer: any = d.failureFromExec(ver, '读 git 版本这一步')
+    const badVer: any = d.failureFromExec(ver, 'Reading the git version')
     if (badVer) return badVer
     const gitVersion: string = d.firstLine(ver.stdout)
     const tier: string = capabilityTierFor(parseVersion(gitVersion))
-    if (tier === 'unsupported') return fail('version', 'git 版本太旧（' + (gitVersion || '读不出') + '），管理多份工作树至少需要 2.11', { gitVersion: gitVersion, tier: tier })
+    if (tier === 'unsupported') return fail('version', 'Git version is too old (' + (gitVersion || 'unreadable') + '); managing multiple worktrees requires at least 2.11', { gitVersion: gitVersion, tier: tier })
     let listing: any = await d.runPinned(exe, base.root, worktreeArgsOf('list', {}), { stdoutLimit: LIST_LIMIT, timeoutMs: VC_WORKTREE_OP_TIMEOUT_MS })
     let useNul: boolean = true
     if (listing && listing.kind === 'non-zero') {
       listing = await d.runPinned(exe, base.root, worktreeArgsOf('list-plain', {}), { stdoutLimit: LIST_LIMIT, timeoutMs: VC_WORKTREE_OP_TIMEOUT_MS })
       useNul = false
     }
-    const badListing: any = d.failureFromExec(listing, '读工作树清单这一步')
+    const badListing: any = d.failureFromExec(listing, 'Reading the worktree list')
     if (badListing) return badListing
-    if (listing.truncated) return fail('truncated', '工作树清单超过了字节上限，读不全就不给半份列表')
+    if (listing.truncated) return fail('truncated', 'The worktree list exceeded the byte limit; a partial list will not be returned')
     const parsed: any = parseWorktrees(listing.stdout, useNul)
-    if (parsed.ok !== true) return fail('parse', '工作树清单解析失败：' + parsed.detail)
+    if (parsed.ok !== true) return fail('parse', 'Worktree list parse failed: ' + parsed.detail)
     return {
       ok: true, exe: exe, root: base.root, gitDir: base.gitDir, gitVersion: gitVersion, tier: tier,
       rows: worktreeRowsOf(parsed.worktrees, { worktreePath: base.root }),
@@ -195,7 +195,7 @@ export function createWorktreePhones(deps: any): any {
    */
   async function readSparse(base: any, targetPath: any, dirs: any): Promise<any> {
     const rulesRes: any = await d.runPinned(base.exe, targetPath, worktreeArgsOf('sparse-list', {}), { stdoutLimit: OP_STDOUT_LIMIT, timeoutMs: VC_WORKTREE_OP_TIMEOUT_MS })
-    const rulesBad: any = d.failureFromExec(rulesRes, '读稀疏检出规则这一步')
+    const rulesBad: any = d.failureFromExec(rulesRes, 'Reading sparse-checkout rules')
     // 「这棵工作树不是稀疏检出」不是失败：旧版 git 回退出码 1，新版回 128 并在 stderr 写
     //   「fatal: this worktree is not sparse」。两种都按「还没有规则」处理——只认退出码 1 时，
     //   一棵普通工作树的稀疏面板永远打不开（#1904 真机复验抓到的就是这个：结果条写着
@@ -203,10 +203,10 @@ export function createWorktreePhones(deps: any): any {
     const notSparse: boolean = !!(rulesRes && rulesRes.kind === 'non-zero' && (rulesRes.exitCode === 1 || String(rulesRes.stderr || '').indexOf('not sparse') >= 0))
     if (rulesBad && !notSparse) return rulesBad
     const gitDirRes: any = await d.runPinned(base.exe, targetPath, worktreeArgsOf('sparse-rule-dir', {}), { stdoutLimit: 4096 })
-    const gitDirBad: any = d.failureFromExec(gitDirRes, '读稀疏检出规则文件位置这一步')
+    const gitDirBad: any = d.failureFromExec(gitDirRes, 'Reading the sparse-checkout rules file location')
     if (gitDirBad) return gitDirBad
     const candRes: any = await d.runPinned(base.exe, targetPath, worktreeArgsOf('sparse-candidates', {}), { stdoutLimit: LIST_LIMIT })
-    const candBad: any = d.failureFromExec(candRes, '读目录候选这一步')
+    const candBad: any = d.failureFromExec(candRes, 'Reading directory candidates')
     if (candBad) return candBad
     return {
       ok: true,
@@ -247,7 +247,7 @@ export function createWorktreePhones(deps: any): any {
     const a: any = args || {}
     const op: string = strOf(a.op)
     const action: any = actionById[op] || null
-    if (!action) return fail('bad-op', '不认识的工作树动作：' + (op || '（空）'))
+    if (!action) return fail('bad-op', 'Unrecognised worktree action: ' + (op || '(empty)'))
     const input: any = { path: strOf(a.path), dest: strOf(a.dest), branch: strOf(a.branch), reason: strOf(a.reason), dirs: dirsOf(a.dirs) }
     const base: any = await readBase(d.cwdOf(a))
     if (base.ok !== true) return base
@@ -264,7 +264,7 @@ export function createWorktreePhones(deps: any): any {
       const probe: any = await d.runPinned(base.exe, base.root, ['rev-parse', '--verify', '--quiet', 'refs/heads/' + input.branch], { stdoutLimit: 4096 })
       if (probe && probe.kind === 'ok') ctx.branchMissing = false
       else if (probe && probe.kind === 'non-zero' && probe.exitCode === 1) ctx.branchMissing = true
-      else { const badProbe: any = d.failureFromExec(probe, '确认分支是否存在这一步'); if (badProbe) return badProbe }
+      else { const badProbe: any = d.failureFromExec(probe, 'Checking whether the branch exists'); if (badProbe) return badProbe }
     }
     if (op === 'remove' && row && row.current !== true && row.locked !== true) {
       const st: any = await d.runPinned(base.exe, row.path, ['status', '--porcelain', '-z'], { stdoutLimit: DIRTY_LIMIT, timeoutMs: VC_WORKTREE_OP_TIMEOUT_MS })
@@ -292,26 +292,26 @@ export function createWorktreePhones(deps: any): any {
     const rows: any[] = base.rows
     const row: any = rowOf(rows, ticket.path)
     if (ticket.op === 'add' || ticket.op === 'add-branch') {
-      if (await existsOf(absOf(base.root, ticket.path)) === true) return fail('target-changed', '目标路径在预检之后被占用了：' + ticket.path + '，请重新预检')
+      if (await existsOf(absOf(base.root, ticket.path)) === true) return fail('target-changed', 'The destination path was taken after preflight: ' + ticket.path + '; run preflight again')
       return null
     }
     if (ticket.op === 'prune') {
       const paths: string[] = worktreePruneEntriesOf(rows).map(pathOf)
-      if (paths.join('\u0001') !== ticket.prunePaths.join('\u0001')) return fail('worktrees-changed', '待清理的登记项在预检之后变了：请重新预检，照新清单再清一次')
+      if (paths.join('\u0001') !== ticket.prunePaths.join('\u0001')) return fail('worktrees-changed', 'The registrations to prune changed after preflight; run preflight again and prune from the new list')
       return null
     }
-    if (!row) return fail('target-changed', '目标工作树在预检之后从清单里消失了：' + ticket.path + '，请重新预检')
+    if (!row) return fail('target-changed', 'The target worktree disappeared from the list after preflight: ' + ticket.path + '; run preflight again')
     if (ticket.op === 'remove') {
-      if (row.current === true) return fail('target-changed', '目标变成了当前工作树，按边界不能移除它')
-      if (row.locked === true) return fail('target-changed', '目标在预检之后被锁定了：按边界先解锁，再重新预检移除')
+      if (row.current === true) return fail('target-changed', 'The target became the current worktree; by design it cannot be removed')
+      if (row.locked === true) return fail('target-changed', 'The target was locked after preflight; by design unlock it first, then run preflight for removal again')
     }
-    if (ticket.op === 'lock' && row.locked === true) return fail('target-changed', '目标在预检之后已经被锁定了，请重新预检')
-    if (ticket.op === 'unlock' && row.locked !== true) return fail('target-changed', '目标在预检之后已经不是锁定状态了，请重新预检')
-    if (ticket.op === 'move' && await existsOf(absOf(base.root, ticket.dest)) === true) return fail('target-changed', '移动目的地在预检之后被占用了：' + ticket.dest + '，请重新预检')
+    if (ticket.op === 'lock' && row.locked === true) return fail('target-changed', 'The target was already locked after preflight; run preflight again')
+    if (ticket.op === 'unlock' && row.locked !== true) return fail('target-changed', 'The target is no longer locked after preflight; run preflight again')
+    if (ticket.op === 'move' && await existsOf(absOf(base.root, ticket.dest)) === true) return fail('target-changed', 'The move destination was taken after preflight: ' + ticket.dest + '; run preflight again')
     if (ticket.op === 'sparse-set') {
       const read: any = await readSparse(base, ticket.path, ticket.dirs)
       if (read.ok !== true) return read
-      if (read.sparse.rules.join('\u0001') !== ticket.sparseOld.join('\u0001')) return fail('target-changed', '稀疏检出规则在预检之后变了：请重新预检，照最新规则再写')
+      if (read.sparse.rules.join('\u0001') !== ticket.sparseOld.join('\u0001')) return fail('target-changed', 'The sparse-checkout rules changed after preflight; run preflight again and write against the latest rules')
     }
     return null
   }
@@ -326,32 +326,32 @@ export function createWorktreePhones(deps: any): any {
   /** 成功时界面该说「本来期望什么」：每条动作一句话，失败卡拿它对照实际。 */
   function expectedOf(op: any): string {
     const o: string = String(op)
-    if (o === 'add' || o === 'add-branch') return '清单里多出一棵在指定路径上的工作树'
-    if (o === 'remove') return '这棵工作树从清单里消失，目录按 git 的规矩清掉'
-    if (o === 'prune') return '清单里那些目录已经不在的登记项被清掉'
-    if (o === 'lock') return '这棵工作树带上锁定标记与原因'
-    if (o === 'unlock') return '锁定标记被摘掉'
-    if (o === 'move') return '工作树目录搬到新路径，清单里跟着更新'
-    if (o === 'sparse-set') return '勾选的目录出现在稀疏检出规则里，其它目录不落盘'
-    return 'git 完成这条命令'
+    if (o === 'add' || o === 'add-branch') return 'The list gains a worktree at the specified path'
+    if (o === 'remove') return 'This worktree disappears from the list, and its directory is removed according to git\'s rules'
+    if (o === 'prune') return 'List entries whose directories no longer exist are pruned'
+    if (o === 'lock') return 'This worktree receives a lock marker and reason'
+    if (o === 'unlock') return 'The lock marker is removed'
+    if (o === 'move') return 'The worktree directory moves to the new path, and the list is updated accordingly'
+    if (o === 'sparse-set') return 'The selected directories appear in the sparse-checkout rules; other directories are not checked out'
+    return 'Git completes this command'
   }
 
   /** 把一次进程执行翻成界面结果卡要的五段事实（成功只报命令名、耗时与对象数）。 */
   function outcomeOf(ticket: any, res: any, ms: number): any {
     const cmd: string = worktreeCmdNameOf(ticket.op)
-    const out: any = { op: ticket.op, cmd: cmd, ms: ms, n: countOf(ticket), exitCode: null, gitText: '', step: '执行 ' + cmd + ' 这一步', expected: expectedOf(ticket.op), actual: '', cause: '' }
-    if (res && res.kind === 'ok') { out.state = 'done'; out.actual = '命令正常结束'; return out }
+    const out: any = { op: ticket.op, cmd: cmd, ms: ms, n: countOf(ticket), exitCode: null, gitText: '', step: 'Execute ' + cmd + '', expected: expectedOf(ticket.op), actual: '', cause: '' }
+    if (res && res.kind === 'ok') { out.state = 'done'; out.actual = 'The command finishes normally'; return out }
     out.state = 'failed'
     out.expected = expectedOf(ticket.op)
     if (res && res.kind === 'non-zero') {
       out.exitCode = res.exitCode
       out.gitText = d.firstLine(res.stderr)
       out.actual = out.gitText
-      out.cause = 'git 拒绝了这条命令（退出码 ' + res.exitCode + '），原始说法见 git 原话'
+      out.cause = 'Git rejected this command (exit code ' + res.exitCode + '); see git\'s original message'
       return out
     }
-    out.actual = '没有拿到 git 的原话'
-    out.cause = '这条命令' + (res && res.kind === 'timeout' ? '超时了（' + VC_WORKTREE_OP_TIMEOUT_MS + ' 毫秒没有回音）' : (res && res.kind === 'spawn-failed' ? '起不了 git 进程：' + res.message : '没有返回可识别的结果'))
+    out.actual = 'Git\'s original message is unavailable'
+    out.cause = 'This command: ' + (res && res.kind === 'timeout' ? 'timed out (' + VC_WORKTREE_OP_TIMEOUT_MS + ' ms without a response)' : (res && res.kind === 'spawn-failed' ? 'could not start git: ' + res.message : 'no recognisable result was returned'))
     return out
   }
 
@@ -360,25 +360,25 @@ export function createWorktreePhones(deps: any): any {
     sweep()
     const a: any = args || {}
     const requestId: string = strOf(a.requestId)
-    if (!/^[A-Za-z0-9_-]{1,64}$/.test(requestId)) return fail('bad-request', '这次执行缺少可复用的请求号（1–64 位字母、数字、下划线或连字符），没法防止重复执行')
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(requestId)) return fail('bad-request', 'This execution lacks a reusable request ID (1–64 letters, digits, underscores or hyphens), so duplicate execution cannot be prevented')
     const replay: any = results[requestId]
     if (replay && now() < replay.expiresAtMs) return replay.reply
-    if (a.confirm !== true) return fail('confirm-required', '这是要真正动工作树的操作：先走预检，并在确认卡上确认后再执行')
+    if (a.confirm !== true) return fail('confirm-required', 'This operation changes worktrees: run preflight and confirm on the confirmation card before executing')
     const ticketId: string = strOf(a.ticketId)
     const ticket: any = ticketId ? tickets[ticketId] : null
-    if (!ticket) return fail('ticket-missing', '预检票据不在（可能已经执行过、刷新过或过期），请重新预检再确认')
-    if (ticket.op !== strOf(a.op)) return fail('ticket-op-mismatch', '票据上的动作是 ' + ticket.op + '，与这次要执行的 ' + strOf(a.op) + ' 不一致：请重新预检')
-    if (!(now() < ticket.expiresAtMs)) { delete tickets[ticketId]; return fail('ticket-expired', '预检票据已经过期（有效期 ' + Math.round(TICKET_TTL_MS / 1000) + ' 秒），过期不自动重放：请重新预检并确认') }
+    if (!ticket) return fail('ticket-missing', 'The preflight ticket is missing (already executed, refreshed or expired); run preflight again and confirm')
+    if (ticket.op !== strOf(a.op)) return fail('ticket-op-mismatch', 'The ticket\'s action is ' + ticket.op + ', but this execution requests ' + strOf(a.op) + '; run preflight again')
+    if (!(now() < ticket.expiresAtMs)) { delete tickets[ticketId]; return fail('ticket-expired', 'The preflight ticket has expired (valid for ' + Math.round(TICKET_TTL_MS / 1000) + ' seconds); expired tickets are not replayed automatically. Run preflight again and confirm') }
     const base: any = await readBase(d.cwdOf(a))
     if (base.ok !== true) return base
-    if (!worktreeSamePathOf(base.root, ticket.repoRoot)) return fail('stale-repo', '预检时钉的仓库是 ' + ticket.repoRoot + '，现在读到的是 ' + base.root + '：换仓库了，请重新预检')
-    if (worktreeDigestOf(base.rows) !== ticket.worktreesDigest) return fail('worktrees-changed', '工作树清单在预检之后变了（多了、少了或被锁了）：请重新预检后再确认')
+    if (!worktreeSamePathOf(base.root, ticket.repoRoot)) return fail('stale-repo', 'Preflight pinned repository ' + ticket.repoRoot + ', but the current repository is ' + base.root + ': the repository changed; run preflight again')
+    if (worktreeDigestOf(base.rows) !== ticket.worktreesDigest) return fail('worktrees-changed', 'The worktree list changed after preflight (entries were added, removed or locked); run preflight again and confirm')
     const changed: any = await revalidate(ticket, base)
     if (changed) return changed
     const argv: any = worktreeArgsOf(ticket.op, ticket)
-    if (!Array.isArray(argv) || argv.length === 0) return fail('bad-op', '动作 ' + ticket.op + ' 没有对应的 git 命令，已拒绝执行')
+    if (!Array.isArray(argv) || argv.length === 0) return fail('bad-op', 'Action ' + ticket.op + ' has no matching git command; execution refused')
     const forbidden: string = worktreeForbiddenFlagIn(argv)
-    if (forbidden) return fail('forbidden-flag', '内部检查发现 argv 里带了 ' + forbidden + '：这条边界（不提供 --force 与 -f -f 入口）不允许，已拒绝执行')
+    if (forbidden) return fail('forbidden-flag', 'An internal check found ' + forbidden + ' in argv: this boundary (no --force or -f -f entry point) does not allow it; execution refused')
     delete tickets[ticketId]
     const dir: any = ticket.op === 'sparse-set' ? ticket.path : base.root
     const t0: number = now()

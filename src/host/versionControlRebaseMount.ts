@@ -26,7 +26,7 @@ function createTmpService(): any {
   return {
     write: async function (text: any): Promise<any> {
       const dir: string = dirOf()
-      if (dir === '') return { ok: false, message: '系统临时目录不可用' }
+      if (dir === '') return { ok: false, message: 'The system temporary directory is unavailable' }
       const abs: string = dir + '/dsh-vc-rebase-' + String(Date.now()) + '-' + String(Math.floor(Math.random() * 1e9)) + '.txt'
       try { await fsWriteFile(abs, String(text === undefined || text === null ? '' : text), { mode: 0o600, encoding: 'utf8' }); return { ok: true, path: abs } } catch (e) { return { ok: false, message: String(((e as any) && (e as any).message) || (e as any)) } }
     },
@@ -81,7 +81,7 @@ export function createRebaseMount(host: any): any {
       return { read: check.handleRebaseRead, check: check.handleRebaseCheck, write: write.handleRebaseWrite, tickets: check.tickets }
     }).catch(function (e: any): any {
       const said: string = String((e && e.message) || e)
-      const bad: any = async function (): Promise<any> { return h.failPhone('env', '变基待办这一层装配失败：' + said) }
+      const bad: any = async function (): Promise<any> { return h.failPhone('env', 'Failed to assemble the rebase todo layer: ' + said) }
       return { read: bad, check: bad, write: bad, tickets: async function (): Promise<any> { return null } }
     })
     return assembling

@@ -49,13 +49,13 @@ export function createMigrateWrite(deps: any): any {
     if (stat === null) return { ok: false, reason: 'env' }
     const boundAbsent: string[] = (ticket.bindings && ticket.bindings.preconditions && ticket.bindings.preconditions.pathAbsent) || []
     if (boundAbsent.indexOf(plan.path) >= 0) {
-      if (stat.exists) return { ok: false, reason: 'target-changed', message: '这个路径在执行前出现了内容，请重新确认' }
+      if (stat.exists) return { ok: false, reason: 'target-changed', message: 'Content appeared at this path before execution; confirm again' }
       return { ok: true, snapshot: { entries: [] } }
     }
-    if (!stat.exists || stat.isDirectory !== true) return { ok: false, reason: 'target-changed', message: '目标目录在执行前被删掉或换成了文件，请重新确认' }
+    if (!stat.exists || stat.isDirectory !== true) return { ok: false, reason: 'target-changed', message: 'The destination directory was deleted or replaced by a file before execution; confirm again' }
     const entries: any = await probe.list(plan.path)
     if (entries === null) return { ok: false, reason: 'env' }
-    if (listingDigest(entries) !== String((ticket.bindings && ticket.bindings.preconditions && ticket.bindings.preconditions.worktreeDigest) || '')) return { ok: false, reason: 'target-changed', message: '目标目录里的内容在执行前变了，请重新确认' }
+    if (listingDigest(entries) !== String((ticket.bindings && ticket.bindings.preconditions && ticket.bindings.preconditions.worktreeDigest) || '')) return { ok: false, reason: 'target-changed', message: 'The destination directory contents changed before execution; confirm again' }
     return { ok: true, snapshot: { entries: entries } }
   }
 
@@ -63,32 +63,32 @@ export function createMigrateWrite(deps: any): any {
     const a = args || {}
     const done = typeof a.requestId === 'string' && records.has(a.requestId) ? records.get(a.requestId) : null
     if (done) return { ok: true, reused: true, result: done }
-    if (idShapeProblem(a.ticketId)) return fail('args', 'bad-target', '票号形状不对，没有起任何 git 进程')
-    if (typeof a.requestId === 'string' && a.requestId !== '' && requestIdProblem(a.requestId)) return fail('args', 'bad-request-id', '请求号只能由字母、数字、下划线与短横线组成，最长 64 个字符')
+    if (idShapeProblem(a.ticketId)) return fail('args', 'bad-target', 'Invalid ticket ID format; no git process was started')
+    if (typeof a.requestId === 'string' && a.requestId !== '' && requestIdProblem(a.requestId)) return fail('args', 'bad-request-id', 'Request IDs may contain only letters, digits, underscores and hyphens, up to 64 characters')
     const ticket: any = tickets.get(String(a.ticketId || ''))
-    if (!ticket) return fail('blocked', 'ticket-missing', '这张票据不存在或已经过期被清掉了，请重新预检一次；没有起任何 git 进程')
+    if (!ticket) return fail('blocked', 'ticket-missing', 'This ticket does not exist or expired and was cleared; run preflight again. No git process was started')
     const plan: any = ticket.target || {}
     const entry = migrateActionOf(a.action)
-    if (entry === null || plan.action !== entry.action) return fail('args', 'ticket-op-mismatch', '票上的动作与这次请求不一致，没有起任何 git 进程')
+    if (entry === null || plan.action !== entry.action) return fail('args', 'ticket-op-mismatch', 'The ticket\'s action differs from this request; no git process was started')
     const pure: any = ticketPureVerdict(ticket, plan.op as any, nowMs())
-    if (!pure.ok) return fail('blocked', pure.reason || 'ticket-expired', pure.message || '票据已过期，请重新预检一次')
-    if (plan.needsConfirm === true && a.confirmed !== true) return fail('blocked', 'need-confirm', '这个动作要先在确认卡上确认，再执行一次')
+    if (!pure.ok) return fail('blocked', pure.reason || 'ticket-expired', pure.message || 'The ticket has expired; run preflight again')
+    if (plan.needsConfirm === true && a.confirmed !== true) return fail('blocked', 'need-confirm', 'Confirm this action on the confirmation card, then execute it again')
     const exe: any = await resolveGitExecutable()
-    if (!exe) return fail('env', 'no-git', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return fail('env', 'no-git', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     let workRoot = String(plan.path || '')
     if (plan.action === 'init') {
       const check: any = await verifyInit(plan, ticket)
-      if (!check.ok) return fail('blocked', check.reason, check.message || '目标状态在执行前变了，请重新确认')
+      if (!check.ok) return fail('blocked', check.reason, check.message || 'The target state changed before execution; confirm again')
       const argv: any[] = ['init']
       if (plan.bare === true) argv.push('--bare')
       if (plan.initMode === 'initial-branch') argv.push('--initial-branch=' + plan.branch)
       argv.push(plan.path)
       const res: any = await runPinned(exe, plan.path, argv, { stdoutLimit: 256 * 1024, timeoutMs: READ_TIMEOUT_MS })
-      const bad: any = failureFromExec(res, '初始化仓库这一步')
+      const bad: any = failureFromExec(res, 'Initialising the repository')
       if (bad) return bad
       if (plan.initMode !== 'initial-branch') {
         const rename: any = await runPinned(exe, plan.path, ['symbolic-ref', 'HEAD', 'refs/heads/' + plan.branch], { stdoutLimit: 8192, timeoutMs: READ_TIMEOUT_MS })
-        const badRename: any = failureFromExec(rename, '把初始分支改名这一步')
+        const badRename: any = failureFromExec(rename, 'Renaming the initial branch')
         if (badRename) return badRename
       }
       const result: any = { ok: true, action: plan.action, ticketId: ticket.id, command: plan.commandText, level: plan.level, init: { path: plan.path, branch: plan.branch, mode: plan.initMode, created: true }, atMs: nowMs() }
@@ -97,25 +97,25 @@ export function createMigrateWrite(deps: any): any {
     }
     // 仓库内动作：先重算现场，再只执行一次。
     const cur: any = await measure(String(a.cwd || ''))
-    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : fail('env', 'measure-failed', '重算现场失败，没有起任何写进程')
-    if (String(ticket.repoRoot || '') !== String(cur.root || '')) return fail('blocked', 'stale-repo', '这张票据是在另一个仓库签的，没有起任何 git 进程')
-    if (String(ticket.headOid || '') !== '' && String(ticket.headOid) !== String(cur.headOid || '')) return fail('blocked', 'stale-head', 'HEAD 在预检之后动过，请重新预检一次；没有起任何 git 进程')
+    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : fail('env', 'measure-failed', 'Failed to recompute repository state; no write process was started')
+    if (String(ticket.repoRoot || '') !== String(cur.root || '')) return fail('blocked', 'stale-repo', 'This ticket was issued for another repository; no git process was started')
+    if (String(ticket.headOid || '') !== '' && String(ticket.headOid) !== String(cur.headOid || '')) return fail('blocked', 'stale-head', 'HEAD changed after preflight; run preflight again. No git process was started')
     const absent: string[] = plan.pathAbsent || []
     for (let i = 0; i < absent.length; i = i + 1) {
       const stat: any = await probe.stat(absent[i])
-      if (stat === null) return fail('env', 'path-unreadable', '读不了路径状态，没有起任何写进程')
-      if (stat.exists) return fail('blocked', 'target-changed', '预检时不存在、现在存在的路径：' + absent[i] + '；没有覆盖，请重新预检')
+      if (stat === null) return fail('env', 'path-unreadable', 'Cannot read the path state; no write process was started')
+      if (stat.exists) return fail('blocked', 'target-changed', 'Paths absent during preflight but present now: ' + absent[i] + '; nothing was overwritten. Run preflight again')
     }
     workRoot = String(cur.root || '')
     if (plan.action === 'fast-import') {
       const made: any = await probe.makeDir(plan.targetPath)
-      if (made === null || made.ok !== true) return fail('env', 'mkdir-failed', '新建导入目标目录失败：' + String((made && made.message) || '文件服务没有给出原因'))
+      if (made === null || made.ok !== true) return fail('env', 'mkdir-failed', 'Failed to create the import destination directory: ' + String((made && made.message) || 'The file service gave no reason'))
       const initRes: any = await runPinned(exe, plan.targetPath, ['init'], { stdoutLimit: 256 * 1024, timeoutMs: READ_TIMEOUT_MS })
-      const badInit: any = failureFromExec(initRes, '为新仓库执行 git init 这一步')
+      const badInit: any = failureFromExec(initRes, 'Running git init for the new repository')
       if (badInit) return badInit
       if (plan.branch !== '' && plan.branch !== 'main' && plan.branch !== 'master') {
         const rename: any = await runPinned(exe, plan.targetPath, ['symbolic-ref', 'HEAD', 'refs/heads/' + plan.branch], { stdoutLimit: 8192, timeoutMs: READ_TIMEOUT_MS })
-        const badRename: any = failureFromExec(rename, '把初始分支改名这一步')
+        const badRename: any = failureFromExec(rename, 'Renaming the initial branch')
         if (badRename) return badRename
       }
       const started: any = await startTask({ requestId: typeof a.requestId === 'string' && a.requestId !== '' ? a.requestId : ticket.id, op: 'fast-import', args: {}, cwd: plan.targetPath, confirm: true, stdinFile: plan.input })

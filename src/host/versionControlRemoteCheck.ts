@@ -82,40 +82,40 @@ export function createRemoteTickets(deps: any): any {
    */
   function planOf(action: string, input: any, remotes: any[]): any {
     const reg: any = remoteWriteActionOf(action)
-    if (!reg) return { ok: false, fail: fail('args', 'remote-action', '不认识的远端动作：' + String(action || ''), '只能从登记 / 改名 / 删除 / 改地址四种里选。') }
+    if (!reg) return { ok: false, fail: fail('args', 'remote-action', 'Unrecognised remote action: ' + String(action || ''), 'Choose one of the four actions: add, rename, delete or change URL.') }
     const a: any = input || {}
     if (action === 'add') {
       const name: string = String(a.name || '')
       const url: string = String(a.url || '')
-      if (remoteNameProblem(name)) return { ok: false, fail: fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '换一个名字再试。') }
-      if (remoteUrlProblem(url)) return { ok: false, fail: fail('args', 'remote-url', '这个地址面板不认（支持 https / http / ssh / git / file、本机路径与 git@host:path 这种写法）。', '检查地址是否完整、是否含空白。') }
-      if (remoteOf(remotes, name)) return { ok: false, fail: fail('args', 'remote-exists', '已经有叫 ' + name + ' 的远端了。', '先删掉或改名原来的远端，或者换一个名字。') }
+      if (remoteNameProblem(name)) return { ok: false, fail: fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Use another name and retry.') }
+      if (remoteUrlProblem(url)) return { ok: false, fail: fail('args', 'remote-url', 'The panel does not accept this URL (supported: https, http, ssh, git, file, local paths and git@host:path).', 'Check that the URL is complete and contains no whitespace.') }
+      if (remoteOf(remotes, name)) return { ok: false, fail: fail('args', 'remote-exists', 'A remote named ' + name + ' already exists.', 'Delete or rename the existing remote, or use another name.') }
       return { ok: true, plan: { action: 'add', name: name, url: url } }
     }
     if (action === 'rename') {
       const from: string = String(a.from || '')
       const to: string = String(a.to || '')
-      if (remoteNameProblem(from) || remoteNameProblem(to)) return { ok: false, fail: fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '换一个名字再试。') }
-      if (from === to) return { ok: false, fail: fail('args', 'remote-unchanged', '新旧名字是同一个，这次改名没有意义。', '换一个新的名字再试。') }
+      if (remoteNameProblem(from) || remoteNameProblem(to)) return { ok: false, fail: fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Use another name and retry.') }
+      if (from === to) return { ok: false, fail: fail('args', 'remote-unchanged', 'The old and new names are the same; this rename has no effect.', 'Use a different new name and retry.') }
       const target: any = remoteOf(remotes, from)
-      if (!target) return { ok: false, fail: fail('args', 'remote-missing', '没有叫 ' + from + ' 的远端，改名做不了。', '刷新一下远端列表再选。') }
+      if (!target) return { ok: false, fail: fail('args', 'remote-missing', 'There is no remote named ' + from + '; it cannot be renamed.', 'Refresh the remote list and select again.') }
       return { ok: true, plan: { action: 'rename', from: from, to: to, fromUrl: String(target.fetchUrl || ''), fromPushUrl: String(target.pushUrl || '') } }
     }
     if (action === 'remove') {
       const name: string = String(a.name || '')
-      if (remoteNameProblem(name)) return { ok: false, fail: fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '从远端列表里选一个再试。') }
+      if (remoteNameProblem(name)) return { ok: false, fail: fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Select a remote from the list and retry.') }
       const target: any = remoteOf(remotes, name)
-      if (!target) return { ok: false, fail: fail('args', 'remote-missing', '没有叫 ' + name + ' 的远端，删除做不了。', '刷新一下远端列表再选。') }
+      if (!target) return { ok: false, fail: fail('args', 'remote-missing', 'There is no remote named ' + name + '; it cannot be deleted.', 'Refresh the remote list and select again.') }
       return { ok: true, plan: { action: 'remove', name: name, url: String(target.fetchUrl || ''), pushUrl: String(target.pushUrl || '') } }
     }
     // setUrl
     const name: string = String(a.name || '')
     const url: string = String(a.url || '')
-    if (remoteNameProblem(name)) return { ok: false, fail: fail('args', 'remote-name', '远端名不能为空、不能以减号开头、不能含空白或控制字符。', '从远端列表里选一个再试。') }
-    if (remoteUrlProblem(url)) return { ok: false, fail: fail('args', 'remote-url', '这个地址面板不认（支持 https / http / ssh / git / file、本机路径与 git@host:path 这种写法）。', '检查地址是否完整、是否含空白。') }
+    if (remoteNameProblem(name)) return { ok: false, fail: fail('args', 'remote-name', 'A remote name cannot be empty, start with a hyphen, or contain whitespace or control characters.', 'Select a remote from the list and retry.') }
+    if (remoteUrlProblem(url)) return { ok: false, fail: fail('args', 'remote-url', 'The panel does not accept this URL (supported: https, http, ssh, git, file, local paths and git@host:path).', 'Check that the URL is complete and contains no whitespace.') }
     const target: any = remoteOf(remotes, name)
-    if (!target) return { ok: false, fail: fail('args', 'remote-missing', '没有叫 ' + name + ' 的远端，改地址做不了。', '刷新一下远端列表再选。') }
-    if (String(target.fetchUrl || '') === url && String(target.pushUrl || '') === url) return { ok: false, fail: fail('args', 'remote-unchanged', '新地址和现在一样，这次没有改动。', '换一个地址再试。') }
+    if (!target) return { ok: false, fail: fail('args', 'remote-missing', 'There is no remote named ' + name + '; its URL cannot be changed.', 'Refresh the remote list and select again.') }
+    if (String(target.fetchUrl || '') === url && String(target.pushUrl || '') === url) return { ok: false, fail: fail('args', 'remote-unchanged', 'The new URL is the same as the current one; nothing changed.', 'Use a different URL and retry.') }
     return { ok: true, plan: { action: 'setUrl', name: name, oldUrl: String(target.fetchUrl || ''), oldPushUrl: String(target.pushUrl || ''), url: url } }
   }
 
@@ -123,7 +123,7 @@ export function createRemoteTickets(deps: any): any {
   function issue(action: any, input: any, facts: any): any {
     const act: string = String(action || '')
     const reg: any = remoteWriteActionOf(act)
-    if (!reg) return fail('args', 'remote-action', '不认识的远端动作，预检没有发起。', '只能从登记 / 改名 / 删除 / 改地址四种里选。')
+    if (!reg) return fail('args', 'remote-action', 'Unrecognised remote action; preflight was not started.', 'Choose one of the four actions: add, rename, delete or change URL.')
     const f: any = facts || {}
     const planOut: any = planOf(act, input, f.remotes || [])
     if (planOut.ok !== true) return planOut.fail
@@ -170,18 +170,18 @@ export function createRemoteTickets(deps: any): any {
     const a: any = input || {}
     const requestId: string = String(a.requestId || '')
     const ridProblem: any = requestIdProblem(requestId)
-    if (ridProblem) return fail('usage', 'usage', '请求号形状不对：' + requestId, '换一个由字母、数字、下划线或减号组成的请求号。')
+    if (ridProblem) return fail('usage', 'usage', 'Invalid request ID format: ' + requestId, 'Use a request ID containing only letters, digits, underscores or hyphens.')
     if (requestId && results.has(requestId)) return { ok: true, replay: results.get(requestId) }
     const ticketId: string = String(a.ticketId || a.ticket || '')
     const idProblem: any = idShapeProblem(ticketId)
-    if (idProblem) return fail('confirm', 'ticket-missing', '这次写操作没有预检凭据，请重新打开确认卡再点一次。', '预检成功后会拿到票号；没拿到的写动作面板不会发。')
-    if (a.confirmed !== true) return fail('confirm', 'not-confirmed', '这个写动作还没有经过确认卡，面板不会发它。', '先在预检结果上点确认，再执行。')
+    if (idProblem) return fail('confirm', 'ticket-missing', 'This write has no preflight credential; reopen the confirmation card and click again.', 'Successful preflight returns a ticket; the panel will not send a write without one.')
+    if (a.confirmed !== true) return fail('confirm', 'not-confirmed', 'This write has not gone through the confirmation card, so the panel will not send it.', 'Confirm the preflight result first, then execute.')
     const ticket: any = tickets.get(ticketId) || null
     const pure: any = ticketPureVerdict(ticket, action as any, now())
     if (pure.ok !== true) {
-      if (pure.reason === 'ticket-expired') return fail('stale', 'ticket-expired', '这张确认卡已经过期（超过 120000 毫秒），请重新预检。', '重新点一次原动作，拿到新票再确认。')
-      if (pure.reason === 'ticket-op-mismatch') return fail('confirm', 'ticket-op-mismatch', '这张确认卡与当前动作不符，请重新预检。', '重新点一次原动作，拿到新票再确认。')
-      return fail('confirm', 'ticket-missing', '这次写操作没有预检凭据，请重新打开确认卡再点一次。', '预检成功后会拿到票号；没拿到的写动作面板不会发。')
+      if (pure.reason === 'ticket-expired') return fail('stale', 'ticket-expired', 'This confirmation card has expired (over 120000 ms); run preflight again.', 'Click the original action again, then confirm the new ticket.')
+      if (pure.reason === 'ticket-op-mismatch') return fail('confirm', 'ticket-op-mismatch', 'This confirmation card does not match the current action; run preflight again.', 'Click the original action again, then confirm the new ticket.')
+      return fail('confirm', 'ticket-missing', 'This write has no preflight credential; reopen the confirmation card and click again.', 'Successful preflight returns a ticket; the panel will not send a write without one.')
     }
     return { ok: true, ticket: ticket }
   }
@@ -194,16 +194,16 @@ export function createRemoteTickets(deps: any): any {
     const a: any = input || {}
     const f: any = fresh || {}
     const ticket: any = tickets.get(String(a.ticketId || a.ticket || '')) || null
-    if (!ticket) return fail('confirm', 'ticket-missing', '这次写操作没有预检凭据，请重新打开确认卡再点一次。', '预检成功后会拿到票号；没拿到的写动作面板不会发。')
-    if (String(f.root || '') !== String(ticket.repoRoot || '')) return fail('stale', 'stale-repo', '工作目录指向的仓库在确认之后变了，请重新预检。', '回到刚才那个仓库再操作一次。')
+    if (!ticket) return fail('confirm', 'ticket-missing', 'This write has no preflight credential; reopen the confirmation card and click again.', 'Successful preflight returns a ticket; the panel will not send a write without one.')
+    if (String(f.root || '') !== String(ticket.repoRoot || '')) return fail('stale', 'stale-repo', 'The repository at the working directory changed after confirmation; run preflight again.', 'Return to the original repository and retry.')
     const planOut: any = planOf(String(action || ''), a, f.remotes || [])
-    if (planOut.ok !== true) return fail('stale', 'target-changed', '远端列表在确认之后变了，这次动作没有执行。请重新预检。', '点一下刷新看最新列表，再选一次。')
+    if (planOut.ok !== true) return fail('stale', 'target-changed', 'The remote list changed after confirmation; this action was not executed. Run preflight again.', 'Refresh to view the latest list, then select again.')
     const current: any = {
       preconditions: { planDigest: hash16(canonicalJson(planOut.plan)), worktreeDigest: remoteListDigestOf(f.remotes || []) },
       counters: { indexEntries: null },
     }
     if (bindingsVerdict(ticket, current) !== null) {
-      return fail('stale', 'target-changed', '远端列表在确认之后变了，这次动作没有执行。请重新预检。', '点一下刷新看最新列表，再选一次。')
+      return fail('stale', 'target-changed', 'The remote list changed after confirmation; this action was not executed. Run preflight again.', 'Refresh to view the latest list, then select again.')
     }
     return { ok: true, ticket: ticket, plan: planOut.plan }
   }

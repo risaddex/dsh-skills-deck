@@ -77,18 +77,18 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
   //   核验通过为什么就算数：客户端说的不是它随手挑的一个，而是宿主上一次算出来、现在显示在面板正文里的那一个。
   //   客户端没带这个名字时，仍按注册表这次算出来的那一个走；「没选定 / 多命中 / 待定」这三种仍然明确失败
   //   （conflict 档），让用户先选定后端再试——绝不许静默挑一个「匹配的赢家」，那可能把颜色改到另一个仓库上去。
-  const UNDECIDED: string = '这个工作区使用哪个后端尚未确定：请在面板中选定这个工作区使用的后端，然后重试'
+  const UNDECIDED: string = 'This workspace\'s backend is not decided yet: select the backend for this workspace in the panel, then retry'
   /**
    * 写用途没凭据时的同一句话（#1003 契约期望行为第 4 条）：这一次的结论不是来自工作区里那份配置文件、
    * 也不是用户这次亲手绑定的（只是仓库说明文件或自动识别算出来的），所以一个字节都不许动外部世界。
    * 读用途（列标签）不查这一条：看票与展示可以用生成结果兜。
    */
   const notPickedYet = function (): any {
-    return { ok: false, error: { kind: 'conflict', message: '这个工作区还没选定后端：现在这个结论是按仓库里的说明文件或自动识别得出的，不算你亲手选过，所以这一次没有改任何东西。请先在面板上选定这个工作区使用的后端，然后重试。' } }
+    return { ok: false, error: { kind: 'conflict', message: 'This workspace has no selected backend: the current result comes from repository instructions or automatic detection, not from your explicit choice, so nothing was changed. Select the backend for this workspace in the panel, then retry.' } }
   }
   /** 「选中的后端在注册表里找不到」这一档（env）：声明的与注册表算出来的是同一句，措辞只此一处。 */
   const unknownBackend = function (id: any): any {
-    return { ok: false, error: { kind: 'env', message: '列出标签与修改标签颜色时插件运行出错：已选定的后端「' + id + '」不在当前可用的后端清单里。这是插件运行环境的问题，不是你的操作有误。' } }
+    return { ok: false, error: { kind: 'env', message: 'The plugin failed while listing labels or changing label colours: the selected backend "' + id + '" is not in the current list of available backends. This is a problem in the plugin\'s runtime environment, not a mistake in your action.' } }
   }
   /**
    * 这次注册表算出来的「认得这个工作区的后端」名单（注册表算好的，出处见 core.ts 的 select）：
@@ -103,10 +103,10 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
   async function pickBackend(cwd: any, caller: any, signal: any, declared: any, needWritable?: any): Promise<any> {
     // #1003 空目录闸：还不知道工作区是哪条时，不探测、不起外部命令，直接说还没就绪。
     if (!cwd || String(cwd).trim() === '') {
-      return { ok: false, error: { kind: 'conflict', message: UNDECIDED + '（这个工作区还没就绪，等面板认出工作区后再试）' } };
+      return { ok: false, error: { kind: 'conflict', message: UNDECIDED + ' (this workspace is not ready; retry once the panel recognises it)' } };
     }
     const reg: any = await getTrackerRegistry()
-    if (!reg) return { ok: false, error: { kind: 'env', message: '插件尚未就绪：还没有可用的后端清单，请稍后重试。这是插件运行环境的问题，不是你的操作有误。' } }
+    if (!reg) return { ok: false, error: { kind: 'env', message: 'The plugin is not ready: no backend list is available yet. Retry later. This is a problem in the plugin\'s runtime environment, not a mistake in your action.' } }
     const platform: any = await getPlatform()
     // #1003 单出口：显式那几层（工作区文件→声明文件）整段交统一判定，自动识别仍由出口内同一注册表跑；
     //   下面只做核验与分档，不再自己判一次。本文件不引用判定服务（同层门禁），函数只经依赖值由工作区入口递进来。
@@ -119,14 +119,14 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
     try { useOutlet = (typeof getDecisionFn === 'function') ? await getDecisionFn() : null } catch (eD) { useOutlet = null }
     if (!useOutlet || typeof useOutlet.decideBackend !== 'function') {
       // 缺依赖即装配错：如实说插件这边有问题，不抛，不编一个后端出来。
-      return { ok: false, error: { kind: 'env', message: '列出标签与修改标签颜色时插件运行出错：判定出口这次没装上，所以没有动仓库里的任何东西。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+      return { ok: false, error: { kind: 'env', message: 'The plugin failed while listing labels or changing label colours: the decision outlet was not connected, so nothing in the repository was changed. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
     }
     let svc: any = null
     try { svc = (typeof getDetectionService === 'function') ? await getDetectionService() : null } catch (eS) { svc = null }
     if (!svc || typeof svc.detect !== 'function') {
       // 同样按「缺依赖即装配错」办，文案与上面那条一样：这句话要说的就是「判定这一套这次没装上」，
       //   换谁承载它都一样，用户该做的事也一样（重试，不行就把原文报告维护者）。
-      return { ok: false, error: { kind: 'env', message: '列出标签与修改标签颜色时插件运行出错：判定出口这次没装上，所以没有动仓库里的任何东西。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+      return { ok: false, error: { kind: 'env', message: 'The plugin failed while listing labels or changing label colours: the decision outlet was not connected, so nothing in the repository was changed. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
     }
     // #1131：判定整段交探测服务走（每个工作区那份缓存归它管），不再在这里直调出口。
     //   为什么不直调：出口是纯计算，每问一次都要把工作区文件、声明文件、自动识别从头跑一遍；而「这个工作区
@@ -156,7 +156,7 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
           ? { backendId: o.backendId || null, source: o.source || 'fallback', multiHit: o.multiHit, pending: true, ref: o.ref || null }
           : { backendId: null, source: 'fallback', multiHit: o.multiHit || undefined, pending: undefined, ref: null }
       } else {
-        return { ok: false, error: { kind: 'env', message: '列出标签与修改标签颜色时插件运行出错：判定出口这次没有拿回结果，所以没有动仓库里的任何东西。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者。' } }
+        return { ok: false, error: { kind: 'env', message: 'The plugin failed while listing labels or changing label colours: the decision outlet returned no result, so nothing in the repository was changed. Retry once; if it still fails, report this exact message to the plugin maintainer.' } }
       }
     }
     // 客户端显式声明了它面板上正在用的那个后端 → **核验**它确实在这次算出来的名单里，是就直接交给它。
@@ -178,7 +178,7 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
     if (sel && Array.isArray(sel.multiHit) && sel.multiHit.length > 1) {
       // 只对用户说两件确定的事：同时对应的个数（用户能对上自己装了几个后端）、以及去面板中选定。
       //   **不列后端 id**：用户看不到 `github` / `gitlab` 这类内部名字，列出来只会让人去猜哪颗按钮对应哪一行。
-      return { ok: false, error: { kind: 'conflict', message: UNDECIDED + '（当前有 ' + sel.multiHit.length + ' 个后端同时对应这个工作区，插件无法自己定下来用哪一个。请在面板中选定这个工作区使用的后端，然后重试）' } }
+      return { ok: false, error: { kind: 'conflict', message: UNDECIDED + ' (' + sel.multiHit.length + ' backends currently match this workspace, and the plugin cannot choose one by itself. Select the backend for this workspace in the panel, then retry)' } }
     }
     const backendId: any = sel && sel.backendId
     if (!backendId) {
@@ -188,9 +188,9 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
       //   所以两句都只说：现在是什么状态、你接下来做什么。「识别」用的是客户端同一档词条
       //   （locale-labels.js 的 lc.errWaitBackend）的说法，两边读到的是同一件事；待定时不带后端名字：
       //   那时名单里的名字只是注册序的暂时赢家，还没定下来。（下面那条 :280 是 ② 命中但同轮仍有待定。）
-      return { ok: false, error: { kind: 'conflict', message: UNDECIDED + (sel && sel.pending ? '（后端尚未识别完成，请等识别完成后再重试）' : '（这个工作区尚未选定后端，请在面板中选定这个工作区使用的后端，然后重试）') } }
+      return { ok: false, error: { kind: 'conflict', message: UNDECIDED + (sel && sel.pending ? ' (backend detection has not finished; wait for it to finish, then retry)' : ' (this workspace has no selected backend; select the backend for this workspace in the panel, then retry)') } }
     }
-    if (sel && sel.pending) return { ok: false, error: { kind: 'conflict', message: UNDECIDED + '（后端尚未识别完成，请等识别完成后再重试）' } }
+    if (sel && sel.pending) return { ok: false, error: { kind: 'conflict', message: UNDECIDED + ' (backend detection has not finished; wait for it to finish, then retry)' } }
     const tracker: any = reg.get(backendId)
     if (!tracker) return unknownBackend(backendId)
     let repoRef: any = (sel && sel.ref) || null
@@ -207,13 +207,13 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
   //   列标签那一档是读操作（没拿回结果 = 读没读成、颜色一个字节没动），`pickBackend` 那一档在交出去**之前**
   //   （那里才能说「没有动仓库里的任何东西」）。三处的话各有各的依据，不能互换。
   function pluginTrouble(opCn: any, why: any, detail?: any): any {
-    return { ok: false, error: { kind: 'env', message: opCn + '时插件运行出错：' + why + (detail ? '（' + detail + '）' : '') + '。这是插件运行环境的问题，不是你的操作有误。' } }
+    return { ok: false, error: { kind: 'env', message: opCn + ': the plugin hit an error: ' + why + (detail ? ' (' + detail + ')' : '') + '. This is a problem in the plugin\'s runtime environment, not a mistake in your action.' } }
   }
   function msgOf(e: any): string { return String((e && e.message) || e) }
   // 后端说的失败原样交给客户端（是哪一档后端自己最清楚）；只有「连失败都没说清」才算插件这边的错。
   function backendFailure(res: any, opCn: any): any {
     if (res && res.error && typeof res.error === 'object') return { ok: false, error: res.error }
-    return pluginTrouble(opCn, '后端既未表示成功，也未说明失败原因')
+    return pluginTrouble(opCn, 'The backend reported neither success nor a failure reason')
   }
   /**
    * 开一次会话，并核验写用途拿到的写权限（#1445）。
@@ -227,9 +227,9 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
    * 4. 没装上 openSession 或开会话抛错时同样如实失败，并且不退回直调房间——绕过会话会把写权限与记账一起绕过去。
    */
   async function openForPicked(picked: any, cwd: any, signal: any, sb: any, write: boolean): Promise<any> {
-    const opCn: string = write ? '修改标签颜色' : '列出标签'
+    const opCn: string = write ? 'Changing label colours' : 'Listing labels'
     if (typeof openSession !== 'function') {
-      return pluginTrouble(opCn, '宿主的「开会话」出口这次没有装上（内部叫 openSession），所以这一步没有发出，仓库里的东西一个字节也没动')
+      return pluginTrouble(opCn, 'The host\'s open-session outlet was not connected (internally called openSession), so this step was not sent and nothing in the repository changed')
     }
     let opened: any = null
     try {
@@ -237,19 +237,19 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
         write: write,
         resolveSelection: function () {
           const sel: any = { backendId: picked.backendId, ref: picked.repoRef || null }
-          if (write) { sel.canWrite = true; sel.reason = '这个工作区已在面板上选定后端，配色写入按写用途交给会话' }
+          if (write) { sel.canWrite = true; sel.reason = 'This workspace has a backend selected in the panel; colour writes are handed to a session opened for writing' }
           return sel
         }
       })
     } catch (e) {
-      return pluginTrouble(opCn, '插件在打开' + (write ? '写' : '只读') + '会话这一步出错，所以这一步没有发出，仓库里的东西一个字节也没动', msgOf(e))
+      return pluginTrouble(opCn, 'The plugin failed while opening a ' + (write ? 'write' : 'read-only') + ' session, so this step was not sent; nothing in the repository changed', msgOf(e))
     }
     if (!opened || opened.ok !== true || typeof opened.call !== 'function') {
-      const reason: any = (opened && opened.reason) || '未说明原因'
-      return pluginTrouble(opCn, '插件没能打开' + (write ? '写' : '只读') + '会话（内部叫 openSession，原因：' + reason + '），所以' + (write ? '没有改动仓库里的任何东西' : '没能读到标签'))
+      const reason: any = (opened && opened.reason) || 'No reason was given'
+      return pluginTrouble(opCn, 'The plugin could not open a ' + (write ? 'write' : 'read-only') + ' session (internally called openSession; reason: ' + reason + '), so ' + (write ? 'nothing in the repository was changed' : 'labels could not be read'))
     }
     if (write && opened.canWrite !== true) {
-      return pluginTrouble(opCn, '这次没有拿到写权限（内部叫 canWrite），所以没有改动仓库里的任何东西。请先在面板上选定这个工作区使用的后端，然后重试')
+      return pluginTrouble(opCn, 'No write permission was granted this time (internally called canWrite), so nothing in the repository changed. Select the backend for this workspace in the panel, then retry')
     }
     return { ok: true, opened: opened }
   }
@@ -289,16 +289,16 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
     const cwd: any = _rawCwd ? await normCwd(_rawCwd) : '';
     const signal: any = new AbortController().signal
     let picked: any = null
-    try { picked = await pickBackend(cwd, 'wf.listLabels', signal, args && args.backendId) } catch (e) { return pluginTrouble('修改标签颜色', '插件没能确定这个工作区使用哪个后端这一步出错（内部叫 pickBackend），所以没有动仓库里的任何东西。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者', msgOf(e)) }
+    try { picked = await pickBackend(cwd, 'wf.listLabels', signal, args && args.backendId) } catch (e) { return pluginTrouble('Changing label colours', 'The plugin failed while determining the backend for this workspace (internally called pickBackend), so nothing in the repository changed. Retry once; if it still fails, report this exact message to the plugin maintainer', msgOf(e)) }
     if (!picked.ok) return picked
     const sb: any = resolveSandboxPolicy(args, cwd)
     const opened: any = await openForPicked(picked, cwd, signal, sb, false)
     if (!opened.ok) return opened
     const inner: any = opened.opened
     let res: any = null
-    try { res = await inner.call(function (session: any, ctx: any) { return session.listLabels(inner.repoRef, ctxForCall(ctx, cwd, picked.platform, inner.repoRef, signal, sb, 'wf.listLabels')) }) } catch (e) { return pluginTrouble('修改标签颜色', '插件没有拿回结果，因此无法确认这次读取有没有成功（也就不知道仓库里的标签现在是什么样）：请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者', msgOf(e)) }
-    if (!res || res.ok !== true) return backendFailure(res, '列出标签')
-    if (!Array.isArray(res.data)) return pluginTrouble('列出标签', '后端返回的标签清单不符合约定格式（应为数组）', typeof res.data)
+    try { res = await inner.call(function (session: any, ctx: any) { return session.listLabels(inner.repoRef, ctxForCall(ctx, cwd, picked.platform, inner.repoRef, signal, sb, 'wf.listLabels')) }) } catch (e) { return pluginTrouble('Changing label colours', 'The plugin received no result, so it cannot confirm whether this read succeeded (or what the repository\'s labels currently are). Retry once; if it still fails, report this exact message to the plugin maintainer', msgOf(e)) }
+    if (!res || res.ok !== true) return backendFailure(res, 'Listing labels')
+    if (!Array.isArray(res.data)) return pluginTrouble('Listing labels', 'The backend returned a label list in the wrong format (expected an array)', typeof res.data)
     return { ok: true, backendId: picked.backendId, labels: res.data }
   }
   // 批量改色（契约操作 setLabelColors）。逐条记账由后端给：这里原样透传 applied 与 failed，
@@ -310,20 +310,20 @@ export function createWorkspaceLabelColors(deps: any): { handleListLabels: (args
     const _rawCwd2: any = (args && typeof args.cwd === 'string' && args.cwd) ? args.cwd : '';
     const cwd: any = _rawCwd2 ? await normCwd(_rawCwd2) : '';
     const changes: any = args && args.changes
-    if (!Array.isArray(changes)) return { ok: false, error: { kind: 'parse', message: '修改标签颜色需要一份「标签 → 新颜色」的改动清单（内部把这个清单叫 changes），本次保存带上来的内容不是这种格式。请回到改色弹窗重新保存一次。' } }
+    if (!Array.isArray(changes)) return { ok: false, error: { kind: 'parse', message: 'Changing label colours requires a list of changes from label to new colour (internally called changes), but this save did not provide that format. Return to the colour dialog and save again.' } }
     const signal: any = new AbortController().signal
     let picked: any = null
-    try { picked = await pickBackend(cwd, 'wf.setLabelColors', signal, args && args.backendId, true) } catch (e) { return pluginTrouble('修改标签颜色', '插件没能确定这个工作区使用哪个后端这一步出错（内部叫 pickBackend），所以没有动仓库里的任何东西。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者', msgOf(e)) }
+    try { picked = await pickBackend(cwd, 'wf.setLabelColors', signal, args && args.backendId, true) } catch (e) { return pluginTrouble('Changing label colours', 'The plugin failed while determining the backend for this workspace (internally called pickBackend), so nothing in the repository changed. Retry once; if it still fails, report this exact message to the plugin maintainer', msgOf(e)) }
     if (!picked.ok) return picked
     const sb: any = resolveSandboxPolicy(args, cwd)
     const opened: any = await openForPicked(picked, cwd, signal, sb, true)
     if (!opened.ok) return opened
     const inner: any = opened.opened
     let res: any = null
-    try { res = await inner.call(function (session: any, ctx: any) { return session.setLabelColors(inner.repoRef, changes, ctxForCall(ctx, cwd, picked.platform, inner.repoRef, signal, sb, 'wf.setLabelColors')) }) } catch (e) { return pluginTrouble('修改标签颜色', '插件没有拿回改动结果，所以仓库里的颜色有没有被改动、哪些被改动，现在都无从确认。请先看一眼标签现在的颜色（去仓库或面板里看一眼都行），再重试一次；如果仍然失败，请把这条提示原文报告给插件维护者', msgOf(e)) }
-    if (!res || res.ok !== true) return backendFailure(res, '修改标签颜色')
+    try { res = await inner.call(function (session: any, ctx: any) { return session.setLabelColors(inner.repoRef, changes, ctxForCall(ctx, cwd, picked.platform, inner.repoRef, signal, sb, 'wf.setLabelColors')) }) } catch (e) { return pluginTrouble('Changing label colours', 'The plugin received no change result, so it cannot confirm whether any repository colours changed, or which ones. Check the current label colours in the repository or panel, then retry once; if it still fails, report this exact message to the plugin maintainer', msgOf(e)) }
+    if (!res || res.ok !== true) return backendFailure(res, 'Changing label colours')
     const data: any = res.data
-    if (!data || typeof data !== 'object' || !Array.isArray(data.applied) || !Array.isArray(data.failed)) return pluginTrouble('修改标签颜色', '后端没有说清哪些标签的颜色改成功了、哪些没改成功（内部把这两份清单叫 applied 与 failed）。请重试一次；如果仍然失败，请把这条提示原文报告给插件维护者')
+    if (!data || typeof data !== 'object' || !Array.isArray(data.applied) || !Array.isArray(data.failed)) return pluginTrouble('Changing label colours', 'The backend did not specify which label colours changed successfully and which did not (internally called applied and failed). Retry once; if it still fails, report this exact message to the plugin maintainer')
     return { ok: true, backendId: picked.backendId, applied: data.applied, failed: data.failed }
   }
   return { handleListLabels: handleListLabels, handleSetLabelColors: handleSetLabelColors }

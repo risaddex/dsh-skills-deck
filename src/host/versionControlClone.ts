@@ -21,33 +21,33 @@ import { VC_CLONE_READ_TIMEOUT_MS as CLONE_READ_TIMEOUT_MS } from '../shared/tim
 
 /** 克隆域自己的理由表：标识符只在这一个文件里出现，界面按标识符翻词条，英文界面不会串出中文。 */
 const CLONE_REASONS: any = {
-  'target-not-empty': '目标目录里已经有东西了；克隆只往空目录或还不存在的目录里写，我不会替你清空它',
-  'target-not-directory': '目标路径已经是一个文件，不能当克隆目录',
-  'target-unreadable': '读不出目标路径的现状（可能是权限问题）；说不准能不能写，就不动手',
-  'nothing-to-clean': '这个目录已经不存在了，没有什么可清理',
-  'target-looks-complete': '这个目录里已经有一个能解析出 HEAD 的仓库，看着不像残留；为免误删，本面板不清理它',
-  'cleanup-unregistered': '只清理本次会话里登记过的克隆目标目录；这个路径没有登记，可能是你别的目录，不动它',
-  'bad-url': '地址形状不合法',
-  'bad-path': '目标目录形状不合法',
-  'bad-depth': '深度不合法',
-  'bad-branch': '分支名不合法',
-  'offline-remote': '离线模式连不了远端地址',
-  'hardlink-source': '离线克隆本机仓库会与源仓库共享对象文件，源仓库删改后这份可能读不出来',
-  'target-missing': '目标目录在这几秒里被删掉了，重新预检一次再动手',
-  'ticket-missing': '这张票找不到（预检没签过，或缓存已经过期）；重新预检一次',
-  'ticket-expired': '这张票已经过期（预检后超过 120 秒）；重新预检一次再动手',
-  'ticket-op-mismatch': '这张票是给另一个动作签的，不能拿来做这个动作',
-  'need-confirm': '这一步要你确认一下再动手',
-  'stale-repo': '当前工作区的仓库根与预检时不一致（换了目录？）；重新预检一次',
-  'target-changed': '预检之后目标目录或克隆选项变了（被别的程序建起来、删掉或改了）；重新预检一次',
-  'remove-failed': '删除残留目录时失败',
-  'task-refused': '长任务通道没有接下这次克隆',
+  'target-not-empty': 'The destination is not empty. Clone writes only to an empty or nonexistent directory; it will not clear it for you',
+  'target-not-directory': 'The destination is an existing file, not a clone directory',
+  'target-unreadable': 'Cannot read the destination\'s state (possibly a permission problem); nothing will be done without knowing it is writable',
+  'nothing-to-clean': 'This directory no longer exists; there is nothing to clean up',
+  'target-looks-complete': 'This directory contains a repository with a resolvable HEAD and does not look like a leftover. The panel will not remove it',
+  'cleanup-unregistered': 'Only clone destinations registered in this session may be cleaned up. This path was not registered and will not be touched',
+  'bad-url': 'Invalid address format',
+  'bad-path': 'Invalid destination-directory format',
+  'bad-depth': 'Invalid depth',
+  'bad-branch': 'Invalid branch name',
+  'offline-remote': 'Offline mode cannot access a remote address',
+  'hardlink-source': 'An offline clone of a local repository shares object files with its source; changes or deletions in the source may make this clone unreadable',
+  'target-missing': 'The destination directory was just deleted; run preflight again',
+  'ticket-missing': 'This ticket was not found (never issued or expired from cache); run preflight again',
+  'ticket-expired': 'This ticket has expired (more than 120 seconds since preflight); run preflight again',
+  'ticket-op-mismatch': 'This ticket was issued for a different action and cannot be used for this one',
+  'need-confirm': 'Confirm this step before proceeding',
+  'stale-repo': 'The workspace repository root differs from preflight (directory changed?); run preflight again',
+  'target-changed': 'The destination or clone options changed after preflight (created, deleted or modified by another program); run preflight again',
+  'remove-failed': 'Failed to remove the leftover directory',
+  'task-refused': 'The long-running task channel did not accept this clone',
 }
 
 /** 把理由标识符翻成一句人话；不认识的标识符原样回，绝不编一句可能误导人的话。 */
 function cloneReasonText(id: any): string {
   const key = String(id === undefined || id === null ? '' : id)
-  return CLONE_REASONS[key] || key || '预检没有通过'
+  return CLONE_REASONS[key] || key || 'Preflight did not pass'
 }
 
 function cloneIdOf(nowMs: number): string {
@@ -109,7 +109,7 @@ export function createClonePhones(deps: any): any {
   async function baseOf(args: any): Promise<any> {
     const cwd: string = cwdOf(args)
     const exe: any = await resolveGitExecutable()
-    if (!exe) return { ok: false, envelope: failPhone('env', '这台机器上找不到 git 命令，克隆跑不了') }
+    if (!exe) return { ok: false, envelope: failPhone('env', 'Git is not available on this machine; clone cannot run') }
     const base: any = await resolveRepoRoot(exe, cwd)
     if (!base || base.ok !== true) return { ok: false, envelope: base }
     let origin: string | null = null
@@ -164,13 +164,13 @@ export function createClonePhones(deps: any): any {
       plan = built.plan
     }
     const rawTarget: any = await probeTarget(plan.dir)
-    if (!cloneTargetStateOk(rawTarget)) return { ok: false, envelope: failPhone('parse', '读回来的目标现场形状不对（状态或条目清单缺失）') }
+    if (!cloneTargetStateOk(rawTarget)) return { ok: false, envelope: failPhone('parse', 'The returned destination state is malformed (status or entry list is missing)') }
     return { ok: true, plan: plan, target: rawTarget, base: base }
   }
 
   async function handleCheck(args: any): Promise<any> {
     const op: string = String((args && args.op) || 'start')
-    if (['start', 'cleanup'].indexOf(op) < 0) return failPhone('args', '不认识的克隆动作：' + op + '（允许：start / cleanup）', { reason: 'bad-op' })
+    if (['start', 'cleanup'].indexOf(op) < 0) return failPhone('args', 'Unrecognised clone action: ' + op + ' (allowed: start / cleanup)', { reason: 'bad-op' })
     const inspected: any = await inspect(args || {}, op)
     if (inspected.ok !== true) return inspected.envelope
     const plan: any = inspected.plan
@@ -229,8 +229,8 @@ export function createClonePhones(deps: any): any {
     ticket.decision = decision
     ticket.confirmRequired = decision.verdict === 'warn' || op === 'cleanup'
     const confirm = op === 'start'
-      ? { kind: 'clone', target: summary.path, verb: decision.verdict === 'warn' ? '仍然克隆' : '开始克隆' }
-      : { kind: 'cleanup', target: summary.path, verb: '删除残留目录' }
+      ? { kind: 'clone', target: summary.path, verb: decision.verdict === 'warn' ? 'Clone anyway' : 'Start clone' }
+      : { kind: 'cleanup', target: summary.path, verb: 'Delete leftover directory' }
     tickets.set(ticket.id, ticket)
     while (tickets.size > 200) { const first: any = tickets.keys().next(); if (first && !first.done) tickets.delete(first.value); else break }
     return {
@@ -270,23 +270,23 @@ export function createClonePhones(deps: any): any {
     const requestProblem: string | null = requestIdProblem(requestId)
     if (requestProblem) return failPhone('args', requestProblem, { reason: 'bad-request-id' })
     const ticket: any = tickets.get(ticketId)
-    if (!ticket) return failPhone('blocked', '这张票找不到（预检没签过，或缓存已经过期）；重新预检一次', { reason: 'ticket-missing' })
+    if (!ticket) return failPhone('blocked', 'This ticket was not found (never issued or expired from cache); run preflight again', { reason: 'ticket-missing' })
     const op: string = String((a.op === undefined || a.op === null ? ticket.op : a.op) || '')
-    if (ticket.op !== op) return failPhone('args', '这张票是给「' + String(ticket.op) + '」签的，不能拿来做「' + op + '」', { reason: 'ticket-op-mismatch' })
+    if (ticket.op !== op) return failPhone('args', 'This ticket was issued for "' + String(ticket.op) + '", not for "' + op + '"', { reason: 'ticket-op-mismatch' })
     const pure: any = ticketPureVerdict(ticket, op as any, nowFn())
     if (pure && pure.ok !== true) return failPhone('blocked', cloneReasonText(pure.reason), { reason: pure.reason })
     const plan: any = ticket.plan
-    if (!plan) return failPhone('blocked', '这张票里没有计划；重新预检一次', { reason: 'ticket-missing' })
+    if (!plan) return failPhone('blocked', 'This ticket has no plan; run preflight again', { reason: 'ticket-missing' })
     if (ticket.confirmRequired === true && a.confirmed !== true) {
-      return failPhone('need-confirm', '这一步要你确认一下再动手', { reason: 'need-confirm', decision: ticket.decision, confirm: { kind: op, target: plan.dir, verb: op === 'start' ? '开始克隆' : '删除残留目录' } })
+      return failPhone('need-confirm', 'Confirm this step before proceeding', { reason: 'need-confirm', decision: ticket.decision, confirm: { kind: op, target: plan.dir, verb: op === 'start' ? 'Start clone' : 'Delete leftover directory' } })
     }
     const cwd: string = String(a.cwd === undefined || a.cwd === null ? '' : a.cwd) || (ticket.repoRoot || '')
-    if (!cwd) return failPhone('args', '没给工作区目录，也读不到票里记的仓库根', { reason: 'bad-cwd' })
+    if (!cwd) return failPhone('args', 'No workspace directory was provided, and the ticket\'s repository root cannot be read', { reason: 'bad-cwd' })
     const current: any = await measure(cwd, plan)
     if (current.ok !== true) return current.envelope
-    if (String(current.repoRoot) !== String(ticket.repoRoot)) return failPhone('blocked', '当前工作区的仓库根与预检时不一致（换了目录？）；重新预检一次', { reason: 'stale-repo' })
+    if (String(current.repoRoot) !== String(ticket.repoRoot)) return failPhone('blocked', 'The workspace repository root differs from preflight (directory changed?); run preflight again', { reason: 'stale-repo' })
     const expected: string = String((ticket.bindings && ticket.bindings.preconditions && ticket.bindings.preconditions.planDigest) || '')
-    if (expected && current.planDigest !== expected) return failPhone('blocked', '预检之后目标目录或克隆选项变了（被别的程序建起来、删掉或改了）；重新预检一次', { reason: 'target-changed' })
+    if (expected && current.planDigest !== expected) return failPhone('blocked', 'The destination or clone options changed after preflight (created, deleted or modified by another program); run preflight again', { reason: 'target-changed' })
     const atMs: number = nowFn()
     if (op === 'cleanup') {
       const registered: boolean = residuals.has(plan.dir)
@@ -304,7 +304,7 @@ export function createClonePhones(deps: any): any {
           await fsp.rm(plan.dir, { recursive: true, force: false })
         }
       } catch (e) {
-        return failPhone('env', '删除残留目录时失败：' + firstLine(String((e && (e as any).message) || e)), { reason: 'remove-failed' })
+        return failPhone('env', 'Failed to remove the leftover directory: ' + firstLine(String((e && (e as any).message) || e)), { reason: 'remove-failed' })
       }
       residuals.delete(plan.dir)
       const out: any = { ok: true, op: 'cleanup', dir: plan.dir, removed: true, ticketId: ticketId, atMs: atMs }
@@ -315,7 +315,7 @@ export function createClonePhones(deps: any): any {
     const started: any = await taskStart({ op: 'clone', args: taskArgs, cwd: ticket.repoRoot, requestId: requestId, confirm: true })
     if (!started || started.ok !== true) {
       const taskError: any = (started && started.error) || {}
-      return failPhone('blocked', '长任务通道没有接下这次克隆：' + String(taskError.message || '原因不明'), { reason: 'task-refused', task: started })
+      return failPhone('blocked', 'The long-running task channel did not accept this clone: ' + String(taskError.message || 'Reason unknown'), { reason: 'task-refused', task: started })
     }
     const out: any = {
       ok: true, op: 'start', dir: plan.dir, maskedUrl: cloneMaskedUrl(plan.url), ticketId: ticketId, atMs: atMs,
@@ -344,7 +344,7 @@ export function clonePhonesOf(deps: any): any {
       }
     }).catch(function (e: any): any {
       _clonePhonesP = null
-      const failed: any = function (): any { return deps.failPhone('env', '克隆向导的执行层装配失败：' + deps.firstLine(String((e && e.message) || e))) }
+      const failed: any = function (): any { return deps.failPhone('env', 'Failed to assemble the clone wizard\'s execution layer: ' + deps.firstLine(String((e && e.message) || e))) }
       return { check: failed, write: failed, tickets: new Map(), residuals: new Map() }
     })
   }

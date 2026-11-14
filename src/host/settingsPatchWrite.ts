@@ -35,7 +35,7 @@ export function createSettingsPatchWriter(deps?: any): any {
     try {
       raw = await readLocalSettings(home, io)
     } catch (e) {
-      return { ok: false, error: { kind: 'environment', message: '读本机设置文件这一步出错了，所以这一次没有写。请重试一次。错误原文：' + String((e && (e as any).message) || e).slice(0, 120) } }
+      return { ok: false, error: { kind: 'environment', message: 'Reading the local settings file failed, so nothing was written. Retry once. Original error: ' + String((e && (e as any).message) || e).slice(0, 120) } }
     }
     let latest: any = null
     if (raw && raw.ok === true) {
@@ -44,16 +44,16 @@ export function createSettingsPatchWriter(deps?: any): any {
     } else if (raw && raw.reason === 'missing') {
       latest = settingsEmptyDocument()
     } else {
-      return { ok: false, error: { kind: mapSettingsKind(String((raw && raw.reason) || 'env')), message: String((raw && raw.message) || '读本机设置文件这一步出错了，所以这一次没有写。') } }
+      return { ok: false, error: { kind: mapSettingsKind(String((raw && raw.reason) || 'env')), message: String((raw && raw.message) || 'Reading the local settings file failed, so nothing was written.') } }
     }
     const latestHash = settingsContentHash(latest)
     const wantBase = String(baseHash === undefined || baseHash === null ? '' : baseHash)
     if (wantBase !== '' && wantBase !== latestHash) {
-      return { ok: false, error: { kind: 'conflict', message: '这份设置刚被另一个窗口改过，这一次没有覆盖它；插件会重读最新内容后把两边的改动合到一起。' }, contentHash: latestHash }
+      return { ok: false, error: { kind: 'conflict', message: 'Another window just changed these settings. They were not overwritten; the plugin will reread the latest content and merge both sets of changes.' }, contentHash: latestHash }
     }
     const merged = mergeSettingsPatch(latest, patch)
     if (!merged || merged.ok !== true) {
-      const out: any = { kind: mapSettingsKind(String((merged && merged.reason) || 'bad-shape')), message: String((merged && merged.message) || '这次要改的设置不合法，所以一个字都没有写。') }
+      const out: any = { kind: mapSettingsKind(String((merged && merged.reason) || 'bad-shape')), message: String((merged && merged.message) || 'The requested settings change is invalid, so nothing was written.') }
       if (merged && Array.isArray(merged.keys)) out.keys = merged.keys
       return { ok: false, error: out, contentHash: latestHash }
     }
@@ -62,12 +62,12 @@ export function createSettingsPatchWriter(deps?: any): any {
     try {
       made = await writeLocalSettings(merged.value, home, io)
     } catch (e) {
-      return { ok: false, error: { kind: 'environment', message: '保存失败，写不进本机设置文件，请检查它的上一级目录在不在与当前账号能不能写入，然后重试。错误原文：' + String((e && (e as any).message) || e).slice(0, 120) } }
+      return { ok: false, error: { kind: 'environment', message: 'Save failed: could not write the local settings file. Check that its parent directory exists and the current account can write to it, then retry. Original error: ' + String((e && (e as any).message) || e).slice(0, 120) } }
     }
     if (!(made && made.ok === true)) {
       const reason = String((made && made.reason) || 'env')
       if (reason === 'version-newer') return readonlyUpgrade()
-      const out: any = { kind: mapSettingsKind(reason), message: String((made && made.message) || '保存失败，写不进本机设置文件。') }
+      const out: any = { kind: mapSettingsKind(reason), message: String((made && made.message) || 'Save failed: could not write the local settings file.') }
       if (made && Array.isArray(made.keys)) out.keys = made.keys
       return { ok: false, error: out, contentHash: latestHash }
     }

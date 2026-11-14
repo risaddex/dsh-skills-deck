@@ -94,19 +94,19 @@ export function createStashTickets(deps: any): any {
   /** 跑一条只读命令并翻成 {ok:true,stdout} 或失败信封；非零退出不当作成功。 */
   async function readOut(exe: string, root: string, args: string[], limit?: number): Promise<any> {
     let res: any
-    try { res = await runPinned(exe, root, args, { timeoutMs: timeoutMs, stdoutLimit: limit || stdoutLimit }) } catch (e) { return fail('env', 'unknown', '只读命令没有起进程：' + firstLine(String((e && (e as any).message) || e))) }
+    try { res = await runPinned(exe, root, args, { timeoutMs: timeoutMs, stdoutLimit: limit || stdoutLimit }) } catch (e) { return fail('env', 'unknown', 'The read-only command did not start a process: ' + firstLine(String((e && (e as any).message) || e))) }
     if (res && res.kind === 'ok') return { ok: true, stdout: String(res.stdout || ''), truncated: res.truncated === true }
-    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || '只读命令以非零退出码结束了')
-    return fail('read', 'unknown', firstLine(res && res.message) || '只读命令没有正常结束')
+    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || 'The read-only command exited with a non-zero exit code')
+    return fail('read', 'unknown', firstLine(res && res.message) || 'The read-only command did not finish normally')
   }
 
   /** 解析仓库：找不到 git 或不是仓库都回明确失败信封（与执行层同一口径）。 */
   async function repoOf(cwd: string): Promise<any> {
     let exe: any = null
     try { exe = await deps.resolveGitExecutable() } catch (e) { exe = null }
-    if (!exe) return fail('env', 'unknown', '找不到 git 命令，读不了贮藏记录。')
+    if (!exe) return fail('env', 'unknown', 'Cannot find git; stash records cannot be read.')
     const repo: any = await deps.resolveRepoRoot(exe, cwd)
-    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', '当前目录不是 git 仓库：' + cwd)
+    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', 'The current directory is not a git repository: ' + cwd)
     return { ok: true, exe: String(exe), root: String(repo.root) }
   }
 
@@ -115,7 +115,7 @@ export function createStashTickets(deps: any): any {
     const listed: any = await readOut(exe, root, stashListArgs())
     if (listed.ok !== true) return listed
     const parsed: any = parseStashList(String(listed.stdout || ''))
-    if (!parsed.ok) return fail('read', 'unknown', '贮藏列表读不出来：' + String(parsed.detail || parsed.error || '格式不对'))
+    if (!parsed.ok) return fail('read', 'unknown', 'Cannot read the stash list: ' + String(parsed.detail || parsed.error || 'Malformed format'))
     const entries: StashEntry[] = parsed.entries || []
     const headOut: any = await readOut(exe, root, ['rev-parse', '--verify', '-q', 'HEAD'], 64 * 1024)
     let head: string = ''
@@ -142,39 +142,39 @@ export function createStashTickets(deps: any): any {
     const versionText: string = String(res.stdout || '').trim()
     const avail: any = capabilityAvailability({ minVersion: '2.35', versionPolicy: 'hide', versionAlternative: 'g' }, versionText)
     if (avail.state === 'full') return { ok: true }
-    return fail('version-hidden', 'version-hidden', '这条动作要 git ' + String(avail.needed || '2.35') + ' 及以上；当前是 ' + (versionText || '未知版本') + '。', { needed: avail.needed, gitVersion: versionText })
+    return fail('version-hidden', 'version-hidden', 'This action requires git ' + String(avail.needed || '2.35') + ' or newer; current version: ' + (versionText || 'Unknown version') + '.', { needed: avail.needed, gitVersion: versionText })
   }
 
   /** 建分支前重做两道校验：名字合法（git 自己判）与名字仍然不存在（本地分支）。 */
   async function branchGate(exe: string, root: string, branch: string): Promise<any> {
     const bad: any = vcStashBranchError(branch)
-    if (bad) return fail('branch', 'branch', '分支名不合法：' + String(bad))
+    if (bad) return fail('branch', 'branch', 'Invalid branch name: ' + String(bad))
     const check: any = await runPinned(exe, root, checkRefArgs(branch), { timeoutMs: timeoutMs, stdoutLimit: 64 * 1024 })
-    if (check.kind === 'non-zero') return fail('branch', 'branch', '分支名不合法：' + branch)
-    if (check.kind !== 'ok') return fail('env', 'unknown', '检查分支名失败：' + branch)
+    if (check.kind === 'non-zero') return fail('branch', 'branch', 'Invalid branch name: ' + branch)
+    if (check.kind !== 'ok') return fail('env', 'unknown', 'Checking the branch name failed: ' + branch)
     const lookup: any = await runPinned(exe, root, ['show-ref', '--verify', '--quiet', 'refs/heads/' + branch], { timeoutMs: timeoutMs, stdoutLimit: 64 * 1024 })
     if (lookup.kind === 'ok') return { ok: true, exists: true }
     if (lookup.kind === 'non-zero' && Number(lookup.exitCode) === 1) return { ok: true, exists: false }
-    return fail('env', 'unknown', '检查分支是否存在失败：' + branch)
+    return fail('env', 'unknown', 'Checking whether the branch exists failed: ' + branch)
   }
 
   /** 预检的动作输入校验：动作名、选择器、分支名、消息都在这里先拒一次，坏输入不签票。 */
   function inputVerdict(op: string, a: any): any {
-    if (!stashNeedsTicketOf(op)) return fail('usage', 'usage', '这个动作不走凭票写：' + op)
+    if (!stashNeedsTicketOf(op)) return fail('usage', 'usage', 'This action does not use a ticketed write: ' + op)
     const selector: string = String(a.selector || '')
     const def: any = stashOpOf(op)
-    if (def && def.needsSelector && !vcStashSelectorOk(selector)) return fail('selector', 'selector', '贮藏选择器不合法：' + selector)
+    if (def && def.needsSelector && !vcStashSelectorOk(selector)) return fail('selector', 'selector', 'Invalid stash selector: ' + selector)
     if (def && def.needsMessage) {
       const msgProblem: any = vcStashMessageError(String(a.message || ''))
-      if (msgProblem) return fail('message', 'message', '贮藏说明不合法：' + String(msgProblem))
+      if (msgProblem) return fail('message', 'message', 'Invalid stash message: ' + String(msgProblem))
     }
     if (op === 'branch') {
       const bad: any = vcStashBranchError(String(a.branch || ''))
-      if (bad) return fail('branch', 'branch', '分支名不合法：' + String(bad))
+      if (bad) return fail('branch', 'branch', 'Invalid branch name: ' + String(bad))
     }
     if (op === 'restore') {
       const built: any = stashRestoreArgs(a.subject, a.oid)
-      if (!built.ok) return fail('usage', 'usage', '恢复贮藏的参数不对：' + String((built.error && built.error.message) || ''))
+      if (!built.ok) return fail('usage', 'usage', 'Invalid stash-restore parameters: ' + String((built.error && built.error.message) || ''))
     }
     return null
   }
@@ -197,7 +197,7 @@ export function createStashTickets(deps: any): any {
 
     if (def && def.needsSelector) {
       const found: StashEntry | null = entryOf(facts.entries, selector)
-      if (!found) return fail('stash-missing', 'stash-missing', '这条贮藏记录不存在（可能已经被丢弃）：' + selector, { entries: facts.entries })
+      if (!found) return fail('stash-missing', 'stash-missing', 'This stash record does not exist (it may have been dropped): ' + selector, { entries: facts.entries })
       plan.selector = selector
       plan.oid = found.oid
     }
@@ -209,25 +209,25 @@ export function createStashTickets(deps: any): any {
       plan.branch = String(a.branch || '')
       const gate: any = await branchGate(repo.exe, repo.root, plan.branch)
       if (gate.ok !== true) return gate
-      if (gate.exists) return fail('branch-exists', 'branch-exists', '这个分支名已经存在：' + plan.branch, { branch: plan.branch })
+      if (gate.exists) return fail('branch-exists', 'branch-exists', 'This branch name already exists: ' + plan.branch, { branch: plan.branch })
     }
     if (op === 'push-staged') {
       const gate: any = await versionGate(repo.exe, repo.root)
       if (gate.ok !== true) return gate
       const staged: any = await readOut(repo.exe, repo.root, ['diff', '--cached', '--name-only', '-z'])
       if (staged.ok !== true) return staged
-      if (String(staged.stdout || '') === '') return fail('nothing', 'nothing-to-do', '现在没有已暂存的改动可贮藏。', { entries: facts.entries })
+      if (String(staged.stdout || '') === '') return fail('nothing', 'nothing-to-do', 'There are no staged changes to stash.', { entries: facts.entries })
     }
     if (op === 'push' || op === 'push-untracked') {
-      if (!facts.hasChanges) return fail('nothing', 'nothing-to-do', '现在没有改动可贮藏。', { entries: facts.entries })
+      if (!facts.hasChanges) return fail('nothing', 'nothing-to-do', 'There are no changes to stash.', { entries: facts.entries })
       if (op === 'push-untracked') {
         const others: any = await readOut(repo.exe, repo.root, ['ls-files', '--others', '--exclude-standard', '-z'])
         if (others.ok !== true) return others
-        if (String(others.stdout || '') === '') return fail('nothing', 'nothing-to-do', '现在没有未跟踪文件可贮藏。', { entries: facts.entries })
+        if (String(others.stdout || '') === '') return fail('nothing', 'nothing-to-do', 'There are no untracked files to stash.', { entries: facts.entries })
       }
     }
     if ((op === 'drop' || op === 'clear') && facts.entries.length === 0) {
-      return fail('nothing', 'nothing-to-do', '贮藏列表现在是空的。', { entries: facts.entries })
+      return fail('nothing', 'nothing-to-do', 'The stash list is empty.', { entries: facts.entries })
     }
 
     const planDigest: string = hash16(canonicalJson(plan))
@@ -263,7 +263,7 @@ export function createStashTickets(deps: any): any {
     const op: string = String(a.op || '')
     const requestId: string = String(a.requestId || '')
     const ridProblem: string | null = requestIdProblem(requestId)
-    if (ridProblem) return fail('usage', 'usage', '请求号形状不对：' + requestId)
+    if (ridProblem) return fail('usage', 'usage', 'Invalid request ID format: ' + requestId)
     if (requestId !== '' && results.has(requestId)) return results.get(requestId)
     // 读动作（list / show）不签票也不拦：直接交给执行层，与加票据层之前的行为一模一样；
     // 写动作才要求凭票。这样界面上的只读刷新不会被票据流程误伤。
@@ -274,34 +274,34 @@ export function createStashTickets(deps: any): any {
     }
     const ticketId: string = String(a.ticketId || a.ticket || '')
     const idProblem: string | null = idShapeProblem(ticketId)
-    if (idProblem) return fail('confirm', 'ticket-missing', '这次写操作没有预检凭据，请重新打开确认卡再点一次。')
+    if (idProblem) return fail('confirm', 'ticket-missing', 'This write has no preflight credential; reopen the confirmation card and click again.')
     const ticket: any = tickets.get(ticketId)
     const pure: any = ticketPureVerdict(ticket, op as any, now())
     if (!pure.ok) {
       const isExpired: boolean = pure.reason === 'ticket-expired'
-      return fail(isExpired ? 'stale' : 'confirm', pure.reason, isExpired ? '这张确认卡已经过期（超过 ' + String(TICKET_TTL_MS) + ' 毫秒），请重新预检。' : '这张确认卡与当前动作不符，请重新预检。')
+      return fail(isExpired ? 'stale' : 'confirm', pure.reason, isExpired ? 'This confirmation card has expired (over ' + String(TICKET_TTL_MS) + ' ms); run preflight again.' : 'This confirmation card does not match the current action; run preflight again.')
     }
     const cwd: string = String(a.cwd || deps.defaultCwd || '')
     const repo: any = await repoOf(cwd)
     if (repo.ok !== true) return repo
-    if (String(repo.root) !== String(ticket.repoRoot || '')) return fail('stale', 'stale-repo', '工作目录指向的仓库在确认之后变了，请重新预检。')
+    if (String(repo.root) !== String(ticket.repoRoot || '')) return fail('stale', 'stale-repo', 'The repository at the working directory changed after confirmation; run preflight again.')
     const read: any = await factsOf(repo.exe, repo.root)
     if (read.ok !== true) return read
     const facts: StashFacts = read.facts
     const plan: any = ticket.target || {}
-    if (String(ticket.headOid || '') !== facts.head) return fail('stale', 'stale-head', 'HEAD 在确认之后变了，请重新预检。')
+    if (String(ticket.headOid || '') !== facts.head) return fail('stale', 'stale-head', 'HEAD changed after confirmation; run preflight again.')
     // 比对两格：计划摘要（要动的那一条/那个分支名）与工作区形状。两格都要给，缺一格会被当成「对不上」。
     const changed: string | null = bindingsVerdict(ticket, { preconditions: { planDigest: hash16(canonicalJson(plan)), worktreeDigest: worktreeDigestOf(facts) }, counters: { indexEntries: null } })
-    if (changed === 'target-changed') return fail('stale', 'target-changed', '贮藏清单或工作区在确认之后变了，请重新预检。')
+    if (changed === 'target-changed') return fail('stale', 'target-changed', 'The stash list or workspace changed after confirmation; run preflight again.')
     if (plan.selector) {
       const found: StashEntry | null = entryOf(facts.entries, String(plan.selector))
-      if (!found) return fail('stale', 'target-changed', '要动的那条贮藏记录已经不在了，请重新预检。')
-      if (String(found.oid) !== String(plan.oid || '')) return fail('stale', 'target-changed', '这条贮藏记录的提交号在确认之后变了，请重新预检。')
+      if (!found) return fail('stale', 'target-changed', 'The target stash record no longer exists; run preflight again.')
+      if (String(found.oid) !== String(plan.oid || '')) return fail('stale', 'target-changed', 'This stash record\'s commit ID changed after confirmation; run preflight again.')
     }
     if (plan.branch) {
       const gate: any = await branchGate(repo.exe, repo.root, String(plan.branch))
       if (gate.ok !== true) return gate
-      if (gate.exists) return fail('stale', 'target-changed', '这个分支名刚刚被占用了，请换一个名字重新预检。')
+      if (gate.exists) return fail('stale', 'target-changed', 'This branch name was just taken; choose another name and run preflight again.')
     }
     if (op === 'push-staged') {
       const gate: any = await versionGate(repo.exe, repo.root)

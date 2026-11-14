@@ -67,16 +67,16 @@ export function createRebaseWrite(deps: any): any {
 
   /** 环节名与期望句都是给失败信封用的，写清「哪一步、本该怎样」，不写内部变量名。 */
   function stepOf(op: string): string {
-    if (op === 'rebase-todo') return '按面板待办重放这一步'
-    if (op === 'rebase-onto') return '换基座这一步'
-    if (op === 'rebase-autosquash') return '自动吸收变基这一步'
-    return '带合并结构的变基这一步'
+    if (op === 'rebase-todo') return 'Replaying the panel\'s todo list'
+    if (op === 'rebase-onto') return 'Moving to the new base'
+    if (op === 'rebase-autosquash') return 'Running autosquash rebase'
+    return 'Running rebase with merge structure'
   }
   function expectedOf(op: string, plan: any): string {
-    if (op === 'rebase-onto') return '把旧基座 ' + String(plan.oldBase || '') + ' 之后的提交搬到新基座 ' + String(plan.newBase || '') + ' 上'
-    if (op === 'rebase-autosquash') return '把 fixup/squash 提交吸收进对应的 pick 提交'
-    if (op === 'rebase-merges') return '保留合并结构重放 ' + String(plan.base || '') + ' 之后的提交'
-    return '按面板待办重放 ' + String(plan.base || '') + ' 之后的提交'
+    if (op === 'rebase-onto') return 'Move the commits after old base ' + String(plan.oldBase || '') + ' onto new base ' + String(plan.newBase || '')
+    if (op === 'rebase-autosquash') return 'Absorb fixup/squash commits into their matching pick commits'
+    if (op === 'rebase-merges') return 'Replay with merge structure: commits after ' + String(plan.base || '')
+    return 'Replay the panel\'s todo list: commits after ' + String(plan.base || '')
   }
 
   async function runStep(exe: any, root: string, argv: string[], env: any, gitEditor: any): Promise<any> {
@@ -104,26 +104,26 @@ export function createRebaseWrite(deps: any): any {
   async function execute(exe: any, root: string, cwd: string, plan: any): Promise<any> {
     const op: string = String(plan.op || '')
     const steps: string[][] = rebaseStepsOf(plan)
-    if (steps.length === 0) return { ok: false, failure: wfail('args', 'bad-target', '这张票里没有可执行的命令：重新预检', { decision: null }) }
+    if (steps.length === 0) return { ok: false, failure: wfail('args', 'bad-target', 'This ticket has no executable command; run preflight again', { decision: null }) }
     const made: string[] = []
     try {
       let env: any = null
       let gitEditor: any = null
       if (op === 'rebase-todo') {
-        if (!tmpReady()) return { ok: false, failure: wfail('env', 'env', '临时文件服务不可用：没法把面板里的待办交给 git', { decision: null }) }
+        if (!tmpReady()) return { ok: false, failure: wfail('env', 'env', 'The temporary-file service is unavailable; the panel\'s todo list cannot be passed to git', { decision: null }) }
         const rows: any[] = Array.isArray(plan.rows) ? plan.rows : []
         const messagePaths: any = {}
         for (let i = 0; i < rows.length; i += 1) {
           if (String(rows[i].action || '') !== 'reword') continue
           const w: any = await tmp.write(String(rows[i].message || ''))
-          if (!w || w.ok !== true) return { ok: false, failure: wfail('env', 'unknown-write-failure', '写改说明的正文失败：' + String((w && w.message) || ''), { decision: null }) }
+          if (!w || w.ok !== true) return { ok: false, failure: wfail('env', 'unknown-write-failure', 'Failed to write the new reword message: ' + String((w && w.message) || ''), { decision: null }) }
           made.push(String(w.path))
           messagePaths[String(rows[i].oid || '')] = String(w.path)
         }
         const lines: any = rebaseTodoLinesOf(plan, function (oid: string) { return messagePaths[String(oid)] })
-        if (!lines || lines.ok !== true) return { ok: false, failure: wfail('args', 'missing-message', '有要改说明的提交没填新说明：面板里逐条填好再点', { decision: null }) }
+        if (!lines || lines.ok !== true) return { ok: false, failure: wfail('args', 'missing-message', 'Some commits to reword have no new message; fill them in one by one in the panel, then retry', { decision: null }) }
         const todo: any = await tmp.write(String(lines.lines.join('\n')) + '\n')
-        if (!todo || todo.ok !== true) return { ok: false, failure: wfail('env', 'unknown-write-failure', '写变基待办文件失败：' + String((todo && todo.message) || ''), { decision: null }) }
+        if (!todo || todo.ok !== true) return { ok: false, failure: wfail('env', 'unknown-write-failure', 'Failed to write the rebase todo file: ' + String((todo && todo.message) || ''), { decision: null }) }
         made.push(String(todo.path))
         env = { GIT_SEQUENCE_EDITOR: 'cp "' + String(todo.path) + '"' }
         // 有压缩行时 git 要写合并后的提交说明：改用 true 接受它给的默认说明，不弹外部编辑器。
@@ -149,11 +149,11 @@ export function createRebaseWrite(deps: any): any {
           ok: false,
           argv: argv,
           ran: ran,
-          failure: wfail('git-failed', classifyWriteFailure(plan.op, res && res.exitCode, says), stepOf(op) + '失败：git 原话「' + says.slice(0, 400) + '」', {
+          failure: wfail('git-failed', classifyWriteFailure(plan.op, res && res.exitCode, says), stepOf(op) + ': failed; git reported: "' + says.slice(0, 400) + '"', {
             git: says.slice(0, 400),
             step: stepOf(op),
             expected: expectedOf(op, plan),
-            actual: '退出码 ' + String(res && res.exitCode),
+            actual: 'Exit code ' + String(res && res.exitCode),
             cause: (res && res.kind) || '',
             exitCode: (res && typeof res.exitCode === 'number') ? res.exitCode : null,
             argv: argv,
@@ -180,30 +180,30 @@ export function createRebaseWrite(deps: any): any {
     const ticketId: string = String(a.ticketId || '')
     const op: string = String(a.op || '')
     const idProblem: any = idShapeProblem(ticketId)
-    if (idProblem) return wfail('args', 'bad-target', '票号格式不合法：' + String(ticketId).slice(0, 80))
+    if (idProblem) return wfail('args', 'bad-target', 'Invalid ticket ID: ' + String(ticketId).slice(0, 80))
     const ridProblem: any = requestIdProblem(requestId)
-    if (ridProblem) return wfail('args', ridProblem, 'requestId 格式不合法：只能用字母、数字、下划线与连字符，长度不超过 64')
+    if (ridProblem) return wfail('args', ridProblem, 'Invalid requestId: use only letters, digits, underscores and hyphens, at most 64 characters')
     const ticket: any = tickets.get(ticketId)
-    if (!ticket) return wfail('blocked', 'ticket-missing', '这张票不存在或已经被执行过：重新预检拿一张新票')
-    if (String(ticket.op || '') !== op) return wfail('args', 'ticket-op-mismatch', '这张票不是为这个动作签的：重新预检')
+    if (!ticket) return wfail('blocked', 'ticket-missing', 'This ticket does not exist or has already been executed; run preflight again for a new ticket')
+    if (String(ticket.op || '') !== op) return wfail('args', 'ticket-op-mismatch', 'This ticket was not issued for this action; run preflight again')
     const meta: any = rebaseOpMetaOf(op)
-    if (meta === null || REBASE_WRITE_OPS.indexOf(meta) < 0) return wfail('args', 'bad-target', '这个动作不需要凭票执行：' + op)
+    if (meta === null || REBASE_WRITE_OPS.indexOf(meta) < 0) return wfail('args', 'bad-target', 'This action does not require a ticket: ' + op)
     const pure: any = ticketPureVerdict(ticket, ticket.op, nowFn())
-    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), '这张票已经过期或不能用：重新预检')
-    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', '这个动作要先确认（确认卡上写清后果），确认后带 confirmed:true 再发一次', { decision: ticket.decision || null })
+    if (!pure || pure.ok !== true) return wfail('blocked', String((pure && pure.reason) || 'ticket-expired'), 'This ticket has expired or is unusable; run preflight again')
+    if (ticket.confirmRequired === true && a.confirmed !== true) return wfail('need-confirm', 'need-confirm', 'This action requires confirmation (the card states the consequences); confirm, then resend with confirmed:true', { decision: ticket.decision || null })
     const cwd: string = typeof a.cwd === 'string' && a.cwd.trim() !== '' ? a.cwd : ''
-    if (!cwd) return wfail('args', 'bad-target', '缺少工作目录：执行必须说清在哪个仓库做')
+    if (!cwd) return wfail('args', 'bad-target', 'Missing working directory: execution must identify the repository')
     const cur: any = await measure(cwd, ticket.plan)
-    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', '执行前读不回现场：这次不执行，先刷新')
-    if (String(cur.repoRoot || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', '这张票不是给这个仓库签的：重新预检')
-    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'target-changed', '预检之后 HEAD 变了：这次不执行，重新预检')
+    if (!cur || cur.ok !== true) return cur && cur.envelope ? cur.envelope : wfail('blocked', 'target-changed', 'Cannot reread repository state before execution; nothing was executed. Refresh first')
+    if (String(cur.repoRoot || '') !== String(ticket.repoRoot || '')) return wfail('blocked', 'stale-repo', 'This ticket was not issued for this repository; run preflight again')
+    if (String(cur.headOid || '') !== String(ticket.headOid || '')) return wfail('blocked', 'target-changed', 'HEAD changed after preflight; nothing was executed. Run preflight again')
     if (cur.updateRefs === true || ticket.bindingValue === 'update-refs-on') return wfail('blocked', 'update-refs-on', writeHintFor('update-refs-on'), { setting: 'rebase.updateRefs', decision: ticket.decision || null })
-    if (cur.state !== null) return wfail('blocked', 'operation-in-progress', '仓库正在进行别的操作（' + String(cur.state) + '）：先把当前操作处理完', { state: cur.state, decision: ticket.decision || null })
+    if (cur.state !== null) return wfail('blocked', 'operation-in-progress', 'The repository is in the middle of another operation (' + String(cur.state) + '); finish it first', { state: cur.state, decision: ticket.decision || null })
     const bind: any = bindingsVerdict(ticket, cur.bindings)
-    if (bind) return wfail('blocked', String(bind === 'stale-index' ? 'target-changed' : bind), '预检之后要动的东西变了（待办窗口、配置或工作区）：这次不执行，重新预检', { decision: ticket.decision || null })
+    if (bind) return wfail('blocked', String(bind === 'stale-index' ? 'target-changed' : bind), 'The todo window, configuration or workspace changed after preflight; nothing was executed. Run preflight again', { decision: ticket.decision || null })
     const plan: any = ticket.plan || {}
     const exe: any = await resolveGitExecutable()
-    if (!exe) return wfail('env', 'env', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return wfail('env', 'env', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const ran: any = await execute(exe, cur.repoRoot, cwd, plan)
     if (ran.ok !== true) { remember(requestId, ran.failure); return ran.failure }
     const after: any = await afterScene(cwd)

@@ -45,19 +45,19 @@ export function createUndoCheck(deps: any): any {
   /** 跑一条只读命令并翻成 {ok:true,stdout} 或失败信封；非零退出不当作成功。 */
   async function readOut(exe: string, root: string, args: string[], limit?: number): Promise<any> {
     let res: any
-    try { res = await deps.runPinned(exe, root, args, { timeoutMs: readTimeoutMs, stdoutLimit: limit || READ_LIMIT }) } catch (e) { return fail('env', 'unknown', '只读命令没有起进程：' + firstLine(String((e && (e as any).message) || e))) }
+    try { res = await deps.runPinned(exe, root, args, { timeoutMs: readTimeoutMs, stdoutLimit: limit || READ_LIMIT }) } catch (e) { return fail('env', 'unknown', 'The read-only command did not start a process: ' + firstLine(String((e && (e as any).message) || e))) }
     if (res && res.kind === 'ok') return { ok: true, stdout: String(res.stdout || ''), truncated: res.truncated === true }
-    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || '只读命令以非零退出码结束了')
-    return fail('read', 'unknown', firstLine(res && res.message) || '只读命令没有正常结束')
+    if (res && res.kind === 'non-zero') return fail('read', 'unknown', firstLine(res.stderr) || 'The read-only command exited with a non-zero exit code')
+    return fail('read', 'unknown', firstLine(res && res.message) || 'The read-only command did not finish normally')
   }
 
   /** 解析仓库：找不到 git 或不是仓库都回明确失败信封。 */
   async function repoOf(cwd: string): Promise<any> {
     let exe: any = null
     try { exe = await deps.resolveGitExecutable() } catch (e) { exe = null }
-    if (!exe) return fail('env', 'unknown', '找不到 git 命令，读不了仓库现场。')
+    if (!exe) return fail('env', 'unknown', 'Cannot find git; repository state cannot be read.')
     const repo: any = await deps.resolveRepoRoot(exe, cwd)
-    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', '当前目录不是 git 仓库：' + cwd)
+    if (!repo || repo.ok !== true) return repo && repo.error ? repo : fail('not-repo', 'unknown', 'The current directory is not a git repository: ' + cwd)
     return { ok: true, exe: String(exe), root: String(repo.root) }
   }
 
@@ -70,7 +70,7 @@ export function createUndoCheck(deps: any): any {
     if (repo.ok !== true) return repo
     let sc: any = null
     try { sc = await deps.readScreenOf(cwd) } catch (e) { sc = null }
-    if (!sc || sc.ok !== true) return (sc && sc.error) ? sc : fail('read', 'unknown', '读不到仓库首屏，判断不了现场（' + firstLine(String((sc && sc.error && sc.error.message) || sc)) + '）')
+    if (!sc || sc.ok !== true) return (sc && sc.error) ? sc : fail('read', 'unknown', 'Cannot read the initial screen to determine repository state (' + firstLine(String((sc && sc.error && sc.error.message) || sc)) + ')')
     const scene: any = undoSceneSummaryOf(sc.screen)
     return { ok: true, exe: repo.exe, root: repo.root, screen: sc.screen, scene: scene, worktreeDigest: undoWorktreeDigestOf(sc.screen) }
   }
@@ -78,14 +78,14 @@ export function createUndoCheck(deps: any): any {
   /** 引用解析成提交全号：不存在回 target-missing（调用方按动作换成自己的 reason 与字段）。 */
   async function resolveCommit(exe: string, root: string, rev: string): Promise<any> {
     let res: any
-    try { res = await deps.runPinned(exe, root, ['rev-parse', '--verify', '--quiet', rev + '^{commit}'], { timeoutMs: readTimeoutMs, stdoutLimit: 4096 }) } catch (e) { return fail('env', 'unknown', '确认提交这一步没有起进程：' + firstLine(String((e && (e as any).message) || e))) }
+    try { res = await deps.runPinned(exe, root, ['rev-parse', '--verify', '--quiet', rev + '^{commit}'], { timeoutMs: readTimeoutMs, stdoutLimit: 4096 }) } catch (e) { return fail('env', 'unknown', 'The commit check did not start a process: ' + firstLine(String((e && (e as any).message) || e))) }
     if (res && res.kind === 'ok') {
       const oid: string = String(res.stdout || '').trim().toLowerCase()
       if (/^[0-9a-f]{40,64}$/.test(oid)) return { ok: true, oid: oid }
-      return fail('parse', 'target-missing', 'git 给出的提交号形状不对：' + oid)
+      return fail('parse', 'target-missing', 'Git returned a malformed commit ID: ' + oid)
     }
-    if (res && res.kind === 'non-zero') return { ok: false, reason: 'target-missing', message: '找不到这个提交：' + rev }
-    return fail('env', 'unknown', '确认提交这一步没有正常结束：' + firstLine(res && res.message))
+    if (res && res.kind === 'non-zero') return { ok: false, reason: 'target-missing', message: 'Cannot find this commit: ' + rev }
+    return fail('env', 'unknown', 'The commit check did not finish normally: ' + firstLine(res && res.message))
   }
 
   /** 这条提交已经在当前分支历史里了吗（拣选用途：已存在的提交再拣一次只会得到空提交，先拒）。 */
@@ -93,7 +93,7 @@ export function createUndoCheck(deps: any): any {
     const res: any = await deps.runPinned(exe, root, ['merge-base', '--is-ancestor', oid, 'HEAD'], { timeoutMs: readTimeoutMs, stdoutLimit: 4096 })
     if (res && res.kind === 'ok') return { ok: true, ancestor: true }
     if (res && res.kind === 'non-zero' && Number(res.exitCode) === 1) return { ok: true, ancestor: false }
-    return fail('env', 'unknown', '判断提交是否已在历史里这一步没有正常结束。')
+    return fail('env', 'unknown', 'The check for whether the commit is already in history did not finish normally.')
   }
 
   /** 读一条提交的标题（还原提交的默认说明要用）。 */
@@ -110,9 +110,9 @@ export function createUndoCheck(deps: any): any {
   async function recoveryOf(exe: string, root: string, plan: any, scene: any): Promise<any> {
     const diffRes: any = await readOut(exe, root, ['diff', '--numstat', '-z', String(plan.targetOid)], IMPACT_LIMIT)
     if (diffRes.ok !== true) return diffRes
-    if (diffRes.truncated === true) return fail('read', 'recovery-unreadable', '硬重置的影响读数被截断了，数不全就不签票。')
+    if (diffRes.truncated === true) return fail('read', 'recovery-unreadable', 'The hard-reset impact count was truncated; no ticket is issued without a complete count.')
     const parsed: any = parseDiffFiles(String(diffRes.stdout || ''))
-    if (parsed.ok !== true) return fail('read', 'recovery-unreadable', '硬重置的影响读数解析失败：' + String(parsed.detail || parsed.error || '格式不对'))
+    if (parsed.ok !== true) return fail('read', 'recovery-unreadable', 'Hard-reset impact parse failed: ' + String(parsed.detail || parsed.error || 'Malformed format'))
     const files: any[] = parsed.files || []
     let added: number = 0
     let deleted: number = 0
@@ -123,14 +123,14 @@ export function createUndoCheck(deps: any): any {
       else { added += Number(one.added) || 0; deleted += Number(one.deleted) || 0 }
     }
     const selRes: any = await readOut(exe, root, ['reflog', 'show', '-n', '1', '--format=%gd', 'HEAD'], 4096)
-    if (selRes.ok !== true) return fail('read', 'recovery-unreadable', '读不到当前 reflog 选择器，恢复路径写不出来，不签票。')
+    if (selRes.ok !== true) return fail('read', 'recovery-unreadable', 'Cannot read the current reflog selector, so no recovery path can be written; no ticket is issued.')
     const selector: string = String(selRes.stdout || '').trim()
     const matched: any = /^HEAD@\{(\d+)\}$/.exec(selector)
-    if (!matched) return fail('read', 'recovery-unreadable', '读到的 reflog 选择器不是 HEAD@{n} 形状：' + selector)
+    if (!matched) return fail('read', 'recovery-unreadable', 'The reflog selector is not in HEAD@{n} form: ' + selector)
     const countRes: any = await readOut(exe, root, ['rev-list', '--count', String(plan.targetOid) + '..HEAD'], 4096)
-    if (countRes.ok !== true) return fail('read', 'recovery-unreadable', '数不出会被移出历史的提交有多少个，不签票。')
+    if (countRes.ok !== true) return fail('read', 'recovery-unreadable', 'Cannot count the commits that would leave history; no ticket is issued.')
     const commits: number = Number(String(countRes.stdout || '').trim())
-    if (!isFinite(commits) || commits < 0) return fail('read', 'recovery-unreadable', '会被移出历史的提交数读出来不是数：' + String(countRes.stdout || ''))
+    if (!isFinite(commits) || commits < 0) return fail('read', 'recovery-unreadable', 'The number of commits that would leave history is not a number: ' + String(countRes.stdout || ''))
     const built: any = recoveryPointOf({
       headOid: scene.head, targetOid: String(plan.targetOid),
       impact: { files: files.length, added: added, deleted: deleted, binary: binary, truncated: false },
@@ -148,7 +148,7 @@ export function createUndoCheck(deps: any): any {
     const a: any = args || {}
     const op: string = String(a.op === undefined || a.op === null ? '' : a.op)
     const def: any = undoOpOf(op)
-    if (!def) return fail('usage', 'unknown-op', '没有这条历史改写动作：' + op)
+    if (!def) return fail('usage', 'unknown-op', 'Unrecognised history-rewrite action: ' + op)
     const planned: any = undoPlanOf(a)
     if (planned.ok !== true) return fail('usage', planned.reason, planned.message, { field: planned.field, index: planned.index })
     const plan: any = planned.plan
@@ -156,25 +156,25 @@ export function createUndoCheck(deps: any): any {
     const m: any = await measure(cwd)
     if (m.ok !== true) return m
     const scene: any = m.scene
-    if (scene.hasCommits !== true) return fail('blocked', 'no-head', '这个仓库还没有第一次提交，没有可改写的历史。', { scene: scene })
-    if (scene.midOperation === true) return fail('blocked', 'mid-operation', '仓库正停在中途操作里（' + String(scene.midOperationWhich || '合并或变基') + '），先把它做完或放弃，再来改写历史。', { scene: scene })
+    if (scene.hasCommits !== true) return fail('blocked', 'no-head', 'This repository has no first commit; there is no history to rewrite.', { scene: scene })
+    if (scene.midOperation === true) return fail('blocked', 'mid-operation', 'The repository is in the middle of an operation (' + String(scene.midOperationWhich || 'merge or rebase') + '); finish or abandon it before rewriting history.', { scene: scene })
 
     let defaultMessage: string = ''
     if (def.needsTarget === true) {
       const resolved: any = await resolveCommit(m.exe, m.root, plan.target)
-      if (resolved.ok !== true) return fail('target', 'target-missing', resolved.message || '找不到这个提交：' + plan.target, { field: 'target', scene: scene })
+      if (resolved.ok !== true) return fail('target', 'target-missing', resolved.message || 'Cannot find this commit: ' + plan.target, { field: 'target', scene: scene })
       plan.targetOid = String(resolved.oid)
       if (plan.targetOid === scene.head) {
-        if (op === 'reset-soft') return fail('blocked', 'nothing-to-do', '现在就在这个提交上，软重置过去不会改变任何东西。', { scene: scene })
-        if (op === 'reset-mixed' && Number(scene.stagedCount) === 0) return fail('blocked', 'nothing-to-do', '现在就在这个提交上，暂存区也空着，混合重置没有可撤销的东西。', { scene: scene })
-        if (op === 'reset-hard' && scene.dirty !== true) return fail('blocked', 'nothing-to-do', '现在就在这个提交上，工作区也干净，硬重置过去没有可丢的东西。', { scene: scene })
+        if (op === 'reset-soft') return fail('blocked', 'nothing-to-do', 'HEAD is already at this commit; a soft reset would change nothing.', { scene: scene })
+        if (op === 'reset-mixed' && Number(scene.stagedCount) === 0) return fail('blocked', 'nothing-to-do', 'HEAD is already at this commit and the index is empty; a mixed reset has nothing to undo.', { scene: scene })
+        if (op === 'reset-hard' && scene.dirty !== true) return fail('blocked', 'nothing-to-do', 'HEAD is already at this commit and the workspace is clean; a hard reset has nothing to discard.', { scene: scene })
       }
       if (op === 'revert') {
         const subject: any = await subjectOf(m.exe, m.root, plan.targetOid)
         if (subject.ok !== true) return subject
         defaultMessage = undoDefaultMessageOf(subject.subject)
         if (String(plan.message) === '') plan.message = defaultMessage
-        if (undoMessageProblem(plan.message) !== null) return fail('usage', 'message-too-long', '还原说明超过了长度上限，改短一点再预检。', { field: 'message' })
+        if (undoMessageProblem(plan.message) !== null) return fail('usage', 'message-too-long', 'The revert message exceeds the length limit; shorten it and run preflight again.', { field: 'message' })
       }
     }
 
@@ -192,17 +192,17 @@ export function createUndoCheck(deps: any): any {
       for (let i = 0; i < plan.commits.length; i += 1) {
         const rev: string = String(plan.commits[i])
         const resolved: any = await resolveCommit(m.exe, m.root, rev)
-        if (resolved.ok !== true) return fail('target', 'commits-invalid', '第 ' + String(i + 1) + ' 条：' + String(resolved.message || ('找不到这个提交：' + rev)), { field: 'commits', index: i + 1 })
+        if (resolved.ok !== true) return fail('target', 'commits-invalid', 'Item ' + String(i + 1) + ': ' + String(resolved.message || ('Cannot find this commit: ' + rev)), { field: 'commits', index: i + 1 })
         const anc: any = await ancestorOfHead(m.exe, m.root, String(resolved.oid))
         if (anc.ok !== true) return anc
-        if (anc.ancestor === true) return fail('blocked', 'commit-already-present', '第 ' + String(i + 1) + ' 条提交已经在当前分支历史里了，再拣一次只会得到空提交。', { field: 'commits', index: i + 1 })
+        if (anc.ancestor === true) return fail('blocked', 'commit-already-present', 'Item ' + String(i + 1) + ': this commit is already in the current branch history; cherry-picking it again would only create an empty commit.', { field: 'commits', index: i + 1 })
         picks.push({ rev: rev, oid: String(resolved.oid) })
       }
       plan.commits = picks
     }
 
     const built: any = undoArgvOf(plan)
-    if (built.ok !== true) return fail('usage', built.reason || 'unknown', '这条动作的命令计划没拼出来，不签票。')
+    if (built.ok !== true) return fail('usage', built.reason || 'unknown', 'The command plan for this action could not be built; no ticket is issued.')
     const ticket: any = makeTicket({
       id: mkId(),
       // 历史改写五条动作名走同一套票据机制，但共享层 WriteOp 联合类型目前只列提交/拉取/推送/抓取与改动页动作；

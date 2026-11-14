@@ -280,7 +280,7 @@ async function readGroup() {
   const patchFile = applySeen && applySeen[2]
   check(applyOk && applyOk.ok === true && applyOk.clean === true && applyOk.mode === 'check', 'C6 13.12 应用补丁只做预演：干净补丁回 clean:true（没有真实应用这一步）')
   check(applySeen && sameList(applySeen.slice(0, 2), ['apply', '--check']) && typeof patchFile === 'string' && patchFile.indexOf('.patch') > 0 && patchFile.charAt(0) !== '-', 'C7 13.12 预演把补丁写进一个临时文件再交给 apply --check（标准输入一律不用，路径不以 - 开头）')
-  check(applyOk && sameList(applyOk.args, ['apply', '--check', '<临时补丁文件>']), 'C8 13.12 回包里的 argv 把临时路径遮成占位符（临时路径不进票据、不进日志）')
+  check(applyOk && sameList(applyOk.args, ['apply', '--check', '<temporary patch file>']), 'C8 13.12 回包里的 argv 把临时路径遮成占位符（临时路径不进票据、不进日志）')
 
   r.state.applyFail = true
   const applyBad = await vc.handleGitDiagnosticsRead({ cwd: REPO, kind: 'apply-check', params: { patch: '--- a/a.txt\n+++ b/a.txt\n' } })
@@ -447,7 +447,7 @@ async function writeGroup() {
   markScene.state.writeFail = 'error: We are not bisecting.\n'
   const signedBad2 = await markVc.handleGitDiagnosticsCheck({ cwd: REPO, op: 'bisect-bad' })
   const failedClass = await markVc.handleGitDiagnosticsWrite({ cwd: REPO, ticketId: signedBad2.ticket.id, requestId: 'r-e15' })
-  check(failedClass && failedClass.ok === false && failedClass.error.kind === 'git-failed' && failedClass.error.reason === 'not-bisecting' && failedClass.error.hint.indexOf('二分') >= 0, 'E15 执行失败按固定类别归族：git 说不在二分中，归 not-bisecting 并给人话提示（不落 unknown）')
+  check(failedClass && failedClass.ok === false && failedClass.error.kind === 'git-failed' && failedClass.error.reason === 'not-bisecting' && failedClass.error.hint.indexOf('bisect') >= 0, 'E15 执行失败按固定类别归族：git 说不在二分中，归 not-bisecting 并给人话提示（不落 unknown）')
   check(failedClass && failedClass.step && failedClass.git && failedClass.exitCode === 1 && failedClass.cause, 'E16 失败回执写清环节名、git 原话、退出码与上游原因（界面四件套从它来）')
 
   markScene.state.writeFail = 'fatal: 仓库自己闹脾气了\n'

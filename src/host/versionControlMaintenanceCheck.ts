@@ -82,12 +82,12 @@ export function createMaintenanceCheck(deps: any): any {
     if (op === 'prune') {
       const preview: any = extra.preview || {}
       const backup: any = extra.backup || {}
-      const when: string = preview.earliestAtMs ? new Date(Number(preview.earliestAtMs)).toISOString() : '时间读不出（对象已打包）'
+      const when: string = preview.earliestAtMs ? new Date(Number(preview.earliestAtMs)).toISOString() : 'Time unavailable (object is packed)'
       return {
-        what: '会从「' + name + '」里删掉 ' + String(preview.count || 0) + ' 个不可达对象（最早 ' + when + '），它们已经不再被任何引用或 reflog 指向，删掉之后就找不回来了。动手前会先做一份整仓备份到 ' + String(backup.path || '') + '（' + (backup.kind === 'bundle' ? '整仓打包' : '镜像克隆') + '，大约 ' + humanBytesOf(Number(backup.estimateBytes) || 0) + '）。',
-        wont: '不删仍然被引用或被 reflog 保住的提交；不做整仓重写；备份只给还原步骤，面板不自动恢复。',
+        what: 'From "' + name + '", delete ' + String(preview.count || 0) + ' unreachable objects (oldest: ' + when + '). No ref or reflog points to them; deletion is irreversible. A full-repository backup will first be made at ' + String(backup.path || '') + ' (' + (backup.kind === 'bundle' ? 'full repository bundle' : 'mirror clone') + ', approximately ' + humanBytesOf(Number(backup.estimateBytes) || 0) + ').',
+        wont: 'Commits protected by refs or reflogs are kept; history is not rewritten. Backup restoration steps are provided, but the panel does not restore automatically.',
         reversible: false,
-        verb: '按下之后先备份，备份成功才开始清理；备份失败会中止，一个对象都不删。',
+        verb: 'Backup runs first; cleanup starts only after it succeeds. If backup fails, cleanup stops without deleting any objects.',
         command: 'git prune',
         backup: backup,
         preview: preview,
@@ -95,36 +95,36 @@ export function createMaintenanceCheck(deps: any): any {
     }
     if (op === 'gc') {
       return {
-        what: '会对「' + name + '」跑一次垃圾回收：把松散对象打成一个包，并清掉按默认保留期已经过期、不再被任何引用或 reflog 指向的对象；提交、分支和标签都不会变。',
-        wont: '不删分支、不改历史、不碰远端。',
+        what: 'For "' + name + '", run garbage collection: pack loose objects and remove expired objects no longer protected by a ref or reflog, using the default retention period. Commits, branches and tags will not change.',
+        wont: 'No branches are deleted, history is unchanged, and remotes are untouched.',
         reversible: true,
-        verb: '按下之后开始回收，进度在任务区，可以取消；取消只停进程，已经整理好的对象不会还原。',
+        verb: 'Start collection; progress is shown in the task area and cancellation is allowed. Cancellation stops only the process; objects already reorganised are not restored.',
         command: 'git gc',
       }
     }
     if (op === 'maintenance-run') {
       return {
-        what: '会让 git 立刻跑一轮自动维护任务（按仓库配置里开启的任务执行，默认包含垃圾回收）；提交、分支和标签都不会变。',
-        wont: '不开启后台调度计划；不改仓库配置；不碰远端。',
+        what: 'Run one round of automatic git maintenance using the repository\'s configured tasks (garbage collection by default). Commits, branches and tags will not change.',
+        wont: 'No background schedule is enabled, repository configuration is unchanged, and remotes are untouched.',
         reversible: true,
-        verb: '按下之后开始运行，进度在任务区，可以取消。',
+        verb: 'Start the task; progress is shown in the task area and cancellation is allowed.',
         command: 'git maintenance run',
       }
     }
     if (op === 'maintenance-enable') {
       return {
-        what: '会把「' + name + '」登记到本机后台自动维护清单，并装一个系统调度任务，之后 git 会在后台定期整理对象库。',
-        wont: '不改提交与引用；不立刻跑维护任务；不动远端。',
+        what: 'Register "' + name + '" for local background maintenance and install a system scheduled task; git will periodically maintain the object database.',
+        wont: 'Commits and refs are unchanged; no maintenance runs immediately, and remotes are untouched.',
         reversible: true,
-        verb: '按下后安装调度任务；想撤销随时可以点关闭自动维护。',
+        verb: 'Install the scheduled task. To undo this, disable automatic maintenance at any time.',
         command: 'git maintenance start',
       }
     }
     return {
-      what: '会先停掉系统调度任务，再把这个仓库从自动维护清单里移除；已有的提交和对象都不动。',
-      wont: '不删对象、不改历史、不动远端。',
+      what: 'Stop the system scheduled task, then unregister this repository from automatic maintenance. Existing commits and objects are unchanged.',
+      wont: 'No objects are deleted, history is unchanged, and remotes are untouched.',
       reversible: true,
-      verb: '按下后按 stop（摘掉系统调度项）→ unregister（移出维护清单）两步执行。',
+      verb: 'Run stop (remove the system schedule), then unregister (remove from the maintenance list).',
       command: 'git maintenance stop / unregister',
     }
   }
@@ -143,31 +143,31 @@ export function createMaintenanceCheck(deps: any): any {
     const a: any = args || {}
     const op: string = String(a.op || '')
     const meta: any = maintenanceWriteOpOf(op)
-    if (meta === null) return fail('args', 'bad-target', '维护页能签票的只有写动作，认不出这个动作：' + op)
-    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'bad-target', '缺少仓库目录，不知道该维护哪个仓库。')
+    if (meta === null) return fail('args', 'bad-target', 'The maintenance page issues tickets only for write actions; unrecognised action: ' + op)
+    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'bad-target', 'Missing repository directory; cannot identify which repository to maintain.')
     const plan: any = maintenancePlanOf({ op: op, mode: a.mode })
     const measured: any = await read.measure(a.cwd, plan)
     if (measured.ok !== true) return measured
     const scene: any = measured.scene
     const repoProblem: string | null = maintenanceSceneProblem({ repoBare: false, operation: scene.operation })
-    if (repoProblem !== null) return blocked(op, repoProblem, repoProblem === 'operation-in-progress' ? '这个仓库有合并或变基正在进行，先收尾再来整理对象库。' : '这个仓库现在不能做维护动作。', { scene: sceneSummaryOf(scene) })
+    if (repoProblem !== null) return blocked(op, repoProblem, repoProblem === 'operation-in-progress' ? 'A merge or rebase is in progress; finish it before maintaining the object database.' : 'This repository cannot run maintenance now.', { scene: sceneSummaryOf(scene) })
     const versionProblem: string | null = maintenanceVersionProblem(meta, scene.gitVersion)
     if (versionProblem !== null) {
       const need: string = MAINTENANCE_VERSION_HIDE[meta.capId] || ''
-      return blocked(op, versionProblem, '这个 git 版本（' + scene.gitVersion + '）还没有自动维护（需要 ' + need + ' 起）；老版本可以用垃圾回收代替自动维护。', { scene: sceneSummaryOf(scene), needed: need })
+      return blocked(op, versionProblem, 'This git version (' + scene.gitVersion + ') does not support automatic maintenance (requires ' + need + ' or newer); use garbage collection on older versions.', { scene: sceneSummaryOf(scene), needed: need })
     }
     const facts: any = {}
     if (op === 'maintenance-enable' && scene.maintenance.registeredLocal === true) {
-      return blocked(op, 'nothing-to-do', '这个仓库已经登记了后台自动维护，不用重复开启。', { scene: sceneSummaryOf(scene) })
+      return blocked(op, 'nothing-to-do', 'This repository is already registered for background maintenance; no need to enable it again.', { scene: sceneSummaryOf(scene) })
     }
     if (op === 'maintenance-disable' && scene.maintenance.registered !== true) {
-      return blocked(op, 'nothing-to-do', '这个仓库没有登记后台自动维护，没有可关闭的计划。', { scene: sceneSummaryOf(scene) })
+      return blocked(op, 'nothing-to-do', 'This repository is not registered for background maintenance; there is no schedule to disable.', { scene: sceneSummaryOf(scene) })
     }
     if (maintenanceRequiresBackupOf(op)) {
       const preview: any = await read.prunePreviewOf(measured.exe || 'git', measured.repoRoot)
       if (preview.ok !== true) return preview
       if (Number(preview.count) === 0) {
-        return blocked(op, 'nothing-to-do', '现在没有不可达对象，不用清理；等以后出现再来。', { scene: sceneSummaryOf(scene), preview: preview })
+        return blocked(op, 'nothing-to-do', 'There are no unreachable objects to clean up now; retry if any appear later.', { scene: sceneSummaryOf(scene), preview: preview })
       }
       facts.preview = preview
       facts.backup = read.backupPlanOf(scene)

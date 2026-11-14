@@ -473,7 +473,7 @@ try {
 
   // ④ 少了 sessionId / 会话没有 cwd：原有那两条失败分支不许动
   const r4 = await okPhone({})
-  if (r4 && r4.ok === false && r4.error === '缺少 sessionId') ok('G4 没给 sessionId 时仍是原来那句「缺少 sessionId」')
+  if (r4 && r4.ok === false && r4.error === 'Missing sessionId') ok('G4 没给 sessionId 时仍是原来那句「缺少 sessionId」')
   else bad('G4 缺 sessionId 的分支变了：' + JSON.stringify(r4))
   const r5 = await makePhone('', async function () { return markedRoot })({ sessionId: 'sid-5' })
   if (r5 && r5.ok === false && !('workspaceRoot' in r5)) ok('G5 会话没有 cwd 时仍是失败答复，且不带工作区根')

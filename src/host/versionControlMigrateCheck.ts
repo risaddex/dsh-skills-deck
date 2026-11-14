@@ -83,32 +83,32 @@ export function createMigrateCheck(deps: any): any {
         return { ok: true, command: 'git bundle verify', ms: ms, n: lines.length, lines: lines.slice(0, 40), truncated: res.truncated === true }
       }
       const says = firstLine(String((res && res.stderr) || ''))
-      return { ok: false, git: 'git bundle verify', step: '校验离线包这一步', expected: '离线包能通过校验', actual: says || 'git 没有接受这个文件', cause: '包文件损坏、被截断，或者不是完整的离线包' }
+      return { ok: false, git: 'git bundle verify', step: 'Verifying the bundle', expected: 'The bundle passes verification', actual: says || 'Git did not accept this file', cause: 'The bundle is corrupt, truncated or incomplete' }
     }
     // svn-probe：只读仓库本地的 svn 关联配置，不联网、不跑 git svn。
     const urlRes: any = await runPinned(exe, root, ['config', '--get', 'svn-remote.svn.url'], { stdoutLimit: 8192, timeoutMs: READ_TIMEOUT_MS })
     const fetchRes: any = await runPinned(exe, root, ['config', '--get', 'svn-remote.svn.fetch'], { stdoutLimit: 8192, timeoutMs: READ_TIMEOUT_MS })
     const url = urlRes && urlRes.kind === 'ok' ? firstLine(String(urlRes.stdout || '')) : ''
     const fetch = fetchRes && fetchRes.kind === 'ok' ? firstLine(String(fetchRes.stdout || '')) : ''
-    return { ok: true, readOnly: true, linked: url !== '', url: url, fetch: fetch, command: 'git config --get svn-remote.svn.url', note: url === '' ? '这个仓库没有 svn 关联配置，不是从 svn 克隆来的仓库。' : '这个仓库登记了 svn 关联；抓取一次会走长任务通道，不做 dcommit。' }
+    return { ok: true, readOnly: true, linked: url !== '', url: url, fetch: fetch, command: 'git config --get svn-remote.svn.url', note: url === '' ? 'This repository has no svn link configuration and was not cloned from svn.' : 'This repository has an svn link; one fetch runs through the long-running task channel without dcommit.' }
   }
 
   async function checkInit(a: any): Promise<any> {
     const target = String(a.path || '').trim()
     const stat: any = await probe.stat(target)
-    if (stat === null) return fail('env', 'path-unreadable', '读不了目标路径是否存在，初始化这一步先停下：再确认一次目录权限后重试')
-    if (stat.exists && stat.isDirectory !== true) return fail('blocked', 'not-directory', '目标路径已经存在而且不是目录，不能在这里初始化仓库')
+    if (stat === null) return fail('env', 'path-unreadable', 'Cannot determine whether the destination exists; initialisation stopped. Check directory permissions and retry')
+    if (stat.exists && stat.isDirectory !== true) return fail('blocked', 'not-directory', 'The destination exists and is not a directory; a repository cannot be initialised here')
     let entries: string[] = []
     if (stat.exists) {
       const listed: any = await probe.list(target)
-      if (listed === null) return fail('env', 'path-unreadable', '读不了目录里的内容，初始化这一步先停下：再确认一次目录权限后重试')
+      if (listed === null) return fail('env', 'path-unreadable', 'Cannot read the directory contents; initialisation stopped. Check directory permissions and retry')
       entries = listed
     }
     // 已经在某个仓库里面时再 git init 会造出嵌套仓库，这一格直接拦下。
     const screen: any = await readScreenOf(target)
-    if (screen && screen.ok === true) return fail('blocked', 'already-repo', '这个目录已经在一个 git 仓库里（仓库根：' + String((screen.screen && screen.screen.repo && screen.screen.repo.root) || '') + '），不能再套一个仓库')
+    if (screen && screen.ok === true) return fail('blocked', 'already-repo', 'This directory is already inside a git repository (root: ' + String((screen.screen && screen.screen.repo && screen.screen.repo.root) || '') + '); nested repositories are not allowed')
     const exe: any = await resolveGitExecutable()
-    if (!exe) return fail('env', 'no-git', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return fail('env', 'no-git', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const versionRes: any = await gitVersionOf(exe, a.cwd)
     const initMode: string = versionRes.ok === true ? (migrateVersionAtLeast(versionRes.version, 2, 28) ? 'initial-branch' : 'rename') : 'rename'
     const built: any = migratePlanOf('init', { path: target, branch: a.branch, bare: a.bare === true, initMode: initMode })
@@ -116,7 +116,7 @@ export function createMigrateCheck(deps: any): any {
     const plan: any = built.plan
     const empty = entries.length === 0
     const reasons: any[] = []
-    if (stat.exists && !empty) reasons.push({ id: 'dir-not-empty', text: '目录里已经有 ' + entries.length + ' 项内容；初始化只会新增 .git，不会动这些内容', blocking: false })
+    if (stat.exists && !empty) reasons.push({ id: 'dir-not-empty', text: 'The directory already contains ' + entries.length + ' entries; initialisation only adds .git and leaves them unchanged', blocking: false })
     if (initMode === 'rename') reasons.push({ id: 'version-degraded', text: plan.versionNote, blocking: false })
     const decision = (stat.exists && !empty) ? 'warn' : 'allow'
     const confirmRequired = decision === 'warn'
@@ -149,7 +149,7 @@ export function createMigrateCheck(deps: any): any {
       decision: decision,
       reasons: reasons,
       confirmRequired: confirmRequired,
-      confirm: { verb: '初始化仓库', target: plan.targetText },
+      confirm: { verb: 'Initialise repository', target: plan.targetText },
       plan: plan,
       ticket: ticket,
       readOnly: false,
@@ -161,7 +161,7 @@ export function createMigrateCheck(deps: any): any {
 
   async function checkRepoAction(a: any, entry: any): Promise<any> {
     const exe: any = await resolveGitExecutable()
-    if (!exe) return fail('env', 'no-git', '找不到 git 命令（platform.resolveExecutable("git") 没有给出路径）')
+    if (!exe) return fail('env', 'no-git', 'Cannot find git (platform.resolveExecutable("git") returned no path)')
     const screen: any = await readScreenOf(String(a.cwd || ''))
     if (screen.ok !== true) return screen
     const base: any = await resolveRepoRoot(exe, String(a.cwd || ''))
@@ -180,23 +180,23 @@ export function createMigrateCheck(deps: any): any {
     // 输入文件（离线包、fast-import 的导入流）先核存在与摘要，再把摘要写进票据；执行时不会重读同一份文件的旧内容。
     if (entry.action === 'bundle-verify' || entry.action === 'bundle-unbundle' || entry.action === 'fast-import') {
       const stat: any = await probe.stat(String(input.filePath || ''))
-      if (stat === null) return fail('env', 'path-unreadable', '读不了输入文件的信息，这一步先停下：再确认一次文件权限后重试')
-      if (!stat.exists) return fail('blocked', 'input-missing', '输入文件不存在：' + String(input.filePath || ''))
-      if (stat.isFile !== true) return fail('blocked', 'input-not-file', '输入路径不是普通文件：' + String(input.filePath || ''))
+      if (stat === null) return fail('env', 'path-unreadable', 'Cannot read the input file\'s information; stopped. Check file permissions and retry')
+      if (!stat.exists) return fail('blocked', 'input-missing', 'The input file does not exist: ' + String(input.filePath || ''))
+      if (stat.isFile !== true) return fail('blocked', 'input-not-file', 'The input path is not a regular file: ' + String(input.filePath || ''))
       const digest: any = await probe.digest(String(input.filePath || ''))
-      if (digest === null) return fail('env', 'path-unreadable', '读不了输入文件的摘要，这一步先停下：文件可能正被别的程序占用')
+      if (digest === null) return fail('env', 'path-unreadable', 'Cannot read the input file\'s digest; stopped. Another program may be using it')
       input.fileSha256 = digest.sha256
       input.fileSizeBytes = digest.sizeBytes
     }
     if (entry.action === 'fast-import') {
       const targetStat: any = await probe.stat(String(input.targetPath || ''))
-      if (targetStat === null) return fail('env', 'path-unreadable', '读不了目标路径是否存在，导入这一步先停下')
-      if (targetStat.exists) return fail('blocked', 'target-exists', '导入目标必须不存在；现在这个路径已经有了东西：' + String(input.targetPath || ''))
+      if (targetStat === null) return fail('env', 'path-unreadable', 'Cannot determine whether the destination exists; import stopped')
+      if (targetStat.exists) return fail('blocked', 'target-exists', 'The import destination must not exist, but this path is already used: ' + String(input.targetPath || ''))
     }
     if (entry.action === 'archive' || entry.action === 'bundle-create' || entry.action === 'fast-export') {
       const outStat: any = await probe.stat(String(input.outputPath || ''))
-      if (outStat === null) return fail('env', 'path-unreadable', '读不了输出路径是否存在，这一步先停下')
-      if (outStat.exists) return fail('blocked', 'output-exists', '输出文件已经存在，不覆盖：' + String(input.outputPath || ''))
+      if (outStat === null) return fail('env', 'path-unreadable', 'Cannot determine whether the output path exists; stopped')
+      if (outStat.exists) return fail('blocked', 'output-exists', 'The output file already exists and will not be overwritten: ' + String(input.outputPath || ''))
     }
     const built: any = migratePlanOf(entry.action, input)
     if (built.ok !== true) return fail('blocked', built.reason, built.message)
@@ -207,13 +207,13 @@ export function createMigrateCheck(deps: any): any {
     // 只读动作（离线包校验、svn 探测）不在长任务清单里，不能拿 taskArgsFor 去校验它们。
     if (entry.task === true) {
       const builtArgs: any = taskArgsFor(plan.op, plan.taskArgs)
-      if (builtArgs.ok !== true) return fail('blocked', 'bad-task-args', '这个动作的参数拼不成受支持的命令：' + String(builtArgs.message || builtArgs.reason || ''))
+      if (builtArgs.ok !== true) return fail('blocked', 'bad-task-args', 'The parameters for this action cannot form a supported command: ' + String(builtArgs.message || builtArgs.reason || ''))
     }
     const reasons: any[] = []
     const planNeedsConfirm = plan.needsConfirm === true
-    if (entry.action === 'fast-import') reasons.push({ id: 'import-new-dir', text: '导入只会写进新的空目录 ' + plan.targetPath + '，不会覆盖或复用现有仓库', blocking: false })
-    if (entry.action === 'svn-fetch') reasons.push({ id: 'svn-fetch-once', text: '只抓取一次，不做 dcommit；抓下来的提交留在本地，可以随时停', blocking: false })
-    if (entry.action === 'fast-export') reasons.push({ id: 'export-readonly-source', text: '导出只读仓库历史，不改任何提交；产物是一份文本文件', blocking: false })
+    if (entry.action === 'fast-import') reasons.push({ id: 'import-new-dir', text: 'Import writes only to the new empty directory ' + plan.targetPath + ' and will not overwrite or reuse an existing repository', blocking: false })
+    if (entry.action === 'svn-fetch') reasons.push({ id: 'svn-fetch-once', text: 'Fetch once without dcommit; fetched commits stay local and you can stop at any time', blocking: false })
+    if (entry.action === 'fast-export') reasons.push({ id: 'export-readonly-source', text: 'Export reads repository history only and changes no commits; it produces a text file', blocking: false })
     const decision = planNeedsConfirm ? 'warn' : 'allow'
     const confirmRequired = planNeedsConfirm
     let readOnlyResult: any = null
@@ -271,7 +271,7 @@ export function createMigrateCheck(deps: any): any {
       decision: decision,
       reasons: reasons,
       confirmRequired: confirmRequired,
-      confirm: confirmRequired ? { verb: plan.action === 'svn-fetch' ? '抓取一次 svn 提交' : '导入历史到新仓库', target: plan.targetText } : { verb: '执行', target: plan.targetText },
+      confirm: confirmRequired ? { verb: plan.action === 'svn-fetch' ? 'Fetch svn commits once' : 'Import history into a new repository', target: plan.targetText } : { verb: 'Execute', target: plan.targetText },
       plan: plan,
       ticket: ticket,
       readOnly: false,
@@ -287,13 +287,13 @@ export function createMigrateCheck(deps: any): any {
 
   async function handleGitMigrateCheck(args: any): Promise<any> {
     const entry = migrateActionOf(args && args.action)
-    if (entry === null) return fail('args', 'unknown-action', '不认识的迁移动作：' + String((args && args.action) || ''))
+    if (entry === null) return fail('args', 'unknown-action', 'Unrecognised migration action: ' + String((args && args.action) || ''))
     const a = args || {}
     if (entry.action === 'init') {
-      if (typeof a.path !== 'string' || a.path.trim() === '') return fail('args', 'path-required', '初始化仓库需要一个目标目录')
+      if (typeof a.path !== 'string' || a.path.trim() === '') return fail('args', 'path-required', 'Repository initialisation requires a destination directory')
       return checkInit(a)
     }
-    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'cwd-required', '这个动作要绑定一个仓库目录')
+    if (typeof a.cwd !== 'string' || a.cwd.trim() === '') return fail('args', 'cwd-required', 'This action must be bound to a repository directory')
     return checkRepoAction(a, entry)
   }
 

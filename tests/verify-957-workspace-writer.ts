@@ -80,7 +80,7 @@ async function main() {
     const r = await api.handleBind({ cwd: dir, backendId: null })
     check(r.ok === false && r.kind === 'no-record-for-none', 'B3 明确不要后端：没有地方记这条选择，如实回失败', JSON.stringify(r).slice(0, 200))
     check(!fs.existsSync(path.join(dir, 'docs', 'agents', 'workspace.yaml')), 'B3 明确不要后端不写文件')
-    check(typeof r.error === 'string' && /没有地方可以记下来/.test(r.error), 'B3 失败回包用一句人话讲清为什么，并给出下一步', String(r.error))
+    check(typeof r.error === 'string' && /cannot be recorded yet/.test(r.error), 'B3 失败回包用一句人话讲清为什么，并给出下一步', String(r.error))
   }
   {
     // #1138 的核心改口径：**写成功才算这次选择生效**。以前这里同时写进程内绑定、本机记忆与工作区文件三处，
@@ -92,7 +92,7 @@ async function main() {
     check(r.ok === false && r.kind === 'workspace-file-failed', 'B4 写不进文件就是没生效：顶层如实回失败（不再回 ok）', JSON.stringify({ ok: r.ok, kind: r.kind }))
     check(!fs.existsSync(path.join(dir, 'docs', 'agents', 'workspace.yaml')), 'B4 确实没写下文件')
     check(hCalls === 0, 'B4 写失败时不落本机记忆：那份备份只跟着已经生效的选择走', String(hCalls))
-    check(typeof r.error === 'string' && /没能把选择写进这个工作区里的配置文件/.test(r.error) && !/绑定/.test(r.error), 'B4 失败文案说清「没写进去、这次选择没有生效」，不再说「绑定与本机记忆不受影响」', String(r.error))
+    check(typeof r.error === 'string' && /could not be written to the workspace configuration file/.test(r.error) && !/binding/i.test(r.error), 'B4 失败文案说清「没写进去、这次选择没有生效」，不再说「绑定与本机记忆不受影响」', String(r.error))
     check(typeof r.errorKind === 'string' && r.errorKind.length > 0, 'B4 回包带上失败原因分类（供排查与日志）', String(r.errorKind))
   }
 
