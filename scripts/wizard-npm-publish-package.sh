@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 #
 # 向导：把一个 npm 包发到官方源，并验证官方源真的能取到。
-# 这是 /npm-publish 能力的「按包传参」版本：#586 迁移要发两个包
-# （dsh-plugin-update 与 dsh-skills-deck），旧脚本 scripts/wizard-npm-publish.sh
-# 把包名和版本号写死在 1.7.3，发第二个包时用不上。
+# 这是 /npm-publish 能力的「按包传参」版本：旧脚本 scripts/wizard-npm-publish.sh
+# 把包名和版本号写死在 1.7.3，换包或换版本时用不上。
 #
 # 执行主体：AI 触发与步进；人只做一件事——在浏览器里完成 npm 的二次验证。
 # 依据：docs/releases/RELEASE-RUNBOOK.md 第 5、7、8 节（交互终端真相、只扫码、发布顺序）。
 #
 # 用法：
-#   bash scripts/wizard-npm-publish-package.sh --pkg-dir packages/dsh-plugin-update
+#   bash scripts/wizard-npm-publish-package.sh --pkg-dir package
 #   bash scripts/wizard-npm-publish-package.sh --pkg-dir package --version 1.8.0
-#   bash scripts/wizard-npm-publish-package.sh --pkg-dir packages/dsh-plugin-update --otp-file .tmp-otp
-#   ENV_FILE=.wizard-publish-update.env bash scripts/wizard-npm-publish-package.sh --pkg-dir packages/dsh-plugin-update
+#   bash scripts/wizard-npm-publish-package.sh --pkg-dir package --otp-file .tmp-otp
+#   ENV_FILE=.wizard-publish.env bash scripts/wizard-npm-publish-package.sh --pkg-dir package
 #   --dry-run 只跑到打包预览，不执行发布
 #
 # 两种二次验证路线（按环境选）：
@@ -102,7 +101,7 @@ if [[ -z "$PKG_DIR" ]]; then
   PKG_DIR=$(_existing WIZARD_PUBLISH_PKG_DIR || true)
 fi
 if [[ -z "$PKG_DIR" ]]; then
-  warn "必须给包目录：--pkg-dir <相对仓库根的目录>，例如 --pkg-dir packages/dsh-plugin-update"
+  warn "必须给包目录：--pkg-dir <相对仓库根的目录>，例如 --pkg-dir package"
   exit 2
 fi
 if [[ ! -f "$PKG_DIR/package.json" ]]; then

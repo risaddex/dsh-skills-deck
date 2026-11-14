@@ -341,9 +341,7 @@ const ALLOWED = {
   //   两个可选（插件版本号、系统环境名，有则记、无则不记）；建库时刻不是进程启动时刻，
   //   不能用来数进程启动次数（见附录 51 行与 3.3 节）。旧回退实现只发三个键，仍是子集，照旧放行。
   'host.start': ['pid', 'startedAt', 'dir', 'pluginVersion', 'os'],
-  'update.install.exec': ['route', 'ok', 'exitCode', 'durationMs', 'pluginId'],
-  // 2026-10-01 新增一条常驻事件（附录 1.4 节）：装更新返回后，代码横幅版本已是目标版本而身份证还旧时，把身份证补成真实版本；只记标识与两个版本号。
-  'update.install.manifestSync': ['pluginId', 'fromVersion', 'toVersion'],
+  // issue #3：自更新入口与执行器已移除，对应两条事件不再属于现役字段表。
   'privacy.scrub': ['field', 'rule', 'hit'],
   // #618 新增两条（附录 1.4 / 1.5 节）：本地配色文件的写入记常驻、读取记按需。
   'labelColors.write': ['cwdHash', 'count', 'ok', 'reason', 'via'],
@@ -1084,19 +1082,6 @@ async function main() {
     names = Object.keys(found).sort()
 
   // 一、允许表里每个事件都有埋点落点（允许表 142 个事件；自监控那几条由 verify-log-selfmon 覆盖，退役的 5 个 —— issuePath.push、issuePath.record、settings.save、choiceStore.hint.reject、sessionTickets.chain —— 不在源码里）。
-  // #875 薄接线：update.install.exec 的发射器已收进已安装的更新包（事件保留、字段不变，落点改到包内编译产物）。
-  // 本仓 src 里不再有它的落点，这里到包内发射处核对事件名与五个字段，找不到仍红。
-  if (!found['update.install.exec']) {
-    try {
-      const evtDef = fs.readFileSync(path.join(ROOT, 'node_modules', 'dsh-plugin-update', 'dist', 'shared', 'log-events.js'), 'utf8')
-      const store = fs.readFileSync(path.join(ROOT, 'node_modules', 'dsh-plugin-update', 'dist', 'core', 'executor.js'), 'utf8')
-      const named = evtDef.includes('"update.install.exec"')
-      const at = store.indexOf('LOG_EVENT_INSTALL_EXEC, {')
-      const near = at >= 0 ? store.slice(at, at + 900) : ''
-      const fieldsOk = ['route', 'ok', 'exitCode', 'durationMs', 'pluginId'].every((k) => near.includes(k))
-      if (named && at >= 0 && fieldsOk) found['update.install.exec'] = { keys: { route: 1, ok: 1, exitCode: 1, durationMs: 1, pluginId: 1 }, sites: ['node_modules/dsh-plugin-update/dist/core/executor.js（包内发射，常量名 LOG_EVENT_INSTALL_EXEC）'] }
-    } catch {}
-  }
   // #1143 包拥有事件核对：白名单里的四个事件到 dsh-log 包内编译产物里核对发射点与字段（读包文件文本断言，不调用包）。
   // 字段形状是对外契约：这里逐键确认白名单里的键在包文本里仍在，才按白名单的键集补上落点，后面存在性与字段形状断言照旧全过。
   for (const name of PACKAGE_OWNED) {
@@ -1116,8 +1101,7 @@ async function main() {
       }
     } catch {}
   }
-  // 这一段必须留在上面的 if 之外：发射器今天在已安装的更新包里，条件为真时才会走进上面的委托核对；
-  // 哪天发射器搬回本仓，found['update.install.exec'] 直接有值，这 109 条存在性断言仍然要一条不少地跑。
+  // 包拥有事件与本仓事件共用存在性断言，不能因为发射位置不同而跳过。
   for (const name of Object.keys(ALLOWED).sort()) {
     check(!!found[name], '事件有埋点落点 ' + name + (found[name] ? '（' + found[name].sites.length + ' 处）' : '（全仓未找到）'))
   }

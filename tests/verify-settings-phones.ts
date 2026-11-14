@@ -262,7 +262,8 @@ async function main() {
     // #1890 加了轮询信号与变化集两条电话 wf.snapshotVersion / wf.snapshotChanges（界面按库版本取数），121 → 123。
     // #1923 加了已关闭容器的容器级投影一条电话 wf.containerProjection，123 → 124。
     // #1922 加了快照库占用读数一条电话 wf.snapshotStoreStats（只给诊断看），124 → 125。
-    check(nPhones === 125, '宿主电话一百二十五条（添电话先改这个数，见上一条注释），实得 ' + nPhones + ' 条。')
+    // issue #3：四条更新电话与仅供更新器使用的 logAppend 一起移除，125 → 120。
+    check(nPhones === 120, '宿主电话一百二十条（增删电话须同步这个数），实得 ' + nPhones + ' 条。')
   }
 
   // —— 第五件事：每条电话真跑一遍并断言真的落了一行对应的日志 ——

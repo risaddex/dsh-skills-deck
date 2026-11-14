@@ -883,7 +883,8 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
 // 现在它走 scripts/verify-chain.ts --script smoke，判据能生效了，但冒烟的门禁不在主链上，
 // 不能混进 COMPLETION_RECORDED_GATES —— 那张表按名字与 gates（主链）逐条对账，混进来会对不上。
 export const SMOKE_COMPLETION_RECORDED_GATES: Record<string, number> = {
-  'smoke-host-dispatch': 40,
+  // issue #3：新增五条已移除端点的真实路由断言。
+  'smoke-host-dispatch': 45,
   'smoke-naming-persistence': 37,
   // 2026-11-04 #1869：三端各一条快照库冒烟。每条只做「真库写一批 → 关句柄 → 重开 → 从库回放容器树
   // 与子票」，两秒内跑完；GitLab 那条顺手证「没有的能力写成不适用」，本地 Markdown 那条再加票号补零
@@ -1758,7 +1759,7 @@ function ungatedReasonFor(rel: string): string {
   const derived = DERIVED_PREFIXES.find((p) => rel.startsWith(p))
   if (derived) {
     return (
-      '这是 ' + derived + ' 下的派生文件：由外部包（dsh-log / dsh-plugin-update）的编译产物原样复制进来，' +
+      '这是 ' + derived + ' 下的派生文件：由外部包（dsh-log）的编译产物原样复制进来，' +
       '本仓库不手写它，正确性由逐字节比对发布包的门禁钉住，所以这里不另设门禁'
     )
   }

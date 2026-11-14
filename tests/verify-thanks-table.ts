@@ -132,7 +132,7 @@ for (const r of zhRows) {
   assert.ok(rec, `表里有 ${r.login}，数据里没有`);
   assert.equal(r.roses, rosesFor(totalOf(rec)), `${r.login} 的花串与票数对不上`);
   // 每个链接：文本号与地址号一致、地址段与类型对应、同一类编号升序。
-  const linkRe = /\[#(\d+)\]\(https:\/\/github\.com\/FeatherHunter\/dsh-skills-deck\/(issues|pull|discussions)\/(\d+)\)/g;
+  const linkRe = /\[#(\d+)\]\(https:\/\/github\.com\/FeatherHunter\/dsh-mattpocock-skills-deck\/(issues|pull|discussions)\/(\d+)\)/g;
   const kinds: Record<string, number[]> = { issues: [], pull: [], discussions: [] };
   let m: RegExpExecArray | null;
   let count: number = 0;

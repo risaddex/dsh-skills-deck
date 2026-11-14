@@ -1,6 +1,5 @@
 // tests/verify-build-cwd-products.ts —— #1644 构建产物不许随「当前目录」漂移
 // 门禁归属: scripts/build.mts
-// 门禁归属: scripts/bundle-update-entry.mts
 //
 // 要守的事（票 #1644 的验收判据 1 与 4）：
 //   同一个提交，从仓库根构建一次、从 package/ 目录构建一次，两次产出的 package/ 下每一个文件
@@ -196,9 +195,8 @@ try {
   check(false, '读得到 package/lib/client.js（第二次构建的客户端产物）', String((e && e.message) || e))
 }
 if (clientText) {
-  const rootComments = (clientText.match(/^[ \t]*\/\/ node_modules\//gm) || []).length
+  // issue #3 移除更新包浏览器打包后，可以没有依赖模块注释；逐文件摘要仍须完全一致。
   const upComments = (clientText.match(/^[ \t]*\/\/ \.\.\/node_modules\//gm) || []).length
-  check(rootComments > 0, '客户端产物里的模块注释按仓库根起算（有 ' + rootComments + ' 处以 // node_modules/ 开头，允许行首缩进）', '一处都没找到：产物格式可能变了，本门禁的这条判据要跟着改')
   check(
     upComments === 0,
     '客户端产物里的模块注释不再带 ../（从 package/ 目录构建也不再改变路径形态）',

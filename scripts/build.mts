@@ -47,10 +47,6 @@ import vm from 'node:vm'
 import { spawnSync, spawn } from 'node:child_process'
 import { cpus } from 'node:os'
 import { deriveClient } from './derive-log-from-package.mts'
-import { deriveClient as deriveUpdateClient } from './derive-update-from-package.mts'
-// base 包接入：联系入口与作者插件卡的客户端产物内联（kernel:baseClient 标记处），派生源是已安装的 base 包。
-import { deriveBaseClient } from './derive-base-from-package.mts'
-import { bundleEntryPanel } from './bundle-update-entry.mts'
 
 // #1023 内置 TypeScript 域的逐文件转译：原先四个计算核各自带一份 build.mjs，
 // 现在收成 scripts/lib 里的一份共用实现（transpile-domains.mts），由本条命令统一驱动。
@@ -191,15 +187,6 @@ const write = (p: string, content: string): void => {
   const abs: string = resolve(ROOT, p)
   mkdirSync(dirname(abs), { recursive: true })
   writeFileSync(abs, content, 'utf8')
-}
-
-/** 已安装更新包的版本号（#800：面板派生唯一数据源；读不到就报未知，不阻断构建，派生步骤会再报错）。 */
-function deriveUpdateClientVersionForLog(): string {
-  try {
-    return JSON.parse(read('node_modules/dsh-plugin-update/package.json')).version || '未知'
-  } catch {
-    return '未知'
-  }
 }
 
 /** 从规范源模块提取插件对象函数体（export default { ... } 的 `{ ... }` 部分，含 apply 方法）。
@@ -482,14 +469,7 @@ const KERNEL_MODULES: { name: string; file: string }[] = [
   // #1251：这一片由手写 .js 转成 .ts，这里改指新真源（读源由 readSpliceFragmentSource 按扩展名分派，
   //   它会把 .ts 转译成可拼接的 JavaScript；同名 .js 已删，不再入库）。
   { name: 'config', file: 'src/client/kernel/config.ts' },
-  // #586 切更新包：面板要用的电话名与轮询间隔由更新包派生（改名或改间隔只改包，不在这里写死）
-  { name: 'updateClient', file: 'scripts/generated/updateClient.derived.js' },
-  // #876 入口件浏览器绑定包（已安装更新包 dist/entry.js 含内部 dialog 面板，摆法与关闭轮询约定走包默认）
-  { name: 'updateEntryBundle', file: 'scripts/generated/updateEntryPanel.bundle.js' },
   { name: 'log', file: 'scripts/generated/logKernel.derived.js' },
-  // base 包接入：联系入口与作者插件卡的客户端产物（已安装 base 包 dist/client/index.js 内联），
-  //   拼在日志内核之后；工厂只在 SettingsPage 叶子渲染时调用，不依赖其它分块的求值顺序。
-  { name: 'baseClient', file: 'scripts/generated/baseClient.derived.js' },
   // 本次界面反馈需求：全客户端唯一的按压委托与点击日志口（ui.action），必须排在 log 之后、页面组件之前。
   { name: 'uiFeedback', file: 'src/client/kernel/ui-feedback.ts' },
   // 构建内核清单含日志模块（运行时拼上面的派生文件，#564 留派生不搬；
@@ -1045,7 +1025,6 @@ const LEAF_MODULES: { id: string; file: string }[] = [
   { id: 'diagnosticLogModel', file: 'src/client/views/diagnosticLog/diagnosticLogModel.ts' }, // 诊断日志的纯推演层：失败翻译、日期、开关选句（#597 那张表由此搬入，DebugSwitchFailHint.js 删档）
   { id: 'diagnosticLogActions', file: 'src/client/views/diagnosticLog/diagnosticLogActions.ts' }, // 诊断日志的不纯跑腿层：五个动作调宿主弹提示，世界全从参数进（原来设置页 toggleDbg 与 do 开头那一串）
   { id: 'diagnosticLogSection', file: 'src/client/views/diagnosticLog/DiagnosticLogSection.ts' }, // 诊断日志分组画法：抱住五个 useState，接好世界，画原来沉底那一组（原来设置页 194-220 行）
-  { id: 'updateEntryHost', file: 'src/client/views/UpdateEntryHost.ts' }, // #876 更新入口挂载点：只挂包的入口件（含内部 dialog 面板），本仓不再自带按钮状态机与浮层弹窗
   { id: 'settingsPage', file: 'src/client/views/SettingsPage.ts' }, // 真源是同名 .ts（调试分组搬走后转成 TS）：拼接缝自己转译，登记真源这一支（与 SkillsTab 同例）
   { id: 'runPanel', file: 'src/client/views/RunPanel.ts' },
   // #1251：这一片由手写 .js 转成 .ts，这里改指新真源（读源由 readSpliceFragmentSource 按扩展名分派，
@@ -1926,7 +1905,6 @@ const devCode: string = devCodeRaw
   } catch (e) {
     throw new Error(`[build] 发布清单校验失败：${((e as Error) && (e as Error).message || e)}`)
   }
-  // #875 薄接线：旧派生目录已删，不再随包复制 updatePkg（能力只走已安装的更新包）。
   // 分发 scripts/：消费者工作区调用的两条脚本随包发布（#588 总指挥裁定：只收两条消费者脚本，
   // 构建/调试脚本（build.mts、ui-*、wizard-*、generate-*、matrix-*、sync-* 等）不许进发布包；
   // 清单写死在这里并注释原因，不另维护第二份——门禁从这份清单机械求值发布包脚本集合）。
@@ -2516,11 +2494,8 @@ function assertLogHalvesVersionMatch(): void {
 }
 
 // #1016 日志系统派生：先把日志包产物派生为运行时文件（旧文件不动），再拼装。
-// #586 更新系统派生：同样先把更新包产物派生为运行时文件（旧文件不动）。
-// #800 面板派生已切到官方工具：取值唯一来源是已安装的更新包（node_modules/dsh-plugin-update@0.13.x），
-//   本构建只做“派生→构建”两步；“升到 0.13.x 最新并提交锁文件”这一步在构建前由人或发版流程执行，
-//   构建时不自动联网升级（顺序：最新 0.13.x → 派生 → 构建）。
-// 两个包 dist 缺失时会报错并提示先跑各自的 build。
+// 2.0 硬分叉（issue #3）：上游的自更新包派生与 base 包推广内容派生已删，分叉版更新改走插件市场索引。
+// 日志包 dist 缺失时会报错并提示先跑它的 build。
 // 两半版本一致的断言放在派生之前：错配当场拦住，不留给运行时（理由见上面那条注释）。
 assertLogHalvesVersionMatch()
 guardBuildLock(buildLock, '日志版本断言后')
@@ -2528,20 +2503,6 @@ try {
   deriveClient()
 } catch (e) {
   throw new Error('[build] 日志派生失败（取值来源是已安装的日志包：先确认 pnpm install 已装好 dsh-log@^0.2.2，再重跑本构建）：' + ((e as Error) && (e as Error).message || e))
-}
-try {
-  const updVersion: string = deriveUpdateClientVersionForLog()
-  console.log(`[build] 更新包面板取值来源：已安装 dsh-plugin-update@${updVersion}（面板派生唯一数据源；打包前应已先升到 0.13.x 最新并提交锁文件）`)
-  deriveUpdateClient()
-  await bundleEntryPanel()
-} catch (e) {
-  throw new Error('[build] 更新派生失败（面板取值来源是已安装的更新包：先确认 pnpm install 已装好 dsh-plugin-update@^0.13.0，再重跑本构建）：' + ((e as Error) && (e as Error).message || e))
-}
-// base 包接入：把已安装 base 包的客户端产物内联成派生文件（联系入口与作者插件卡要用的组件工厂）。
-try {
-  deriveBaseClient()
-} catch (e) {
-  throw new Error('[build] base 包派生失败（内联源是已安装的 dsh-featherhunter-plugin-base：先确认 pnpm install 已装好 base@0.1.5，再重跑本构建）：' + ((e as Error) && (e as Error).message || e))
 }
 
 // 打包是最后一段长活（拼客户端与宿主两半产物），开始前再确认一次锁：这段里被接管的话，
