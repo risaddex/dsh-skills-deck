@@ -43,6 +43,7 @@ import {
   verdictEvidence,
 } from '../src/tracker/detection/backendDecision.ts'
 import { parseIssueTracker } from '../src/tracker/detection/parseIssueTracker.ts'
+import { BUILTIN_ROOM_IDS } from '../src/tracker/registry/builtins.ts'
 import type { DecideRegistry } from '../src/tracker/detection/backendDecision.ts'
 import type { SandboxFs } from '../src/tracker/contract/contexts.ts'
 
@@ -325,8 +326,9 @@ async function main(): Promise<void> {
 
   title('D 多命中按明文顺序裁剪（GitHub > Markdown > GitLab）')
   {
-    ok(JSON.stringify(MULTI_CLAIM_ORDER) === JSON.stringify(['github', 'markdown', 'gitlab']),
-      '明文顺序常量就是 GitHub > Markdown > GitLab', JSON.stringify(MULTI_CLAIM_ORDER))
+    // 明文顺序读注册名单，不再抄一份三个房间的字面量：加第四间房时只改名单（#20）。
+    ok(JSON.stringify(MULTI_CLAIM_ORDER) === JSON.stringify(BUILTIN_ROOM_IDS),
+      '明文顺序常量与注册名单 BUILTIN_ROOM_IDS 一致', JSON.stringify(MULTI_CLAIM_ORDER))
     ok(JSON.stringify(orderClaims(['gitlab', 'markdown', 'github'])) === JSON.stringify(['github', 'markdown', 'gitlab']),
       '倒着给的名单按明文顺序排好')
     ok(JSON.stringify(orderClaims(['gitlab', 'scratch', 'github'])) === JSON.stringify(['github', 'gitlab', 'scratch']),
@@ -347,8 +349,8 @@ async function main(): Promise<void> {
     // 不是看 import 文本出现的位置——两件事今天碰巧同序，改起来却可以不一致（#1048 复核指出上一版只看了位置）。
     const assembly = readAssembly()
     const order = registerOrderOf(assembly)
-    ok(JSON.stringify(order) === JSON.stringify(['github', 'markdown', 'gitlab']),
-      '装配处三个后端是按 github → markdown → gitlab 注册的（读真的注册调用）', JSON.stringify(order))
+    ok(JSON.stringify(order) === JSON.stringify(BUILTIN_ROOM_IDS),
+      '装配处的后端按注册名单的顺序注册（读真的注册调用）', JSON.stringify(order))
     ok(JSON.stringify(order) === JSON.stringify(MULTI_CLAIM_ORDER),
       '装配顺序与明文裁剪顺序逐位一致：改一处就得同时改另一处',
       JSON.stringify({ 装配: order, 明文: MULTI_CLAIM_ORDER }))
