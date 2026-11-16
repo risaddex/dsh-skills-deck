@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T20:17:30.361Z",
+  "generatedAt": "2026-11-16T21:45:40.039Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 605,
-  "gateCount": 605,
-  "attributedGates": 548,
+  "chainLength": 608,
+  "gateCount": 608,
+  "attributedGates": 551,
   "unattributedGates": 57,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 144,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 964,
+  "graphFileCount": 968,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -7264,6 +7264,51 @@
       "completionRecord": true,
       "expectedAssertions": 74,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 7 条）"
+    },
+    {
+      "step": "node tests/verify-19-linear-protocol.ts",
+      "file": "tests/verify-19-linear-protocol.ts",
+      "guards": [
+        "src/shared/linear-signin/src/protocol.ts"
+      ],
+      "dirs": [
+        "src/shared/linear-signin/src"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条"
+    },
+    {
+      "step": "node tests/verify-19-linear-signin.ts",
+      "file": "tests/verify-19-linear-signin.ts",
+      "guards": [
+        "src/host/linearSignin.ts"
+      ],
+      "dirs": [
+        "src/host"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条"
+    },
+    {
+      "step": "node tests/verify-19-linear-wiring.ts",
+      "file": "tests/verify-19-linear-wiring.ts",
+      "guards": [
+        "src/host/linearSigninWiring.ts"
+      ],
+      "dirs": [
+        "src/host"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条"
     },
     {
       "step": "node tests/verify-1903-history-entries.ts",
@@ -15292,6 +15337,8 @@
       "node tests/verify-1879-suggest-deck-gate.ts",
       "node tests/verify-1885-review-read-versions.ts",
       "node tests/verify-1893-projection-only.ts",
+      "node tests/verify-19-linear-signin.ts",
+      "node tests/verify-19-linear-wiring.ts",
       "node tests/verify-1903-history-entries.ts",
       "node tests/verify-1923-closed-container.ts",
       "node tests/verify-3-workspace-switch.ts",
@@ -15775,6 +15822,10 @@
     "src/shared/label-color/src": [
       "node tests/verify-label-color-core.ts",
       "node tests/verify-markdown-label-colors.ts"
+    ],
+    "src/shared/linear-signin": [],
+    "src/shared/linear-signin/src": [
+      "node tests/verify-19-linear-protocol.ts"
     ],
     "src/shared/time-config": [],
     "src/shared/time-config/src": [
@@ -16700,12 +16751,12 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 987,
-    "dirCount": 103,
-    "coveredFileCount": 987,
+    "fileCount": 991,
+    "dirCount": 105,
+    "coveredFileCount": 991,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
-    "dedicatedDirCount": 80,
+    "dedicatedDirCount": 81,
     "guardedFiles": [
       "src/client/floating/Pop.ts",
       "src/client/floating/SkillFloatList.ts",
@@ -17096,6 +17147,8 @@
       "src/host/index.ts",
       "src/host/issuePage.ts",
       "src/host/linearAccounts.ts",
+      "src/host/linearSignin.ts",
+      "src/host/linearSigninWiring.ts",
       "src/host/logFromPackage.ts",
       "src/host/mapBody.ts",
       "src/host/mapTickets.ts",
@@ -17353,6 +17406,8 @@
       "src/shared/label-color/tsconfig.json",
       "src/shared/linear-accounts/src/resolve.ts",
       "src/shared/linear-accounts/tsconfig.json",
+      "src/shared/linear-signin/src/protocol.ts",
+      "src/shared/linear-signin/tsconfig.json",
       "src/shared/log-event-list.ts",
       "src/shared/matt-skills.ts",
       "src/shared/naming-attribution.ts",
@@ -17755,6 +17810,8 @@
       "src/shared/label-color/src",
       "src/shared/linear-accounts",
       "src/shared/linear-accounts/src",
+      "src/shared/linear-signin",
+      "src/shared/linear-signin/src",
       "src/shared/time-config",
       "src/shared/time-config/src",
       "src/shared/tracker",
@@ -17844,6 +17901,7 @@
       "src/shared/doc-layout/src",
       "src/shared/issue-file/src",
       "src/shared/label-color/src",
+      "src/shared/linear-signin/src",
       "src/shared/time-config/src",
       "src/shared/tracker",
       "src/shared/ui",
@@ -17946,6 +18004,10 @@
       {
         "path": "src/shared/linear-accounts/src",
         "fileCount": 1
+      },
+      {
+        "path": "src/shared/linear-signin",
+        "fileCount": 2
       },
       {
         "path": "src/shared/time-config",

@@ -1450,6 +1450,33 @@
       "count": 1,
       "owner": "#12（Linear 账号元数据与凭据解析）",
       "note": "账号文件的读写要用配置核的门面（parseConfig/stringifyConfig 是唯一入口），而配置核本体已贴着 20 KB 文件上限，读者只能另起一份文件住在旁边：这条边是「上限拆文件」的代价，不是新引入的业务耦合。方向单向（本文件→配置核，配置核不引本文件），无环。"
+    },
+    {
+      "file": "src/host/index.ts",
+      "spec": "./linearSigninWiring.js",
+      "resolved": "src/host/linearSigninWiring.ts",
+      "layer": "host",
+      "count": 1,
+      "owner": "#19（Linear 登录流）",
+      "note": "装配扇入：入口只留一次动态加载这一个叶子（D7 禁静态 import），登录流的注册与账号读取都在叶子里；入口已贴 400 行上限，直接写在入口会让一处错误拖垮全部 deck 工具的注册。方向单向（入口→叶子），叶子不引入口，无环。"
+    },
+    {
+      "file": "src/host/linearSigninWiring.ts",
+      "spec": "./linearAccounts.js",
+      "resolved": "src/host/linearAccounts.ts",
+      "layer": "host",
+      "count": 1,
+      "owner": "#19（Linear 登录流）",
+      "note": "接线叶子要读账号文件（readLinearAccounts / linearRegistryPath 是 #12 留下的唯一入口），抄第二份读取逻辑会让两处对「文件缺失」的判断走样。只读不写，方向单向（叶子→账号层），账号层不引叶子，无环。"
+    },
+    {
+      "file": "src/host/linearSigninWiring.ts",
+      "spec": "./linearSignin.js",
+      "resolved": "src/host/linearSignin.ts",
+      "layer": "host",
+      "count": 1,
+      "owner": "#19（Linear 登录流）",
+      "note": "接线叶子要用登录流的注册函数（registerLinearFlows），协议与网络住在 linearSignin.ts，接线与账号读取住在叶子里，两者分文件是为了让协议部分能脱离宿主离线测试。方向单向（叶子→协议件），协议件不引叶子，无环。"
     }
   ]
 }
