@@ -62,8 +62,8 @@ export interface LinearSigninDeps {
   redirectPort?: number
 }
 
-/** The port for the redirect URI `http://127.0.0.1:<port>/callback` — registered once in the Linear OAuth app. */
-export const LINEAR_REDIRECT_PORT = 48719
+/** The port for the redirect URI `http://127.0.0.1:<port>/callback`. 8791 is the one the maintainer's installed Linear OAuth app registered (2026-11-16); a different app needs a different value. */
+export const LINEAR_REDIRECT_PORT = 8791
 
 function hex(bytes: Uint8Array): string {
   let out = ''

@@ -99,14 +99,14 @@ async function main() {
     const origNotify = s.session.notify
     s.session.notify = (n: any) => { if (n.url) state.url = n.url; origNotify(n) }
     const l2 = async (_port: number) => ({ url: 'x', close: () => {}, wait: new Promise<string>((resolve) => setTimeout(() => {
-      const u = new URL(state.url as string); resolve('http://127.0.0.1:48719/callback?code=thecode&state=' + u.searchParams.get('state'))
+      const u = new URL(state.url as string); resolve('http://127.0.0.1:8791/callback?code=thecode&state=' + u.searchParams.get('state'))
     }, 5)) })
     const flow = buildLinearFlow({ alias: 'ombrello', authType: 'oauth_user' }, { fetchImpl: ff.fn, now: () => NOW, listen: l2 as any, sha256: sha })
     await flow.run(s.session)
     const authUrl = new URL(state.url as string)
     const verifier = new URLSearchParams(captured).get('code_verifier') as string
     check(authUrl.searchParams.get('code_challenge') === b64url(await sha(verifier)), 'S3 the verifier sent matches the challenge in the authorize URL')
-    check(authUrl.searchParams.get('redirect_uri') === 'http://127.0.0.1:48719/callback', 'S3 the redirect URI uses the plugin-owned port', authUrl.href)
+    check(authUrl.searchParams.get('redirect_uri') === 'http://127.0.0.1:8791/callback', 'S3 the redirect URI uses the plugin-owned port', authUrl.href)
     check(s.committed[0] && s.committed[0].payload.refreshToken === 'URT' && s.committed[0].payload.mode === 'oauth_user', 'S3 a user grant keeps its refresh token', JSON.stringify(s.committed[0]))
     void listen
   }

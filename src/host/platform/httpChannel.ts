@@ -36,6 +36,8 @@
 import type { HttpChannel, HttpRequest, HttpResponse } from '../../tracker/contract/contexts.js'
 import type { OutboundService } from '../../tracker/contract/outbound.js'
 import type { OutboundControl } from '../../tracker/contract/outbound.js'
+// 缺省总超时只有一处真源：config/timeouts.yaml 的 outboundDefaultMs（拿不到档位时的旧默认，30 秒），不在这里再抄一份数字。
+import { OUTBOUND_DEFAULT_TIMEOUT_MS } from '../../shared/time-config/src/values.js'
 
 /** fetch 的最小形状：只声明本通道用到的几格，测试替换时不必造一个完整的 Response。 */
 export interface HttpFetchLike {
@@ -57,8 +59,8 @@ export interface CreateHttpChannelOptions {
   timeoutMs?: number
 }
 
-/** 缺省总超时：与出站档位的量级一致（读 30 秒级），显式写在文件里便于一眼核对。 */
-const DEFAULT_TIMEOUT_MS = 30000
+/** 缺省总超时：接已登记的 outboundDefaultMs（与出站档位的量级一致，读 30 秒级）。 */
+const DEFAULT_TIMEOUT_MS = OUTBOUND_DEFAULT_TIMEOUT_MS
 
 /**
  * 造一份 HTTP 通道。每次调用返回新对象，但名额与冷却在 `outbound` 背后是进程级单例，
