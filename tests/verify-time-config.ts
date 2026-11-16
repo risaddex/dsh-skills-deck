@@ -78,6 +78,8 @@ interface RefRow {
 const REFERENCES: RefRow[] = [
   // —— 宿主：静态 import 生成常量（别名只改名，不改值） ——
   { file: 'src/host/versionControl.ts', access: 'RUN_TIMEOUT_MS', gen: 'VC_RUN_TIMEOUT_MS', key: 'vcRunTimeoutMs' },
+  // #19 Linear 登录：令牌提前续期的窗口，宿主登录文件直接拿生成常量，协议件只收参数、不自留数字。
+  { file: 'src/host/linearSignin.ts', access: 'LINEAR_RENEW_WINDOW_MS', gen: 'LINEAR_RENEW_WINDOW_MS', key: 'linearRenewWindowMs' },
   { file: 'src/host/versionControlCheck.ts', access: 'CHECK_CALL_BUDGET_MS', gen: 'VC_CHECK_CALL_BUDGET_MS', key: 'vcCheckCallBudgetMs' },
   { file: 'src/host/versionControlCheck.ts', access: 'LSFILES_TIMEOUT_MS', gen: 'VC_LSFILES_TIMEOUT_MS', key: 'vcLsFilesTimeoutMs' },
   { file: 'src/host/versionControlCheck.ts', access: 'REMOTE_TIMEOUT_MS', gen: 'VC_REMOTE_TIMEOUT_MS', key: 'vcRemoteTimeoutMs' },
@@ -176,6 +178,8 @@ const REFERENCES: RefRow[] = [
   { file: 'src/tracker/kernel/outbound-tiers.ts', access: 'WRITE_TIMEOUT_MS', gen: 'OUTBOUND_WRITE_TIMEOUT_MS', key: 'outboundWriteMs' },
   { file: 'src/tracker/kernel/outbound-tiers.ts', access: 'PROBE_TIMEOUT_MS', gen: 'OUTBOUND_PROBE_TIMEOUT_MS', key: 'outboundProbeMs' },
   { file: 'src/tracker/kernel/outbound-tiers.ts', access: 'DEFAULT_TIMEOUT_MS', gen: 'OUTBOUND_DEFAULT_TIMEOUT_MS', key: 'outboundDefaultMs' },
+  // #24 房间 HTTP 通道：缺省总超时与出站档位同一份旧默认，直接拿生成常量，不另抄 30000。
+  { file: 'src/host/platform/httpChannel.ts', access: 'DEFAULT_TIMEOUT_MS', gen: 'OUTBOUND_DEFAULT_TIMEOUT_MS', key: 'outboundDefaultMs' },
   { file: 'src/tracker/kernel/outbound-tiers.ts', access: 'TRANSPORT_COOLDOWN_MS', gen: 'OUTBOUND_TRANSPORT_COOLDOWN_MS', key: 'outboundTransportCooldownMs' },
   // #1007 复核补的排队上限：代码里只夹排队段，起进程之后的等待仍按本档超时。
   // #1560 起算式搬进房间与宿主共用的 kernel（outbound-tiers.ts）；#1570 起到点与迟到名额归还也由准入闸自己执行。
@@ -427,9 +431,6 @@ const EXEMPTS: ExemptRow[] = [
   { file: 'src/refresh/kernel/write-event-detection.ts', name: 'probeIntervalMs', reason: '函数内局部变量，接的是注入的 limits（上游是 PROBE_INTERVAL_MS），不是新参数' },
   // 在办表（#1082）读「宿主接线」的统一等待上限：本文件不写数字，只把注入的 deps.canonicalTimeoutMs 换个名字。
   { file: 'src/deck/shell/running-sessions.ts', name: 'timeoutMs', reason: '函数内局部变量，接的是注入的 deps.canonicalTimeoutMs（值来自 config/timeouts.yaml，已登记），不是本文件的新参数' },
-  // #24 房间的 HTTP 通道：这一次请求的预算来自契约字段 req.timeoutMs（调用方按需给），
-  // 本文件一个数字都不写 —— 没给时取 timeoutForTier(bucket)，那是 kernel 从中央时间参数读出来的档位值。
-  { file: 'src/host/platform/httpChannel.ts', name: 'timeoutMs', reason: '契约字段 req.timeoutMs（调用方给的这一次预算），缺省取 timeoutForTier（已登记的档位值），本文件不写数字' },
   // —— 别名：恒等于已登记的参数，改一边自动跟另一边，不需要第二把锁 ——
   { file: 'src/refresh/rooms/host/quota-ledger.ts', name: 'SYNC_INTERVAL_MS', reason: '别名，恒等于 QUOTA_SYNC_INTERVAL_MS（已登记），引用即跟随' },
   // —— 注入结构体的字段：值由调用方按已登记参数装进来，本文件不写数字 ——
@@ -550,6 +551,11 @@ const EXEMPTS: ExemptRow[] = [
   { file: 'src/refresh/kernel/failure-backoff.ts', name: 'delay', reason: '派生变量：backoffDelayMs(state) 算出来的本次等待时长，序列本身已登记为 chainBackoffMs' },
   { file: 'src/tracker/rooms/github/transport/client.ts', name: 'timeout', reason: '透传参数：值来自上层调用参数，本文件不决定时长（出站层的档位由 outbound-tiers.ts 定，已登记）' },
   { file: 'src/tracker/rooms/gitlab/client.ts', name: 'timeout', reason: '同上，透传参数' },
+  { file: 'src/shared/linear-signin/src/protocol.ts', name: 'expiresInMs', reason: '解析结果字段：把令牌端点回的 expires_in（秒，由对端给）换成毫秒再交出去，是单位换算后的数据，不是本文件的可调时长（#19）' },
+  { file: 'src/host/linearSignin.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#19，与 linearAccounts.ts 同一口径）' },
+  { file: 'src/host/linearSignin.ts', name: 'renewWindowMs', reason: '派生变量：缺省接已登记的 LINEAR_RENEW_WINDOW_MS，正常路径用调用方给的值（#19）' },
+  // #24 与 #13 合并后的顺序：这一次请求自带的 > 通道构造时给的 > 出站档位（timeoutForTier 从中央参数读）> 本文件已登记的 DEFAULT_TIMEOUT_MS。四层都不是本文件新写的数字。
+  { file: 'src/host/platform/httpChannel.ts', name: 'timeoutMs', reason: '透传参数与派生变量：请求自带的优先，其次通道构造时给的，再次取 timeoutForTier（已登记档位值），最后落回 DEFAULT_TIMEOUT_MS（outboundDefaultMs），都不是新的可调时长（#24、#13）' },
   { file: 'src/host/linearAccounts.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#12）' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'startedMs', reason: '读钟时刻（这趟扫描什么时候开始的），不是可调参数' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'nextWatermarkMs', reason: '算出来的下一个水位时刻，不是可调参数' },

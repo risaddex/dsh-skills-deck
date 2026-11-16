@@ -38,6 +38,8 @@ import type { HttpChannel, HttpRequest, HttpResponse } from '../../tracker/contr
 import { timeoutForTier } from '../../tracker/kernel/outbound-tiers.js'
 import type { OutboundService } from '../../tracker/contract/outbound.js'
 import type { OutboundControl } from '../../tracker/contract/outbound.js'
+// 缺省总超时只有一处真源：config/timeouts.yaml 的 outboundDefaultMs（拿不到档位时的旧默认，30 秒），不在这里再抄一份数字。
+import { OUTBOUND_DEFAULT_TIMEOUT_MS } from '../../shared/time-config/src/values.js'
 
 /** fetch 的最小形状：只声明本通道用到的几格，测试替换时不必造一个完整的 Response。 */
 export interface HttpFetchLike {
@@ -55,8 +57,12 @@ export interface CreateHttpChannelOptions {
   service?: OutboundService
   /** 测试替换用；生产就是当前运行时的全局 fetch。 */
   fetchImpl?: HttpFetchLike | null
+  /** 通道自己的缺省预算；请求没带 `timeoutMs` 时用它，仍没给就落到出站档位与已登记的总超时。 */
+  timeoutMs?: number
 }
 
+/** 缺省总超时：接已登记的 outboundDefaultMs（与出站档位的量级一致，读 30 秒级）。 */
+const DEFAULT_TIMEOUT_MS = OUTBOUND_DEFAULT_TIMEOUT_MS
 /**
  * 造一份 HTTP 通道。每次调用返回新对象，但名额与冷却在 `outbound` 背后是进程级单例，
  * 所以多处注入不会造成两套上限。
@@ -79,8 +85,14 @@ export function createHttpChannel(options: CreateHttpChannelOptions): HttpChanne
       // 名额：排满就在这里等；等待期间被取消要能认出来（交给 outbound.isCancelled 认）。
       const release = await outbound.acquire({ bucket, service, signal: req.signal })
 
-      // 调用方给了预算就用它的；没给按这一次的桶取中央档位（读 / 写 / 探活各一档，值与 gh 同源）。
-      const timeoutMs = (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) ? req.timeoutMs : timeoutForTier(bucket)
+      // 预算的顺序（PR #24 与 #13 合并时的裁决）：这一次请求自带的 > 通道构造时给的 > 这一次的桶
+      // 在中央时间参数里的档位值（读 / 写 / 探活各一档，与 gh 同源）> 已登记的缺省总超时。
+      // 四层都写下来，是因为两个来源各有各的道理：调用方最清楚这一趟要等多久，档位值是中央口径，
+      // 缺省总超时是最后兜底 —— 少写一层就会让某一处调用方悄悄落回 30 秒而没有任何解释。
+      const askedMs = (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) ? req.timeoutMs : 0
+      const channelMs = (typeof options.timeoutMs === 'number' && options.timeoutMs > 0) ? options.timeoutMs : 0
+      const tierMs = timeoutForTier(bucket)
+      const timeoutMs = askedMs || channelMs || (tierMs > 0 ? tierMs : DEFAULT_TIMEOUT_MS)
       const controller = new AbortController()
       let timedOut = false
       const onCallerAbort = (): void => { try { controller.abort() } catch { /* 已经中止过 */ } }
