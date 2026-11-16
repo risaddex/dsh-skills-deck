@@ -22,7 +22,7 @@ import { DECK_ASSEMBLY_TIMEOUT_MS as CENTRAL_DECK_ASSEMBLY_TIMEOUT_MS, DECK_LOCA
 // #1159 出站控制面（createOutboundControl，与平台通道那一处同源的两处注入点之一）。
 import { createFilePlanStore, planCursorDir } from '../../deck/shell/plan-cursor.js'
 import { hostTimers } from '../contract/host-timer-ports.js'
-import { createOutboundControl } from '../rooms/host/outbound-control.js'
+import { createHttpChannel, createOutboundControl } from '../rooms/host/room-host-services.js'
 import { publishDeckTable, noteDeckGate } from '../../deck/shell/table-cell.js'
 import { createSandboxPolicyFor } from '../../deck/registration/sandbox-guard.js'
 import { parseWorkspaceFile, WORKSPACE_FILE_REL } from '../../deck/shell/workspace-anchor.js'
@@ -348,6 +348,8 @@ export function createDeckToolBridge(deps: any): any {
           // #1159：出站控制面（进程级能力，随这份后端上下文注入一次）。房间起 gh 命令前拿名额、
           // 认取消、写完记账都从这里取；缺了房间按环境失败返回，不静默绕过名额闸。
           outbound: createOutboundControl(logCtx),
+          // #24：http 与 outbound 共用同一个名额闸（背后同一份进程级单例，取两份不会造成两套上限）。
+          http: createHttpChannel({ outbound: createOutboundControl(logCtx) }),
         }
         /**
          * #1150：批量建图的计划游标存储器，按这一次调用的工作区现造一份落盘的。

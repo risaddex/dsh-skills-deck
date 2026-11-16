@@ -9,7 +9,7 @@
  * #1159 起多引一件同层的 outbound.ts（出站控制面的形状）：仍是契约内部，仍然只有类型。
  */
 
-import type { OutboundControl } from './outbound.js'
+import type { OutboundBucket, OutboundControl, OutboundService } from './outbound.js'
 import type { ReadSpendChannel } from './operations-encyclopedia.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,6 +166,65 @@ export interface BackendContext {
    * **必填**：缺了就是接线漏了一处，房间会按环境失败大声报出来（理由见 outbound.ts 末尾一节）。
    */
   outbound: OutboundControl
+  /**
+   * HTTP 通道：房间发一次 HTTPS 请求的唯一合法出口（#24 的决定）。
+   *
+   * 为什么要有这一格：房间不许直接用全局 `fetch`（本节开头那句），而 Linear 没有命令行工具，
+   * `exec` 那条路对它不成立 —— 一等后端里出现了「想发一个请求，没有任何合法通道」的空档。
+   * 这一格把空档补上，而不是给那间房开一个例外。
+   *
+   * 为什么它必须经过出站控制面：`http.request` 的实现自己拿名额（`ctx.outbound.acquire`）、
+   * 自己上报通路失败、自己在写成功时记搭车账。房间只给「这是一次读还是写」和要发的内容，
+   * 不自己管并发、冷却或取消。若让房间自己拿名额，不同房间迟早用不同的方式拿，
+   * 名额闸就退化成建议 —— 那正是 outbound.ts 末尾一节说「不许静默直通」的意思。
+   *
+   * 失败怎么回：传输层失败（连不上、超时、被杀）**抛错**，不是返回一个假状态码；
+   * 拿到任何 HTTP 响应（含 4xx/5xx 与 GraphQL 常见的 200-with-errors）就是成功返回，
+   * 由房间按自己的协议解读。这个分界与 `exec` 一致：起不来是异常，跑起来有退出码就是回话。
+   *
+   * **必填**：与 `outbound` 同一条理由 —— 缺了就是接线漏了一处，房间大声失败，不静默绕过。
+   */
+  http: HttpChannel
+}
+
+/**
+ * 一次出站 HTTP 请求。字段是「发给远端的那几件事」，不是某个后端的私有习惯。
+ */
+export interface HttpRequest {
+  /** 请求方法，缺省 GET。 */
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  /** 完整地址，必须带协议（http/https）。 */
+  url: string
+  /** 请求头。凭据由调用方放进来；通道不读、不记、不改写它们。 */
+  headers?: Record<string, string>
+  /** 请求体（字符串）。JSON 由调用方自己序列化，通道不猜内容类型。 */
+  body?: string
+  /** 这一次算读还是写：决定出站桶与冷却档。缺省 read。 */
+  bucket?: OutboundBucket
+  /** 通路口径，缺省用调用方注入时约定的那条；房间一般不用给。 */
+  service?: OutboundService
+  /** 这一次的总超时（毫秒）。缺省由通道自己的档位配置决定。 */
+  timeoutMs?: number
+  /** 调用方放弃时中止。中止按取消处理，不算通路失败。 */
+  signal?: AbortSignal
+}
+
+/**
+ * 一次出站 HTTP 响应。**只有拿到响应才有它**，传输层失败是抛错。
+ */
+export interface HttpResponse {
+  status: number
+  /** 响应头，键名小写。 */
+  headers: Record<string, string>
+  /** 响应体文本；二进制用法不在这一版的范围内。 */
+  body: string
+}
+
+/**
+ * HTTP 通道的形状。通道是**进程级**能力（并发上限全进程一份），由宿主注入一次。
+ */
+export interface HttpChannel {
+  request(req: HttpRequest): Promise<HttpResponse>
 }
 
 /**

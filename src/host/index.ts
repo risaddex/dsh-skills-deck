@@ -363,6 +363,8 @@ export default {
     // 轮询已按 #348 Q3 关闭（60s 全量贴配额上限）：纯手动刷新 + 打开面板即刷，自动待 P1 再议。命名守护按 #709（T5）改事件驱动，
     // 下面这一次只做一次性铺垫（预热跟踪态、把攒下的脏账落盘），此后每一跳都由事件带起来，宿主侧没有自续定时器（由门禁守着）。缘由见账本 §8。
     _naming().then(function (h: any){ try { h.startNamingGuardianEvents() } catch (eEvents) {} }).catch(function(){})
+    // #19：把 Linear 登录流挂到授权缝上。动态 import（D7 禁静态），整段失败只是没有登录流——账号读作 needs_auth，不影响任何 deck 工具。
+    ;(async function () { try { const pl: any = await getPlatform(); const home = await pl.getHome(); const wiring: any = await import('./linearSigninWiring.js'); await wiring.wireLinearSignin({ ctx: ctx, homeDir: home, io: wiring.nodeFileIo(), env: function (n: string) { try { return pl.env && pl.env.get ? pl.env.get(n) : undefined } catch (eE) { return undefined } } }) } catch (eL) { try { fireLog('warn', 'host.dispatch.error', { method: 'linear sign-in flows', argsHash: '', errorKind: 'internal' }) } catch (eR) {} } })()
     // ---- RPC 通道注册（#596 换到 /api 载体，细节见 ./rpcChannel.js，这里只递端点表与日志函数）---- 这里那个 catch 只兜「本文件加载 rpcChannel.js 失败」；通道注册失败由 rpcChannel.js 自己记账。
     let _rpcChannelP: Promise<any> | null = null
     function _rpcChannel(): Promise<any> { if (!_rpcChannelP) _rpcChannelP = import('./rpcChannel.js'); return _rpcChannelP }
