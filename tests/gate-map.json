@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T20:17:30.361Z",
+  "generatedAt": "2026-11-16T21:19:27.107Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 605,
   "gateCount": 605,
@@ -10,7 +10,7 @@
   "completionRecordedGates": 144,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 964,
+  "graphFileCount": 967,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -548,20 +548,17 @@
       "step": "node tests/verify-deck-repo-resolve.ts",
       "file": "tests/verify-deck-repo-resolve.ts",
       "guards": [
-        "src/deck/tools/tracker-session.ts",
-        "src/tracker/rooms/github/room/backend.ts",
-        "tests/lib/deck-decide-stub.ts"
+        "src/deck/tools/deck-default-admit.ts",
+        "src/deck/tools/identity-resolve.ts"
       ],
       "dirs": [
-        "src/deck/tools",
-        "src/tracker/rooms/github/room",
-        "tests/lib"
+        "src/deck/tools"
       ],
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 2 条"
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
     },
     {
       "step": "node tests/verify-deck-slots.ts",
@@ -3355,16 +3352,18 @@
       "step": "node tests/verify-1465-detail-refid.ts",
       "file": "tests/verify-1465-detail-refid.ts",
       "guards": [
-        "src/refresh/rooms/host/comment-thread-fetch.ts"
+        "src/refresh/rooms/host/comment-thread-fetch.ts",
+        "src/tracker/rooms/github/model/issue-key.ts"
       ],
       "dirs": [
-        "src/refresh/rooms/host"
+        "src/refresh/rooms/host",
+        "src/tracker/rooms/github/model"
       ],
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：源码里的路径字面量 1 条"
+      "reason": "归属来自：源码里的路径字面量 2 条"
     },
     {
       "step": "node tests/verify-1472-write-event-fetch.ts",
@@ -4205,6 +4204,7 @@
       "guards": [
         "src/deck/tools/tracker-session.ts",
         "src/refresh/rooms/host/session-opener.ts",
+        "src/tracker/session/repo-ref-note.ts",
         "src/tracker/session/repo-ref.ts"
       ],
       "dirs": [
@@ -4216,7 +4216,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自 文件头 // 门禁归属: 注释（共 3 条）"
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
       "step": "node tests/verify-1584-repo-ref-for-cwd.ts",
@@ -16080,6 +16080,7 @@
       "node tests/verify-1286-snapshot.ts",
       "node tests/verify-1443-static-gate.ts",
       "node tests/verify-1453-repo-locate-via-session.ts",
+      "node tests/verify-1465-detail-refid.ts",
       "node tests/verify-1830-list-label-honesty.ts",
       "node tests/verify-504-github-pr.ts",
       "node tests/verify-507-pr-offline.ts",
@@ -16121,7 +16122,6 @@
     ],
     "src/tracker/rooms/github/room": [
       "node tests/verify-chain-renderer.ts",
-      "node tests/verify-deck-repo-resolve.ts",
       "node tests/verify-deck-slots.ts",
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-1223-catalog-runtime-parity.ts",
@@ -16496,7 +16496,6 @@
       "node tests/verify-chain-renderer.ts",
       "node tests/verify-deck-no-hang.ts",
       "node tests/verify-deck-parallel.ts",
-      "node tests/verify-deck-repo-resolve.ts",
       "node tests/verify-deck-slots.ts",
       "node tests/verify-deck-thin-reads.ts",
       "node tests/verify-deck-tools-matrix.ts",
@@ -16700,9 +16699,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 987,
+    "fileCount": 990,
     "dirCount": 103,
-    "coveredFileCount": 987,
+    "coveredFileCount": 990,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 80,
@@ -17062,6 +17061,8 @@
       "src/deck/shell/write-mutex.ts",
       "src/deck/tools/assignee-note.ts",
       "src/deck/tools/context.ts",
+      "src/deck/tools/deck-default-admit.ts",
+      "src/deck/tools/identity-resolve.ts",
       "src/deck/tools/issue-create-failure.ts",
       "src/deck/tools/issue-create-parts.ts",
       "src/deck/tools/issue-create.ts",
@@ -17642,6 +17643,7 @@
       "src/tracker/session/interceptors.ts",
       "src/tracker/session/open-tracker.ts",
       "src/tracker/session/pipeline.ts",
+      "src/tracker/session/repo-ref-note.ts",
       "src/tracker/session/repo-ref.ts",
       "src/tracker/tsconfig.json",
       "src/tracker/ui-description.ts",

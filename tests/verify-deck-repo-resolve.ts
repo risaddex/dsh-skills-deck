@@ -1,5 +1,7 @@
 // verify-deck-repo-resolve.ts —— 门禁：仓库标识补全（#758）
 // 用法：在插件根目录执行 node tests/verify-deck-repo-resolve.ts，可独立运行。
+// 门禁归属: src/deck/tools/identity-resolve.ts
+// 门禁归属: src/deck/tools/deck-default-admit.ts
 // 写法保持 require 风格：require 与 __dirname 照 CommonJS 形态工作，类型只做标注（与 tests/verify-leaves.ts 同形）；
 // 行为与改名前一字不差。
 //

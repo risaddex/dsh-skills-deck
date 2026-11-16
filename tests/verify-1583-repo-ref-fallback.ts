@@ -18,6 +18,7 @@
  * 运行：node --import ./scripts/ts-hook.mts tests/verify-1583-repo-ref-fallback.ts
  *
  * 门禁归属: src/tracker/session/repo-ref.ts
+ * 门禁归属: src/tracker/session/repo-ref-note.ts
  * 门禁归属: src/refresh/rooms/host/session-opener.ts
  * 门禁归属: src/deck/tools/tracker-session.ts
  */
