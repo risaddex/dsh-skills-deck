@@ -20,6 +20,9 @@
 import { parse as parseYaml } from 'yaml'
 import { parseLabelColors, stringifyLabelColors, LABEL_COLORS_JSON_REL, LABEL_COLORS_YAML_REL } from '../shared/config-store/src/labels.js'
 import { parseSettings, stringifySettings, SETTINGS_REL_SEGMENTS } from '../shared/config-store/src/settings.js'
+// #12: Linear account metadata is user data of its own (never a secret), kept in a file beside the
+// local settings for the reasons written at the top of that unit.
+import { parseLinearAccounts, stringifyLinearAccounts, LINEAR_ACCOUNTS_REL_SEGMENTS } from '../shared/config-store/src/linear-accounts.js'
 import { parseWorkspace, stringifyWorkspace, WORKSPACE_JSON_REL, WORKSPACE_YAML_REL } from '../shared/config-store/src/workspace.js'
 // 布局取值的唯一真源（#1342）：核不自己留字面量，由调用方把名单传进去。
 import { DOC_LAYOUT_VALUES } from '../shared/doc-layout/src/layouts.js'
@@ -34,6 +37,11 @@ function joinRoot(root: any, rel: any): string {
 /** 用户主目录 → 本机设置文件的绝对路径。 */
 function settingsPath(homeDir: any): string {
   return String(homeDir || '').replace(/[\\/]+$/, '') + '/' + SETTINGS_REL_SEGMENTS.join('/')
+}
+
+/** 用户主目录 → Linear 账号文件的绝对路径（#12）。 */
+function linearAccountsPath(homeDir: any): string {
+  return String(homeDir || '').replace(/[\\/]+$/, '') + '/' + LINEAR_ACCOUNTS_REL_SEGMENTS.join('/')
 }
 
 /** 这次读到的上一级目录（写之前建它，免得目录不在写失败）。 */
@@ -94,7 +102,7 @@ function countAliases(text: any): number {
  * 老的 `.json` 是 YAML 的子集，直接可读，不用区分。
  */
 export function parseConfig(text: any, schema: any): any {
-  if (schema !== 'workspace' && schema !== 'settings' && schema !== 'label-colors') {
+  if (schema !== 'workspace' && schema !== 'settings' && schema !== 'label-colors' && schema !== 'linear-accounts') {
     return { ok: false, reason: 'bad-shape', message: 'The core does not recognise this schema: ' + String(schema) }
   }
   if (typeof text !== 'string') return { ok: false, reason: 'bad-shape', message: 'The input to parse is not text' }
@@ -118,6 +126,9 @@ export function parseConfig(text: any, schema: any): any {
   }
   if (schema === 'workspace') return parseWorkspace(doc, DOC_LAYOUT_VALUES)
   if (schema === 'settings') return parseSettings(doc)
+  // #12: the account file carries dates (expired previous aliases), so the parse is given today's
+  // date rather than reading the clock itself — the core stays a pure function of its inputs.
+  if (schema === 'linear-accounts') return parseLinearAccounts(doc, new Date().toISOString().slice(0, 10))
   return parseLabelColors(doc)
 }
 
@@ -126,6 +137,7 @@ export function stringifyConfig(value: any, schema: any): any {
   if (schema === 'workspace') return stringifyWorkspace(value, DOC_LAYOUT_VALUES)
   if (schema === 'settings') return stringifySettings(value)
   if (schema === 'label-colors') return stringifyLabelColors(value)
+  if (schema === 'linear-accounts') return stringifyLinearAccounts(value)
   return { ok: false, reason: 'bad-shape', message: 'The core does not recognise this schema: ' + String(schema) }
 }
 

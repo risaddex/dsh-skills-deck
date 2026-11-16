@@ -1432,6 +1432,15 @@
       "count": 1,
       "owner": "#1903（历史页四条能力）",
       "note": "装配扇入：备注的预检与执行共用一个业务叶子（票表与 requestId 结果表都在它自己的闭包里），外壳只在第一次拨电话时动态载入它，载入失败回明确失败信封；叶子不引用外壳。"
+    },
+    {
+      "file": "src/shared/config-store/src/linear-accounts.ts",
+      "spec": "./ports.js",
+      "resolved": "src/shared/config-store/src/ports.ts",
+      "layer": "shared",
+      "count": 1,
+      "owner": "#12（Linear 账号元数据文件）",
+      "note": "同层互引的第四条同性质边：账号文件的校验与拼装引同目录的 ports.ts 类型（settings / labels / workspace 三条已记名）。只引类型，两处 import 都是 import type，转译后不留引用；不引这条就得把端口形状抄第二份。"
     }
   ]
 }

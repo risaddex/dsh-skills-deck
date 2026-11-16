@@ -10,7 +10,7 @@
 export const PORTS_SOURCE = 'src/shared/config-store/src/ports.ts'
 
 /** 核认识的三种文件：工作区后端配置、本机全局设置、标签配色数据。 */
-export type SchemaId = 'workspace' | 'settings' | 'label-colors'
+export type SchemaId = 'workspace' | 'settings' | 'label-colors' | 'linear-accounts'
 
 /** 解析失败的档位：每一档都有固定含义，调用方按档位给用户不同的说法。 */
 export type ParseFailReason =
