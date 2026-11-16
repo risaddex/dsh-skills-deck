@@ -155,6 +155,8 @@ console.log('丁）三条执行器的端到端（临时夹具仓库）')
   copy('scripts/verify-all.mts')
   copy('scripts/verify-parallel.mts')
   copy('scripts/lib/discover-gates.ts')
+  copy('scripts/lib/known-reds.mts')
+  copy('tests/known-reds.json')
   // 夹具约定：单默认段；冒烟专用的 gate-s 排除出主链（它只走冒烟那条路）。
   fs.mkdirSync(path.join(tmpRoot, 'scripts'), { recursive: true })
   fs.writeFileSync(
