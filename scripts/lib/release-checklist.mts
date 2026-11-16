@@ -79,11 +79,11 @@ export function ghText(args: string[]): string {
     maxBuffer: 32 * 1024 * 1024,
   })
   if (result.error) {
-    throw new ReleaseEnvError('起不来 gh 命令（' + result.error.message + '）。发布检查需要 GitHub CLI，先确认 gh 已安装并在 PATH 上。', 2)
+    throw new ReleaseEnvError('Cannot start the gh command (' + result.error.message + '). The release check needs the GitHub CLI; confirm gh is installed and on PATH.', 2)
   }
   if (result.status !== 0) {
     const tail = String(result.stderr || result.stdout || '').trim()
-    throw new ReleaseEnvError('gh ' + args.join(' ') + ' 失败（exit ' + result.status + '）：' + tail, 2)
+    throw new ReleaseEnvError('gh ' + args.join(' ') + ' failed (exit ' + result.status + '): ' + tail, 2)
   }
   return String(result.stdout || '')
 }
@@ -106,10 +106,10 @@ export function listChecklistIssues(): ChecklistIssue[] {
   try {
     parsed = JSON.parse(raw)
   } catch (error) {
-    throw new ReleaseEnvError('gh 返回的清单票列表不是合法 JSON：' + String(error), 2)
+    throw new ReleaseEnvError('The checklist ticket list returned by gh is not valid JSON: ' + String(error), 2)
   }
   if (!Array.isArray(parsed)) {
-    throw new ReleaseEnvError('gh 返回的清单票列表不是数组，无法判断清单票状态。', 2)
+    throw new ReleaseEnvError('The checklist ticket list returned by gh is not an array, so the checklist ticket state cannot be determined.', 2)
   }
   const issues: ChecklistIssue[] = []
   for (const item of parsed) {
@@ -151,10 +151,10 @@ export function listIssueComments(issueNumber: number): ChecklistComment[] {
   try {
     parsed = JSON.parse(raw)
   } catch (error) {
-    throw new ReleaseEnvError('gh 返回的评论列表不是合法 JSON：' + String(error), 2)
+    throw new ReleaseEnvError('The comment list returned by gh is not valid JSON: ' + String(error), 2)
   }
   if (!Array.isArray(parsed)) {
-    throw new ReleaseEnvError('gh 返回的评论列表不是数组，无法核对清单票的记录。', 2)
+    throw new ReleaseEnvError('The comment list returned by gh is not an array, so the checklist ticket records cannot be checked.', 2)
   }
   // --slurp 的输出是「每一页一个数组」套在外层数组里；只有一页时同样是 [[...]]，逐页摊平即可。
   const items: unknown[] = []
@@ -178,17 +178,17 @@ export function listIssueComments(issueNumber: number): ChecklistComment[] {
 export function readPackageVersion(): string {
   const pkgPath = path.join(REPO_ROOT, 'package.json')
   if (!existsSync(pkgPath)) {
-    throw new ReleaseEnvError('找不到 ' + pkgPath + '，无法确定本版版本号。', 2)
+    throw new ReleaseEnvError('Cannot find ' + pkgPath + ', so the version of this release cannot be determined.', 2)
   }
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(pkgPath, 'utf8'))
   } catch (error) {
-    throw new ReleaseEnvError('读不懂 ' + pkgPath + '：' + String(error), 2)
+    throw new ReleaseEnvError('Cannot parse ' + pkgPath + ': ' + String(error), 2)
   }
   const version = normalizeVersion(String((parsed as Record<string, unknown>).version || ''))
   if (!version) {
-    throw new ReleaseEnvError(pkgPath + ' 里没有 version 字段，无法确定本版版本号。', 2)
+    throw new ReleaseEnvError(pkgPath + ' has no version field, so the version of this release cannot be determined.', 2)
   }
   return version
 }
@@ -197,13 +197,13 @@ export function readPackageVersion(): string {
 export function extractChecklistTemplateBody(): string {
   const templatePath = path.join(REPO_ROOT, TEMPLATE_REL)
   if (!existsSync(templatePath)) {
-    throw new ReleaseEnvError('找不到清单票正文模板 ' + templatePath + '。', 2)
+    throw new ReleaseEnvError('Cannot find the checklist ticket body template ' + templatePath + '.', 2)
   }
   const text = readFileSync(templatePath, 'utf8')
   const start = text.indexOf(TEMPLATE_START)
   const end = text.indexOf(TEMPLATE_END)
   if (start < 0 || end < 0 || end <= start) {
-    throw new ReleaseEnvError('模板 ' + templatePath + ' 里找不到 ' + TEMPLATE_START + ' / ' + TEMPLATE_END + ' 两枚标记。', 2)
+    throw new ReleaseEnvError('Template ' + templatePath + ' does not contain both markers ' + TEMPLATE_START + ' and ' + TEMPLATE_END + '.', 2)
   }
   return text.slice(start + TEMPLATE_START.length, end).trim()
 }

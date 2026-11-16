@@ -88,6 +88,7 @@ const KEYS: Array<[string, string, string]> = [
   ['gitlabReadMs', 'GITLAB_READ_TIMEOUT_MS', 'timeouts'],
   ['gitlabSlowReadMs', 'GITLAB_SLOW_READ_TIMEOUT_MS', 'timeouts'],
   ['gitlabProbeMs', 'GITLAB_PROBE_TIMEOUT_MS', 'timeouts'],
+  ['linearProbeMs', 'LINEAR_PROBE_TIMEOUT_MS', 'timeouts'],
   ['gitlabRepoGitMs', 'GITLAB_REPO_GIT_TIMEOUT_MS', 'timeouts'],
   ['gitlabFallbackMs', 'GITLAB_FALLBACK_TIMEOUT_MS', 'timeouts'],
   ['gitlabCreateProjectMs', 'GITLAB_CREATE_PROJECT_TIMEOUT_MS', 'timeouts'],

@@ -257,7 +257,9 @@ Run `node scripts/release-dist.mts` from the repository root for a dry run. It b
 
 Only after verification and explicit release approval, run `node scripts/release-dist.mts --push`. It updates local `dist`, creates the annotated `dist/v<version>` tag, pushes both, and uses the operator's authenticated `gh` CLI to send `skills-deck-dist-tag` to `repos/risaddex/dsh-plugins/dispatches`. No dispatch secret belongs in this repository. The old tag-triggered notification workflow was removed because the packed dist tree does not contain workflows.
 
-Push mode refuses an existing tag. Fetch the latest dist branch first and never force-push it. If push or dispatch fails, inspect remote refs before retrying; if only dispatch failed after a successful push, send the same `gh api` dispatch for that tag instead of rerunning the release. This script never publishes to npm.
+The tracked source tree must be clean before building, after building, and after packing; HEAD must remain unchanged. Push mode also requires a complete green `node_modules/.cache/dsh-verify-last.json` report for that exact HEAD, including all smoke steps. The historical known-red register is informational, not permission to release future failures. The forced build prevents reuse of outputs from another source tree.
+
+Push mode refuses an existing tag. Fetch the latest dist branch first and never force-push it. Branch and tag are pushed atomically; a rejected push sends no notification. If dispatch fails after a successful push, run `node scripts/release-dist.mts --notify-only dist/v<version>`. This mode does not build, move refs, or push: it first verifies that both the remote annotated tag object SHA and its peeled commit SHA match the local tag, then retries only the notification. A mismatch refuses notification. Inspect remote refs after any failure rather than recreating tags. This script never publishes to npm.
 
 ## 附：修订记录
 

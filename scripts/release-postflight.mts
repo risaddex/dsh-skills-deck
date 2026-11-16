@@ -77,7 +77,7 @@ function parseArgs(argv: string[]): Options | null {
     const arg = argv[index]
     if (arg === '--version' || arg === '--evidence') {
       const value = argv[index + 1]
-      if (!value) throw new Error(arg + ' 后面缺值。')
+      if (!value) throw new Error(arg + ' is missing its value.')
       if (arg === '--version') options.version = value
       else options.evidencePath = value
       index += 1
@@ -86,7 +86,7 @@ function parseArgs(argv: string[]): Options | null {
       // 免得靠一个只有本文件知道的异常字符串当控制流。
       return null
     } else {
-      throw new Error('不认识的参数：' + arg)
+      throw new Error('Unknown argument: ' + arg)
     }
   }
   return options
@@ -106,9 +106,9 @@ export function buildPublishRecordLines(input: PublishRecordInput): string[] {
   const lines: string[] = [
     '## 发布记录',
     '',
-    '- 发布版本：v' + version,
-    '- 发布时间：' + localIso(input.now),
-    '- 发布说明：见 CHANGELOG.md 的「v' + version + '」一节',
+    '- Released version: v' + version,
+    '- Release time: ' + localIso(input.now),
+    '- Release notes: see the "v' + version + '" section of CHANGELOG.md',
   ]
   const evidence = input.evidence
   if (evidence && evidence.packages.length > 0) {
@@ -125,7 +125,7 @@ export function buildPublishRecordLines(input: PublishRecordInput): string[] {
     lines.push('- 发布包逐文件清单：（这次没有机器对账证据：发布脚本未产出，或没有走完「发布→拉回→比对」的包）')
   }
   lines.push('- 下一版清单票：' + (input.nextIssueNumber ? '#' + input.nextIssueNumber : '（这次没建出来，发布前检查会拦下一版）'))
-  lines.push('', '本版已发布。安装由用户侧完成：市场升级、软件内升级，或自己执行安装命令。', '本票继续保持关闭；下一版的真机验证场景请登记到下一版清单票。')
+  lines.push('', 'This version is published. Installing is done on the user side: marketplace upgrade, in-app upgrade, or running the install command yourself.', 'This ticket stays closed; register real-machine verification scenarios for the next version on the next version checklist ticket.')
   return lines
 }
 
@@ -140,21 +140,21 @@ function readEvidenceFile(filePath: string): PublishEvidence {
   try {
     text = readFileSync(filePath, 'utf8')
   } catch (error) {
-    throw new Error('读不到 --evidence 指向的文件「' + filePath + '」：' + String(error))
+    throw new Error('Cannot read the file pointed to by --evidence ("' + filePath + '"): ' + String(error))
   }
   let parsed: any
   try {
     parsed = JSON.parse(text)
   } catch (error) {
-    throw new Error('--evidence 文件「' + filePath + '」不是合法 JSON：' + String(error))
+    throw new Error('The --evidence file ("' + filePath + '") is not valid JSON: ' + String(error))
   }
-  if (!parsed || typeof parsed !== 'object') throw new Error('--evidence 文件「' + filePath + '」不是对象。')
-  if (typeof parsed.version !== 'string' || parsed.version === '') throw new Error('--evidence 文件缺 version 字段。')
-  if (!Array.isArray(parsed.packages)) throw new Error('--evidence 文件缺 packages 数组。')
+  if (!parsed || typeof parsed !== 'object') throw new Error('The --evidence file ("' + filePath + '") is not an object.')
+  if (typeof parsed.version !== 'string' || parsed.version === '') throw new Error('The --evidence file is missing the version field.')
+  if (!Array.isArray(parsed.packages)) throw new Error('The --evidence file is missing the packages array.')
   const packages: PublishEvidencePackage[] = []
   for (const raw of parsed.packages) {
     if (!raw || typeof raw.name !== 'string' || typeof raw.version !== 'string') {
-      throw new Error('--evidence 文件里有一个包缺 name/version。')
+      throw new Error('A package in the --evidence file is missing name/version.')
     }
     packages.push({
       name: raw.name,
@@ -201,16 +201,16 @@ function createIssue(title: string, body: string): Issue | null {
   try {
     output = ghText(['issue', 'create', '--title', title, '--body', body])
   } catch (error) {
-    fail('建下一版占位清单票失败：' + (error instanceof ReleaseEnvError ? error.message : String(error)))
+    fail('Failed to create the next version placeholder checklist ticket: ' + (error instanceof ReleaseEnvError ? error.message : String(error)))
     return null
   }
   const number = issueNumberFromUrl(output)
   const url = String(output || '').trim().split(/\s+/).pop() || ''
   if (!number) {
-    fail('建票命令返回了看不懂的输出，票可能已经建出来，请人工确认：' + String(output || '').trim())
+    fail('The issue create command returned output that could not be parsed; the ticket may already exist, please confirm manually: ' + String(output || '').trim())
     return null
   }
-  ok('建好下一版占位清单票 #' + number + '「' + title + '」' + (url ? ' ' + url : ''))
+  ok('Created the next version placeholder checklist ticket #' + number + ' "' + title + '"' + (url ? ' ' + url : ''))
   return { number, title, state: 'OPEN', url }
 }
 
@@ -219,7 +219,7 @@ function main(): void {
   try {
     const parsed = parseArgs(process.argv.slice(2))
     if (parsed === null) {
-      console.log('用法：node scripts/release-postflight.mts [--version <版本号>] [--evidence <发布证据文件>]')
+      console.log('Usage: node scripts/release-postflight.mts [--version <version>] [--evidence <release evidence file>]')
       process.exit(0)
     }
     options = parsed
@@ -237,10 +237,10 @@ function main(): void {
   }
   const versionNumber = String(version).trim().replace(/^[vV]/, '')
   if (!versionNumber) {
-    fail('版本号为空：用 --version 指定，或确认 package.json 里有 version。')
+    fail('The version is empty: pass --version, or confirm package.json has a version.')
     process.exit(1)
   }
-  info('刚发布的版本：' + versionNumber)
+  info('Version just published: ' + versionNumber)
 
   let evidence: PublishEvidence | null = null
   if (options.evidencePath) {
@@ -251,15 +251,15 @@ function main(): void {
       process.exit(1)
     }
     if (evidence.version.trim().replace(/^[vV]/, '') !== versionNumber) {
-      fail('--evidence 里的版本是 ' + evidence.version + '，与这次发布的 ' + versionNumber + ' 不一致。')
+      fail('The version in --evidence is ' + evidence.version + ', which does not match the version being published (' + versionNumber + ').')
       process.exit(1)
     }
     info(
-      '发布证据：' + evidence.packages.length + ' 个包，dist-tag latest=' + (evidence.tags.latest || '（缺）') +
-        '，beta=' + (evidence.tags.beta || '（缺）'),
+      'Release evidence: ' + evidence.packages.length + ' packages, dist-tag latest=' + (evidence.tags.latest || '(missing)') +
+        ', beta=' + (evidence.tags.beta || '(missing)'),
     )
   } else {
-    info('没有给 --evidence：发布记录里不写逐文件清单与 dist-tag 指向（五仓同步的旧协议行为）。')
+    info('No --evidence given: the release record will not include the per-file manifest or dist-tag targets (legacy behavior of the five-repo sync).')
   }
 
   let issues: Issue[] = []
@@ -275,14 +275,14 @@ function main(): void {
 
   let nextIssue: Issue | null = placeholders.length > 0 ? placeholders[0] : null
   if (nextIssue) {
-    info('下一版占位清单票已经存在：#' + nextIssue.number + '「' + normalizeTitle(nextIssue.title) + '」')
+    info('The next version placeholder checklist ticket already exists: #' + nextIssue.number + ' "' + normalizeTitle(nextIssue.title) + '"')
   } else {
     const placeholderTitle = TITLE_PREFIX + ' ' + PLACEHOLDER_WORD + '（自 v' + versionNumber + ' 之后）'
     let body = ''
     try {
       body = fillChecklistTemplate(extractChecklistTemplateBody(), '待定（发布准备时确定并改标题）', versionNumber)
     } catch (error) {
-      fail('读清单票正文模板失败：' + (error instanceof ReleaseEnvError ? error.message : String(error)))
+      fail('Failed to read the checklist ticket body template: ' + (error instanceof ReleaseEnvError ? error.message : String(error)))
     }
     if (body) {
       nextIssue = createIssue(placeholderTitle, body)
@@ -290,13 +290,13 @@ function main(): void {
   }
 
   if (exact.length === 0) {
-    fail('没找到标题为「' + TITLE_PREFIX + ' ' + versionNumber + '」的清单票，这次发布没有清单票可补记录。下一版占位票已经处理完。')
+    fail('No checklist ticket titled "' + TITLE_PREFIX + ' ' + versionNumber + '" was found, so there is no checklist ticket to add the release record to. The next version placeholder ticket is already handled.')
     process.exit(failed ? 1 : 0)
   }
   if (exact.length > 1) {
     fail(
-      '标题为「' + TITLE_PREFIX + ' ' + versionNumber + '」的清单票有 ' + exact.length + ' 张，无法确定补哪一张：' +
-        exact.map((issue) => '#' + issue.number).join('、') + '。',
+      'There are ' + exact.length + ' checklist tickets titled "' + TITLE_PREFIX + ' ' + versionNumber + '", so it is unclear which one to update: ' +
+        exact.map((issue) => '#' + issue.number).join(', ') + '.',
     )
     process.exit(1)
   }
@@ -311,10 +311,10 @@ function main(): void {
   try {
     ghText(['issue', 'comment', String(issue.number), '--body', lines.join('\n')])
   } catch (error) {
-    fail('给清单票 #' + issue.number + ' 补发布记录失败：' + (error instanceof ReleaseEnvError ? error.message : String(error)))
+    fail('Failed to add the release record to checklist ticket #' + issue.number + ': ' + (error instanceof ReleaseEnvError ? error.message : String(error)))
     process.exit(1)
   }
-  ok('已给清单票 #' + issue.number + '「' + normalizeTitle(issue.title) + '」补发布记录')
+  ok('Added the release record to checklist ticket #' + issue.number + ' "' + normalizeTitle(issue.title) + '"')
   process.exit(failed ? 1 : 0)
 }
 

@@ -272,7 +272,7 @@ function parseOverview(section: BodySection): OverviewResult {
     const statusText = stripMarkup(cells[columns.status] || '')
     const status = classifyStatus(statusText)
     if (!status) {
-      result.malformed.push({ line, text: statusText || '（空）' })
+      result.malformed.push({ line, text: statusText || '(empty)' })
       continue
     }
     result.rows.push({ id: first, source: stripMarkup(cells[columns.source] || ''), status, statusText, line })
@@ -507,8 +507,8 @@ function collectSlashCountFindings(sources: CountSource[], counts: StatusCounts)
       if (expected === null || expected === pair.count) continue
       findings.push({
         code: 'release-count-mismatch',
-        message: '发布计数对不上：' + source.where + '写「' + pair.status + ' ' + pair.count + '」，按场景总览表统计应为 ' + expected + '。',
-        fix: '按总览表重新统计通过/失败/豁免（已验证并入通过），' + source.fixTail,
+        message: 'Release count mismatch: ' + source.where + ' says "' + pair.status + ' ' + pair.count + '", but the scenario overview table gives ' + expected + '.',
+        fix: 'Recount passed/failed/exempted from the overview table (已验证 counts as 通过), then ' + source.fixTail,
       })
     }
   }
@@ -531,8 +531,8 @@ function collectSealClaimFindings(closing: ChecklistCommentInput[], rows: Scenar
         if (claimed === claim.expected) continue
         findings.push({
           code: 'release-count-mismatch',
-          message: '发布计数对不上：收口评论写「' + claimed + ' 条' + claim.label + '」，按场景总览表统计应为 ' + claim.expected + ' 条。',
-          fix: '按总览表重新统计，改正收口评论里的「依据」一段，并同步正文「## 发布前对账」。',
+          message: 'Release count mismatch: the closing comment says "' + claimed + ' 条' + claim.label + '", but the scenario overview table gives ' + claim.expected + '.',
+          fix: 'Recount from the overview table, correct the 依据 paragraph of the closing comment, and sync the body section "## 发布前对账".',
         })
       }
     }
@@ -559,8 +559,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
   if (!overview) {
     findings.push({
       code: 'missing-overview',
-      message: '清单票正文里找不到「## 场景总览」这一节，没法核对场景记录。',
-      fix: '按 docs/agents/checklist-issue-template.md 的模板，在正文「## 规则」与「## 豁免」之间加回「## 场景总览」表，逐条登记本版场景。',
+      message: 'The checklist ticket body has no "## 场景总览" section, so the scenario records cannot be checked.',
+      fix: 'Following the template in docs/agents/checklist-issue-template.md, add the "## 场景总览" table back between the "## 规则" and "## 豁免" sections of the body and register this version\'s scenarios one by one.',
     })
     return emptyReport()
   }
@@ -569,15 +569,15 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
   for (const bad of parsed.malformed) {
     findings.push({
       code: 'malformed-row',
-      message: '「## 场景总览」第 ' + bad.line + ' 行的场景编号或状态看不懂：「' + bad.text + '」。',
-      fix: '场景编号写成「来源票号-两位序号」（例如 1600-01），状态只能是 ' + STATUS_WORDS.join(' / ') + '。',
+      message: 'Line ' + bad.line + ' of "## 场景总览" has a scenario id or status that cannot be read: "' + bad.text + '".',
+      fix: 'Write the scenario id as <source ticket number>-<two-digit sequence> (for example 1600-01); the status must be one of ' + STATUS_WORDS.join(' / ') + '.',
     })
   }
   if (!parsed.hasTable || parsed.rows.length === 0) {
     findings.push({
       code: 'empty-overview',
-      message: '「## 场景总览」表里没有任何场景行（还是「（暂无）」占位）。',
-      fix: '把本版需要真机验证的场景逐条填进总览表；没有场景的版本也要在正文里说明为什么没有。',
+      message: 'The "## 场景总览" table has no scenario rows (it is still the 暂无 placeholder).',
+      fix: 'Fill the scenarios this version needs verified on a real machine into the overview table one by one; a version with no scenarios must also say in the body why there are none.',
     })
     return emptyReport()
   }
@@ -593,8 +593,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
   if (registered.size === 0) {
     findings.push({
       code: 'missing-scenario-block',
-      message: '所有评论里都没有「场景块」：找不到标题为「场景块：<来源票号>」的评论。',
-      fix: '按 docs/agents/real-machine-verification.md 的规则，在每张来源票下用「## 场景块：<来源票号> …」评论写场景明细，正文总览表再按评论登记。',
+      message: 'No comment has a 场景块 (scenario block): no comment is titled "场景块：<source ticket number>".',
+      fix: 'Following docs/agents/real-machine-verification.md, write the scenario details on each source ticket in a comment headed "## 场景块：<source ticket number> ...", then register them in the body overview table from those comments.',
     })
   } else {
     // 有场景块时逐行核对来源：正文这一行必须由某条场景块登记过，只有批次结果提过编号不算。
@@ -604,8 +604,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
       if (row.status === '豁免' || row.status === '作废' || registered.has(row.id)) continue
       findings.push({
         code: 'missing-scenario-block',
-        message: '场景 ' + row.id + ' 在正文总览里有（第 ' + row.line + ' 行），但评论里没有登记它的场景块（只在别处提过编号）。',
-        fix: '在来源票 #' + row.id.split('-')[0] + ' 下补一条「## 场景块：<来源票号> …」评论，写明 ' + row.id + ' 的步骤、预期与结果；总览这一行要有场景块做来源。',
+        message: 'Scenario ' + row.id + ' is in the body overview (line ' + row.line + ') but no comment registers a 场景块 for it (the id is only mentioned elsewhere).',
+        fix: 'Add a "## 场景块：<source ticket number> ..." comment on source ticket #' + row.id.split('-')[0] + ' stating the steps, expectation and result of ' + row.id + '; the overview row needs a scenario block as its source.',
       })
     }
   }
@@ -618,8 +618,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
     const source = id.split('-')[0]
     findings.push({
       code: 'scenario-not-in-body',
-      message: '评论里登记了场景 ' + id + '（来源票 #' + source + '），但正文「## 场景总览」没有这一行。',
-      fix: '在总览表补上 ' + id + '，来源票写 #' + source + '，状态与评论里最新批次结果一致。',
+      message: 'A comment registers scenario ' + id + ' (source ticket #' + source + '), but the body "## 场景总览" has no row for it.',
+      fix: 'Add ' + id + ' to the overview table with source ticket #' + source + ' and a status that matches the latest batch result in the comments.',
     })
   }
   // 豁免行不要求评论里出现编号：豁免的登记与接受在正文「## 豁免」表，评论里可以没有独立场景块（995-01）。
@@ -628,8 +628,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
   for (const row of notMentioned) {
     findings.push({
       code: 'scenario-not-registered',
-      message: '正文总览表有场景 ' + row.id + '（第 ' + row.line + ' 行），但所有评论里都没出现过这个编号。',
-      fix: '在来源票 #' + row.id.split('-')[0] + ' 的评论里补「场景块」，写明 ' + row.id + ' 的步骤与结果；总览表里的编号必须能在评论里找到。',
+      message: 'The body overview table has scenario ' + row.id + ' (line ' + row.line + '), but no comment mentions this id.',
+      fix: 'Add a 场景块 to the comments of source ticket #' + row.id.split('-')[0] + ' stating the steps and result of ' + row.id + '; every id in the overview table must be findable in the comments.',
     })
   }
 
@@ -640,8 +640,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
       if (NEEDS_COMMENT_RESULT.includes(row.status)) {
         findings.push({
           code: 'missing-result',
-          message: '场景 ' + row.id + ' 在正文总览表里是「' + row.status + '」，但所有评论里都找不到关于它的明确结果。',
-          fix: '在批次结果评论里用「场景 ' + row.id + '：<结果>」这类明确格式写出结果，或把正文状态改回「待验证」。',
+          message: 'Scenario ' + row.id + ' is "' + row.status + '" in the body overview table, but no comment gives a clear result for it.',
+          fix: 'State the result in a batch result comment in an explicit format such as "场景 ' + row.id + '：<result>", or set the body status back to "待验证".',
         })
       }
       continue
@@ -654,8 +654,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
     if (latest !== row.status) {
       findings.push({
         code: 'result-mismatch',
-        message: '场景 ' + row.id + ' 两边结果不一致：正文总览表写「' + row.statusText + '」，评论里最新结果写「' + latest + '」。',
-        fix: '核对真机结果后把两边改成一致：先改（或补一条）评论里的结论，再改正文总览表；两边都改完再重跑发布检查。',
+        message: 'Scenario ' + row.id + ' has conflicting results: the body overview table says "' + row.statusText + '", the latest comment result says "' + latest + '".',
+        fix: 'After rechecking the real-machine result, make both sides agree: first fix (or add) the conclusion in the comments, then fix the body overview table; rerun the release check once both are updated.',
       })
     }
   }
@@ -668,8 +668,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
     if (claimed !== rows.length) {
       findings.push({
         code: 'count-mismatch',
-        message: '正文写「' + claimed + ' 条场景」，但「## 场景总览」表实际有 ' + rows.length + ' 行。',
-        fix: '先补齐或删掉总览表的行，再按实际行数改正正文里这句总数（两处要一致）。',
+        message: 'The body says "' + claimed + ' 条场景", but the "## 场景总览" table actually has ' + rows.length + ' rows.',
+        fix: 'First complete or remove rows in the overview table, then correct the total in that body sentence to the actual row count (the two must agree).',
       })
     }
   }
@@ -677,8 +677,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
     if (claimed !== sourceCount) {
       findings.push({
         code: 'count-mismatch',
-        message: '正文写「' + claimed + ' 张来源票」，但总览表实际来自 ' + sourceCount + ' 张来源票。',
-        fix: '按总览表「来源票」一列去重后的数量改正正文里这句总数。',
+        message: 'The body says "' + claimed + ' 张来源票", but the overview table actually comes from ' + sourceCount + ' source tickets.',
+        fix: 'Correct the total in that body sentence to the number of distinct values in the overview table\'s 来源票 column.',
       })
     }
   }
@@ -686,8 +686,8 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
     if (group.count !== counts[group.status]) {
       findings.push({
         code: 'count-mismatch',
-        message: '正文写「' + group.count + ' 条「' + group.status + '」」，但总览表实际有 ' + counts[group.status] + ' 条。',
-        fix: '按总览表的实际状态统计改正这句分组计数；改完顺手检查下面发布计数有没有跟着改。',
+        message: 'The body says "' + group.count + ' 条「' + group.status + '」", but the overview table actually has ' + counts[group.status] + '.',
+        fix: 'Correct this grouped count to the actual status counts in the overview table; afterwards check that the release counts below were updated too.',
       })
     }
   }
@@ -697,16 +697,16 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
   const countSources: CountSource[] = []
   if (reconcile) {
     countSources.push({
-      where: '正文「## 发布前对账」',
+      where: 'the body section "## 发布前对账"',
       text: reconcile.lines.join('\n'),
-      fixTail: '先统一收口评论里的计数，再改正文「## 发布前对账」。',
+      fixTail: 'first align the counts in the closing comment, then fix the body section "## 发布前对账".',
     })
   }
   for (const comment of comments.closing) {
     countSources.push({
-      where: '收口评论',
+      where: 'the closing comment',
       text: closingCountLines(comment.body),
-      fixTail: '改正收口评论里的计数，并同步正文「## 发布前对账」。',
+      fixTail: 'correct the counts in the closing comment and sync the body section "## 发布前对账".',
     })
   }
   findings.push(...collectSlashCountFindings(countSources, counts), ...collectSealClaimFindings(comments.closing, rows, counts))
@@ -722,5 +722,5 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
 
 /** 把判据结果变成给人读的行：每条先说哪一处两边不一致，再给「改法：」。预检脚本直接逐行打印。 */
 export function formatConsistencyFindings(report: ConsistencyReport): string[] {
-  return report.findings.map((finding) => finding.message + ' 改法：' + finding.fix)
+  return report.findings.map((finding) => finding.message + ' Fix: ' + finding.fix)
 }

@@ -64,8 +64,8 @@ export type CandidateAuditCandidate = {
 
 /** 候选清单缺字段时给调用方看的统一说明；发布前检查与发布脚本共用，避免两处文案各写一份。 */
 export const CANDIDATE_MANIFEST_FIELDS_HINT =
-  '候选清单缺字段：要 validity（字符串）、sourceStable（布尔）、git.commit（字符串）、' +
-  'package.fileDigest（字符串）、package.tgzSha256（字符串）。'
+  'Candidate manifest is missing fields: it needs validity (string), sourceStable (boolean), git.commit (string), ' +
+  'package.fileDigest (string) and package.tgzSha256 (string).'
 
 /**
  * 从解析好的候选清单 JSON 里取出判据关心的字段；字段不全返回 null。
@@ -203,9 +203,9 @@ export function collectBatchIdentities(comments: BatchIdentityComment[]): { iden
       }
       if (first.commit === identity.commit && first.packageSha256 === identity.packageSha256) continue
       errors.push(
-        '第 ' + (commentIndex + 1) + ' 条评论里批次「' + parsed.batchName + '」的验证身份与第 ' +
-          (first.commentIndex + 1) + ' 条评论不一致：候选提交 ' + first.commit + ' / ' + identity.commit +
-          '；候选包 sha256 ' + first.packageSha256 + ' / ' + identity.packageSha256 + '。同一批次的身份必须完全相同。',
+        'The verification identity of batch "' + parsed.batchName + '" in comment ' + (commentIndex + 1) +
+          ' differs from comment ' + (first.commentIndex + 1) + ': candidate commit ' + first.commit + ' / ' + identity.commit +
+          '; package sha256 ' + first.packageSha256 + ' / ' + identity.packageSha256 + '. The identity of one batch must be exactly the same.',
       )
     }
   })
@@ -289,36 +289,36 @@ export function checkCandidateManifest(candidate: CandidateAuditCandidate): Cand
     findings.push({
       code: 'candidate-not-release',
       message:
-        '候选清单的 validity 是「' + String(candidate.validity || '（空）') + '」：development 候选只用于开发验证，不能作为发布证据。',
-      fix: '用不带 --allow-dirty 的方式重新冻结候选（validity 写成 release），再用这个候选重跑真机验证。',
+        'The candidate manifest has validity "' + String(candidate.validity || '(empty)') + '": a development candidate is only for development verification and cannot be release evidence.',
+      fix: 'Freeze the candidate again without --allow-dirty (so validity becomes release), then rerun the real-machine verification with that candidate.',
     })
   }
   if (candidate.sourceStable !== true) {
     findings.push({
       code: 'candidate-source-unstable',
-      message: '候选清单的 sourceStable 不是 true：冻结前后 HEAD 或未提交文件集合变过，构建出来的包不能当作该提交的候选包。',
-      fix: '确认冻结期间源码没有被改动，重新冻结一次候选，并把 sourceStable 写成 true。',
+      message: 'The candidate manifest sourceStable is not true: HEAD or the set of uncommitted files changed between before and after freezing, so the built package cannot be treated as the candidate package of that commit.',
+      fix: 'Make sure the source was not modified during freezing, freeze the candidate once more, and make sourceStable true.',
     })
   }
   if (!COMMIT_PATTERN.test(commit)) {
     findings.push({
       code: 'candidate-commit-invalid',
-      message: '候选清单的 git.commit 不是 40 位小写十六进制：「' + commit + '」。',
-      fix: '把 candidate.json 的 git.commit 写成完整的 40 位小写提交哈希。',
+      message: 'The candidate manifest git.commit is not 40 lowercase hex characters: "' + commit + '".',
+      fix: 'Write git.commit in candidate.json as the full 40-character lowercase commit hash.',
     })
   }
   if (!PACKAGE_SHA256_PATTERN.test(fileDigest)) {
     findings.push({
       code: 'candidate-digest-invalid',
-      message: '候选清单的 package.fileDigest 不是 64 位小写十六进制：「' + fileDigest + '」。',
-      fix: '重新冻结候选，让 package.fileDigest 写成 64 位小写十六进制的逐文件清单指纹（与 release-integrity.mts 的 digest 同一算法）。',
+      message: 'The candidate manifest package.fileDigest is not 64 lowercase hex characters: "' + fileDigest + '".',
+      fix: 'Freeze the candidate again so package.fileDigest is the per-file manifest fingerprint as 64 lowercase hex characters (same algorithm as the digest in release-integrity.mts).',
     })
   }
   if (!PACKAGE_SHA256_PATTERN.test(packageSha256)) {
     findings.push({
       code: 'candidate-package-sha-invalid',
-      message: '候选清单的 package.tgzSha256 不是 64 位小写十六进制：「' + packageSha256 + '」。',
-      fix: '重新冻结候选，让 package.tgzSha256 写成候选包文件字节的 64 位小写 sha256。',
+      message: 'The candidate manifest package.tgzSha256 is not 64 lowercase hex characters: "' + packageSha256 + '".',
+      fix: 'Freeze the candidate again so package.tgzSha256 is the 64-character lowercase sha256 of the candidate package file bytes.',
     })
   }
   return findings
@@ -358,7 +358,7 @@ export function judgeReleaseBytes(options: {
       candidateFileDigest,
       publishedFileDigest,
       auditCovered,
-      message: '要发的字节与候选包清单一致 fileDigest=' + publishedFileDigest,
+      message: 'The bytes to publish match the candidate package manifest, fileDigest=' + publishedFileDigest,
     }
   }
   if (auditCovered) {
@@ -368,8 +368,8 @@ export function judgeReleaseBytes(options: {
       publishedFileDigest,
       auditCovered,
       message:
-        '要发的字节与候选包清单不一致，但清单票有差异审计（候选 fileDigest=' + candidateFileDigest +
-        '，要发 fileDigest=' + publishedFileDigest + '）',
+        'The bytes to publish differ from the candidate package manifest, but the checklist ticket has a diff audit (candidate fileDigest=' + candidateFileDigest +
+        ', publish fileDigest=' + publishedFileDigest + ')',
     }
   }
   return {
@@ -378,8 +378,8 @@ export function judgeReleaseBytes(options: {
     publishedFileDigest,
     auditCovered,
     message:
-      '要发字节与候选包清单不一致且清单票没有差异审计，发布前停下（候选 fileDigest=' + candidateFileDigest +
-      '，要发 fileDigest=' + publishedFileDigest + '）',
+      'The bytes to publish differ from the candidate package manifest and the checklist ticket has no diff audit; stop before publishing (candidate fileDigest=' + candidateFileDigest +
+      ', publish fileDigest=' + publishedFileDigest + ')',
   }
 }
 
@@ -403,7 +403,7 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
     findings.push({
       code: 'identity-conflict',
       message: error,
-      fix: '同一批次的批次开始评论与每条场景结果评论要写同一行「验证身份」：批次名、候选提交、候选包 sha256 完全一致；以批次开始评论为准，把对不上的那条改过来。',
+      fix: 'The batch-start comment and every scenario result comment of one batch must carry the same 验证身份 line: identical batch name, candidate commit and package sha256; treat the batch-start comment as authoritative and fix the one that differs.',
     })
   }
 
@@ -412,15 +412,15 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
     const text = String(comment.body || '')
     if (!requiresIdentity(text)) return
     if (hasIdentityLine(text)) return
-    const exampleBatch = batchStartName(text) || '<批次名>'
+    const exampleBatch = batchStartName(text) || '<batch name>'
     findings.push({
       code: 'identity-missing',
       message:
-        '第 ' + (commentIndex + 1) + ' 条评论是批次开始或场景结果评论，但没有格式正确的「验证身份」行：' +
-        '发布前检查靠这一行把评论和 batch.json 对上，缺了它这条记录不算进通过项。',
+        'Comment ' + (commentIndex + 1) + ' is a batch-start or scenario result comment, but it has no correctly formatted 验证身份 line: ' +
+        'the pre-release check uses this line to match the comment with batch.json, and without it this record does not count toward passed items.',
       fix:
-        '在这条评论里补一行：' + IDENTITY_PREFIX + exampleBatch +
-        '；候选提交 <40 位小写候选提交>；候选包 sha256 <64 位小写候选包 tgz 哈希>（批次名、候选提交与候选包 sha256 要和 batch.json 的记录一致）。',
+        'Add this line to the comment: ' + IDENTITY_PREFIX + exampleBatch +
+        '；候选提交 <40 lowercase hex chars of the candidate commit>；候选包 sha256 <64 lowercase hex chars of the candidate tgz hash> (batch name, candidate commit and package sha256 must match the record in batch.json).',
     })
   })
 
@@ -435,11 +435,11 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
   if (identityComments.length === 0) {
     findings.push({
       code: 'batch-start-missing',
-      message: '清单票评论里没有一条带格式正确「验证身份」行的批次记录：发布前检查找不到这批真机验证的起点。',
+      message: 'No batch record in the checklist ticket comments has a correctly formatted 验证身份 line: the pre-release check cannot find where this real-machine verification started.',
       fix:
-        '按 docs/agents/real-machine-verification.md 第二节的模板发一条批次开始评论：写清批次号、候选提交、候选包 sha256、' +
-        '验证环境与本批场景，并带一行：' + IDENTITY_PREFIX +
-        '<批次名>；候选提交 <40 位小写候选提交>；候选包 sha256 <64 位小写候选包 tgz 哈希>。',
+        'Post a batch-start comment following the template in section 2 of docs/agents/real-machine-verification.md: state the batch id, candidate commit, package sha256, ' +
+        'verification environment and the scenarios of this batch, and include this line: ' + IDENTITY_PREFIX +
+        '<batch name>；候选提交 <40 lowercase hex chars of the candidate commit>；候选包 sha256 <64 lowercase hex chars of the candidate tgz hash>.',
     })
   }
 
@@ -464,14 +464,14 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
   const latestIdentity = [...identities].reverse().find((identity) => identity.batchName === latestBatchName) || null
   const latestCommit = latestIdentity ? latestIdentity.commit : ''
   for (const commit of identityCommits) {
-    const batchName = batchNameOfCommit.get(commit) || '<批次名>'
+    const batchName = batchNameOfCommit.get(commit) || '<batch name>'
     if (ancestorCheck && !ancestorCheck(commit)) {
       findings.push({
         code: 'commit-not-ancestor',
         message:
-          '批次「' + batchName + '」的候选提交 ' + commit + ' 不是发布提交 ' + releaseCommit +
-          ' 的祖先：这批验的代码没有进这次要发的版本。',
-        fix: '用发布提交（或它的祖先）重新冻结候选、重跑这一批真机验证，再关闭清单票；或者把发布提交换成包含这个候选提交的版本。',
+          'The candidate commit ' + commit + ' of batch "' + batchName + '" is not an ancestor of the release commit ' + releaseCommit +
+          ': the code verified in this batch is not in the version being released.',
+        fix: 'Freeze a new candidate from the release commit (or one of its ancestors), rerun this batch of real-machine verification and then close the checklist ticket; or change the release commit to a version that contains this candidate commit.',
       })
     }
     if (commit !== latestCommit) continue
@@ -480,9 +480,9 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
       findings.push({
         code: 'audit-missing',
         message:
-          '最新一批（批次「' + batchName + '」）的候选提交 ' + commit + ' 与发布提交 ' + releaseCommit +
-          ' 不同，但清单票正文没有对应的差异审计行。',
-        fix: '在清单票正文补一行：- 候选提交 ' + commit + ' → 发布提交 ' + releaseCommit + '：<一句话说明这段差异为什么可以接受>。',
+          'The candidate commit ' + commit + ' of the latest batch (batch "' + batchName + '") differs from the release commit ' + releaseCommit +
+          ', but the checklist ticket body has no matching diff audit line.',
+        fix: 'Add this line to the checklist ticket body: - 候选提交 ' + commit + ' → 发布提交 ' + releaseCommit + '：<one sentence saying why this difference is acceptable>.',
       })
     }
   }
@@ -500,8 +500,8 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
         if (ancestorCheck && !ancestorCheck(candidateCommit)) {
           findings.push({
             code: 'candidate-commit-not-ancestor',
-            message: '候选清单的候选提交 ' + candidateCommit + ' 不是发布提交 ' + releaseCommit + ' 的祖先：这次要发的版本不包含候选代码。',
-            fix: '换一个发布提交，或者从发布提交（或它的祖先）重新冻结候选、重跑真机验证。',
+            message: 'The candidate commit ' + candidateCommit + ' in the candidate manifest is not an ancestor of the release commit ' + releaseCommit + ': the version being released does not contain the candidate code.',
+            fix: 'Use a different release commit, or freeze a new candidate from the release commit (or one of its ancestors) and rerun the real-machine verification.',
           })
         }
         // 候选提交就是最新一批时，上面第三段已经报过 audit-missing，不再报第二条。
@@ -509,9 +509,9 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
           findings.push({
             code: 'candidate-audit-missing',
             message:
-              '候选清单的候选提交 ' + candidateCommit + ' 与发布提交 ' + releaseCommit +
-              ' 不同，但清单票正文没有对应的差异审计行。',
-            fix: '在清单票正文补一行：- 候选提交 ' + candidateCommit + ' → 发布提交 ' + releaseCommit + '：<一句话说明这段差异为什么可以接受>。',
+              'The candidate commit ' + candidateCommit + ' in the candidate manifest differs from the release commit ' + releaseCommit +
+              ', but the checklist ticket body has no matching diff audit line.',
+            fix: 'Add this line to the checklist ticket body: - 候选提交 ' + candidateCommit + ' → 发布提交 ' + releaseCommit + '：<one sentence saying why this difference is acceptable>.',
           })
         }
       }
@@ -519,17 +519,17 @@ export function checkCandidateAudit(options: CandidateAuditOptions): CandidateAu
       if (registeredForCommit.length === 0) {
         findings.push({
           code: 'candidate-not-registered',
-          message: '候选清单的候选提交 ' + candidateCommit + ' 没有出现在任何一条「验证身份」行里：这批证据不是对这个候选做的。',
-          fix: '用这个候选提交重新冻结、重跑批次，并在批次开始与每条场景结果评论里写同一行「验证身份」；或者换一个已在票面登记过的候选。',
+          message: 'The candidate commit ' + candidateCommit + ' in the candidate manifest does not appear in any 验证身份 line: this evidence was not produced on this candidate.',
+          fix: 'Freeze again from this candidate commit, rerun the batch, and write the same 验证身份 line in the batch-start comment and every scenario result comment; or switch to a candidate already registered on the ticket.',
         })
       } else if (candidatePackageShaValid && !registeredForCommit.some((identity) => identity.packageSha256 === candidatePackageSha)) {
         findings.push({
           code: 'candidate-package-sha-mismatch',
           message:
-            '候选清单的候选包 sha256 是 ' + candidatePackageSha + '，但票面里候选提交 ' + candidateCommit +
-            ' 的身份行写的是 ' + registeredForCommit.map((identity) => identity.packageSha256).join(' / ') +
-            '：这份候选包和当时登记、真机验证过的包不是同一个。',
-          fix: '核对 candidate.json 的 package.tgzSha256 与批次开始评论里的「候选包 sha256」；不一致时用同一个候选重新跑真机验证，或把票面身份行改成正确的候选包哈希。',
+            'The candidate manifest package sha256 is ' + candidatePackageSha + ', but the identity line on the ticket for candidate commit ' + candidateCommit +
+            ' says ' + registeredForCommit.map((identity) => identity.packageSha256).join(' / ') +
+            ': this candidate package is not the one that was registered and verified on a real machine.',
+          fix: 'Compare package.tgzSha256 in candidate.json with the 候选包 sha256 in the batch-start comment; if they differ, rerun the real-machine verification with the same candidate, or correct the identity line on the ticket to the right candidate package hash.',
         })
       }
     }
