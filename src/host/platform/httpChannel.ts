@@ -34,6 +34,8 @@
  */
 
 import type { HttpChannel, HttpRequest, HttpResponse } from '../../tracker/contract/contexts.js'
+// #24：单次请求的时间预算不在这里写数字 —— 它按桶取中央时间参数里那一档（值与 gh 的出站档同一份）。
+import { timeoutForTier } from '../../tracker/kernel/outbound-tiers.js'
 import type { OutboundService } from '../../tracker/contract/outbound.js'
 import type { OutboundControl } from '../../tracker/contract/outbound.js'
 
@@ -53,12 +55,7 @@ export interface CreateHttpChannelOptions {
   service?: OutboundService
   /** 测试替换用；生产就是当前运行时的全局 fetch。 */
   fetchImpl?: HttpFetchLike | null
-  /** 缺省总超时（毫秒）。请求自己给了 timeoutMs 就以请求为准。 */
-  timeoutMs?: number
 }
-
-/** 缺省总超时：与出站档位的量级一致（读 30 秒级），显式写在文件里便于一眼核对。 */
-const DEFAULT_TIMEOUT_MS = 30000
 
 /**
  * 造一份 HTTP 通道。每次调用返回新对象，但名额与冷却在 `outbound` 背后是进程级单例，
@@ -67,9 +64,6 @@ const DEFAULT_TIMEOUT_MS = 30000
 export function createHttpChannel(options: CreateHttpChannelOptions): HttpChannel {
   const outbound = options.outbound
   const defaultService: OutboundService = options.service || 'linear'
-  const defaultTimeout = (typeof options.timeoutMs === 'number' && options.timeoutMs > 0)
-    ? options.timeoutMs
-    : DEFAULT_TIMEOUT_MS
 
   return {
     async request(req: HttpRequest): Promise<HttpResponse> {
@@ -85,7 +79,8 @@ export function createHttpChannel(options: CreateHttpChannelOptions): HttpChanne
       // 名额：排满就在这里等；等待期间被取消要能认出来（交给 outbound.isCancelled 认）。
       const release = await outbound.acquire({ bucket, service, signal: req.signal })
 
-      const timeoutMs = (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) ? req.timeoutMs : defaultTimeout
+      // 调用方给了预算就用它的；没给按这一次的桶取中央档位（读 / 写 / 探活各一档，值与 gh 同源）。
+      const timeoutMs = (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) ? req.timeoutMs : timeoutForTier(bucket)
       const controller = new AbortController()
       let timedOut = false
       const onCallerAbort = (): void => { try { controller.abort() } catch { /* 已经中止过 */ } }
