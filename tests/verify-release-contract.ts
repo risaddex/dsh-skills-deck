@@ -23,8 +23,9 @@
  * node scripts/build.mts 再跑本门禁即可。A/B/C/E/F 五段与构建无关。
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { readFileSync, existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -233,7 +234,12 @@ let packOut = "";
 let packOk = false;
 let packFiles = [];
 try {
-  const result = spawnSync("npm", ["pack", "--dry-run"], { cwd: resolve(ROOT, "package"), encoding: "utf8", shell: true });
+  let result = spawnSync("npm", ["pack", "--dry-run"], { cwd: resolve(ROOT, "package"), encoding: "utf8", shell: true });
+  if (result.status !== 0) {
+    // 默认缓存不可写时只换临时缓存重试，不放宽清单判据。
+    const npmCache = mkdtempSync(join(tmpdir(), "dsh-npm-cache-"));
+    result = spawnSync("npm", ["pack", "--dry-run"], { cwd: resolve(ROOT, "package"), encoding: "utf8", shell: true, env: { ...process.env, npm_config_cache: npmCache } });
+  }
   packOut = (result.stdout || "") + (result.stderr || "");
   // 解析 Tarball Contents 段
   const lines = packOut.split("\n");

@@ -11,6 +11,7 @@
 //   后续 C–F 组（宿主读电话 / 预检 / 执行 / 客户端面板）在同一份文件上按同样方式追加。
 //
 // 用法：node --import ./scripts/ts-hook.mts tests/verify-1586-commit-page.ts
+require('./lib/git-fixture-env.ts')
 const path = require('path')
 const { printGateResult } = require('./lib/gate-result.ts')
 const { sourceText } = require('./lib/source-text.ts')

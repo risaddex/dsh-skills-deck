@@ -3,6 +3,7 @@
 // 全篇用真实临时 git 仓库与假进程夹具：真冲突由本机 git 造出来，argv 走夹具观测，不联网。
 'use strict'
 
+require('./lib/git-fixture-env.ts')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const os = require('node:os')

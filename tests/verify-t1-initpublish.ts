@@ -3,6 +3,7 @@
 // 加载方式：经发货产物 package/lib/index.js 的标准分发通道（connection.rpc.handle('/dsws')），与冒烟测试同法。
 // 注意：本文件跑的 publishFlow 那条路，git 命令经 execProc，返回契约是 { ok, text, error, code }（见 src/refresh/rooms/host/git-execution.ts:196-198）。
 //   initProject 里 execFn 的契约是 { code, stdout, stderr }，形状不同，不能拿来喂这条流程。
+require('./lib/git-fixture-env.ts')
 const fsx = require('fs')
 const fsp = fsx.promises
 const path = require('path')

@@ -14,6 +14,7 @@
  * 2026-10-17 先修：这个文件里的中文原本整片是乱码（历史上某次以错误编码写入，原文已不可复原），
  *   本笔按代码行为把注释与提示文案重写成人话；判据逻辑一个字没动。
  */
+require('./lib/git-fixture-env.ts')
 const fs = require("fs");
 const path = require("path");
 const os = require("os");

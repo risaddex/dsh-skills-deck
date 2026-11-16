@@ -10,6 +10,7 @@
 //   G 反证：把判据改坏，A–F 的同一套判断必须判红。
 // 本文件是 CommonJS：产品源码靠动态 import 取，说明符一律 .js（由钩子改指同名 .ts）。
 // 宿主仍走「真 git 子进程」的垫片（argv 直传、不经 shell），所以断言的是真仓库有没有被动过。
+require('./lib/git-fixture-env.ts')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')

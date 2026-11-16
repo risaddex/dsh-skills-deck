@@ -17,6 +17,7 @@
 // E 真宿主假路由（预检→执行）、F 反证组、G 七登记点。
 //
 // 用法：node --import ./scripts/ts-hook.mts tests/verify-1586-branches.ts
+require('./lib/git-fixture-env.ts')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')

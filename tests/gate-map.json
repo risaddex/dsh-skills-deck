@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T18:26:31.726Z",
+  "generatedAt": "2026-11-16T18:27:54.986Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 601,
   "gateCount": 601,
@@ -883,20 +883,22 @@
         "src/tracker/kernel/preflight.ts",
         "src/tracker/rooms",
         "src/tracker/rooms/github",
-        "src/tracker/rooms/gitlab"
+        "src/tracker/rooms/gitlab",
+        "tests/lib/git-fixture-env.ts"
       ],
       "dirs": [
         "src/tracker/contract",
         "src/tracker/kernel",
         "src/tracker/rooms",
         "src/tracker/rooms/github",
-        "src/tracker/rooms/gitlab"
+        "src/tracker/rooms/gitlab",
+        "tests/lib"
       ],
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 2 条；源码里的路径字面量 3 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 2 条；载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 3 条"
     },
     {
       "step": "node tests/verify-no-title.ts",
@@ -4619,7 +4621,8 @@
         "src/shared/version-control/src/undo-ticket.ts",
         "src/shared/version-control/src/write-ticket.ts",
         "tests/lib/eval-probe.ts",
-        "tests/lib/gate-result.ts"
+        "tests/lib/gate-result.ts",
+        "tests/lib/git-fixture-env.ts"
       ],
       "dirs": [
         "scripts/lib",
@@ -4631,7 +4634,7 @@
       "buildOutputOnly": false,
       "completionRecord": true,
       "expectedAssertions": 99,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 5 条；载入模块（require / import / pathToFileURL） 3 条；源码里的路径字面量 3 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 5 条；载入模块（require / import / pathToFileURL） 4 条；源码里的路径字面量 3 条"
     },
     {
       "step": "node tests/verify-1586-vc-visual-browser.ts",
@@ -13191,17 +13194,19 @@
       "file": "tests/verify-t1-initpublish.ts",
       "guards": [
         "package/lib/index.js",
-        "src/tracker/rooms/github/write/init-project.ts"
+        "src/tracker/rooms/github/write/init-project.ts",
+        "tests/lib/git-fixture-env.ts"
       ],
       "dirs": [
         "package/lib",
-        "src/tracker/rooms/github/write"
+        "src/tracker/rooms/github/write",
+        "tests/lib"
       ],
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条"
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条"
     },
     {
       "step": "node tests/verify-t3-locale.ts",
@@ -16424,6 +16429,7 @@
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-deck-tools.ts",
       "node tests/verify-gate-map.ts",
+      "node tests/verify-no-mixed-session.ts",
       "node tests/verify-no-title.ts",
       "node tests/verify-1090-progress-roundtrip.ts",
       "node tests/verify-1091-original-words.ts",
@@ -16589,6 +16595,7 @@
       "node tests/verify-snapshot-cache-first.ts",
       "node tests/verify-subdir-first-frame.ts",
       "node tests/verify-suggest-next-steps.ts",
+      "node tests/verify-t1-initpublish.ts",
       "node tests/verify-tabsfold-leaf.ts",
       "node tests/verify-tip-place.ts",
       "node tests/verify-ui-feedback.ts",

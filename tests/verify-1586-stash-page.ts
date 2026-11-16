@@ -4,6 +4,7 @@
 // 界面叶子按构建同一份拼接口径求值（spliceableJs，与 818 的 buildView 同一条路），不 import 模块。
 'use strict'
 
+require('./lib/git-fixture-env.ts')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')

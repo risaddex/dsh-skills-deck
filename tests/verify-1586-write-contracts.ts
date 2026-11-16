@@ -6,6 +6,7 @@
 // stdin 管道、待答进程、EPIPE、缺失 stdin 流），这样「到底起没起进程」与「送进去了多少字节」都看得见。
 // 本文件是 CommonJS：产品源码用动态 import 取，说明符写 .js（靠钩子改指同名 .ts）。
 // 用法：node --import ./scripts/ts-hook.mts tests/verify-1586-write-contracts.ts
+require('./lib/git-fixture-env.ts')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')

@@ -4,6 +4,7 @@
 // 本文件只做观察：读真源码文本、真 import 共享纯模块、在真临时 git 仓库里跑真命令；
 // 每一组末尾都不依赖被测代码自证，反证组会故意改坏一份副本并断言对账必然报错。
 'use strict'
+require('./lib/git-fixture-env.ts')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
