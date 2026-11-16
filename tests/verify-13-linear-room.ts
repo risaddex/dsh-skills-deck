@@ -150,6 +150,33 @@ async function main(): Promise<void> {
     const more = ctxAnswering(200, JSON.stringify({ data: { issues: { nodes: [ISSUE_NODE], pageInfo: { hasNextPage: true } } } }))
     const partial = await listIssues(more.ctx, ACCOUNT, undefined)
     check(partial.ok && partial.truncated === true, 'hasNextPage marks the answer as a short page', partial.ok ? String(partial.truncated) : 'error')
+
+    // 翻得动的一格：增量窗口要真的落到查询里，否则刷新后台每拍全量翻。
+    const windowed = ctxAnswering(200, JSON.stringify({ data: { issues: { nodes: [], pageInfo: { hasNextPage: false } } } }))
+    await listIssues(windowed.ctx, ACCOUNT, { since: '2026-11-01T00:00:00Z' })
+    const sent = windowed.calls[0] ? JSON.parse(windowed.calls[0].body).variables.filter : null
+    check(JSON.stringify(sent) === JSON.stringify({ updatedAt: { gte: '2026-11-01T00:00:00Z' } }), 'the incremental window reaches the query', JSON.stringify(sent))
+
+    // 翻不动的格子必须整体报 unsupported，而且一个请求都不发：交回没筛过的名单比失败更贵。
+    const unhonoured: [string, any][] = [
+      ['type', { type: 'map' }],
+      ['labels', { labels: ['bug'] }],
+      ['parentKey', { parentKey: 'ENG-100' }],
+      ['parentKey', { parentKey: null }],
+      ['keys', { keys: ['ENG-1'] }],
+      ['isPullRequest', { isPullRequest: true }],
+    ]
+    for (const [name, filter] of unhonoured) {
+      const refused = ctxAnswering(200, JSON.stringify({ data: { issues: { nodes: [ISSUE_NODE], pageInfo: { hasNextPage: false } } } }))
+      const answer = await listIssues(refused.ctx, ACCOUNT, filter as any)
+      check(!answer.ok && answer.error.kind === 'unsupported', 'a filter it cannot honour fails as unsupported (' + name + ')', answer.ok ? 'ok' : answer.error.kind)
+      check(refused.calls.length === 0, 'no request goes out for it (' + name + ')', String(refused.calls.length))
+    }
+
+    // 空数组、省略、isPullRequest:false 都不是「要求了做不到的条件」，照常发。
+    const fine = ctxAnswering(200, JSON.stringify({ data: { issues: { nodes: [], pageInfo: { hasNextPage: false } } } }))
+    const fineAnswer = await listIssues(fine.ctx, ACCOUNT, { labels: [], isPullRequest: false })
+    check(fineAnswer.ok === true && fine.calls.length === 1, 'an empty label list and a false pull-request filter cost nothing', fineAnswer.ok ? String(fine.calls.length) : JSON.stringify(fineAnswer.error))
   }
 
   console.log('L5 get and preflight answer only what they can')

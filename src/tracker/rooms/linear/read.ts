@@ -24,16 +24,41 @@ import { ISSUE_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
 const PAGE_SIZE = Math.min(50, MAX_PAGE)
 
 /**
+ * 这一版翻不动的筛选格（返回字段名）；空数组表示整份条件都翻成了 Linear 的 filter。
+ *
+ * 为什么要单独列出来：契约的 ListFilter 有七格，这一版只翻得动「状态」和「更新时间窗口」。
+ * 翻不动的格子如果照旧发一个不带它的查询，回来的名单就是**没筛过**的，而调用方会当成
+ * 「按我说的筛过了」—— 错的名单比失败更贵（PR #26 review 的 P2）。所以翻不动就整体报
+ * unsupported，让调用方看见「这一版还不支持这个条件」，而不是拿到一堆不相关的票。
+ */
+export function unsupportedFilters(filter: ListFilter | undefined): string[] {
+  if (!filter) return []
+  const out: string[] = []
+  if (filter.type) out.push('type')
+  // 空数组与省略同义（#1183：都是不过滤），所以只有非空才算要求了标签。
+  if (Array.isArray(filter.labels) && filter.labels.length > 0) out.push('labels')
+  // null 在契约里是「只要根票」，不是「不过滤」—— 这一版两种都还拼不出来。
+  if (filter.parentKey !== undefined) out.push('parentKey')
+  if (Array.isArray(filter.keys) && filter.keys.length > 0) out.push('keys')
+  // Linear 里没有拉取请求，`false`（只要非拉取请求）恒成立，只有 `true` 是无法满足的要求。
+  if (filter.isPullRequest === true) out.push('isPullRequest')
+  return out
+}
+
+/**
  * 把契约的 ListFilter 拼成 Linear 的 IssueFilter。
  *
- * 只翻「状态」这一格：其余条件（标签、指派人、关键字）等对应读路径实现时再加，
- * 现在硬塞一个猜出来的映射，读回来的名单会悄悄不对。
+ * 只拼翻得动的两格（状态、更新时间窗口）；其余格子由 unsupportedFilters 先挡掉，
+ * 所以走到这里的条件一定是能表达的，不会出现「发了查询但筛没生效」。
  */
 export function buildIssuesFilter(filter: ListFilter | undefined): Record<string, unknown> | undefined {
-  const state = filter && filter.state
-  if (state === 'open') return { state: { type: { nin: CLOSED_STATE_TYPES } } }
-  if (state === 'closed') return { state: { type: { in: CLOSED_STATE_TYPES } } }
-  return undefined
+  if (!filter) return undefined
+  const conditions: Record<string, unknown> = {}
+  if (filter.state === 'open') conditions.state = { type: { nin: CLOSED_STATE_TYPES } }
+  if (filter.state === 'closed') conditions.state = { type: { in: CLOSED_STATE_TYPES } }
+  // 增量窗口：只要「更新时间不早于这个时刻」的票；服务端能筛就别每拍全量翻。
+  if (filter.since) conditions.updatedAt = { gte: String(filter.since) }
+  return Object.keys(conditions).length > 0 ? conditions : undefined
 }
 
 /** 取一张票。key 既可以是 UUID，也可以是 ENG-123 这种标识符（Linear 两者都收）。 */
@@ -63,6 +88,18 @@ export async function listIssues(
   account: LinearAccount,
   filter?: ListFilter,
 ): Promise<IssueListResult> {
+  // 先把翻不动的条件挡在门外：带着它们发查询，回来的名单会像「筛过了」一样交出去。
+  const missing = unsupportedFilters(filter)
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      error: linearError(
+        ERROR_KIND.UNSUPPORTED,
+        'this room cannot filter by ' + missing.join(', ') + ' yet; asking without it would answer with tickets nobody filtered',
+      ),
+    }
+  }
+
   const first = PAGE_SIZE
   const result = await gql<{
     issues: { nodes?: LinearIssueNode[]; pageInfo?: { hasNextPage?: boolean } }
