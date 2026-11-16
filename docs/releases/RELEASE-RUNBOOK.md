@@ -227,7 +227,7 @@ pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile $env:TEMP\dsh-publish
 
 ### 13.2 只读核对三步（不发布、不改 tag）
 
-1. 从 registry 拉回 tarball：`npm pack dsh-mattpocock-skills-deck@<版本> --registry https://registry.npmjs.org --pack-destination <临时目录>`。
+1. 从 registry 拉回 tarball：`npm pack dsh-skills-deck@<版本> --registry https://registry.npmjs.org --pack-destination <临时目录>`。
 2. 与冻结候选逐个比对：候选 tgz 的 sha256 记在批次目录的 `pkg/candidate.json` 与清单票的批次评论里；用 `Get-FileHash -Algorithm SHA256` 两两对照，字节数也要一致。beta.32 实测两边都是 1,483,823 字节、sha256 `de94618c…`（完整值 `de94618c47be9c0e594206297337bd3d69e73af5aea73b89e3f641e3da07c261`）。
 3. 读 `dist-tag`：`npm dist-tag ls dsh-mattpocock-skills-deck --registry https://registry.npmjs.org`，确认 `beta` 与 `latest` 的指向符合第 8 节的策略（预发布版本两个 tag 都指向本版；稳定版本只动 `latest`）。
 
@@ -238,7 +238,7 @@ pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile $env:TEMP\dsh-publish
 核对通过后如果 `dist-tag` 不符合预期，只补 tag，不重新发布：
 
 ```powershell
-npm dist-tag add dsh-mattpocock-skills-deck@<版本> latest --registry https://registry.npmjs.org
+npm dist-tag add dsh-skills-deck@<版本> latest --registry https://registry.npmjs.org
 ```
 
 遇到 `E429`（请求过多）按秒退避，等几分钟再试；beta.32 实测第一次 429、稍等后重试成功。token 仍按第 12 节的文件通道传入，命令行里只出现路径。
@@ -250,6 +250,14 @@ npm dist-tag add dsh-mattpocock-skills-deck@<版本> latest --registry https://r
 > **一句话**：失败之后先只读核对、再补 tag、最后追加记录；永远不要用重跑发布命令来「确认它好了」。
 
 ---
+
+## 14. Built Git distribution and plugin-index notification
+
+Run `node scripts/release-dist.mts` from the repository root for a dry run. It builds, packs `package/` with npm, extracts the packed root, validates its version and every main/exports target, and creates an unreferenced commit whose parent is the previous local `dist` commit. Dry runs do not change refs or create tags.
+
+Only after verification and explicit release approval, run `node scripts/release-dist.mts --push`. It updates local `dist`, creates the annotated `dist/v<version>` tag, pushes both, and uses the operator's authenticated `gh` CLI to send `skills-deck-dist-tag` to `repos/risaddex/dsh-plugins/dispatches`. No dispatch secret belongs in this repository. The old tag-triggered notification workflow was removed because the packed dist tree does not contain workflows.
+
+Push mode refuses an existing tag. Fetch the latest dist branch first and never force-push it. If push or dispatch fails, inspect remote refs before retrying; if only dispatch failed after a successful push, send the same `gh api` dispatch for that tag instead of rerunning the release. This script never publishes to npm.
 
 ## 附：修订记录
 
