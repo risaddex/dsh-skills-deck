@@ -31,6 +31,7 @@ _research/
 **/.tmp-publish-all-status.json
 /package.json
 /package-lock.json
+/.pnpm-store/
 /tests/playwright-e2e-probe.js
 /cyberpunk-tokyo-16x9-4k.png
 
