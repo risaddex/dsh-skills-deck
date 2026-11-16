@@ -9,7 +9,7 @@ never touched `api.linear.app`.
 1. **The plugin installed in the `desktop` profile must contain the sign-in code.** On 2026-11-16 the profile
    linked `~/.dsh/profiles/desktop/node_modules/dsh-skills-deck` to the worktree `fix-22-repo-identity`, which
    does not have `src/host/linearSignin.ts` (zero occurrences of `registerLinearFlows` in its build). Linked
-   to `main` at `fcd9257d` or later it does. Check which one you have before step 3 (see "Is the code installed?").
+   to `main` at `c2c56899` or later it does. Check which one you have before step 3 (see "Is the code installed?").
 2. **No screen in DSH starts a third-party sign-in flow.** The Account settings page only handles the DeepSeek
    account, and `cordis_inspect` only reads. The flow is registered on `ctx.authorization`, but nothing calls
    `begin()` until the Linear inbox in the deck tab exists (ticket #14). So today the way in is to write the
@@ -29,14 +29,25 @@ never touched `api.linear.app`.
 ### 1. Is the code installed?
 
 ```sh
-ls -ld ~/.dsh/profiles/desktop/node_modules/dsh-skills-deck          # where the link points
+ls -ld ~/.dsh/profiles/desktop/node_modules/dsh-skills-deck | sed 's/.*-> //'     # where the profile links to
 grep -rl registerLinearFlows ~/.dsh/profiles/desktop/node_modules/dsh-skills-deck/.build 2>/dev/null | head -1
 ```
 
-The second command must print a path. If it prints nothing, the installed build has no sign-in: link the profile
-to a tree that contains `fcd9257d`, build it (`node scripts/build.mts` in that tree), and redeploy with
-`plugin_manager` `remove_bundle` then `install_bundle` (the `desktop` profile is managed by the Electron app; the
-CLI refuses it). Then continue.
+The second command must print a path. On 2026-11-16 it printed nothing: the profile was linked to the worktree
+`fix-22-repo-identity`, a branch of ticket #22 that has no sign-in code. Reinstalling re-linked the same tree, so it
+changed nothing. `main` at `c2c56899` already contains everything that branch had, so the branch is obsolete and the
+profile should point at a tree that contains `c2c56899` or later.
+
+To fix it, in the tree you will link (for example the main checkout, with its own dependencies installed):
+
+```sh
+node scripts/build.mts          # the profile loads the build output, not the sources
+```
+
+then redeploy with `plugin_manager` `remove_bundle` followed by `install_bundle` pointing at that tree (the `desktop`
+profile is managed by the Electron app and the CLI refuses it), restart DSH, and run the `grep` again: it must now
+print a path. **Not checked:** I could not run `plugin_manager` from here, so the exact bundle path to give it is
+yours to confirm.
 
 ### 2. Add the account
 
