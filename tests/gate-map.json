@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T18:30:59.884Z",
+  "generatedAt": "2026-11-16T19:17:35.682Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 601,
-  "gateCount": 601,
+  "chainLength": 602,
+  "gateCount": 602,
   "attributedGates": 545,
-  "unattributedGates": 56,
+  "unattributedGates": 57,
   "buildOutputOnlyGates": 20,
-  "completionRecordedGates": 143,
+  "completionRecordedGates": 144,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 960,
@@ -12565,6 +12565,21 @@
       "reason": "读到的路径都落在 docs、package、scripts、wizard/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
+      "step": "node tests/verify-release-dist-safety.ts",
+      "file": "tests/verify-release-dist-safety.ts",
+      "guards": [
+        "scripts/release-dist.mts"
+      ],
+      "dirs": [
+        "scripts"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 12,
+      "reason": "读到的路径都落在 scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
+    },
+    {
       "step": "node tests/verify-release-gate.ts",
       "file": "tests/verify-release-gate.ts",
       "guards": [
@@ -14462,6 +14477,7 @@
       "node tests/verify-parse-leaf.ts",
       "node tests/verify-prompts.ts",
       "node tests/verify-release-contract.ts",
+      "node tests/verify-release-dist-safety.ts",
       "node tests/verify-release-gate.ts",
       "node tests/verify-release-template.ts",
       "node tests/verify-rest-fallback-banner.ts",

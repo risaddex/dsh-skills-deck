@@ -1,6 +1,8 @@
 {
   "note": "Maintainer accepted these 24 baseline failures on 2026-11-16 for issue #3 promotion. Classification is informational; any failing gate still makes verification exit non-zero.",
-  "acceptedOnHead": "73894f26",
+  "acceptedPromotionHead": "ae2ccb9d",
+  "scope": "Historical acceptance for issue #3 promotion only; not approval of future failures or releases.",
+  "registerCreatedFromCheckout": "73894f26",
   "sourceHead": "0a612fca212c953bc9f6a06a43b2b73c4923af29",
   "sourceAt": 1794850070892,
   "failures": [
