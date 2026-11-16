@@ -201,7 +201,7 @@ export function judgeGateCompletion(input: {
         ' ≠ 归属表里记着的 ' +
         expectedAssertions +
         '（' +
-        (diff > 0 ? '少跑了 ' + diff + ' 条' : '多跑了 ' + -diff + ' 条，加了断言就顺手改 tests/gate-map.json 的期望') +
+        (diff > 0 ? '少跑了 ' + diff + ' 条' : '多跑了 ' + -diff + ' 条，加了断言就更新 scripts/gate-map.mts 里的期望，再跑 node scripts/gate-map.mts 重新生成') +
         '）',
       record,
     }
