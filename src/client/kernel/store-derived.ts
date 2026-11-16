@@ -150,7 +150,8 @@ export const mapBlockOf = function (snapshot: any): any {
 //   算两遍——而 openBlocker 只读快照、算一遍与算两遍结果必然相同，所以两遍是白算。今天每张票只读一次状态、
 //   阻塞判定只算一遍，趟数从六降到二。
 // 不能改的约定：五个数组的元素顺序仍与 m.tickets 一致（面板按这个顺序画）；
-//   判定表达式与短路条件原样保留——t.claimedBy 为真时根本不碰 blockedBy，blockedBy 是 undefined 时照旧当场抛错（不兜底、不吞）。
+//   判定表达式与短路条件原样保留——t.claimedBy 为真时根本不碰 blockedBy。
+//   blockedBy 缺席表示依赖组未知（变化集新插入的子票就会这样）：按被挡收口，不当成可接，也不当成「确认没有」。
 // 这一笔优化成立的前提：state 与 blockedBy 是纯数据（普通属性，读几次结果都一样）。哪天它们变成带副作用的取值器
 //   （getter 或 Proxy），「每张票只读一次状态」就不再等价于原来读三次，届时要么改回多趟，要么把票据在入口处先拍成纯数据。
 export const compute = (st: any): any => {
@@ -159,7 +160,15 @@ export const compute = (st: any): any => {
     // effort 维度：地图内的票按身份 (effort, 编号) 索引；阻塞引用只在同一 effort 内解析
     // #1431 双键索引（同 mapBlockOf）：原样身份之外再记一笔规范键，数字边也能命中补零键的票。
     const byId: any = {}; m.tickets.forEach(function (t: any): void { byId[idOf(t)] = t; try { const nk: string = idOfParts(effortOf(t), normIdentityKey((t || {}).key)); if (nk && nk !== idOf(t)) byId[nk] = t } catch (e) { /* 键异常不挡整表 */ } })
-    const openBlocker = (b: any): any => { const raw: any = byId[idOfParts(effortOf(m), refKeyOf(b))]; const t: any = (raw !== undefined && raw !== null) ? raw : byId[idOfParts(effortOf(m), normIdentityKey(refKeyOf(b)))]; return t !== undefined && t.state === 'OPEN' }
+    // 图外引用的状态仍来自宿主旁表：明确已关闭才放行，没读到状态不能推成可接（#1768）。
+    const openBlocker = (b: any, ticket: any): boolean => {
+      const raw: any = byId[idOfParts(effortOf(m), refKeyOf(b))]
+      const blocker: any = raw ?? byId[idOfParts(effortOf(m), normIdentityKey(refKeyOf(b)))]
+      if (blocker) return blocker.state === 'OPEN'
+      const refs: any[] = Array.isArray(ticket.blockedByRefs) ? ticket.blockedByRefs : []
+      const ref = refs.find(function (x: any): boolean { return normIdentityKey(refKeyOf(x)) === normIdentityKey(refKeyOf(b)) })
+      return !ref || String(ref.state || '').toUpperCase() !== 'CLOSED'
+    }
     const open: any[] = []
     const closed: any[] = []
     const frontier: any[] = []
@@ -170,7 +179,8 @@ export const compute = (st: any): any => {
       if (t.state !== 'OPEN') return
       open.push(t)
       if (t.claimedBy) { claimed.push(t); return }
-      if (t.blockedBy.some(openBlocker)) blocked.push(t)
+      // 依赖组未知（blockedBy 缺席）：不能算可接，按被挡收口（与 #1768 图外阻塞者未知同侧）。
+      if (!Array.isArray(t.blockedBy) || t.blockedBy.some(function (b: any): boolean { return openBlocker(b, t) })) blocked.push(t)
       else frontier.push(t)
     })
     return { m: m, open: open, closed: closed, frontier: frontier, claimed: claimed, blocked: blocked }

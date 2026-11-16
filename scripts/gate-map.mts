@@ -138,7 +138,7 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // unknown / 组缺席 / truncated + 空在两边都不写；状态与类型不知道时不兜成 open / issue；变化集的
   // 落点由宿主 placement 给（map / child / thin / issue 各走一遍），客户端不再按 parentKey 判容器归属，
   // 不知道的组并进已有行不抹掉已知值。单跑实测 38 条。
-  'verify-1885-review-row-merge': 38,
+  'verify-1885-review-row-merge': 42,
   // 2026-11-05 #1885 评审修复（规格 §6 / I7）：删除只走墓碑——真 SQLite 里 confirm-不存在（row=complete+null）
   // 之后行还在（只读打开文件数一行）、列表投影没有它、变化集 missing 有它、关库重开结论不变；
   // 票重新出现时墓碑被清掉、变化集改说「变了」；另一条入口 markMissing 仍然可用。单跑实测 19 条。

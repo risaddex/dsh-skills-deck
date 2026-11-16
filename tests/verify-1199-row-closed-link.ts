@@ -149,5 +149,19 @@ function renderStatic(url) {
   check(r === true && opened.length === 1, '有窗口环境 https 分支回真且调 window.open（回归不动）')
 }
 
+// C6：TicketRow 与 compute 同口径消费阻塞边：图外只在引用态明确 CLOSED 时放行，未知不放成可接。
+{
+  const renderOpen = (extra) => renderToStaticMarkup(React.createElement(DswsCtx.Provider, { value: makeCx(React.createElement) },
+    React.createElement(TicketRow, {
+      st: { snapshot: { issues: [], maps: [] } }, g: { m: { tickets: [] } },
+      t: Object.assign({ number: 9, key: '9', title: '开着的行', state: 'OPEN', labels: [], url: 'https://github.com/o/r/issues/9' }, extra),
+      indent: 0, colorOf: () => '#fff',
+    })))
+  check(!renderOpen({ blockedBy: [42], blockedByRefs: [{ key: 42, state: 'CLOSED' }] }).includes('map.subBlocked'), '图外阻塞者明确 CLOSED：行不显示被挡')
+  check(renderOpen({ blockedBy: [42], blockedByRefs: [{ key: 42 }] }).includes('map.subBlocked'), '图外阻塞者状态未知：行按被挡显示')
+  check(renderOpen({}).includes('map.subBlocked'), '依赖组未知（blockedBy 缺席）：行按被挡显示，不当成没有阻塞者')
+  check(!renderOpen({ blockedBy: [] }).includes('map.subBlocked'), '确认没有阻塞者（空数组）：行不显示被挡')
+}
+
 console.log(failures ? `\n#1199 门禁失败 ${failures} 项（共 ${total} 条）` : `\n#1199 门禁全部通过（共 ${total} 条）`)
 process.exit(failures ? 1 : 0)

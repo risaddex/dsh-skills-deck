@@ -484,7 +484,8 @@ export const envTotal = (st: any): number => { return chainSteps(st).length; };
 export const envLabel = (st: any): string => { const n: number = readyCount(st); const t: number = envTotal(st); if (t <= 0) return '--'; return n < 0 ? '--/' + t : n + '/' + t; };
 export const setupCheck = (st: any): any => chainStep(st, 'tracker:initialized');
 // #370：blockerNames 只列「仍 OPEN」的阻塞者（GitHub 依赖边在阻塞者关闭后仍保留，需按状态过滤）
-export const openBlockers = (t: any, m: any): any[] => t.blockedBy.filter(function (b: any): boolean {
+// blockedBy 缺席表示依赖组未知：名单为空，但调用方仍按被挡显示，不能把未知说成已知阻塞者。
+export const openBlockers = (t: any, m: any): any[] => (Array.isArray(t.blockedBy) ? t.blockedBy : []).filter(function (b: any): boolean {
   const bt: any = m.tickets.find(function (x: any): boolean { return x.number === b; });
   return bt !== undefined && bt.state === 'OPEN';
 });

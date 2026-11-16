@@ -1,3 +1,11 @@
+## 2026-11-16 · v2.0.0-alpha.1 alpha: fix the panel crash on new map tickets and ship the tracker and progress-heading fixes (#7, #9, #10)
+
+- **What this is**: the version moves from `2.0.0-alpha.0` to `2.0.0-alpha.1`. It ships a crash fix found while the maintainer was testing the installed alpha.0 by hand, plus two fixes already reviewed for tickets #7 and #10.
+- **Panel crash fixed**: the details panel crashed with `Cannot read properties of undefined (reading 'some')`. The cause: a change set could add a new map ticket before anything was known about its dependencies, so the ticket arrived without `blockedBy`. Now a missing `blockedBy` means the dependencies are unknown, and the panel counts that ticket as blocked instead of ready to take. Known blockers are stored as ticket numbers, with their titles and states kept next to them. The grouping, the ticket row and the new map detail view all apply the same rule, and a blocker that lives outside the map counts as cleared only when it is confirmed closed.
+- **Ships the reviewed fixes**: missing English tracker messages no longer fall back to Chinese (#7), and creating a ticket with lowercase English progress headings no longer produces a duplicate progress section (#10).
+- **Verification**: build and typecheck pass; `npm run verify:parallel` matches the accepted baseline failures, and all 8 smoke tests pass.
+- **Commit**: this commit.
+
 ## 2026-11-13 · v2.0.0-alpha.0 alpha: hard fork as dsh-skills-deck (#2)
 
 - **What this is**: the first release of the hard fork `risaddex/dsh-skills-deck`, taken from `FeatherHunter/dsh-mattpocock-skills-deck` at `5b4d78f`. The package, the DSH plugin entries and the GitHub repository are renamed to `dsh-skills-deck`; behavior is unchanged. Decision record: `docs/adr/20261113-hard-fork-dsh-skills-deck.md`.

@@ -29,8 +29,16 @@ export     const TicketRow = React.memo(({ st, g, t, indent, colorOf }: any) => 
       const wayfinderTypeOf = function(x: any){ const ls=(x.labels||[]); for(let i=0;i<ls.length;i++){ const n=typeof ls[i]==='string'?ls[i]:ls[i].name; if(n==='wayfinder:map') return 'map'; if(n==='wayfinder:research') return 'research'; if(n==='wayfinder:prototype') return 'prototype'; if(n==='wayfinder:grilling') return 'grilling'; if(n==='wayfinder:task') return 'task'; } const tt=x.type||''; if(['research','prototype','grilling','task','map','spec'].indexOf(tt)>=0) return tt; return 'issue'; };
       const cx = React.useContext(DswsCtx)
       const h = cx ? cx.h : React.createElement
-      const openBlocker = function (b: any) { const bt = g.m.tickets.find(function (x: any) { return x.number === b }); return bt && bt.state === 'OPEN' }
-      const blocked = t.state === 'OPEN' && t.blockedBy.some(openBlocker)
+      // 与 compute 同口径：图内看行状态；图外只在 blockedByRefs 明确 CLOSED 时放行，没读到状态按挡着收口（#1768）。
+      const openBlocker = function (b: any) {
+        const bt = g.m.tickets.find(function (x: any) { return String(x.number) === String(b) })
+        if (bt) return bt.state === 'OPEN'
+        const refs: any[] = Array.isArray(t.blockedByRefs) ? t.blockedByRefs : []
+        const ref = refs.find(function (x: any) { return String(x && x.key) === String(b) })
+        return !ref || String(ref.state || '').toUpperCase() !== 'CLOSED'
+      }
+      // 依赖组未知（blockedBy 缺席）时不放出行内动作：与 compute 的被挡分组同口径，未知不等于没有阻塞者。
+      const blocked = t.state === 'OPEN' && (!Array.isArray(t.blockedBy) || t.blockedBy.some(openBlocker))
       const subItem = (icon: any, color: any, text: any) => h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 3, color: color, minWidth: 0 } }, [
         Ic({ n: icon, size: 11 }),
         h(Tip, { content: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } }, [h('div', { style: { fontSize: 10, color: '#8b8b95', lineHeight: '14px' } }, tr('tip.header.text')), h('div', { style: { fontSize: 11, color: '#e6edf3', lineHeight: '16px', wordBreak: 'break-word', whiteSpace: 'normal' } }, text)]) }, h('span', { className: 'dsws-ellip', style: { maxWidth: 200 } }, text)),

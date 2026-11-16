@@ -103,8 +103,8 @@ function has(obj: any, field: string): boolean {
   check(bytes(issue.assignees) === bytes(patch.assignees) && patch.assignees[0].login === 'alice',
     'A2 指派：两边写出同一份', { issue: issue.assignees, patch: patch.assignees })
   check(issue.parentKey === '100' && patch.parentKey === '100', 'A3 父票：两边都是 100')
-  check(bytes(issue.blockedBy) === bytes(patch.blockedBy) && patch.blockedBy.length === 1 && patch.blockedBy[0].key === '90',
-    'A4 阻塞边：客户端补丁也写 blockedBy，且与宿主投影逐字相等（标准轴第 1 条的核心缺口）', { issue: issue.blockedBy, patch: patch.blockedBy })
+  check(bytes(issue.blockedBy) === bytes(patch.blockedBy) && patch.blockedBy[0].key === '90',
+    'A4 共享换算保留同一份引用；地图子票在落位时另换成编号与引用态旁表', { issue: issue.blockedBy, patch })
   check(issue.mergedAt !== null && patch.mergedAt === issue.mergedAt, 'A5 合并信息：两边写出同一个 ISO 时间')
   check(patch.state === 'OPEN' && issue.state === 'open', 'A6 状态：客户端大写、宿主小写，但都是同一个值')
 
@@ -242,6 +242,32 @@ function has(obj: any, field: string): boolean {
   check(source.indexOf('changePlacementOf(item)') >= 0, 'C16 客户端从 item.placement 取落点（宿主回包带来）')
   check(!/patch\.parentKey\s*\)/.test(source) && !/mapIndexOf\([^\n]*patch\.parentKey/.test(source),
     'C17 客户端不再拿 patch.parentKey 去查容器（领域规则不在客户端重算）')
+}
+
+// D 真实变化集插入未知依赖的新子票后，DetailsDock 的 compute 不能崩溃或把未知当可接。
+{
+  const identity = await import('../src/tracker/kernel/identity-keys.ts')
+  Object.assign(globalThis, identity)
+  const { compute } = await import('../src/client/kernel/store-derived.ts')
+  const before = { ok: true, maps: [{ key: '100', number: 100, effortId: '', tickets: [] }], issues: [] }
+  const row = listRow('41', { blockedByGroup: 'unknown', placement: { place: 'child', containerEffortId: '', containerKey: '100' } })
+  const merged: any = applySnapshotChangeSet(before, [row], [], { idOf, rowFieldsOf: snapshotRowFieldsOf })
+  try {
+    const groups = compute({ snapshot: merged.snapshot })
+    check(groups[0].frontier.length === 0 && groups[0].blocked.length === 1,
+      'D1 unknown 新子票经 applySnapshotChangeSet → compute 不崩溃，也不成为 frontier', groups[0])
+    const child = merged.snapshot.maps[0].tickets[0]
+    check(!has(child, 'blockedBy') && !has(child, 'blockedByKnown'), 'D2 缺席本身表示未知，不加第二份旗标', child)
+    const known = listRow('41', { blockedBy: [{ key: '42', title: '图外阻塞者', state: 'open' }], blockedByGroup: 'complete', placement: { place: 'child', containerEffortId: '', containerKey: '100' } })
+    const knownMerged: any = applySnapshotChangeSet(merged.snapshot, [known], [], { idOf, rowFieldsOf: snapshotRowFieldsOf })
+    const unknownAgain: any = applySnapshotChangeSet(knownMerged.snapshot, [row], [], { idOf, rowFieldsOf: snapshotRowFieldsOf })
+    const kept = unknownAgain.snapshot.maps[0].tickets[0]
+    check(bytes(kept.blockedBy) === '[42]' && kept.blockedByRefs[0].state === 'OPEN',
+      'D3 已知阻塞后再收到 unknown：保留编号与引用态', kept)
+    check(compute({ snapshot: unknownAgain.snapshot })[0].blocked.length === 1, 'D4 compute 按编号消费保留下来的已知阻塞边')
+  } catch (error) {
+    check(false, 'D1 unknown 新子票经 applySnapshotChangeSet → compute 不崩溃，也不成为 frontier', String(error))
+  }
 }
 
 console.log('')

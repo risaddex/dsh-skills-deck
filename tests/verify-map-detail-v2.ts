@@ -202,9 +202,9 @@ section('2. 状态判定：已关闭 > 在办 > 被挡 > 可接；阻塞者不�
     '编号两端的空白也去掉再比（实得 ' + show(facts.ticketCardStatusOf({ state: 'OPEN', blockedBy: [' 01 '] }, { '1': true })) + '）')
   // 有意的放宽（与宿主 groupTickets 只认 OPEN 不同）：状态缺失或写法不认识时按「开着」判。
   // 若照着宿主只认 OPEN，脏行会被当成已关闭，悄悄从看板上消失；宁可让它显眼地排进可接。
-  check(facts.ticketCardStatusOf({ title: '状态缺失' }, openByNumber) === 'ready',
+  check(facts.ticketCardStatusOf({ title: '状态缺失', blockedBy: [] }, openByNumber) === 'ready',
     '状态缺失的脏行按开着判、排在可接里（与宿主 groupTickets 的有意差异）')
-  check(facts.ticketCardStatusOf({ state: 'REOPENED' }, openByNumber) === 'ready',
+  check(facts.ticketCardStatusOf({ state: 'REOPENED', blockedBy: [] }, openByNumber) === 'ready',
     '不认识的状态写法同样按开着判')
 }
 
@@ -215,7 +215,7 @@ section('2b. 跨容器引用态：图外阻塞者按 blockedByRefs 收口，标�
 {
   const env = { cardIdPrefix: 'x', colorOf: {}, actionOf: () => 'execute', textOf: (key) => key }
   const factWith = (row) => facts.ticketCardFactsOf(row, facts.ticketFactsContextOf([row], env))
-  const base = { key: 'i-1500', number: 1500, title: '被别的地图挡住的票', state: 'OPEN' }
+  const base = { key: 'i-1500', number: 1500, title: '被别的地图挡住的票', state: 'OPEN', blockedBy: [] }
 
   const outsideOpen = Object.assign({}, base, { blockedBy: [9001], blockedByRefs: [{ key: 9001, title: '别图里还开着', state: 'OPEN' }] })
   const openFact = factWith(outsideOpen)
@@ -247,16 +247,16 @@ section('2b. 跨容器引用态：图外阻塞者按 blockedByRefs 收口，标�
 // ===========================================================================
 // 夹具：票号、状态、阻塞关系、标签形状都按真后端的几种写法来。
 const ROWS = [
-  { key: 'i-1332', number: 1332, title: '订阅源切成八段', state: 'OPEN', labels: ['wayfinder:task', 'bug'], updatedAt: '2026-10-20T10:00:00Z' },
+  { key: 'i-1332', number: 1332, title: '订阅源切成八段', state: 'OPEN', blockedBy: [], labels: ['wayfinder:task', 'bug'], updatedAt: '2026-10-20T10:00:00Z' },
   { key: 'i-1374', number: 1374, title: '一个进程只建一个日志实例', state: 'OPEN', labels: ['wayfinder:task'], blockedBy: [1332], updatedAt: '2026-10-21T08:00:00Z' },
-  { key: 'i-1316', number: 1316, title: '决定读回失败的处置策略', state: 'OPEN', labels: ['wayfinder:grilling'], updatedAt: '2026-10-19' },
-  { key: 'i-1348', number: 1348, title: '宿主启动次数在一千到四千之间', state: 'OPEN', labels: ['wayfinder:research'], claimedBy: 'FeatherHunter', updatedAt: '2026-10-21' },
+  { key: 'i-1316', number: 1316, title: '决定读回失败的处置策略', state: 'OPEN', blockedBy: [], labels: ['wayfinder:grilling'], updatedAt: '2026-10-19' },
+  { key: 'i-1348', number: 1348, title: '宿主启动次数在一千到四千之间', state: 'OPEN', blockedBy: [], labels: ['wayfinder:research'], claimedBy: 'FeatherHunter', updatedAt: '2026-10-21' },
   { key: 'i-1350', number: 1350, title: '被挡但有人在办的票', state: 'OPEN', labels: ['wayfinder:research'], claimedBy: 'someone', blockedBy: [1332] },
   { key: 'i-1315', number: 1315, title: '定位读回失败在哪一层', state: 'CLOSED', labels: [{ name: 'wayfinder:research', color: '#0ea5e9' }], closedAt: '2026-10-18T09:00:00Z', updatedAt: '2026-10-18' },
   { key: 'i-1317', number: 1317, title: '把真重启与重复写分开', state: 'CLOSED', labels: ['wayfinder:research'], closedAt: '2026-10-18T11:00:00Z' },
   { key: 'i-1331', number: 1331, title: '一个进程只建一个日志实例（方案）', state: 'CLOSED', labels: ['wayfinder:task'], closedAt: '2026-10-17' },
-  { key: 'i-1400', number: 1400, title: '行自带类型兜底的原型票', state: 'OPEN', labels: ['needs-triage'], type: 'prototype' },
-  { key: 'i-1401', number: 1401, title: '普通票没有类型小签', state: 'OPEN', labels: ['needs-triage'] },
+  { key: 'i-1400', number: 1400, title: '行自带类型兜底的原型票', state: 'OPEN', blockedBy: [], labels: ['needs-triage'], type: 'prototype' },
+  { key: 'i-1401', number: 1401, title: '普通票没有类型小签', state: 'OPEN', blockedBy: [], labels: ['needs-triage'] },
 ]
 const ACTIONS = { 1316: 'discuss', 1348: 'research', 1317: 'takeover', 1400: 'prototype', 1401: 'implement' }
 const COLOR_OF = {
@@ -302,8 +302,8 @@ section('3. 卡片刻画：编号 / 标题 / 小签 / BUG / 认领 / 更新日 /
     '在办卡的页脚键、角标、小签（实得 ' + show(doing.footText) + ' / ' + show(doing.pickCorner) + ' / ' + show(doing.tags) + '）')
 
   // p101 定版：认领优先，在办票画「在办」角标而不是 BUG 三角；结案票才保留 BUG。
-  const doingBug = facts.ticketCardFactsOf({ number: 1601, title: '在办的 bug 票', state: 'OPEN', labels: ['bug'], claimedBy: 'someone' },
-    facts.ticketFactsContextOf([{ number: 1601, title: '在办的 bug 票', state: 'OPEN', claimedBy: 'someone' }], ENV))
+  const doingBug = facts.ticketCardFactsOf({ number: 1601, title: '在办的 bug 票', state: 'OPEN', blockedBy: [], labels: ['bug'], claimedBy: 'someone' },
+    facts.ticketFactsContextOf([{ number: 1601, title: '在办的 bug 票', state: 'OPEN', blockedBy: [], claimedBy: 'someone' }], ENV))
   check(doingBug.status === 'doing' && doingBug.bug === false && doingBug.pickCorner === 'doing',
     '在办 + bug：画在办角标，不给 BUG 三角（实得 status=' + show(doingBug.status) + '、bug=' + show(doingBug.bug) + '、角标=' + show(doingBug.pickCorner) + '）')
   const closedBug = facts.ticketCardFactsOf({ number: 1602, title: '结案的 bug 票', state: 'CLOSED', labels: ['bug'] },
@@ -372,9 +372,9 @@ section('4. 阻塞关系：被挡卡指向编号最小的开着阻塞者，挡�
   check(closed.blockedBy === null && closed.blocks === null, '结案卡的阻塞关系两个方向都是 null（实得 ' + show(closed.blockedBy) + ' / ' + show(closed.blocks) + '）')
 
   // 挡路卡只指向「确实处于被挡状态」的那张：在办票不算。
-  const onlyClaimedChild = facts.ticketCardFactsOf({ number: 1500, title: '挡路者', state: 'OPEN', labels: ['wayfinder:task'] },
+  const onlyClaimedChild = facts.ticketCardFactsOf({ number: 1500, title: '挡路者', state: 'OPEN', blockedBy: [], labels: ['wayfinder:task'] },
     facts.ticketFactsContextOf([
-      { number: 1500, title: '挡路者', state: 'OPEN' },
+      { number: 1500, title: '挡路者', state: 'OPEN', blockedBy: [] },
       { number: 1501, title: '被挡的', state: 'OPEN', blockedBy: [1500] },
       { number: 1502, title: '在办的', state: 'OPEN', blockedBy: [1500], claimedBy: 'x' },
     ], ENV))
@@ -384,8 +384,8 @@ section('4. 阻塞关系：被挡卡指向编号最小的开着阻塞者，挡�
   // 一张票被两张挡住时，两侧必须指向同一对：被挡卡说被主阻塞者（编号最小）挡，
   // 只有主阻塞者才画「阻塞的就是这张」，另一张不能也说自己挡住它。
   const multiRows = [
-    { key: 'm-10', number: 10, title: '次阻塞者', state: 'OPEN' },
-    { key: 'm-1', number: 1, title: '主阻塞者', state: 'OPEN' },
+    { key: 'm-10', number: 10, title: '次阻塞者', state: 'OPEN', blockedBy: [] },
+    { key: 'm-1', number: 1, title: '主阻塞者', state: 'OPEN', blockedBy: [] },
     { key: 'm-5', number: 5, title: '被两张挡的', state: 'OPEN', blockedBy: [10, 1] },
   ]
   const multiCtx = facts.ticketFactsContextOf(multiRows, ENV)
@@ -399,7 +399,7 @@ section('4. 阻塞关系：被挡卡指向编号最小的开着阻塞者，挡�
     '次阻塞者 #10 不说自己挡住它，两侧说法一致（实得 ' + show(multiOf(10).blocks) + '）')
   // 补零编号进阻塞关系：行 key '01' 解析成 1，阻塞者写 '01' 也要挂得上去。
   const paddedRows = [
-    { key: '01', number: 1, title: '补零挡路者', state: 'OPEN' },
+    { key: '01', number: 1, title: '补零挡路者', state: 'OPEN', blockedBy: [] },
     { key: '02', number: 2, title: '被挡住', state: 'OPEN', blockedBy: ['01'] },
   ]
   const paddedFacts = paddedRows.map((row) => facts.ticketCardFactsOf(row, facts.ticketFactsContextOf(paddedRows, ENV)))
@@ -440,7 +440,7 @@ section('6. 看板排序：三条性质 + 已完成段')
 
   // 一张挡路者挡住两张、其中一张自己还有下游：这几张必须连在该段里，但不保证两张被挡票相邻。
   const fanRows = [
-    { key: 'f-100', number: 100, title: '挡路者', state: 'OPEN' },
+    { key: 'f-100', number: 100, title: '挡路者', state: 'OPEN', blockedBy: [] },
     { key: 'f-101', number: 101, title: '被挡之一', state: 'OPEN', blockedBy: [100] },
     { key: 'f-102', number: 102, title: '被挡之二', state: 'OPEN', blockedBy: [100] },
     { key: 'f-103', number: 103, title: '下游', state: 'OPEN', blockedBy: [101] },
@@ -498,7 +498,7 @@ section('6.1 脏数据：成环、自阻塞、缺编号')
     { number: 2001, title: '环一号', state: 'OPEN', blockedBy: [2002] },
     { number: 2002, title: '环二号', state: 'OPEN', blockedBy: [2001] },
     { number: 2003, title: '自阻塞', state: 'OPEN', blockedBy: [2003] },
-    { title: '没有编号', state: 'OPEN' },
+    { title: '没有编号', state: 'OPEN', blockedBy: [] },
   ]
   const cycleFacts = cycleRows.map((row) => facts.ticketCardFactsOf(row, facts.ticketFactsContextOf(cycleRows, ENV)))
   const order = board.orderOpenTickets(cycleFacts)
@@ -514,8 +514,8 @@ section('6.1 脏数据：成环、自阻塞、缺编号')
 
   // 撞编号的脏数据：两张行写成同一个编号。只拿编号认名字会把第二张当成「已经画过」静默丢掉。
   const dupRows = [
-    { key: 'dup-a', number: 3001, title: '撞号一', state: 'OPEN' },
-    { key: 'dup-b', number: 3001, title: '撞号二', state: 'OPEN' },
+    { key: 'dup-a', number: 3001, title: '撞号一', state: 'OPEN', blockedBy: [] },
+    { key: 'dup-b', number: 3001, title: '撞号二', state: 'OPEN', blockedBy: [] },
   ]
   const dupFacts = dupRows.map((row) => facts.ticketCardFactsOf(row, facts.ticketFactsContextOf(dupRows, ENV)))
   const dupOrder = board.orderOpenTickets(dupFacts)
@@ -526,8 +526,8 @@ section('6.1 脏数据：成环、自阻塞、缺编号')
 
   // 连编号带行 key 都一样的两张脏行：靠「输入里的第几张」区分，仍然各画一次。
   const sameRows = [
-    { key: 'dup-same', number: 3002, title: '同号同 key 一', state: 'OPEN' },
-    { key: 'dup-same', number: 3002, title: '同号同 key 二', state: 'OPEN' },
+    { key: 'dup-same', number: 3002, title: '同号同 key 一', state: 'OPEN', blockedBy: [] },
+    { key: 'dup-same', number: 3002, title: '同号同 key 二', state: 'OPEN', blockedBy: [] },
   ]
   const sameFacts = sameRows.map((row) => facts.ticketCardFactsOf(row, facts.ticketFactsContextOf(sameRows, ENV)))
   const sameOrder = board.orderOpenTickets(sameFacts)
@@ -536,8 +536,8 @@ section('6.1 脏数据：成环、自阻塞、缺编号')
 
   // 两行都没有编号、也没有 key：内容完全一样，只靠「输入里的第几张」区分，仍要各画一次。
   const blankRows = [
-    { title: '无编号一', state: 'OPEN' },
-    { title: '无编号二', state: 'OPEN' },
+    { title: '无编号一', state: 'OPEN', blockedBy: [] },
+    { title: '无编号二', state: 'OPEN', blockedBy: [] },
   ]
   const blankFacts = blankRows.map((row) => facts.ticketCardFactsOf(row, facts.ticketFactsContextOf(blankRows, ENV)))
   const blankOrder = board.orderOpenTickets(blankFacts)
@@ -551,7 +551,7 @@ section('6.1 脏数据：成环、自阻塞、缺编号')
   const CHAIN = 20000
   const chainRows = []
   for (let i = 1; i <= CHAIN; i += 1) {
-    chainRows.push(i === 1 ? { key: 'c-1', number: 1, title: '链头', state: 'OPEN' } : { key: 'c-' + i, number: i, title: '链上第 ' + i + ' 张', state: 'OPEN', blockedBy: [i - 1] })
+    chainRows.push(i === 1 ? { key: 'c-1', number: 1, title: '链头', state: 'OPEN', blockedBy: [] } : { key: 'c-' + i, number: i, title: '链上第 ' + i + ' 张', state: 'OPEN', blockedBy: [i - 1] })
   }
   const chainCtx = facts.ticketFactsContextOf(chainRows, ENV)
   const chainFacts = chainRows.map((row) => facts.ticketCardFactsOf(row, chainCtx))
@@ -565,7 +565,7 @@ section('6.1 脏数据：成环、自阻塞、缺编号')
 // ===========================================================================
 section('7. 取数五态：取回那份 / 正在取 / 不支持 / 取失败 / 还没有桶')
 {
-  const snapshot = { tickets: [{ number: 1, title: '快照票', state: 'OPEN' }], stats: { total: 9, closed: 4 } }
+  const snapshot = { tickets: [{ number: 1, title: '快照票', state: 'OPEN', blockedBy: [] }], stats: { total: 9, closed: 4 } }
 
   const real = feed.ticketFeedOf({
     mode: 'real', items: [{ number: 1, title: 'a' }, { number: 2, title: 'b' }],
@@ -632,8 +632,11 @@ section('8. 交叉一致性：行序打乱不影响每张卡的刻画')
 
   const noLabels = facts.ticketLabelNamesOf({ labels: null })
   check(show(noLabels) === show([]), '没有标签时标签名列表是空数组（实得 ' + show(noLabels) + '）')
-  const noBlockers = facts.ticketCardStatusOf({ state: 'OPEN', blockedBy: null }, {})
-  check(noBlockers === 'ready', '没有阻塞者时判可接（实得 ' + show(noBlockers) + '）')
+  // 只有明确的空数组才是「确认没有阻塞者」；缺席或 null 是依赖组未知（变化集新插入行），按被挡收口。
+  const noBlockers = facts.ticketCardStatusOf({ state: 'OPEN', blockedBy: [] }, {})
+  check(noBlockers === 'ready', '确认没有阻塞者（空数组）时判可接（实得 ' + show(noBlockers) + '）')
+  const unknownBlockers = [facts.ticketCardStatusOf({ state: 'OPEN' }, {}), facts.ticketCardStatusOf({ state: 'OPEN', blockedBy: null }, {})]
+  check(show(unknownBlockers) === show(['blocked', 'blocked']), '依赖组未知（缺席 / null）不进可接列（实得 ' + show(unknownBlockers) + '）')
 }
 
 // ===========================================================================
@@ -758,7 +761,7 @@ section('10. 适配层：四处理名不漏，四个按钮与整卡点按都把�
 {
   const ENV = { cardIdPrefix: 'm1314', colorOf: { 'wayfinder:task': '10b981' }, actionOf: function () { return 'execute' }, textOf: function (key) { return key } }
   const ROWS = [
-    { key: 'i-1332', number: 1332, title: '挡路的那张', state: 'OPEN' },
+    { key: 'i-1332', number: 1332, title: '挡路的那张', state: 'OPEN', blockedBy: [] },
     { key: 'i-1374', number: 1374, title: '被挡的那张', state: 'OPEN', blockedBy: [1332] },
     { key: 'i-1315', number: 1315, title: '结案的 bug 票', state: 'CLOSED', labels: ['bug'] },
   ]
@@ -823,7 +826,7 @@ section('11. 一整页模型：计数与卡片张数一致，取数五态都画�
   const ENV = { colorOf: { 'wayfinder:task': '10b981' }, actionOf: function () { return 'execute' }, textOf: function (key) { return key } }
   const MAP = { number: 1314, key: '1314', title: '插件日志持久化读回失败与宿主反复启动', destination: '让日志能如实落盘', tickets: [], stats: { total: 0 } }
   const ROWS = [
-    { key: 'i-1332', number: 1332, title: '可接的那张', state: 'OPEN' },
+    { key: 'i-1332', number: 1332, title: '可接的那张', state: 'OPEN', blockedBy: [] },
     { key: 'i-1374', number: 1374, title: '被挡的那张', state: 'OPEN', blockedBy: [1332] },
     { key: 'i-1315', number: 1315, title: '结案的那张', state: 'CLOSED', closedAt: '2026-10-18T09:00:00Z' },
   ]
@@ -855,7 +858,7 @@ section('11. 一整页模型：计数与卡片张数一致，取数五态都画�
     '页面回调经整页模型仍然收到「这张票」，链路不断（实得 ' + show(seen) + '）')
 
   const loadingModel = pageModel.mapDetailPageModelOf({
-    map: { number: 7, title: '快照里的地图', tickets: [{ number: 1, title: '快照票', state: 'OPEN' }], stats: { total: 1 } },
+    map: { number: 7, title: '快照里的地图', tickets: [{ number: 1, title: '快照票', state: 'OPEN', blockedBy: [] }], stats: { total: 1 } },
     bucket: { mode: 'loading' },
     cardIdPrefix: 'm7', actionOf: ENV.actionOf, textOf: ENV.textOf,
   })

@@ -10,7 +10,8 @@
  *     容器（maps）只在真有子票变动时才换对象。
  *  2. 只写这一趟真正表达了的字段组：换算只此一份（src/shared/snapshot-row-fields.ts，构建时把同一份
  *     文本拼进闭包）。组记录缺席 / unknown / truncated + 空一律不写，不补空数组、不补 null ——
- *     并进已有行时不拿「不知道」去盖「已知」（规格 I6 三态）。
+ *     并进已有行时不拿「不知道」去盖「已知」（规格 I6 三态）。 未知的阻塞边就让 blockedBy 缺席，
+ *     由地图消费方按被挡收口；不另造「已知」旗标，缺席本身就是未知。
  *  3. 「这一行该放在哪里」由宿主的回包说了算（item.placement，见快照库变化集投影）：
  *     map = 这一行自己是容器，child = 挂到哪个容器的子票里，thin = 已关闭容器里已关闭子票的瘦身行，
  *     issue = 未挂图票。客户端不查 parentKey、不自己判容器归属（规格 D1「领域规则一处实现」）。
@@ -66,6 +67,36 @@ function changePlacementOf(item: any): ChangePlacement {
   if (p && p.place === 'child') return p
   if (p && p.place === 'thin') return p
   return { place: 'issue' }
+}
+
+/** 阻塞者键写成地图子票认的编号：纯数字键折成数字，其它键原样保留字符串，与宿主首帧组装同口径。 */
+function changeBlockerNumberOf(ref: any): number | string | null {
+  const raw = ref && typeof ref === 'object' ? ref.key : ref
+  const key = raw === null || raw === undefined ? '' : String(raw).trim()
+  if (!key) return null
+  return /^\d+$/.test(key) ? Number(key) : key
+}
+
+/**
+ * 地图子票的阻塞边形状：blockedBy 是编号，标题与状态另放 blockedByRefs（与宿主 normalizeTicket 同形）。
+ * 为什么只改子票：compute、TicketRow、阻塞名单都按 x.number === b 比编号，共享换算给的引用对象
+ * 直接放进去会全部比不上；未挂图票的消费方按 refKeyOf 读，引用对象照旧可用，不在这里改它的形状。
+ * 补丁里没有 blockedBy（依赖组未知）时原样返回：并进已有行不盖掉已知值，新插入行保持缺席即未知。
+ */
+function childBlockerPatch(patch: any): any {
+  if (!Array.isArray(patch.blockedBy)) return patch
+  const blockedBy: Array<number | string> = []
+  const blockedByRefs: any[] = []
+  patch.blockedBy.forEach(function (ref: any): void {
+    const key = changeBlockerNumberOf(ref)
+    if (key === null) return
+    blockedBy.push(key)
+    const out: any = { key: key }
+    if (ref && ref.title) out.title = String(ref.title)
+    if (ref && (ref.state === 'open' || ref.state === 'closed')) out.state = ref.state === 'closed' ? 'CLOSED' : 'OPEN'
+    blockedByRefs.push(out)
+  })
+  return Object.assign({}, patch, { blockedBy: blockedBy, blockedByRefs: blockedByRefs })
 }
 
 /**
@@ -209,9 +240,10 @@ export function applySnapshotChangeSet(
     maps.push(Object.assign({ tickets: [] }, patch))
     redrawn.push(id)
   }
-  const putChild = function (id: string, patch: any, placement: ChangePlacement): void {
+  const putChild = function (id: string, rowPatch: any, placement: ChangePlacement): void {
     const mi = mapIndexOf(placement.containerEffortId, placement.containerKey)
-    if (mi < 0) { putIssue(id, patch); return }
+    if (mi < 0) { putIssue(id, rowPatch); return }
+    const patch = childBlockerPatch(rowPatch)
     const map = writableMap(mi)
     for (let ti = 0; ti < map.tickets.length; ti++) {
       if (identity(map.tickets[ti]) !== id) continue

@@ -213,6 +213,8 @@ export function ticketCardStatusOf(
 ): TicketCardStatus {
   if (rowClosedOf(row)) return 'closed'
   if (claimedPersonOf(row)) return 'doing'
+  // 变化集可能只读到行而没读到依赖组；blockedBy 缺席是未知，不是确认没有阻塞者，不能进入可接列。
+  if (!Array.isArray(row.blockedBy)) return 'blocked'
   for (const blockerNo of blockerNumbersOf(row)) {
     if (blockerBlocksPage(blockerNo, openByNumber, blockerStates)) return 'blocked'
   }
