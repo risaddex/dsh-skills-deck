@@ -16,7 +16,7 @@ import { ghClient } from '../transport/client.js'
 import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
 // #104 `issue.write`：票写入的常驻结论线（轨迹形状与发射口在 ./write-log.js）。
 import { beginWriteTrail, emitIssueWrite } from '../support/write-log.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 import type { WriteTrail } from '../support/write-log.js';
 
 /**
@@ -35,7 +35,7 @@ async function addCommentInner(repo: RepositoryRef, key: string, body: string, c
   try {
     const parsed = parseRepo(repo)
     // 形状不对的入参本身就是这一处的原文（这之前还没跑过任何外部命令）；它取出来可能是空串，那是如实交代。
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `comment: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `comment: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'comment: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     if (typeof body !== 'string' || !body.trim()) return fail(ERROR_KIND.PARSE, 'comment: body required', body, TRACKER_ERROR_STAGE.INPUT_REFUSED)

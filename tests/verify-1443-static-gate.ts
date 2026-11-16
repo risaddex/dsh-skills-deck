@@ -210,7 +210,11 @@ async function main() {
   check(snapComposer.indexOf('const trackerFor') >= 0 && snapComposer.indexOf('opened.call(') >= 0 && countOf(snapComposer, 'registry.get(') === 1,
     '编排器接了会话口就经 opened.call 调会话操作，会话这层用不上时回落注册表取实例（全文件 registry.get 恰好一处，实得 ' + countOf(snapComposer, 'registry.get(') + ' 处）')
   const deckSession = stripComments(fs.readFileSync(path.join(ROOT, 'src/deck/tools/tracker-session.ts'), 'utf8'))
-  check(deckSession.indexOf('registry.get(') < 0 && deckSession.indexOf('resolveSessionRepoRef(') >= 0,
+  // #22：补齐那一调用搬进了同目录的 identity-resolve.ts（接线层要控制文件大小）。规则的意思没变——
+  // 「补仓库身份走会话能力、不向注册表取实例」——所以两件事分开查：接线层里不许有 registry.get，
+  // 共享补齐实现必须在身份模块里被真的调用。
+  const deckIdentity = stripComments(fs.readFileSync(path.join(ROOT, 'src/deck/tools/identity-resolve.ts'), 'utf8'))
+  check(deckSession.indexOf('registry.get(') < 0 && deckIdentity.indexOf('resolveSessionRepoRef(') >= 0,
     'deck 补仓库身份走会话能力（调用共享补齐实现，不再向注册表取实例）')
   console.log(failed ? ('\n' + total + ' 条断言，失败') : ('\n' + total + ' 条断言，全部通过')); process.exit(failed ? 1 : 0)
 }

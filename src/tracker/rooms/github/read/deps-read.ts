@@ -28,7 +28,7 @@ import { fail } from '../../../kernel/preflight.js'
 import { ghClient } from '../transport/client.js'
 import { getIssue, listIssues } from './issues.js'
 import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 import type { ParsedRepo } from '../model/issue-key.js'
 import { normalizeDependencyEdges } from '../model/normalize.js'
 import { DEPS_MAX, DEPS_QUERY } from '../channels/graphql/queries.js'
@@ -190,7 +190,7 @@ function caughtMessage(e: unknown, len: number): string {
 async function getDependenciesInner(repo: RepositoryRef, key: string, opts: DepsOpts | undefined, ctx: MemoContext): Promise<OpResult<Dependencies>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `getDependencies: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `getDependencies: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     // 批量模式：opts.keys
     if (opts && Array.isArray(opts.keys) && opts.keys.length) {
       // 批量返回聚合：对每 key 各自取依赖投影，再合并；宿主快照平时逐 key 调用，多 key 分支罕见。

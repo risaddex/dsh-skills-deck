@@ -38,7 +38,7 @@ import { writeBlockedByEdges } from './blocked-by-write.js'
 import type { EdgeTrail } from './blocked-by-write.js'
 import { PAGINATION } from '../../../contract/pagination.js'
 // 仓库坐标解析与读侧共用一份（#1687 从三处一模一样的副本里抽出来），不再在本文件里重写。
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 
 /** gh 执行器的形状（client 房的 ghClient 回什么就是什么，这里只借它的类型）。 */
 type GhClient = ReturnType<typeof ghClient>;
@@ -159,7 +159,7 @@ export async function setParent(repo: RepositoryRef, key: string, parentKey: str
 async function setParentInner(repo: RepositoryRef, key: string, parentKey: string | null | undefined, opts: SetOpts | undefined, ctx: MemoContext, trail: EdgeTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setParent: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setParent: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'setParent: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     const wantParent = parentKey == null ? null : String(parentKey).trim() || null
@@ -354,7 +354,7 @@ export async function setBlockedBy(repo: RepositoryRef, key: string, blockers: s
 async function setBlockedByInner(repo: RepositoryRef, key: string, blockers: string[] | undefined, opts: SetOpts | undefined, ctx: MemoContext, trail: EdgeTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setBlockedBy: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setBlockedBy: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'setBlockedBy: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     const want = Array.isArray(blockers) ? blockers.map((b) => String(b).trim()).filter(Boolean) : []

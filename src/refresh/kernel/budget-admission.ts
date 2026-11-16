@@ -9,7 +9,7 @@
 // 写保底与档位换算全部由调用方注入。这样同一个算式在刷新闸、宿主账本与门禁里是同一份逻辑，
 // 而数字只有 host-budget.ts 一处真源（同一件事不写两遍）。
 
-import { OPERATION_ENCYCLOPEDIA } from '../../tracker/contract/operations-encyclopedia.js'
+import { OPERATION_ENCYCLOPEDIA, LOCATOR_SPEND_PLANS } from '../../tracker/contract/operations-encyclopedia.js'
 import type { ReadSpendChannel } from '../../tracker/contract/operations-encyclopedia.js'
 import type { BackendBudgetModel, BudgetReading, BucketLevel } from '../../tracker/contract/budget-model.js'
 
@@ -121,6 +121,11 @@ export function isWriteOp(op: string): boolean {
  * 额度闸再手写一份「哪些读只花 GraphQL」，就又多一处会漂移的说法；派生之后，新增读操作
  * 只要在百科里写好花费计划，这里自动跟上。门禁 `tests/verify-operation-catalog.ts`
  * 与 `tests/verify-1765-read-channel-plan.ts` 钉住这张表。
+ *
+ * #22 起这张表也收三条定位口（`LOCATOR_SPEND_PLANS`，与读操作同一个契约文件）。原因是管线把
+ * `getRepoKey` 当成一次操作送进来裁决：表里没有它时只能走 `familiesOfOp` 的保守兜底「两族都看」，
+ * REST 见底就把这一问也拦了，而它头两级只读本地 git、一分额度都不花。拦下的后果不是少读一次，
+ * 是会话拿不到仓库身份，整家 deck 工具报「repo.refId missing」。
  */
 const READ_SPEND_PLANS: Record<string, readonly ReadSpendChannel[]> = (function (): Record<string, readonly ReadSpendChannel[]> {
   const table: Record<string, readonly ReadSpendChannel[]> = {}
@@ -129,12 +134,15 @@ const READ_SPEND_PLANS: Record<string, readonly ReadSpendChannel[]> = (function 
     const profile = OPERATION_ENCYCLOPEDIA[op]
     if (profile.kind === 'read') table[op] = profile.spend
   }
+  const locators = Object.keys(LOCATOR_SPEND_PLANS) as (keyof typeof LOCATOR_SPEND_PLANS)[]
+  for (const name of locators) table[name] = LOCATOR_SPEND_PLANS[name]
   return table
 })()
 
 /**
- * 这条操作的花费渠道计划；不是百科里的读操作（写操作、名单外的操作）返回 null。
- * 返回 null 的调用方按老行为两族都看，见 familiesOfOp 的兜底分支。
+ * 这条操作的（或这条定位口的）花费渠道计划；写操作与表里没有的名字返回 null。
+ * 返回 null 的调用方按老行为两族都看，见 familiesOfOp 的兜底分支——#22 之前 `getRepoKey`
+ * 就是落到那条兜底上，REST 见底时连只读本地 git 的一问也被拦，会话随即没有仓库身份。
  */
 export function readSpendPlanOf(op: string): readonly ReadSpendChannel[] | null {
   return READ_SPEND_PLANS[op] || null
