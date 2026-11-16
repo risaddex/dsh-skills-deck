@@ -547,6 +547,7 @@ const EXEMPTS: ExemptRow[] = [
   { file: 'src/refresh/kernel/failure-backoff.ts', name: 'delay', reason: '派生变量：backoffDelayMs(state) 算出来的本次等待时长，序列本身已登记为 chainBackoffMs' },
   { file: 'src/tracker/rooms/github/transport/client.ts', name: 'timeout', reason: '透传参数：值来自上层调用参数，本文件不决定时长（出站层的档位由 outbound-tiers.ts 定，已登记）' },
   { file: 'src/tracker/rooms/gitlab/client.ts', name: 'timeout', reason: '同上，透传参数' },
+  { file: 'src/host/linearAccounts.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#12）' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'startedMs', reason: '读钟时刻（这趟扫描什么时候开始的），不是可调参数' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'nextWatermarkMs', reason: '算出来的下一个水位时刻，不是可调参数' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'watermarkMs', reason: '上次扫到哪儿的时刻（状态字段），不是可调参数' },

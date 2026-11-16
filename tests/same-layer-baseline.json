@@ -1441,6 +1441,15 @@
       "count": 1,
       "owner": "#12（Linear 账号元数据文件）",
       "note": "同层互引的第四条同性质边：账号文件的校验与拼装引同目录的 ports.ts 类型（settings / labels / workspace 三条已记名）。只引类型，两处 import 都是 import type，转译后不留引用；不引这条就得把端口形状抄第二份。"
+    },
+    {
+      "file": "src/host/linearAccounts.ts",
+      "spec": "./configStore.js",
+      "resolved": "src/host/configStore.ts",
+      "layer": "host",
+      "count": 1,
+      "owner": "#12（Linear 账号元数据与凭据解析）",
+      "note": "账号文件的读写要用配置核的门面（parseConfig/stringifyConfig 是唯一入口），而配置核本体已贴着 20 KB 文件上限，读者只能另起一份文件住在旁边：这条边是「上限拆文件」的代价，不是新引入的业务耦合。方向单向（本文件→配置核，配置核不引本文件），无环。"
     }
   ]
 }
