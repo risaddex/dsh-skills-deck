@@ -30,10 +30,10 @@ never touched `api.linear.app`.
 
 ```sh
 ls -ld ~/.dsh/profiles/desktop/node_modules/dsh-skills-deck | sed 's/.*-> //'     # where the profile links to
-grep -rl registerLinearFlows ~/.dsh/profiles/desktop/node_modules/dsh-skills-deck/.build 2>/dev/null | head -1
+grep -rl registerLinearFlows ~/.dsh/profiles/desktop/node_modules/dsh-skills-deck/package/lib | head -1
 ```
 
-The second command must print a path. On 2026-11-16 it printed nothing: the profile was linked to the worktree
+The second command must print a path (it looks in `package/lib`, which is what the plugin loads; searching `.build` finds nothing even on a correct install, because that directory holds intermediate output). On 2026-11-16 it printed nothing: the profile was linked to the worktree
 `fix-22-repo-identity`, a branch of ticket #22 that has no sign-in code. Reinstalling re-linked the same tree, so it
 changed nothing. `main` at `c2c56899` already contains everything that branch had, so the branch is obsolete and the
 profile should point at a tree that contains `c2c56899` or later.
@@ -46,7 +46,7 @@ node scripts/build.mts          # the profile loads the build output, not the so
 
 then redeploy with `plugin_manager` `remove_bundle` followed by `install_bundle` pointing at that tree (the `desktop`
 profile is managed by the Electron app and the CLI refuses it), restart DSH, and run the `grep` again: it must now
-print a path. **Not checked:** I could not run `plugin_manager` from here, so the exact bundle path to give it is
+print a path. A correct link does not prove the running DSH loaded it: the host reads the code at start, so restart DSH after re-linking. **Not checked:** I could not run `plugin_manager` from here, so the exact bundle path to give it is
 yours to confirm.
 
 ### 2. Add the account
