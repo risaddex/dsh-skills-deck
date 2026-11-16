@@ -554,7 +554,8 @@ const EXEMPTS: ExemptRow[] = [
   { file: 'src/shared/linear-signin/src/protocol.ts', name: 'expiresInMs', reason: '解析结果字段：把令牌端点回的 expires_in（秒，由对端给）换成毫秒再交出去，是单位换算后的数据，不是本文件的可调时长（#19）' },
   { file: 'src/host/linearSignin.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#19，与 linearAccounts.ts 同一口径）' },
   { file: 'src/host/linearSignin.ts', name: 'renewWindowMs', reason: '派生变量：缺省接已登记的 LINEAR_RENEW_WINDOW_MS，正常路径用调用方给的值（#19）' },
-  { file: 'src/host/platform/httpChannel.ts', name: 'timeoutMs', reason: '透传参数：请求自带的 timeoutMs 优先，缺省接本文件已登记的 DEFAULT_TIMEOUT_MS（outboundDefaultMs），不是新的可调时长（#24）' },
+  // #24 与 #13 合并后的顺序：这一次请求自带的 > 通道构造时给的 > 出站档位（timeoutForTier 从中央参数读）> 本文件已登记的 DEFAULT_TIMEOUT_MS。四层都不是本文件新写的数字。
+  { file: 'src/host/platform/httpChannel.ts', name: 'timeoutMs', reason: '透传参数与派生变量：请求自带的优先，其次通道构造时给的，再次取 timeoutForTier（已登记档位值），最后落回 DEFAULT_TIMEOUT_MS（outboundDefaultMs），都不是新的可调时长（#24、#13）' },
   { file: 'src/host/linearAccounts.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#12）' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'startedMs', reason: '读钟时刻（这趟扫描什么时候开始的），不是可调参数' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'nextWatermarkMs', reason: '算出来的下一个水位时刻，不是可调参数' },

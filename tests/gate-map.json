@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T22:44:05.915Z",
+  "generatedAt": "2026-11-16T23:43:19.193Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 609,
-  "gateCount": 609,
-  "attributedGates": 552,
+  "chainLength": 610,
+  "gateCount": 610,
+  "attributedGates": 553,
   "unattributedGates": 57,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 144,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 973,
+  "graphFileCount": 980,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -2326,6 +2326,26 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 6 条）"
+    },
+    {
+      "step": "node tests/verify-13-linear-room.ts",
+      "file": "tests/verify-13-linear-room.ts",
+      "guards": [
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/normalize.ts",
+        "src/tracker/rooms/linear/preflight.ts",
+        "src/tracker/rooms/linear/read.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 5 条；源码里的路径字面量 2 条"
     },
     {
       "step": "node tests/verify-1302-panel-list-skeleton.ts",
@@ -16008,6 +16028,7 @@
       "node tests/verify-1059-issue-write.ts",
       "node tests/verify-1060-edge-log.ts",
       "node tests/verify-1182-docs-paths.ts",
+      "node tests/verify-13-linear-room.ts",
       "node tests/verify-1444-list-detail-thin.ts",
       "node tests/verify-1676-blocked-ref-unknown.ts",
       "node tests/verify-1765-read-channel-plan.ts",
@@ -16315,6 +16336,9 @@
       "node tests/verify-1605-map-routing-guard.ts",
       "node tests/verify-capability-register.ts",
       "node tests/verify-operation-catalog.ts"
+    ],
+    "src/tracker/rooms/linear": [
+      "node tests/verify-13-linear-room.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-tools-matrix.ts",
@@ -16776,12 +16800,12 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 996,
-    "dirCount": 105,
-    "coveredFileCount": 996,
+    "fileCount": 1003,
+    "dirCount": 106,
+    "coveredFileCount": 1003,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
-    "dedicatedDirCount": 81,
+    "dedicatedDirCount": 82,
     "guardedFiles": [
       "src/client/floating/Pop.ts",
       "src/client/floating/SkillFloatList.ts",
@@ -17670,6 +17694,13 @@
       "src/tracker/rooms/gitlab/support/capability-register.ts",
       "src/tracker/rooms/gitlab/support/read-log.ts",
       "src/tracker/rooms/gitlab/support/read-sources.ts",
+      "src/tracker/rooms/linear/client.ts",
+      "src/tracker/rooms/linear/errors.ts",
+      "src/tracker/rooms/linear/index.ts",
+      "src/tracker/rooms/linear/normalize.ts",
+      "src/tracker/rooms/linear/preflight.ts",
+      "src/tracker/rooms/linear/queries.ts",
+      "src/tracker/rooms/linear/read.ts",
       "src/tracker/rooms/markdown/budget.ts",
       "src/tracker/rooms/markdown/capability-register.ts",
       "src/tracker/rooms/markdown/comment-format.ts",
@@ -17875,6 +17906,7 @@
       "src/tracker/rooms/gitlab/repo",
       "src/tracker/rooms/gitlab/room",
       "src/tracker/rooms/gitlab/support",
+      "src/tracker/rooms/linear",
       "src/tracker/rooms/markdown",
       "src/tracker/rooms/markdown/format",
       "src/tracker/session",
@@ -17959,6 +17991,7 @@
       "src/tracker/rooms/gitlab/repo",
       "src/tracker/rooms/gitlab/room",
       "src/tracker/rooms/gitlab/support",
+      "src/tracker/rooms/linear",
       "src/tracker/rooms/markdown",
       "src/tracker/rooms/markdown/format",
       "src/tracker/session",

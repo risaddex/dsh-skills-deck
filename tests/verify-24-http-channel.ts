@@ -121,13 +121,13 @@ async function main(): Promise<void> {
   console.log('H4 a transport failure cools the bucket down, and a timeout says so')
   {
     const t = fakeOutbound()
-    const ch = createHttpChannel({ outbound: t.control, timeoutMs: 20, fetchImpl: (async (_u, init) => new Promise((_res, rej) => {
+    const ch = createHttpChannel({ outbound: t.control, fetchImpl: (async (_u, init) => new Promise((_res, rej) => {
       const signal = init.signal as AbortSignal
       signal.addEventListener('abort', () => rej(new Error('aborted by timeout')))
     })) as unknown as HttpFetchLike })
     const started = Date.now()
     let threw = ''
-    await ch.request({ url: 'https://example.test/', bucket: 'write' }).then(() => {}, (e) => { threw = String((e as Error).message || e) })
+    await ch.request({ url: 'https://example.test/', bucket: 'write', timeoutMs: 20 }).then(() => {}, (e) => { threw = String((e as Error).message || e) })
     check(threw !== '', 'a timeout throws rather than returning a fake status', threw)
     check(Date.now() - started < 2000, 'the timeout fires the request level budget, not a much longer one')
     check(t.log.transport.length === 1, 'the failure is reported to outbound', JSON.stringify(t.log.transport))
