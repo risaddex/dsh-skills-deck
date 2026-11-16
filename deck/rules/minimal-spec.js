@@ -32,7 +32,7 @@ function missingMapBlocks(text) {
   return MAP_BLOCK_TITLES.filter((t) => !new RegExp("^##\\s*" + escapeRegExp(t) + "\\s*$", "m").test(text));
 }
 function hasProgressHeading(text) {
-  return /^##\s*(?:进度|Progress)(?:\s*[\uFF1A:]\s*\d{1,3}\s*%?)?\s*$/m.test(text);
+  return /^##\s*(?:进度|Progress)(?:\s*[\uFF1A:]\s*\d{1,3}\s*%?)?\s*$/im.test(text);
 }
 function ensureBody(body, kind) {
   const text = typeof body === "string" ? body : "";

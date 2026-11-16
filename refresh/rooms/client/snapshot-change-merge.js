@@ -18,6 +18,27 @@ function changePlacementOf(item) {
   if (p && p.place === "thin") return p;
   return { place: "issue" };
 }
+function changeBlockerNumberOf(ref) {
+  const raw = ref && typeof ref === "object" ? ref.key : ref;
+  const key = raw === null || raw === void 0 ? "" : String(raw).trim();
+  if (!key) return null;
+  return /^\d+$/.test(key) ? Number(key) : key;
+}
+function childBlockerPatch(patch) {
+  if (!Array.isArray(patch.blockedBy)) return patch;
+  const blockedBy = [];
+  const blockedByRefs = [];
+  patch.blockedBy.forEach(function(ref) {
+    const key = changeBlockerNumberOf(ref);
+    if (key === null) return;
+    blockedBy.push(key);
+    const out = { key };
+    if (ref && ref.title) out.title = String(ref.title);
+    if (ref && (ref.state === "open" || ref.state === "closed")) out.state = ref.state === "closed" ? "CLOSED" : "OPEN";
+    blockedByRefs.push(out);
+  });
+  return Object.assign({}, patch, { blockedBy, blockedByRefs });
+}
 function changeRowPatch(item, rowFieldsOf) {
   const fieldsOf = typeof rowFieldsOf === "function" ? rowFieldsOf : typeof snapshotRowFieldsOf === "function" ? snapshotRowFieldsOf : null;
   if (!fieldsOf) throw new Error("change-set merge has no row conversion: the client closure lacks snapshotRowFieldsOf and the caller did not provide options.rowFieldsOf");
@@ -138,12 +159,13 @@ function applySnapshotChangeSet(snapshot, changes, missing, options) {
     maps.push(Object.assign({ tickets: [] }, patch));
     redrawn.push(id);
   };
-  const putChild = function(id, patch, placement) {
+  const putChild = function(id, rowPatch, placement) {
     const mi = mapIndexOf(placement.containerEffortId, placement.containerKey);
     if (mi < 0) {
-      putIssue(id, patch);
+      putIssue(id, rowPatch);
       return;
     }
+    const patch = childBlockerPatch(rowPatch);
     const map = writableMap(mi);
     for (let ti = 0; ti < map.tickets.length; ti++) {
       if (identity(map.tickets[ti]) !== id) continue;

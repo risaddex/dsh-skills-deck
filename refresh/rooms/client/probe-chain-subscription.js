@@ -373,7 +373,7 @@ const envLabel = (st) => {
   return n < 0 ? "--/" + t : n + "/" + t;
 };
 const setupCheck = (st) => chainStep(st, "tracker:initialized");
-const openBlockers = (t, m) => t.blockedBy.filter(function(b) {
+const openBlockers = (t, m) => (Array.isArray(t.blockedBy) ? t.blockedBy : []).filter(function(b) {
   const bt = m.tickets.find(function(x) {
     return x.number === b;
   });

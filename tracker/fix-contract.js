@@ -7,7 +7,6 @@ function pickLang(value, lang) {
     const l = lang === "zh" ? "zh" : "en";
     if (typeof value[l] === "string") return value[l];
     if (l === "zh" && typeof value.en === "string") return value.en;
-    if (l === "en" && typeof value.zh === "string") return value.zh;
   }
   return void 0;
 }
