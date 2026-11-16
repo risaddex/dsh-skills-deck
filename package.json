@@ -1,0 +1,68 @@
+{
+  "name": "dsh-skills-deck",
+  "version": "2.0.0-alpha.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/risaddex/dsh-skills-deck.git"
+  },
+  "description": "Ships Matt Pocock's 27 engineering and productivity skills (mattpocock/skills) plus an issue-tracker deck: maps, specs and tickets on GitHub, GitLab, local Markdown and Linear. Hard fork of FeatherHunter/dsh-mattpocock-skills-deck.",
+  "engines": {
+    "dsh": ">=0.2.0-rc.2"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "scripts": {
+    "prepublishOnly": "node ../scripts/build.mts --pkg-only"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./tools": "./deck/registration/agent-row.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "dsh-log": "0.4.1",
+    "yaml": "^2.9.1"
+  },
+  "files": [
+    "lib",
+    "shared",
+    "deck",
+    "tracker",
+    "refresh",
+    "workspace-snapshot",
+    "cordis.patch.yml",
+    "bundled-skills",
+    "bundled-skills-zh",
+    "scripts/",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "plugin",
+    "mattpocock",
+    "skills",
+    "wayfinder",
+    "triage",
+    "grilling",
+    "handoff",
+    "issue-tracker",
+    "deck",
+    "linear"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "homepage": "https://github.com/risaddex/dsh-skills-deck",
+  "license": "MIT"
+}
