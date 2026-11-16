@@ -25,7 +25,14 @@ export function parseRepo(repo: RepositoryRef | null | undefined): ParsedRepo | 
   return { owner: s.slice(0, idx), name: s.slice(idx + 1) }
 }
 
-/** 仓库口径的标识串：优先 refId，其次 name，都没有回空串（调用方按「缺仓库标识」处理）。 */
+/**
+ * 仓库口径的标识串：优先 refId，其次 name，都没有回空串（调用方按「缺仓库标识」处理）。
+ *
+ * 本函数**保持原样**，不去收紧：它返回的是「这个身份里写着的最像 id 的那串」，不负责判断
+ * 那串能不能当身份用。要印进报错、要写进日志、要拿去拼地址的地方一律用 `repoIdentityText`——
+ * 那条才负责拒绝把工作区目录名当仓库（#22 的教训在这里：`describe` 只拿到目录时回的是
+ * `{refId: '', name: 'dsh-skills-deck'}`，旧报错把这个目录名当 id 印了出来）。
+ */
 export function repoId(repo: RepositoryRef | null | undefined): string {
   if (!repo) return ''
   if (typeof repo.refId === 'string' && repo.refId) return repo.refId
@@ -33,4 +40,27 @@ export function repoId(repo: RepositoryRef | null | undefined): string {
   return ''
 }
 
-export default { parseRepo, repoId }
+/**
+ * 报错文案与日志里的「仓库是谁」：解析出来就是 `owner/name`；解析不出来就明说没解析出来，
+ * 并把工作区目录名作为线索写进去（写成线索，不写成标识）。
+ *
+ * 两条判据与 `repoId` 不同，是故意的：`refId` 非空才算身份；`name` 只有本身就是 `owner/name`
+ * 形态时才算（离网后端只填 name 的老口径照旧），因为 GitHub 的 `describe` 只拿到目录时，
+ * `name` 是目录名。目录名不是身份，把它当 id 印出来会让「没解析出仓库」读成
+ * 「仓库解析到了、只是 refId 丢了」，排查方向被带到 keyring 的 token 上（#22 的现场）。
+ *
+ * 为什么还带目录名：一条「repo.refId missing: 」的报错，读的人只知道少了什么，不知道少了谁、
+ * 该去哪儿找；写成 `(the workspace folder is "x", which is not a repository id)` 既给了线索，
+ * 又明说它不是仓库 id。
+ */
+export function repoIdentityText(repo: RepositoryRef | null | undefined): string {
+  const refId = (repo && typeof repo.refId === 'string') ? repo.refId : ''
+  if (refId) return refId
+  const name = (repo && typeof repo.name === 'string') ? repo.name : ''
+  if (name && name.indexOf('/') > 0) return name
+  return name
+    ? ('no owner/repository was resolved (the workspace folder is "' + name + '", which is not a repository id)')
+    : 'no owner/repository was resolved'
+}
+
+export default { parseRepo, repoId, repoIdentityText }

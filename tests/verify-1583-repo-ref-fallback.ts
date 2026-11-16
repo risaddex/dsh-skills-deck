@@ -22,6 +22,7 @@
  * 门禁归属: src/deck/tools/tracker-session.ts
  */
 import { resolveSessionRepoRef } from '../src/tracker/session/repo-ref.ts'
+import { repoRefNoteOf, repoRefNoteClass } from '../src/tracker/session/repo-ref-note.ts'
 
 let failed = false
 let passed = 0
@@ -202,6 +203,49 @@ async function main(): Promise<void> {
     check(!threw, '会话对象连属性读取都抛错时，补齐函数仍不抛（实得 ' + (threw ? '抛了' : '没抛') + '）')
     check(resolved && resolved.via === 'none' && (resolved.steps || []).length >= 1,
       '这种情况下如实回「没补全」并留下诊断（实得 ' + JSON.stringify(resolved) + '）')
+  }
+
+  // —— ⑪ 远端那一问被额度闸拦下时，闸的原话必须活到 steps 里（#22）——
+  // 病：会话的 getRepoKey 撞额度闸被拒时回的是带 ok:false 的失败形状，旧代码只记一句
+  // 「这一步没成」，把闸说的「REST 见底、几点恢复」整句丢掉了。回执随即只剩「repo.refId missing」，
+  // 读的人于是去查 keyring 里的 token，而 token 一直是好的（#22 的现场）。
+  {
+    // 两种拒绝形状都要认，而且**生产上回来的是第一种**：管线的失败信封
+    //（`pipelineFail`：`{ ok:false, error:{ kind, message, raw } }`，见 src/tracker/session/pipeline.ts）。
+    // 只喂平形状的门禁会给假保险——评审时就是这么发现第一版只读了顶层 message 的（#22）。
+    const refusal = 'Quota exhausted: REST requests quota is insufficient (server remaining: 0 requests (limit 5000, floor 250)); this call will not run.'
+    const { session } = makeSession({
+      describe: () => ({ backend: 'github', refId: '', name: 'dsh-skills-deck', url: '' }),
+      getRepoKey: async () => ({ ok: false, error: { kind: 'rate-limit', message: refusal, raw: '' } }),
+    })
+    const resolved: any = await resolveSessionRepoRef({ session, cwd: '/ws/deck', backendId: 'github', caller: 'deck-tool' })
+    const locate: any = (resolved.steps || []).filter(function (s: any): boolean { return s.step === 'remote-locate' })[0]
+    check(resolved.via === 'none', '闸拦下远端定位时如实回「没补全」（实得 via=' + resolved.via + '）')
+    check(!!locate && locate.ok === false && String(locate.error || '').indexOf('REST requests') >= 0,
+      '闸的原话从失败信封的 error.message 里取到了，不再只剩一句「没成」（实得 ' + JSON.stringify(locate) + '）')
+    // 回执与日志共用的那句人话：说清没解析出身份，并把原因带上；绝不拿工作区目录名冒充仓库标识。
+    const note: string = repoRefNoteOf(resolved)
+    check(note.indexOf('REST requests') >= 0, '回执注解带上闸的原话（实得 ' + JSON.stringify(note) + '）')
+    check(note.indexOf('dsh-skills-deck') < 0, '回执注解不拿工作区目录名冒充仓库标识（实得 ' + JSON.stringify(note) + '）')
+    check(repoRefNoteClass(note) === 'quota-rest', '日志档位说得出是哪一族见底（实得 ' + repoRefNoteClass(note) + '）')
+    // 平形状（房间自造的失败）同样要认。
+    const flat: any = await resolveSessionRepoRef({
+      session: makeSession({
+        describe: () => ({ backend: 'github', refId: '', name: 'ws', url: '' }),
+        getRepoKey: async () => ({ ok: false, message: 'Quota exhausted: GraphQL points quota is insufficient (server remaining: 100 points (limit 5000, floor 250)); this call will not run.' }),
+      }).session,
+      cwd: '/ws/deck', backendId: 'github', caller: 'deck-tool',
+    })
+    check(repoRefNoteOf(flat).indexOf('GraphQL points') >= 0, '平的拒绝形状（顶层 message）也认', repoRefNoteOf(flat))
+    check(repoRefNoteClass(repoRefNoteOf(flat)) === 'quota-graphql', '档位认得 GraphQL 点数见底', repoRefNoteClass(repoRefNoteOf(flat)))
+    check(repoRefNoteClass('No repository identity was resolved: quotas are both insufficient (REST requests 0/5000, GraphQL points 0/5000)') === 'quota-both',
+      '两条路都见底时档位是 quota-both')
+    check(repoRefNoteClass('No repository identity was resolved (no locator answered)') === 'repo-ref',
+      '认不出原因时老实回 repo-ref，不猜')
+    check(repoRefNoteOf({ ref: { backend: 'github', refId: 'o/r', name: 'o/r', url: '' }, via: 'selection', steps: [] } as any) === '',
+      '身份拿到了注解就留空（没出事不占回执）')
+    check(repoRefNoteOf({ ref: { backend: 'github', refId: '', name: 'ws', url: '' }, via: 'none', steps: [] } as any).indexOf('no locator') >= 0,
+      '没有任何一步留下原因时，注解说清「没有定位口答上来」')
   }
 
   console.log(failed ? ('\n' + (passed + 1) + ' 条断言，失败') : ('\n' + passed + ' 条断言，全部通过'))

@@ -28,9 +28,9 @@ import { ghClient } from '../transport/client.js'
 import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
 import { readRepoPermissions, readonlyMessage } from '../read/repo-permissions.js'
 import { getIssue } from '../read/issues.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoId, repoIdentityText } from '../model/issue-key.js'
 import type { MemoContext } from '../model/roster.js';
-export { parseRepo, repoId }
+export { parseRepo, repoId, repoIdentityText }
 
 function normalizeLabelInput(li: unknown): Label | null {
   if (typeof li === 'string') {
@@ -112,7 +112,7 @@ async function setLabelsInner(repo: RepositoryRef, key: string, labels: LabelInp
   try {
     const parsed = parseRepo(repo)
     // 形状不对的入参本身就是这一处的原文（这之前还没跑过任何外部命令）；它取出来可能是空串，那是如实交代。
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setLabels: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setLabels: repo.refId missing: ${repoIdentityText(repo)}`, repo)
 
     // If-Match 前置：expectedUpdatedAt 强一致
     if (opts && typeof opts.expectedUpdatedAt === 'string' && opts.expectedUpdatedAt !== '') {

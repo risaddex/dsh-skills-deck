@@ -84,6 +84,29 @@ function errorText(e: unknown): string {
   }
 }
 
+/**
+ * 读一个「失败形状」里自带的说明。
+ *
+ * 两种形状都得认，而且**生产上真正回来的是第二种**：
+ *   - 平的 `{ ok: false, message }`（房间自造的失败、部分定位口的回包）；
+ *   - 管线的失败信封 `{ ok: false, error: { kind, message, raw } }`（`pipelineFail`，`src/tracker/session/pipeline.ts`）。
+ * 只读顶层那一格的话，生产上的整句原因取不到，回执又退回「no locator answered」——那正是本票要去掉
+ * 的那句没有信息的话（#22 的评审里就是这么发现的：门禁喂的是平形状，生产回的是信封）。
+ *
+ * 与 `errorText` 分开是因为用途相反：那个把任意东西凑成一句（异常没有 `message` 时也不许丢），
+ * 这个只取真正写了说明的那一份——没有说明就回空串，绝不用 `String(对象)` 造一句假话。
+ */
+function messageOf(value: unknown): string {
+  try {
+    const rec = value as { message?: unknown; error?: { message?: unknown } | null } | null | undefined
+    if (rec && typeof rec.message === 'string' && rec.message) return rec.message
+    const nested = rec && rec.error && typeof rec.error === 'object' ? rec.error.message : undefined
+    return (typeof nested === 'string' && nested) ? nested : ''
+  } catch {
+    return ''
+  }
+}
+
 /** 读一个身份里的 refId（缺格、非字符串都按空串；下游只认这一个判据）。 */
 function refIdOf(ref: RepositoryRef | null | undefined): string {
   try {
@@ -132,7 +155,7 @@ export async function resolveSessionRepoRef(input: ResolveSessionRepoRefInput): 
     remote = undefined
   }
   if (typeof remote === 'function') {
-    type RemoteAnswer = { owner?: unknown; name?: unknown; ok?: unknown }
+    type RemoteAnswer = { owner?: unknown; name?: unknown; ok?: unknown; message?: unknown }
     let located: RemoteAnswer | null = null
     try {
       const opCtx = Object.assign({}, input.baseCtx || {}, { cwd: input.cwd, caller: input.caller }) as unknown as OpContext
@@ -145,7 +168,14 @@ export async function resolveSessionRepoRef(input: ResolveSessionRepoRefInput): 
     const owner = (located && located.ok !== false && typeof located.owner === 'string') ? located.owner : ''
     const name = (located && located.ok !== false && typeof located.name === 'string') ? located.name : ''
     if (!steps.some(function (s) { return s.step === 'remote-locate' })) {
-      steps.push({ step: 'remote-locate', ok: !!(owner && name) })
+      // 远端那一问可能不是「没答上来」，而是「被额度闸拦下了」：失败形状里带着闸的原话
+      // （例如「REST requests 见底，剩余 0，上限 5000，保底 250，约 17:45 恢复」）。
+      // 旧代码只记一句「这一步没成」，把整句话丢掉了——回执于是只剩「repo.refId missing」，
+      // 读的人被送去查 keyring 里的 token，而 token 一直是好的（#22 的现场）。原话留在 error 里。
+      const step: RepoRefStep = { step: 'remote-locate', ok: !!(owner && name) }
+      const refusal = messageOf(located)
+      if (!step.ok && refusal) step.error = refusal
+      steps.push(step)
     }
     if (owner && name) {
       const refId = owner + '/' + name

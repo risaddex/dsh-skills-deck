@@ -181,6 +181,32 @@ async function main() {
   const p7 = await openedOf(deferReg, deferGate)
   check(p7 && p7.ok === true && p7.ref.refId === 'a/b' && deferResolveCalls === 1, '新路补全不经发送口：admitAiTool 放行就竞速补全（defer 只活在旧路的发送接口里）')
 
+  // ── 3b. 补不全时回执与日志都说出原因（#22）──
+  // 病：额度闸把远端定位拦下时，回执只剩「repo.refId missing」，读的人去查 keyring 的 token。
+  // 这一段盯住「补不全」那一条路的两个出口：会话回包的 repoNote（壳拼进 cost.note）与插件日志那一行。
+  // 拒绝形状照生产写：管线回的是失败信封 `{ ok:false, error:{ kind, message, raw } }`（pipelineFail）。
+  const refusalText = 'Quota exhausted: REST requests quota is insufficient (server remaining: 0 requests (limit 5000, floor 250)); this call will not run.'
+  const refuseResolve = {
+    has: function () { return true },
+    select: async function () { return { backendId: 'github', source: 'matches', ref: { backend: 'github', refId: '', name: 'dsh-skills-deck', url: '' }, canWrite: true } },
+    describe: function () { return { backend: 'github', refId: '', name: 'dsh-skills-deck', url: '' } },
+    get: function () { return { getRepoKey: async function () { return { ok: false, error: { kind: 'rate-limit', message: refusalText, raw: '' } } } } },
+  }
+  const logged: any[] = []
+  const p8 = await sessionMod.openDeckSession({
+    deps: baseShellDeps({ registry: withModules(refuseResolve), log: { fire: function (level: string, event: string, fields: any) { logged.push({ level: level, event: event, fields: fields }) } } }),
+    exec: { agent: { session: { cwd: '/ws' } } }, session: sess('/ws'), estimate: EST, tool: 'test', kind: 'op',
+  })
+  check(p8 && p8.ok === true && p8.ref && p8.ref.refId === '', '被拦时仍如实回空标识，不编身份')
+  check(p8 && typeof p8.repoNote === 'string' && p8.repoNote.indexOf('REST requests') >= 0,
+    '会话回包带着闸的原话，壳拼进回执 cost.note（实得 ' + JSON.stringify(p8 && p8.repoNote) + '）')
+  check(p8 && String(p8.repoNote).indexOf('dsh-skills-deck') < 0, '那句注解不拿工作区目录名当仓库标识')
+  const idLine = logged.filter(function (e: any): boolean { return e && e.event === 'host.call.fail' && e.fields && e.fields.method === 'deck.repoIdentity' })[0]
+  check(!!idLine, '补不全时插件日志记一行（实得 ' + JSON.stringify(logged.map(function (e: any) { return e.event })) + '）')
+  check(!!idLine && idLine.fields.errorKind === 'quota-rest' && typeof idLine.fields.errorHash === 'string',
+    '日志那一行说得出是哪一族见底（errorKind）并带原因散列（实得 ' + JSON.stringify(idLine && idLine.fields) + '）')
+  check(!!idLine && idLine.level === 'warn', '这一行是告警级')
+
   // ── 4. 补全走闸（读探针一格，可归因）──
   // #1443 起选后端不再调闸的发送接口：读探针（quota.read / resolve）随旧路退役，裁决走 admitAiTool 两笔
   // （打开会话前的余量探针与整单的批量裁决）。记账仍在管线里，不丢笔数。
