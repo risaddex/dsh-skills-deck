@@ -169,6 +169,31 @@ async function main() {
   ok(defaultHint === ghMod.fixes['gh:installed'].hint.en, '没有指定语言时 gh:installed 的提示取英文（实得「' + defaultHint.slice(0, 60) + '」）')
   ok(!!defaultAction && (String(defaultAction.prompt) === ghPrompts[INSTALL_PROMPT_KEY].en || String(defaultAction.prompt) === INSTALL_PROMPT_KEY), '没有指定语言时按钮注入英文指引或提示词键名')
 
+  // #7：走公开的修复契约；英文缺席时不拿中文冒充，也不编造翻译或增加修复动作。
+  const missingEnglish = {
+    fixes: { sample: { hint: { zh: '中文提示' }, actions: [{ type: 'inject-prompt', prompt: 'sampleGuide' }] } },
+    prompts: { sampleGuide: { zh: '中文指引' } },
+  }
+  const fixtureBefore = JSON.stringify(missingEnglish)
+  for (const lang of [undefined, 'en', 'unknown', 'zh']) {
+    const rows = lang === undefined
+      ? fixMod.attachFixContract([{ id: 'sample' }], missingEnglish)
+      : fixMod.attachFixContract([{ id: 'sample' }], missingEnglish, lang)
+    const row = rows[0]
+    const actions = row.onFail.actions
+    const label = lang === undefined ? 'omitted' : lang
+    ok(rows.length === 1 && row.id === 'sample' && actions.length === 1 && actions[0].type === 'inject-prompt', '缺英文 / ' + label + '：保持公开形状与原有动作数')
+    ok(lang === 'zh' ? row.onFail.show.hint === '中文提示' : !Object.hasOwn(row.onFail.show, 'hint'), '缺英文 / ' + label + '：只在显式中文时提供中文 hint')
+    ok(actions[0].prompt === (lang === 'zh' ? '中文指引' : 'sampleGuide'), '缺英文 / ' + label + '：没有译文就保留原提示词键，不伪造指引')
+  }
+  ok(JSON.stringify(missingEnglish) === fixtureBefore, '缺英文：不改调用方传入的修复声明')
+  const englishOnly = {
+    fixes: { sample: { hint: { en: 'English hint' }, actions: [{ type: 'inject-prompt', prompt: 'sampleGuide' }] } },
+    prompts: { sampleGuide: { en: 'English guide' } },
+  }
+  const zhFallback = fixMod.attachFixContract([{ id: 'sample' }], englishOnly, 'zh')[0]
+  ok(zhFallback.onFail.show.hint === 'English hint' && zhFallback.onFail.actions[0].prompt === 'English guide', '缺中文：显式 zh 仍回退到英文 hint 与指引')
+
   console.log(failed ? 'FAIL ' + total + ' 项检查里有 ' + failedN + ' 项未过' : 'PASS 全部 ' + total + ' 项检查通过')
   process.exit(failed ? 1 : 0)
 }
