@@ -105,12 +105,18 @@ export async function gql<T>(
     return done({ ok: false, error: linearError(kindOfStatus(response.status), 'Linear answered HTTP ' + response.status + (snippet ? ': ' + snippet : '')) })
   }
 
-  let payload: { data?: T; errors?: unknown }
+  let parsed: unknown
   try {
-    payload = JSON.parse(response.body || '{}')
+    parsed = JSON.parse(response.body || '{}')
   } catch (error) {
     return done({ ok: false, error: linearError(ERROR_KIND.PARSE, 'Linear answered something that is not JSON') })
   }
+  // `JSON.parse('null')` 也成功，但接下来读 payload.errors 会在 try 之外抛 TypeError，
+  // 于是垃圾回包绕过了契约「失败是返回值」这条 —— 所以先认清它是一个对象再往下读（PR #26 review 的 P2）。
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return done({ ok: false, error: linearError(ERROR_KIND.PARSE, 'Linear answered JSON that is not an object') })
+  }
+  const payload = parsed as { data?: T; errors?: unknown }
 
   if (payload.errors) {
     const classified = classifyGraphQLErrors(payload.errors)

@@ -35,7 +35,7 @@ import type { RepositoryRef } from '../../../contract/entities.js';
 import { fail } from '../../../kernel/preflight.js'
 import { ghClient } from '../transport/client.js'
 import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 import { labelsOf } from '../model/issue-filter.js'
 import { COUNTS_QUERY, COUNTS_QUERY_WITH_LABELS } from '../channels/graphql/queries.js'
 import { emitReadDegraded } from '../support/read-log.js'
@@ -69,7 +69,7 @@ export async function countIssues(repo: RepositoryRef, filter: ListFilter | unde
     // 形状不对的入参本身就是这一处的原文（这之前还没跑过任何外部命令）；它取出来可能是空串，那是如实交代。
     if (!parsed) {
       emitReadDegraded(ctx, 'counts', 'counts:repo-ref', Date.now() - t0)
-      return fail(ERROR_KIND.NOTFOUND, `counts: repo.refId missing or malformed: ${repoId(repo)}`, repo)
+      return fail(ERROR_KIND.NOTFOUND, `counts: repo.refId missing or malformed: ${repoIdentityText(repo)}`, repo)
     }
     const narrow = narrowStateOf(filter)
     const labels = labelsOf(filter)

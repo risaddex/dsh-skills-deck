@@ -109,6 +109,14 @@ async function main(): Promise<void> {
     const parsed = await gql(notJson.ctx, ACCOUNT, { query: 'query { viewer { name } }' })
     check(!parsed.ok && parsed.error.kind === 'parse', 'a body that is not JSON is a parse failure', !parsed.ok ? parsed.error.kind : 'ok')
 
+    // `JSON.parse('null')` 成功，但读 payload.errors 会在 try 之外抛错，垃圾回包就绕过了契约；
+    // 所以非对象的 JSON 必须当场按解析失败交回去。
+    for (const body of ['null', '[]', '"a string"', '42']) {
+      const odd = ctxAnswering(200, body)
+      const answer = await gql(odd.ctx, ACCOUNT, { query: 'query { viewer { name } }' })
+      check(!answer.ok && answer.error.kind === 'parse', 'a JSON body that is not an object is a parse failure (' + body + ')', answer.ok ? 'ok' : answer.error.kind)
+    }
+
     const noChannel = {} as unknown as OpContext
     const missing = await gql(noChannel, ACCOUNT, { query: 'query { viewer { name } }' })
     check(!missing.ok && missing.error.kind === 'env', 'a context with no channel fails loudly as an environment gap', !missing.ok ? missing.error.kind : 'ok')
@@ -133,7 +141,11 @@ async function main(): Promise<void> {
     const openIssue = issueOf({ ...ISSUE_NODE, state: { name: 'Todo', type: 'unstarted' }, parent: null, assignee: null } as any)
     check(openIssue.state === 'open', 'an unstarted workflow state reads as open', openIssue.state)
     check(openIssue.parentKey === null, 'a top-level ticket has a null parent', String(openIssue.parentKey))
-    check(openIssue.assignees === undefined, 'no assignee means the field is absent, not an empty claim')
+    // 三态：null（问了、明确没人）→ 空数组；字段没问 → 省略。省略会把库里旧的负责人留下。
+    check(openIssue.assignees !== undefined && openIssue.assignees.length === 0, 'an explicit null assignee becomes an empty array, not an absent field', JSON.stringify(openIssue.assignees))
+    const unfetched = { ...ISSUE_NODE }
+    delete (unfetched as any).assignee
+    check(issueOf(unfetched as any).assignees === undefined, 'an assignee that was never asked for stays absent')
   }
 
   console.log('L4 list asks for the right filter and admits a short page')

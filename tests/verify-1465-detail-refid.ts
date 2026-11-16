@@ -25,6 +25,20 @@ function check(cond, msg) {
 }
 
 const { createCommentThreads } = await import(pathToFileURL(resolve(ROOT, 'src/refresh/rooms/host/comment-thread-fetch.ts')).href)
+const { repoIdentityText } = await import(pathToFileURL(resolve(ROOT, 'src/tracker/rooms/github/model/issue-key.ts')).href)
+
+// #22：工作区目录名不是仓库标识。describe 只给目录时 name 是目录名、refId 是空串，
+// 报错文案过去把这个目录名当成仓库 id 印出来（「repo.refId missing: dsh-skills-deck」），
+// 读的人以为仓库解析到了、只是 refId 丢了。文案现在必须说清「没解析出 owner/repository」。
+{
+  const shell = { backend: 'github', refId: '', name: 'dsh-skills-deck', url: '' }
+  const text = String(repoIdentityText(shell))
+  check(text !== 'dsh-skills-deck', '#22 外壳身份：文案不是那个目录名（实得 ' + JSON.stringify(text) + '）')
+  check(text.indexOf('no owner/repository') >= 0, '#22 外壳身份：文案说清「没解析出 owner/repository」')
+  check(String(repoIdentityText({ backend: 'github', refId: 'o/r', name: 'r', url: '' })) === 'o/r', '#22 有 refId 时文案就是 owner/name')
+  check(String(repoIdentityText({ backend: 'github', refId: '', name: 'o/r', url: '' })) === 'o/r',
+    '#22 name 本身就是 owner/name 形态时照用（离网后端的老口径不变）')
+}
 
 const CWD = 'D:/work/repo'
 const SESSION_REF = { backend: 'github', refId: 'o/r', name: 'o/r', url: 'https://github.com/o/r' }

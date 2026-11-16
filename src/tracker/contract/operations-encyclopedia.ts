@@ -31,7 +31,7 @@
  * 写操作的通道选择是另一张票（额度闸渠道放行）的范围，本票不动。这里只记读/写标记、
  * 结果类型（写操作固定是回执）与回执能表达的字段组，够门禁判「这条是写」即可。
  */
-import { OPERATIONS } from './operations-catalog.js'
+import { OPERATIONS, LOCATORS } from './operations-catalog.js'
 
 /** 操作名联合类型：直接取自契约名录，不在本文件手抄第二份 24 个名字。 */
 export type OperationName = (typeof OPERATIONS)[number]
@@ -218,6 +218,37 @@ export const OPERATION_ENCYCLOPEDIA = {
   // 读预算：读插件自己的账本，不走任何远端渠道；它本来就不花额度，永远放行。
   readBudget: { kind: 'read', channels: 'local', result: 'budget', fieldGroups: ['counts'], spend: ['local'] },
 } as const satisfies Record<OperationName, OperationProfile>
+
+/**
+ * 三条定位口的名字：直接取自契约名录（`LOCATORS`），不在本文件手抄第二份。
+ */
+export type LocatorName = (typeof LOCATORS)[number]
+
+/**
+ * 三条定位口的花费渠道计划（#22）。
+ *
+ * ── 为什么定位口也要这张表 ────────────────────────────────────────────────────
+ * 会话管线把 `getRepoKey` 当成一次操作送去裁决与记账（`src/tracker/session/open-tracker.ts`
+ * 把两条同步定位口之外的定位口与 24 条操作一起转发给管线）。这张表里没有它时，额度闸只能走
+ * 「名单外一律保守两族」那条兜底，于是 REST 见底就把这一问也拦了——而它的头两级只读本地 git
+ * （`git remote get-url origin` 与 `.git/config`），一分额度都不花，第三级才是 `gh repo view`。
+ * 拦下它的后果不是少读一次：会话拿不到仓库身份，整家 deck 工具随即报「repo.refId missing」，
+ * 读的人被送去查 keyring 里的 token（#22 的现场就是这么发生的）。
+ *
+ * ── 三条各写什么 ──────────────────────────────────────────────────────────────
+ *   - `getRepoKey`：先本地 git，再 GraphQL。本地那一级不花额度，所以 REST 见底不再影响它；
+ *     GraphQL 也见底时才拦——那时第三级 fallback 确实要花点数。
+ *   - `describe` / `issueAddress`：纯计算，只读本地，登记成 `['local']`，两族见底也放行。
+ *     它们今天不进管线（`open-tracker.ts` 的两条同步定位口直通后端），写在这里是为了将来
+ *     有人把它们接进管线时不必再踩一次同样的坑。
+ *
+ * 键类型用 `LOCATORS`：名录加一条定位口而不在这里补计划，编译期就报错。
+ */
+export const LOCATOR_SPEND_PLANS = {
+  getRepoKey: ['local', 'graphql'],
+  describe: ['local'],
+  issueAddress: ['local'],
+} as const satisfies Record<LocatorName, ReadSpendPlan>
 
 /**
  * 名录里被标成读操作的那些名字。

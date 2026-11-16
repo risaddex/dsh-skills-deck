@@ -80,7 +80,14 @@ export function issueOf(node: LinearIssueNode): Issue {
     parentKey: node.parent?.identifier ? String(node.parent.identifier) : null,
     labels,
   }
-  if (node.assignee) {
+  // 契约的 assignees 有三态，这里必须分清（PR #26 review 的 P2）：
+  //   · 字段根本没问（undefined）——「不知道谁被指派」，整个字段省略；
+  //   · 问了、答案是 null ——「明确没有人」，写空数组。省略会让刷新路径以为没变化，
+  //     于是在 Linear 里把人取消指派之后，库里还留着原来的负责人；
+  //   · 问了、有人 —— 写那一个人。
+  if (node.assignee === null) {
+    issue.assignees = []
+  } else if (node.assignee) {
     const login = String(node.assignee.name || '')
     if (login) {
       issue.assignees = [{ login, ...(node.assignee.displayName ? { name: String(node.assignee.displayName) } : {}) }]

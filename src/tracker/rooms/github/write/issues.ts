@@ -20,7 +20,7 @@ import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
 import { planCloseReason } from './close-reason.js'
 import { rosterUpsert, type MemoContext } from '../model/roster.js';
 import { getIssue } from '../read/issues.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 // #711：创建幂等锚。锚那一行怎么拼、命中判据是什么，在刷新核心的产物里（唯一一处判据）；
 // 本间房专属的「建后按锚回查」在 ./idempotency.js（两条路：搜索接口 + 最近更新列表逐张读正文）。
 import { checkIdempotencyKey } from '../../../../refresh/contract/idempotency-keys.js'
@@ -73,7 +73,7 @@ export async function createIssue(repo: RepositoryRef, input: CreateInput, ctx: 
 async function createIssueInner(repo: RepositoryRef, input: CreateInput, ctx: MemoContext, trail: WriteTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `create: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `create: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     // 标题与幂等键都在发出写命令之前检查：失败说明输入要改，重试同一份输入没有意义，所以标输入被拒。
     if (!input || typeof input.title !== 'string' || !input.title.trim()) return fail(ERROR_KIND.PARSE, 'create: title required', input, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     // 幂等键当场检查：不合规（空、超长、带换行或注释收尾符）绝不落到正文上，
@@ -224,7 +224,7 @@ export async function closeIssue(repo: RepositoryRef, key: string, opts: CloseOp
 async function closeIssueInner(repo: RepositoryRef, key: string, opts: CloseOpts | undefined, ctx: OpContext, trail: WriteTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `close: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `close: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'close: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     const c = ghClient(ctx)
@@ -280,7 +280,7 @@ export async function reopenIssue(repo: RepositoryRef, key: string, ctx: OpConte
 async function reopenIssueInner(repo: RepositoryRef, key: string, ctx: OpContext, trail: WriteTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `reopen: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `reopen: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'reopen: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     const c = ghClient(ctx)
@@ -328,7 +328,7 @@ export async function updateIssue(repo: RepositoryRef, key: string, patch: Updat
 async function updateIssueInner(repo: RepositoryRef, key: string, patch: UpdatePatch, ctx: OpContext, trail: WriteTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `update: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `update: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'update: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     if (!patch || typeof patch !== 'object') return fail(ERROR_KIND.PARSE, 'update: patch required', patch, TRACKER_ERROR_STAGE.INPUT_REFUSED)
@@ -409,7 +409,7 @@ export async function setAssignees(repo: RepositoryRef, key: string, assignees: 
 async function setAssigneesInner(repo: RepositoryRef, key: string, assignees: AssigneeInput[] | undefined, opts: SetOpts | undefined, ctx: MemoContext, trail: WriteTrail): Promise<OpResult<Issue>> {
   try {
     const parsed = parseRepo(repo)
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setAssignees: repo.refId missing: ${repoId(repo)}`, repo)
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setAssignees: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'setAssignees: key required', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)
     // 为什么显式标：循环里才往里装，编译器判成隐式 any；装的本来就是归一后的认领，运行时还是原来那几个值。

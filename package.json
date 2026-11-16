@@ -6,8 +6,17 @@
     "url": "https://github.com/risaddex/dsh-skills-deck.git"
   },
   "private": true,
+  "main": "package/lib/index.js",
+  "exports": {
+    ".": "./package/lib/index.js",
+    "./client": "./package/lib/client.js",
+    "./tools": "./package/deck/registration/agent-row.js",
+    "./cordis.patch.yml": "./package/cordis.patch.yml",
+    "./package.json": "./package/package.json"
+  },
   "engines": {
-    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "dsh": ">=0.2.0-rc.2"
   },
   "scripts": {
     "build": "node scripts/build.mts",

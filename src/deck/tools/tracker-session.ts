@@ -7,14 +7,14 @@
 // 后端口径裁决与记账。九个工具的 work 闭包一个字不动，只换 pick 与 call 两个调用点。
 import { openTracker } from '../../tracker/session/open-tracker.js'
 import { adaptSession } from './tracker-session-adapt.js'
-import { resolveSessionRepoRef } from '../../tracker/session/repo-ref.js'
+import { resolveIdentityWithNote, combineNotes } from './identity-resolve.js'
+import { fallbackAdmit } from './deck-default-admit.js'
 import type { TrackerSession } from '../../tracker/session/open-tracker.js'
 import type { RepositoryRef } from '../../tracker/contract/entities.js'
 import { selectionFromOutlet } from '../../tracker/detection/backendDecision.js'
 import { tierFor, aiToolFloor } from '../../refresh/kernel/host-budget.js'
 import { recordWorkRoute } from '../shell/work-path-record.js'
 import { DECK_STATUS, DECK_TOOL_KIND, REFUSAL_REASONS, receiptCost } from '../shell/call-shell.js'
-import { withCap } from '../shell/capped-wait.js'
 import { TOOL_RECEIPT_SLOW_MS } from '../../shared/time-config/src/values.js'
 
 /** 未知形状的记录（依赖袋与会话壳都没标类型，用到哪格验哪格，不猜）。 */
@@ -76,6 +76,11 @@ export interface DeckOpenedSession {
   session: TrackerSession;
   /** 调用上下文要的裁决结论（双桶是闸的原话，离网是直通标记，work 闭包照旧从 c.admit 取）。 */
   admit: UnknownRecord;
+  /**
+   * 仓库身份没补全时的注解（#22）：说清「没解析出仓库身份」以及最后一次失败的原因，
+   * 由回执的 cost.note 与插件日志一起用。补全了就是空串，回执不会多一行没人要的注解。
+   */
+  repoNote: string;
 }
 /** 打开失败：原因码与人话（工具拿它拼 unsupported 信封，与原来拼 pick 失败那一行同形）。 */
 export interface DeckOpenFailed { ok: false; reason: string; text: string; }
@@ -88,30 +93,6 @@ function backendCtxNow(d: UnknownRecord): UnknownRecord {
   if (typeof b === 'function') { try { return (b() || {}) as UnknownRecord; } catch { return {}; } }
   return (b || {}) as UnknownRecord;
 }
-/** 依赖袋没配裁决口时的兜底（与参考裁决同口径：硬顶先行、未知与离网放行、已知耗尽推迟，见 budget-model.ts）。 */
-async function fallbackAdmit(input: UnknownRecord): Promise<UnknownRecord> {
-  const op = String(input.op || '');
-  const model = (input.budget || {}) as UnknownRecord;
-  const reading = (input.reading || {}) as UnknownRecord;
-  const writes = ['create', 'close', 'reopen', 'comment', 'update', 'setLabels', 'setAssignees', 'setParent', 'setBlockedBy'];
-  if (writes.indexOf(op) >= 0 && input.canWrite === false) return { allowed: false, kind: 'rate-limit', reason: 'hard-cap', message: 'Hard cap: this call has no write permission, so the write is refused outright.' };
-  if (!reading || reading.known === false) return { allowed: true, reason: 'unknown-reading' };
-  if (model.kind === 'off-network' || reading.kind === 'off-network') return { allowed: true, reason: 'off-network' };
-  const levels: Array<{ remaining: number; limit: number }> = [];
-  if (reading.kind === 'requests-only') levels.push((reading.requests || {}) as { remaining: number; limit: number });
-  else if (reading.kind === 'two-buckets') {
-    const buckets = (reading.buckets || {}) as UnknownRecord;
-    if (model.kind === 'requests-only') levels.push((buckets.rest || {}) as { remaining: number; limit: number });
-    else if (model.independentBuckets) levels.push((buckets.rest || {}) as { remaining: number; limit: number }, (buckets.graphql || {}) as { remaining: number; limit: number });
-    else levels.push((buckets.graphql || {}) as { remaining: number; limit: number });
-  }
-  // #1527：保底线改成服务端上限的 5%（以前是本桶份额的 30%），文案照实报服务端剩余与保底，不让人猜。
-  for (const level of levels) {
-    if (num(level.remaining) <= aiToolFloor(num(level.limit))) return { allowed: false, kind: 'rate-limit', reason: 'exhausted', message: 'Quota exhausted: the server still has ' + num(level.remaining) + ' (limit ' + num(level.limit) + ', floor ' + aiToolFloor(num(level.limit)) + '), so this call is not executed now.' };
-  }
-  return { allowed: true, reason: 'sufficient' };
-}
-
 /**
  * 打开一个 Tracker 会话（九个工具的 pickBackend 整段搬到这里，失败的人话与原来逐字相同）。
  * 注册表的选择接口一次都不调：判定出口给选择形状，openTracker 用预填的 resolveSelection 建会话。
@@ -253,26 +234,27 @@ export async function openDeckSession(req: DeckSessionRequest): Promise<DeckOpen
   // （域名不在这里拼）。#1453 起这一问必须走会话能力：仓库定位是出站动作，要过裁决与记账；
   // 注册表的取实例口不再对 deck 工具公开。#1583 起不按后端名写死、也不再自己拼 github.com。
   let ref: UnknownRecord | null = (selection.ref || null) as UnknownRecord | null;
+  // 补不全时留给回执与日志的那句话（#22）：过去 steps 到此为止就被丢掉，回执只剩
+  // 「repo.refId missing」，读的人去查 keyring 里的 token——而那一趟的真实原因是 REST 见底。
+  let repoNote = '';
   if (!ref || !ref.refId) {
     const cap = (typeof d.resolveTimeoutMs === 'number' && (d.resolveTimeoutMs as number) > 0) ? Math.floor(d.resolveTimeoutMs as number) : 8000;
-    // 补身份整段与等待上限赛跑：describe 是同步的，真正可能悬挂的是远端那一问；整段一起限时
-    // 也覆盖将来 describe 换成异步实现的情形。等待口缺席时用真定时器（与旧行为一致）。
-    const resolved = await withCap(
-      resolveSessionRepoRef({
-        session: opened.session,
-        cwd: cwd,
-        backendId: backendId,
-        fromSelection: (ref as unknown as RepositoryRef | null),
-        baseCtx: backendCtxNow(d),
-        caller: DECK_TOOL_KIND,
-      }),
-      cap,
-      (typeof d.sleep === 'function') ? d.sleep as (ms: number) => Promise<unknown> : undefined,
-    );
-    const maybe = (resolved.ok === true) ? (resolved.value as { ref?: RepositoryRef | null } | null) : null;
-    if (maybe && maybe.ref) ref = maybe.ref as unknown as UnknownRecord;
+    // 补全、拼注解、记日志三件事一起在 identity-resolve.ts 里（这里只接线，不各写一份）。
+    const outcome = await resolveIdentityWithNote({
+      session: opened.session,
+      cwd: cwd,
+      backendId: backendId,
+      fromSelection: (ref as unknown as RepositoryRef | null),
+      baseCtx: backendCtxNow(d),
+      caller: DECK_TOOL_KIND,
+      cap: cap,
+      wait: (typeof d.sleep === 'function') ? d.sleep as (ms: number) => Promise<unknown> : undefined,
+      log: d.log,
+    });
+    if (outcome.ref) ref = outcome.ref as unknown as UnknownRecord;
+    repoNote = outcome.note;
   }
-  return { ok: true, backendId: backendId, source: source, ref: ref, pending: !!selection.pending, requests: num(est.requests), points: num(est.points), session: opened.session, admit: admit };
+  return { ok: true, backendId: backendId, source: source, ref: ref, pending: !!selection.pending, requests: num(est.requests), points: num(est.points), session: opened.session, admit: admit, repoNote: repoNote };
 }
 
 /** 调一次会话要齐的东西（openDeckSession 的成功那一支原样递进来，工具再加自己的 repo 与沙箱）。 */
@@ -461,7 +443,8 @@ export async function callDeckSession(req: DeckCallRequest, work: (ctx: unknown)
   // #1527：闸放行时带的提醒（例如这一小时越过了 AI 工具提醒线）要出现在回执里——人翻回执就能看见
   //   「花得多、该收手」，不用去日志里翻；票面第 5 条点名 cost.note，提醒也写进那一格。拼法在壳里
   //   （call-shell.ts 的 receiptCost）：这里是接线层，只递料，不各拼一份。没提醒时两格都不出现。
-  const cost = receiptCost(est, actual, opened.admit, quota.note)
+  // #22：仓库身份没补全时，那句原因排在额度提醒前面（身份补不上是这一笔失败的直接来路）。
+  const cost = receiptCost(est, actual, opened.admit, combineNotes(opened.repoNote, quota.note))
   const out = envelope(tool, DECK_STATUS.OK, {
     workspace: { root: str(s.cwd), key: str(s.workspaceKey) },
     backend: { id: backendId, source: opened.source },

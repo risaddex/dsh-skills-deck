@@ -29,7 +29,7 @@ import type { State } from '../../../contract/identity.js'
 import type { MapListOpResult } from '../../../contract/results.js'
 import { fail } from '../../../kernel/preflight.js'
 import { PAGINATION } from '../../../contract/pagination.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 import { listIssuesPage } from './page.js'
 import { beginRead } from '../routing/read-result.js'
 import { mapsProvenanceFromGraphql } from '../routing/read-assembly.js'
@@ -77,7 +77,7 @@ export async function listMaps(repo: RepositoryRef, ctx: OpContext): Promise<Map
   const clock = beginRead()
   // 坐标形坏是调用方的错：一笔服务端往返都不做，直接失败。
   if (!parseRepo(repo)) {
-    return fail(ERROR_KIND.NOTFOUND, 'listMaps: repo.refId missing or malformed: ' + repoId(repo), repo)
+    return fail(ERROR_KIND.NOTFOUND, 'listMaps: repo.refId missing or malformed: ' + repoIdentityText(repo), repo)
   }
   const collected: Array<{ row: MapRow; updatedAt: string; seq: number }> = []
   // 每张地图行的标签数组（#1686）：列表片段 labels(first:50) 没有 pageInfo，只能按「某行满 50 条」判标签截断。
