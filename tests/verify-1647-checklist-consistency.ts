@@ -85,8 +85,8 @@ for (const fixtureName of FIXTURE_NAMES) {
   const lines = formatConsistencyFindings(report)
   check(lines.length === report.findings.length, where + '：每条判据都有一行给人读的说明（' + lines.length + ' 行 / ' + report.findings.length + ' 条）')
   check(
-    lines.every((line) => line.includes('改法：')),
-    where + '：每条说明都带「改法：」，读票的人知道下一步改哪里',
+    lines.every((line) => line.includes(' Fix: ')),
+    where + '：每条说明都带「Fix:」，读票的人知道下一步改哪里',
   )
 }
 

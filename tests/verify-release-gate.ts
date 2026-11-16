@@ -308,8 +308,8 @@ async function main(): Promise<void> {
     const run = await runGate({ ticketFace: happyFace({ comments: [batchComment({ identity: false })] }) })
     check(run.exitCode === 1, 'B1 缺身份行 → 退出码 1', show(run.exitCode))
     check(hasFinding(run.report, 'identity-missing'), 'B2 报告带 identity-missing finding', show(run.report?.findings?.map((f: any) => f.code)))
-    check(run.err.includes('PREFLIGHT-FAIL 发布门禁拒绝 v' + VERSION), 'B3 stderr 有拒绝汇总行', run.err.split(NEWLINE)[0] ?? '')
-    check(run.err.includes('PREFLIGHT-FAIL identity-missing：'), 'B4 每条 finding 都带「改法」行', '')
+    check(run.err.includes('PREFLIGHT-FAIL Release gate rejects v' + VERSION), 'B3 stderr 有拒绝汇总行', run.err.split(NEWLINE)[0] ?? '')
+    check(run.err.includes('PREFLIGHT-FAIL identity-missing: '), 'B4 每条 finding 都带「改法」行', '')
     check(!run.out.includes('PREFLIGHT-OK'), 'B5 失败时绝不出现 PREFLIGHT-OK', '')
     check(run.out.includes('decision: fail (exit 1)'), 'B6 人类可读报告仍完整打印', '')
   }
@@ -319,7 +319,7 @@ async function main(): Promise<void> {
     const run = await runGate({ ticketFace: happyFace({ comments: [batchComment({ commit: OTHER })] }) })
     check(run.exitCode === 1, 'C1 身份行候选提交与候选包不符 → 退出码 1', show(run.exitCode))
     check(hasFinding(run.report, 'identity-not-in-candidate'), 'C2 报告带 identity-not-in-candidate', show(run.report?.findings?.map((f: any) => f.code)))
-    check(run.err.includes('PREFLIGHT-FAIL identity-not-in-candidate：'), 'C3 CLI 点名该 finding code', '')
+    check(run.err.includes('PREFLIGHT-FAIL identity-not-in-candidate: '), 'C3 CLI 点名该 finding code', '')
   }
 
   // ---- D. 清单票还没关闭 → checklist-not-closed ----
@@ -327,7 +327,7 @@ async function main(): Promise<void> {
     const run = await runGate({ ticketFace: happyFace({ issues: [checklistIssue({ state: 'OPEN' })] }) })
     check(run.exitCode === 1, 'D1 清单票 OPEN → 退出码 1', show(run.exitCode))
     check(hasFinding(run.report, 'checklist-not-closed'), 'D2 报告带 checklist-not-closed', show(run.report?.findings?.map((f: any) => f.code)))
-    check(run.err.includes('PREFLIGHT-FAIL checklist-not-closed：'), 'D3 CLI 点名该 finding code', '')
+    check(run.err.includes('PREFLIGHT-FAIL checklist-not-closed: '), 'D3 CLI 点名该 finding code', '')
   }
 
   // ---- E. 候选不是发布提交的祖先、票面又没有差异审计 → 两条 finding 一起红 ----
@@ -337,7 +337,7 @@ async function main(): Promise<void> {
     check(hasFinding(run.report, 'commit-not-ancestor'), 'E2 报告带 commit-not-ancestor', show(run.report?.findings?.map((f: any) => f.code)))
     check(hasFinding(run.report, 'audit-missing'), 'E3 报告带 audit-missing', '')
     check(run.report?.audit?.required === true && run.report?.audit?.covered === false, 'E4 报告记下「需要审计、未覆盖」', show(run.report?.audit))
-    check(run.err.includes('PREFLIGHT-FAIL commit-not-ancestor：'), 'E5 CLI 把两条 finding 都打出来', '')
+    check(run.err.includes('PREFLIGHT-FAIL commit-not-ancestor: '), 'E5 CLI 把两条 finding 都打出来', '')
   }
 
   // ---- F. 票面写了差异审计 → 候选非祖先也能过，并打 PREFLIGHT-CANDIDATE-AUDIT ----
@@ -368,7 +368,7 @@ async function main(): Promise<void> {
     check(run.report?.blocked?.[0]?.code === 'adapter-missing', 'G3 阻塞原因 adapter-missing', show(run.report?.blocked?.[0]?.code))
     check(run.err.includes('PREFLIGHT-BLOCKED'), 'G4 stderr 有 PREFLIGHT-BLOCKED 标记', '')
     check(run.err.includes('add to verify/profile.ts'), 'G5 阻塞行带三步注入方法', '')
-    check(run.err.includes('改法：'), 'G6 阻塞行带可执行的「改法」', '')
+    check(run.err.includes('(fix: '), 'G6 阻塞行带可执行的「改法」', '')
     check(!run.out.includes('PREFLIGHT-OK') && !run.err.includes('PREFLIGHT-FAIL'), 'G7 阻塞既不算通过也不算失败', '')
   }
 
@@ -377,7 +377,7 @@ async function main(): Promise<void> {
     const run = await runGate({ candidate: releaseCandidate({ validity: 'development' }) })
     check(run.exitCode === 1, 'H1 development 候选 → 退出码 1', show(run.exitCode))
     check(hasFinding(run.report, 'candidate-not-release'), 'H2 报告带 candidate-not-release', show(run.report?.findings?.map((f: any) => f.code)))
-    check(run.err.includes('PREFLIGHT-FAIL candidate-not-release：'), 'H3 CLI 点名该 finding code', '')
+    check(run.err.includes('PREFLIGHT-FAIL candidate-not-release: '), 'H3 CLI 点名该 finding code', '')
   }
 
   // ---- I. 候选就是发布提交 → PREFLIGHT-CANDIDATE-OK ----
@@ -396,15 +396,15 @@ async function main(): Promise<void> {
   {
     const gitRun = await runGate({ releaseCommit: undefined, ports: portsWithCommand(fakeCommand(128, 'fatal: not a git repository')) })
     check(gitRun.exitCode === 2, 'J1 git 取不到 HEAD → 退出码 2', show(gitRun.exitCode))
-    check(gitRun.err.includes('PREFLIGHT-ENV') && gitRun.err.includes('git rev-parse HEAD 失败'), 'J2 stderr 说清是 git 环境问题', gitRun.err.split(NEWLINE)[0] ?? '')
+    check(gitRun.err.includes('PREFLIGHT-ENV') && gitRun.err.includes('git rev-parse HEAD failed'), 'J2 stderr 说清是 git 环境问题', gitRun.err.split(NEWLINE)[0] ?? '')
 
     const versionRun = await runGate({ version: undefined, readVersion: () => '   ' })
     check(versionRun.exitCode === 2, 'J3 版本号为空 → 退出码 2', show(versionRun.exitCode))
-    check(versionRun.err.includes('PREFLIGHT-ENV') && versionRun.err.includes('版本号'), 'J4 stderr 说清缺版本号', versionRun.err.split(NEWLINE)[0] ?? '')
+    check(versionRun.err.includes('PREFLIGHT-ENV') && versionRun.err.includes('The version number is empty'), 'J4 stderr 说清缺版本号', versionRun.err.split(NEWLINE)[0] ?? '')
 
     const missingCandidate = await runGate({ candidate: undefined, candidatePath: 'D:/Temp/__no_such_candidate__.json' })
     check(missingCandidate.exitCode === 2, 'J5 候选清单文件不存在 → 退出码 2', show(missingCandidate.exitCode))
-    check(missingCandidate.err.includes('PREFLIGHT-ENV') && missingCandidate.err.includes('候选清单文件不存在'), 'J6 stderr 点名缺失的候选清单', missingCandidate.err.split(NEWLINE)[0] ?? '')
+    check(missingCandidate.err.includes('PREFLIGHT-ENV') && missingCandidate.err.includes('Candidate manifest file does not exist'), 'J6 stderr 点名缺失的候选清单', missingCandidate.err.split(NEWLINE)[0] ?? '')
 
     const noDeclaration = await runGate({
       ticketFace: undefined,

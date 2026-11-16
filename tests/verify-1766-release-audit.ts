@@ -119,7 +119,7 @@ check(
 )
 check(codesOf(missing).includes('batch-start-missing'), '批次开始评论没带身份行时也报 batch-start-missing')
 const missingFinding = missing.findings.find((finding) => finding.code === 'identity-missing')
-check(missingFinding !== undefined && missingFinding.message.includes('第 1 条评论'), 'identity-missing 的说明点名第几条评论')
+check(missingFinding !== undefined && missingFinding.message.includes('Comment 1 '), 'identity-missing 的说明点名第几条评论')
 check(missingFinding !== undefined && missingFinding.fix.includes(IDENTITY_PREFIX), 'identity-missing 的改法给出应补的整行示例')
 
 // ── 四、同一批次身份冲突 ────────────────────────────────────────────────

@@ -93,7 +93,7 @@ function describeError(error: unknown): string {
 async function gitText(ports: Ports, args: readonly string[], cwd: string): Promise<GitTextResult> {
   const outcome = await ports.command.run({ argv: ['git', ...args], cwd, timeoutMs: 60_000 })
   if (!outcome.ok) {
-    return { ok: false, message: '调不起 git：' + outcome.error.message + '。发布前检查要在仓库里跑，且 git 要可用。' }
+    return { ok: false, message: 'Cannot run git: ' + outcome.error.message + '. The release preflight must run inside the repository, and git must be available.' }
   }
   const result = outcome.value
   if (result.exitCode !== 0) {
@@ -101,8 +101,8 @@ async function gitText(ports: Ports, args: readonly string[], cwd: string): Prom
     return {
       ok: false,
       message:
-        'git ' + args.join(' ') + ' 失败（exit=' + String(result.exitCode) + '）' +
-        (detail ? '：' + detail : '') + '。',
+        'git ' + args.join(' ') + ' failed (exit=' + String(result.exitCode) + ')' +
+        (detail ? ': ' + detail : '') + '.',
     }
   }
   return { ok: true, value: String(result.stdout || '').trim() }
@@ -110,7 +110,7 @@ async function gitText(ports: Ports, args: readonly string[], cwd: string): Prom
 
 /** 把一行失败标成环境问题：退出码 2，前缀 PREFLIGHT-ENV（发布脚本按它区分 1 与 2）。 */
 function envFail(lines: PreflightLine[], message: string, hint?: string): PreflightGateOutcome {
-  lines.push({ stream: 'err', text: 'PREFLIGHT-ENV ' + message + (hint ? '（改法：' + hint + '）' : '') })
+  lines.push({ stream: 'err', text: 'PREFLIGHT-ENV ' + message + (hint ? ' (fix: ' + hint + ')' : '') })
   return { exitCode: 2, report: null, lines }
 }
 
@@ -136,12 +136,12 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
   } catch (error) {
     return envFail(
       lines,
-      '读不到本版版本号：' + describeError(error) + '。',
-      '用 --version 指定版本号，或确认 package.json 里有 version。',
+      'Cannot read the version number for this release: ' + describeError(error) + '.',
+      'pass the version with --version, or make sure package.json has a version.',
     )
   }
   if (version === '') {
-    return envFail(lines, '版本号为空：用 --version 指定，或确认 package.json 里有 version。')
+    return envFail(lines, 'The version number is empty: pass it with --version, or make sure package.json has a version.')
   }
 
   let releaseCommit = options.releaseCommit ?? ''
@@ -151,7 +151,7 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
     releaseCommit = head.value
   }
   if (!/^[0-9a-f]{40}$/.test(releaseCommit)) {
-    return envFail(lines, 'git rev-parse HEAD 没给出 40 位小写提交号：' + (releaseCommit || '<空>') + '。')
+    return envFail(lines, 'git rev-parse HEAD did not return a 40-character lowercase commit hash: ' + (releaseCommit || '<empty>') + '.')
   }
 
   let candidate: CandidateManifest | null = null
@@ -165,17 +165,17 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
     } catch (error) {
       const code = (error as { code?: unknown } | null)?.code
       if (code === 'ENOENT') {
-        return envFail(lines, '候选清单文件不存在：' + resolved + '。', '检查 --candidate 的路径。')
+        return envFail(lines, 'Candidate manifest file does not exist: ' + resolved + '.', 'check the --candidate path.')
       }
       return envFail(
         lines,
-        '候选清单读不出来或不是合法 JSON：' + resolved + '（' + describeError(error) + '）。',
-        '检查 --candidate 指向的文件。',
+        'Candidate manifest cannot be read or is not valid JSON: ' + resolved + ' (' + describeError(error) + ').',
+        'check the file that --candidate points to.',
       )
     }
     const parsed = parseCandidateManifest(raw)
     if (!parsed.ok) {
-      return envFail(lines, '候选清单不符合候选清单契约：' + parsed.error.message, parsed.error.hint)
+      return envFail(lines, 'Candidate manifest does not satisfy the candidate manifest contract: ' + parsed.error.message, parsed.error.hint)
     }
     candidate = parsed.value
   }
@@ -197,11 +197,11 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
           text:
             'PREFLIGHT-BLOCKED ' +
             declaration.error.message +
-            (declaration.error.hint ? '（改法：' + declaration.error.hint + '）' : ''),
+            (declaration.error.hint ? ' (fix: ' + declaration.error.hint + ')' : ''),
         })
         return { exitCode: 2, report: null, lines }
       }
-      return envFail(lines, 'verify/profile.ts 读不通：' + declaration.error.message, declaration.error.hint)
+      return envFail(lines, 'verify/profile.ts cannot be loaded: ' + declaration.error.message, declaration.error.hint)
     }
     profile = declaration.value.profile
   }
@@ -223,7 +223,7 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
   if (!gate.ok) {
     return envFail(
       lines,
-      '发布门禁无法用这组输入判定（' + gate.error.code + '）：' + gate.error.message,
+      'The release gate cannot reach a verdict with these inputs (' + gate.error.code + '): ' + gate.error.message,
       gate.error.hint,
     )
   }
@@ -250,23 +250,23 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
     } else if (report.audit.required) {
       lines.push({
         stream: 'out',
-        text: 'PREFLIGHT-INFO 候选提交与发布提交不同，且票面没有覆盖这对提交的差异审计：发布脚本会按候选包对账字节。',
+        text: 'PREFLIGHT-INFO The candidate commit differs from the release commit, and the ticket has no diff audit covering this pair of commits: the release script will reconcile bytes against the candidate package.',
       })
     }
   } else {
     lines.push({
       stream: 'out',
-      text: 'PREFLIGHT-INFO 没传 --candidate：只核对清单票与票面身份行，不证明要发的字节。',
+      text: 'PREFLIGHT-INFO No --candidate was passed: only the checklist ticket and its identity lines are checked; this does not prove the bytes to be released.',
     })
   }
 
   if (report.decision === 'pass') {
-    const ticket = report.ticket.number === null ? '没有清单票' : '清单票 #' + String(report.ticket.number)
+    const ticket = report.ticket.number === null ? 'no checklist ticket' : 'checklist ticket #' + String(report.ticket.number)
     lines.push({
       stream: 'out',
       text:
-        'PREFLIGHT-OK 发布门禁通过：v' + version + ' at ' + releaseCommit + '；' + ticket +
-        '；' + String(report.tally.passed) + '/' + String(report.tally.total) + ' 项检查通过。',
+        'PREFLIGHT-OK Release gate passed: v' + version + ' at ' + releaseCommit + '; ' + ticket +
+        '; ' + String(report.tally.passed) + '/' + String(report.tally.total) + ' checks passed.',
     })
     return { exitCode: 0, report, lines }
   }
@@ -275,13 +275,13 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
     lines.push({
       stream: 'err',
       text:
-        'PREFLIGHT-BLOCKED 发布门禁无法判定 v' + version + '：' +
-        String(report.blocked.length) + ' 个前置条件缺失（exit 2）。',
+        'PREFLIGHT-BLOCKED Release gate cannot reach a verdict for v' + version + ': ' +
+        String(report.blocked.length) + ' precondition(s) missing (exit 2).',
     })
     for (const reason of report.blocked) {
       lines.push({
         stream: 'err',
-        text: 'PREFLIGHT-BLOCKED ' + reason.message + '（改法：' + reason.hint + '）',
+        text: 'PREFLIGHT-BLOCKED ' + reason.message + ' (fix: ' + reason.hint + ')',
       })
     }
     return { exitCode: 2, report, lines }
@@ -290,13 +290,13 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
   lines.push({
     stream: 'err',
     text:
-      'PREFLIGHT-FAIL 发布门禁拒绝 v' + version + '：' + String(report.tally.failed) +
-      ' 项硬检查没通过（共 ' + String(report.tally.total) + ' 项）。',
+      'PREFLIGHT-FAIL Release gate rejects v' + version + ': ' + String(report.tally.failed) +
+      ' hard check(s) failed (out of ' + String(report.tally.total) + ').',
   })
   for (const finding of report.findings) {
     lines.push({
       stream: 'err',
-      text: 'PREFLIGHT-FAIL ' + finding.code + '：' + finding.message + '（改法：' + finding.hint + '）',
+      text: 'PREFLIGHT-FAIL ' + finding.code + ': ' + finding.message + ' (fix: ' + finding.hint + ')',
     })
   }
   return { exitCode: 1, report, lines }
