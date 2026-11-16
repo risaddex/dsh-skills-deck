@@ -29,9 +29,6 @@ export const LINEAR_REVOKE_URL = 'https://api.linear.app/oauth/revoke'
  */
 export const LINEAR_SCOPE = 'read,write'
 
-/** A token inside this many milliseconds of expiring is renewed before use rather than after a 401. */
-export const LINEAR_RENEW_WINDOW_MS = 5 * 60 * 1000
-
 /** The fields a grant record's payload carries. It must survive a JSON round trip, so only plain values. */
 export interface LinearGrantPayload {
   mode: 'oauth_user' | 'oauth_app'
@@ -209,8 +206,12 @@ export function grantPayload(p: { mode: 'oauth_user' | 'oauth_app'; alias: strin
   return out
 }
 
-/** Whether a grant should be renewed before use: it has an expiry and that expiry is inside the window. A grant with no expiry is never renewed on a clock, only after a 401. */
-export function needsRenewal(payload: { expiresAt?: number } | null | undefined, now: number): boolean {
+/**
+ * Whether a grant should be renewed before use: it has an expiry and that expiry is inside `windowMs`.
+ * A grant with no expiry is never renewed on a clock, only after a 401. The window is a parameter, not a
+ * constant here, because its value lives in config/timeouts.yaml and this layer may not import the host.
+ */
+export function needsRenewal(payload: { expiresAt?: number } | null | undefined, now: number, windowMs: number): boolean {
   const at = payload && typeof payload.expiresAt === 'number' ? payload.expiresAt : 0
-  return at > 0 && at - now <= LINEAR_RENEW_WINDOW_MS
+  return at > 0 && at - now <= windowMs
 }

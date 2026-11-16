@@ -40,7 +40,7 @@ import {
 } from '../shared/linear-signin/src/protocol.js'
 import type { LinearGrantPayload } from '../shared/linear-signin/src/protocol.js'
 import { LINEAR_CREDENTIAL_SCOPE, linearCredentialId, linearCredentialKey } from '../shared/linear-accounts/src/resolve.js'
-import { LINEAR_PROBE_TIMEOUT_MS } from '../shared/time-config/src/values.js'
+import { LINEAR_PROBE_TIMEOUT_MS, LINEAR_RENEW_WINDOW_MS } from '../shared/time-config/src/values.js'
 
 /** The two answers the token endpoint call can give. */
 export type TokenCall = { ok: true; status: number; body: unknown } | { ok: false; reason: string; message: string }
@@ -52,6 +52,8 @@ export interface LinearSigninDeps {
   randomBytes?: (n: number) => Uint8Array
   sha256?: (text: string) => Promise<Uint8Array>
   timeoutMs?: number
+  /** Renew a grant this close to expiry; defaults to the registered LINEAR_RENEW_WINDOW_MS. */
+  renewWindowMs?: number
   tokenUrl?: string
   revokeUrl?: string
   /** Opens a loopback listener and resolves what it received; absent means "paste mode only". */
@@ -83,6 +85,7 @@ function defaults(deps?: LinearSigninDeps) {
     randomBytes: d.randomBytes || ((n: number) => { const c: any = (globalThis as any).crypto; const a = new Uint8Array(n); c.getRandomValues(a); return a }),
     sha256: d.sha256 || (async (text: string) => { const c: any = (globalThis as any).crypto; const enc = new (globalThis as any).TextEncoder().encode(text); return new Uint8Array(await c.subtle.digest('SHA-256', enc)) }),
     timeoutMs: typeof d.timeoutMs === 'number' ? d.timeoutMs : LINEAR_PROBE_TIMEOUT_MS,
+    renewWindowMs: typeof d.renewWindowMs === 'number' ? d.renewWindowMs : LINEAR_RENEW_WINDOW_MS,
     tokenUrl: d.tokenUrl || LINEAR_TOKEN_URL,
     revokeUrl: d.revokeUrl || LINEAR_REVOKE_URL,
     listen: d.listen,
@@ -165,7 +168,7 @@ export function ensureFreshGrant(store: CredentialStoreLike, alias: string, opts
     const record = await store.readRecord(key)
     const payload: LinearGrantPayload | null = record && record.kind === 'grant' && record.payload && typeof record.payload === 'object' ? (record.payload as LinearGrantPayload) : null
     if (!payload || typeof payload.accessToken !== 'string' || payload.accessToken === '') return { ok: false as const, reason: 'needs_auth', message: 'no grant is stored for ' + alias + '; sign in first' }
-    if (!opts?.force && !needsRenewal(payload, o.now())) return { ok: true as const, accessToken: payload.accessToken }
+    if (!opts?.force && !needsRenewal(payload, o.now(), o.renewWindowMs)) return { ok: true as const, accessToken: payload.accessToken }
 
     let renewed: { ok: true; payload: LinearGrantPayload } | { ok: false; reason: string; message: string }
     if (payload.mode === 'oauth_app') {

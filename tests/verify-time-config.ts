@@ -78,6 +78,8 @@ interface RefRow {
 const REFERENCES: RefRow[] = [
   // —— 宿主：静态 import 生成常量（别名只改名，不改值） ——
   { file: 'src/host/versionControl.ts', access: 'RUN_TIMEOUT_MS', gen: 'VC_RUN_TIMEOUT_MS', key: 'vcRunTimeoutMs' },
+  // #19 Linear 登录：令牌提前续期的窗口，宿主登录文件直接拿生成常量，协议件只收参数、不自留数字。
+  { file: 'src/host/linearSignin.ts', access: 'LINEAR_RENEW_WINDOW_MS', gen: 'LINEAR_RENEW_WINDOW_MS', key: 'linearRenewWindowMs' },
   { file: 'src/host/versionControlCheck.ts', access: 'CHECK_CALL_BUDGET_MS', gen: 'VC_CHECK_CALL_BUDGET_MS', key: 'vcCheckCallBudgetMs' },
   { file: 'src/host/versionControlCheck.ts', access: 'LSFILES_TIMEOUT_MS', gen: 'VC_LSFILES_TIMEOUT_MS', key: 'vcLsFilesTimeoutMs' },
   { file: 'src/host/versionControlCheck.ts', access: 'REMOTE_TIMEOUT_MS', gen: 'VC_REMOTE_TIMEOUT_MS', key: 'vcRemoteTimeoutMs' },
@@ -547,6 +549,9 @@ const EXEMPTS: ExemptRow[] = [
   { file: 'src/refresh/kernel/failure-backoff.ts', name: 'delay', reason: '派生变量：backoffDelayMs(state) 算出来的本次等待时长，序列本身已登记为 chainBackoffMs' },
   { file: 'src/tracker/rooms/github/transport/client.ts', name: 'timeout', reason: '透传参数：值来自上层调用参数，本文件不决定时长（出站层的档位由 outbound-tiers.ts 定，已登记）' },
   { file: 'src/tracker/rooms/gitlab/client.ts', name: 'timeout', reason: '同上，透传参数' },
+  { file: 'src/shared/linear-signin/src/protocol.ts', name: 'expiresInMs', reason: '解析结果字段：把令牌端点回的 expires_in（秒，由对端给）换成毫秒再交出去，是单位换算后的数据，不是本文件的可调时长（#19）' },
+  { file: 'src/host/linearSignin.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#19，与 linearAccounts.ts 同一口径）' },
+  { file: 'src/host/linearSignin.ts', name: 'renewWindowMs', reason: '派生变量：缺省接已登记的 LINEAR_RENEW_WINDOW_MS，正常路径用调用方给的值（#19）' },
   { file: 'src/host/linearAccounts.ts', name: 'timeoutMs', reason: '派生变量：缺省接已登记的 LINEAR_PROBE_TIMEOUT_MS，正常路径用调用方给的 timeoutMs（#12）' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'startedMs', reason: '读钟时刻（这趟扫描什么时候开始的），不是可调参数' },
   { file: 'src/refresh/rooms/host/issue-index-scan.ts', name: 'nextWatermarkMs', reason: '算出来的下一个水位时刻，不是可调参数' },
