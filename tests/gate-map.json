@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T17:21:16.140Z",
+  "generatedAt": "2026-11-16T18:26:31.726Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 600,
-  "gateCount": 600,
+  "chainLength": 601,
+  "gateCount": 601,
   "attributedGates": 545,
-  "unattributedGates": 55,
+  "unattributedGates": 56,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 143,
   "smokeLength": 8,
@@ -11391,6 +11391,21 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 4 条"
     },
     {
+      "step": "node tests/verify-known-reds.ts",
+      "file": "tests/verify-known-reds.ts",
+      "guards": [
+        "scripts/lib/known-reds.mts"
+      ],
+      "dirs": [
+        "scripts/lib"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "读到的路径都落在 scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
+    },
+    {
       "step": "node tests/verify-label-color-core.ts",
       "file": "tests/verify-label-color-core.ts",
       "guards": [
@@ -14511,6 +14526,7 @@
       "node tests/verify-file-granularity.ts",
       "node tests/verify-issue232-sync.ts",
       "node tests/verify-kernel.ts",
+      "node tests/verify-known-reds.ts",
       "node tests/verify-log-artifacts.ts",
       "node tests/verify-log-client.ts",
       "node tests/verify-log-selfmon.ts",

@@ -22,6 +22,7 @@
 //
 // 退出码：全部通过 0；有失败 1。名单走规划函数（目录约定加显式排除表，#1125），
 // 与串行执行器、逐道汇总读的是同一份，本脚本不另抄一份。
+import { loadKnownReds, classifyReds } from './lib/known-reds.mts'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -590,6 +591,12 @@ if (smokeSkip) {
 const smokeFailed: StepResult[] = smokeResults.filter((r) => r.code !== 0)
 const smokeRedTotal: number = smokeFailed.length + (smokeProblem ? 1 : 0)
 
+const acceptedReds = loadKnownReds(path.join(ROOT, 'tests/known-reds.json'))
+const classified = classifyReds([...failed, ...smokeFailed], acceptedReds)
+console.log('[verification] known red: ' + classified.known.length + '; NEW RED: ' + (classified.fresh.length + (smokeProblem ? 1 : 0)))
+for (const r of classified.fresh) console.log('  NEW RED: ' + r.file)
+if (smokeProblem) console.log('  NEW RED: smoke planning: ' + smokeProblem)
+
 const slow = [...results].sort((a, b) => b.ms - a.ms).slice(0, 10)
 console.log('')
 // 预构建不是链上的步骤，算总数时把它摘出去（它自己的耗时照旧打在明细里）。
@@ -641,6 +648,8 @@ if (has('--json')) {
             // red 是整趟的总红数（主链 + 冒烟）；chainRed 单独给出，好让发布脚本分辨是哪一段红了。
             red: failed.length + smokeRedTotal,
             chainRed: failed.length,
+            knownRed: classified.known.length,
+            newRed: classified.fresh.length + (smokeProblem ? 1 : 0),
             flaky: flaky.length,
             results: results.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, evidence: r.evidence || '' })),
             smoke: {

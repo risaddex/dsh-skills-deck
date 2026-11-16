@@ -1,0 +1,104 @@
+{
+  "note": "Maintainer accepted these 24 baseline failures on 2026-11-16 for issue #3 promotion. Classification is informational; any failing gate still makes verification exit non-zero.",
+  "acceptedOnHead": "73894f26",
+  "sourceHead": "0a612fca212c953bc9f6a06a43b2b73c4923af29",
+  "sourceAt": 1794850070892,
+  "failures": [
+    {
+      "file": "tests/verify-deck-render-detail.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-841-write-phones.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1640-unopened-merge.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-wire-subissues-script.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1641-listed-workspace-flags.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1612-settings-switches.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1802-settings-cross-window.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1654-ws-pending-hint.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1776-vc-live-tab.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-settings-view.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1586-config-hooks.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-issue-body-script.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1709-deck-entry.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1586-maintenance.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-666-subws-mark-root.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1766-release-audit.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1442-tracker-tools.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1082-work-route-table.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-656-subworkspace-acceptance.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1610-parallel-read.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1605-map-routing-guard.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-wizard-exit-609.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-1446-receipts.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    },
+    {
+      "file": "tests/verify-verify-checks.ts",
+      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
+    }
+  ]
+}
