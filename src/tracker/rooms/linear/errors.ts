@@ -61,9 +61,12 @@ export function classifyGraphQLErrors(errors: unknown): { kind: ErrorKind; messa
   const message = String(first?.message || 'Linear returned an error')
   const code = String(first?.extensions?.code || '').toUpperCase()
   const type = String(first?.extensions?.type || '').toLowerCase()
+  // 顺序是有意的：'feature not accessible' 里也含 'not accessible'，所以**先**认能力缺失这一档。
+  // 反过来写会让 UNSUPPORTED 永远走不到，把「这个操作不可用」说成「你登录失败了」，
+  // 界面于是把人赶去重新登录（PR #26 review 指出过这一条）。
+  if (type.includes('feature not accessible')) return { kind: ERROR_KIND.UNSUPPORTED, message }
   if (code === 'RATELIMITED' || type.includes('ratelimit') || type.includes('usage limit')) return { kind: ERROR_KIND.RATELIMIT, message }
   if (type.includes('authentication') || type.includes('forbidden') || type.includes('not accessible')) return { kind: ERROR_KIND.AUTH, message }
   if (type.includes('invalid input') || type === 'user error') return { kind: ERROR_KIND.CONFLICT, message }
-  if (type.includes('feature not accessible')) return { kind: ERROR_KIND.UNSUPPORTED, message }
   return { kind: ERROR_KIND.NETWORK, message }
 }

@@ -92,6 +92,10 @@ async function main(): Promise<void> {
       { name: 'HTTP 200 with RATELIMITED', status: 200, body: JSON.stringify({ errors: [{ message: 'slow down', extensions: { code: 'RATELIMITED' } }] }), kind: 'rate-limit' },
       { name: 'HTTP 200 with an auth error', status: 200, body: JSON.stringify({ errors: [{ message: 'nope', extensions: { type: 'authentication error' } }] }), kind: 'auth' },
       { name: 'HTTP 200 with invalid input', status: 200, body: JSON.stringify({ errors: [{ message: 'bad', extensions: { type: 'invalid input' } }] }), kind: 'conflict' },
+      // PR #26 review (P2): 'feature not accessible' also contains 'not accessible', so the order of the
+      // two conditions decides whether callers are told "log in again" or "this operation is unavailable".
+      { name: 'HTTP 200 with feature not accessible', status: 200, body: JSON.stringify({ errors: [{ message: 'gone', extensions: { type: 'feature not accessible' } }] }), kind: 'unsupported' },
+      { name: 'HTTP 200 with a plain not-accessible error', status: 200, body: JSON.stringify({ errors: [{ message: 'nope', extensions: { type: 'not accessible' } }] }), kind: 'auth' },
     ]
     for (const item of cases) {
       const { ctx } = ctxAnswering(item.status, item.body)
@@ -159,6 +163,42 @@ async function main(): Promise<void> {
     const badProbe = ctxAnswering(401, '')
     const pre2 = await preflightLinear(badProbe.ctx, ACCOUNT)
     check(pre2.ok === false && pre2.error && pre2.error.kind === 'auth', 'a rejected credential fails preflight as auth', pre2.ok ? 'ok' : JSON.stringify(pre2.error))
+  }
+
+  console.log('L7 every request leaves one boundary line, without what would replay it')
+  {
+    const records: { level: string; event: string; fields: Record<string, unknown> }[] = []
+    const ctx = {
+      http: { request: async () => ({ status: 200, headers: {}, body: JSON.stringify({ data: { viewer: { name: 'x' } } }) }) },
+      logEvent: (level: string, event: string, fields: Record<string, unknown>) => records.push({ level, event, fields: fields || {} }),
+      isEnabled: () => true,
+    } as unknown as OpContext
+    await gql(ctx, { ...ACCOUNT, authorization: 'SECRET-TOKEN' }, { query: 'query LinearViewer { viewer { name } }', bucket: 'read' })
+    const line = records.find((r) => r.event === 'linear.request')
+    check(!!line, 'a successful request writes a linear.request line', JSON.stringify(records.map((r) => r.event)))
+    const flat = JSON.stringify(line ? line.fields : {})
+    check(/"op":"LinearViewer"/.test(flat), 'the line names the operation', flat)
+    check(/"outcome":"ok"/.test(flat) && /"bucket":"read"/.test(flat), 'the line carries the outcome and the bucket', flat)
+    check(/"ms":\d+/.test(flat) && /"alias":"demo"/.test(flat), 'the line carries the duration and the account alias', flat)
+    check(!/SECRET-TOKEN/.test(flat), 'the line carries no credential', flat)
+
+    const failing: Record<string, unknown>[] = []
+    const ctx2 = {
+      http: { request: async () => ({ status: 200, headers: {}, body: JSON.stringify({ errors: [{ message: 'slow', extensions: { code: 'RATELIMITED' } }] }) }) },
+      logEvent: (_l: string, _e: string, fields: Record<string, unknown>) => failing.push(fields || {}),
+      isEnabled: () => true,
+    } as unknown as OpContext
+    await gql(ctx2, ACCOUNT, { query: 'query LinearIssues { issues { nodes { id } } }' })
+    check(/"outcome":"rate-limit"/.test(JSON.stringify(failing[0] || {})), 'a failure records its classified outcome, not just "failed"', JSON.stringify(failing[0]))
+
+    const quiet: Record<string, unknown>[] = []
+    const ctx3 = {
+      http: { request: async () => ({ status: 200, headers: {}, body: JSON.stringify({ data: {} }) }) },
+      logEvent: (_l: string, _e: string, fields: Record<string, unknown>) => quiet.push(fields || {}),
+      isEnabled: () => false,
+    } as unknown as OpContext
+    await gql(ctx3, ACCOUNT, { query: 'query LinearViewer { viewer { name } }' })
+    check(quiet.length === 0, 'with the debug switch off nothing is written at all')
   }
 
   console.log('L6 the room never reaches for the global fetch')
