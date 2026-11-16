@@ -12,6 +12,7 @@
  */
 import type { Issue, Label } from '../../contract/entities.js'
 import type { IssueType, State } from '../../contract/identity.js'
+import { normalizeColor } from '../../../shared/label-color/src/colors.js'
 
 /** Linear 的节点形状（只声明本文件读到的格，多的一律不碰）。 */
 export interface LinearIssueNode {
@@ -29,8 +30,13 @@ export interface LinearIssueNode {
   labels?: { nodes?: { name?: string; color?: string }[] } | null
 }
 
-/** 关票的三种 workflow state type（研究笔记 §7）；其余都是开着。 */
-const CLOSED_STATE_TYPES = ['completed', 'canceled', 'duplicate']
+/**
+ * 关票的三种 workflow state type（研究笔记 §7）；其余都是开着。
+ *
+ * 导出而不是各写一份：读侧的查询条件（`state.type in / nin`）与这里的判定必须是同一张表，
+ * 分成两份的话，改了一边就会出现「查询按关票过滤、翻译却说是开着」这种对不上的名单。
+ */
+export const CLOSED_STATE_TYPES = ['completed', 'canceled', 'duplicate']
 
 export function stateOf(type: string | undefined): State {
   return CLOSED_STATE_TYPES.includes(String(type || '').toLowerCase()) ? 'closed' : 'open'
@@ -48,8 +54,11 @@ export function labelsOf(node: LinearIssueNode): Label[] {
   for (const item of nodes) {
     const name = String(item?.name || '')
     if (!name) continue
-    // Label.color 在契约里是必填：Linear 每条标签都带色值，没带就补空串（明确「不知道什么色」）。
-    out.push({ name, color: String(item?.color || '') })
+    // 颜色必须过共享的归一化：契约要的是「不带井号的小写六位」，而 Linear 给的是 `#EB5757`。
+    // 原样透传会让界面拼成 `##EB5757`（视图自己会补一个井号），颜色整条失效。
+    // Label.color 在契约里是必填：归一化不出来的（空串、位数不对、非十六进制）补空串，
+    // 表示「这个标签不知道什么色」，而不是猜一个近似值。
+    out.push({ name, color: normalizeColor(item?.color) ?? '' })
   }
   return out
 }

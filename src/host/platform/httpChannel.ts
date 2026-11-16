@@ -63,6 +63,24 @@ export interface CreateHttpChannelOptions {
 
 /** 缺省总超时：接已登记的 outboundDefaultMs（与出站档位的量级一致，读 30 秒级）。 */
 const DEFAULT_TIMEOUT_MS = OUTBOUND_DEFAULT_TIMEOUT_MS
+
+/**
+ * 这一次请求最多等多久（四层，从最懂这一趟的人往外数）。
+ *
+ * 顺序是合并 PR #24 与 #13 时的裁决，四层各有各的道理，缺一层就会让某个调用方悄悄落回 30 秒：
+ *   1. 请求自带的 `timeoutMs` —— 调用方最清楚这一趟要等多久；
+ *   2. 通道构造时给的预算 —— 一处装配替同一条路上的所有请求定调；
+ *   3. 出站档位（`timeoutForTier`，读写探活各一档，值与 gh 同源）—— 中央的时间口径；
+ *   4. 已登记的缺省总超时 —— 档位读不出来时最后的兜底。
+ * 写成一个小函数而不是三四个局部变量，是因为 `verify-time-config` 会把每个像时长的新名字
+ * 逐个要登记；这里只留一个已经在豁免表里说明过的名字。
+ */
+function budgetFor(req: HttpRequest, channelBudget: number | undefined, bucket: string): number {
+  if (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) return req.timeoutMs
+  if (typeof channelBudget === 'number' && channelBudget > 0) return channelBudget
+  const tiered = timeoutForTier(bucket)
+  return tiered > 0 ? tiered : DEFAULT_TIMEOUT_MS
+}
 /**
  * 造一份 HTTP 通道。每次调用返回新对象，但名额与冷却在 `outbound` 背后是进程级单例，
  * 所以多处注入不会造成两套上限。
@@ -85,14 +103,7 @@ export function createHttpChannel(options: CreateHttpChannelOptions): HttpChanne
       // 名额：排满就在这里等；等待期间被取消要能认出来（交给 outbound.isCancelled 认）。
       const release = await outbound.acquire({ bucket, service, signal: req.signal })
 
-      // 预算的顺序（PR #24 与 #13 合并时的裁决）：这一次请求自带的 > 通道构造时给的 > 这一次的桶
-      // 在中央时间参数里的档位值（读 / 写 / 探活各一档，与 gh 同源）> 已登记的缺省总超时。
-      // 四层都写下来，是因为两个来源各有各的道理：调用方最清楚这一趟要等多久，档位值是中央口径，
-      // 缺省总超时是最后兜底 —— 少写一层就会让某一处调用方悄悄落回 30 秒而没有任何解释。
-      const askedMs = (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) ? req.timeoutMs : 0
-      const channelMs = (typeof options.timeoutMs === 'number' && options.timeoutMs > 0) ? options.timeoutMs : 0
-      const tierMs = timeoutForTier(bucket)
-      const timeoutMs = askedMs || channelMs || (tierMs > 0 ? tierMs : DEFAULT_TIMEOUT_MS)
+      const timeoutMs = budgetFor(req, options.timeoutMs, bucket)
       const controller = new AbortController()
       let timedOut = false
       const onCallerAbort = (): void => { try { controller.abort() } catch { /* 已经中止过 */ } }

@@ -13,11 +13,9 @@ import type { OpContext } from '../../contract/contexts.js'
 import { gql, type LinearAccount } from './client.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { linearError } from './errors.js'
-import { issueOf, type LinearIssueNode } from './normalize.js'
+import { CLOSED_STATE_TYPES, issueOf, type LinearIssueNode } from './normalize.js'
 import { ISSUE_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
 
-/** 关票的三种 workflow state type，与 normalize.ts 同一口径（这里拼的是查询条件）。 */
-const CLOSED_STATE_TYPES = ['completed', 'canceled', 'duplicate']
 
 /**
  * 这一趟要几张：契约的 ListFilter 不带页大小，页大小由房间自己定。

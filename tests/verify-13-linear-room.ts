@@ -16,6 +16,9 @@
 //   L5  preflight answers the environment question only, and does not claim success when the probe
 //       came back as an error.
 //   L6  the room never touches the global fetch — that is the whole point of the channel.
+//   L7  every request leaves one debug-only boundary line, carrying no replayable credential.
+//   L8  the closed-state list is defined in one place, so the query filter and the reading of a
+//       state can never disagree about which workflow states mean closed.
 //
 // Usage: node --import ./scripts/ts-hook.mts tests/verify-13-linear-room.ts
 import { readFileSync, readdirSync } from 'node:fs'
@@ -120,7 +123,12 @@ async function main(): Promise<void> {
     check(issue.parentKey === 'ENG-100', 'the parent identifier becomes the parent key', String(issue.parentKey))
     check(issue.effortId === '', 'a single-work-unit backend writes an empty effort', issue.effortId)
     check(issue.labels && issue.labels.length === 2, 'both labels survive', JSON.stringify(issue.labels))
-    check(issue.labels && issue.labels[0].color === '#4EA7FC', 'a label keeps its colour', JSON.stringify(issue.labels && issue.labels[0]))
+    // 契约要的是「不带井号的小写六位」，Linear 给的是 `#4EA7FC`，所以颜色必须被收过；
+    // 原样透传会让视图拼成 `##4EA7FC`（视图自己会补井号），颜色整条失效。
+    check(issue.labels && issue.labels[0].color === '4ea7fc', 'a label colour is lowered and lose its hash', JSON.stringify(issue.labels && issue.labels[0]))
+    const oddColours = issueOf({ ...ISSUE_NODE, labels: { nodes: [{ name: 'a', color: '#8b5cf' }, { name: 'b', color: 'not-a-colour' }, { name: 'c', color: '#8B5CF6' }] } } as any)
+    check(oddColours.labels && oddColours.labels[0].color === '' && oddColours.labels[1].color === '', 'an unusable colour becomes an empty string, not a guess', JSON.stringify(oddColours.labels))
+    check(oddColours.labels && oddColours.labels[2].color === '8b5cf6', 'an uppercase colour with a hash still normalises', JSON.stringify(oddColours.labels && oddColours.labels[2]))
     check(issue.assignees && issue.assignees[0].login === 'danilo' && issue.assignees[0].name === 'Danilo', 'the assignee carries login and name', JSON.stringify(issue.assignees))
     const openIssue = issueOf({ ...ISSUE_NODE, state: { name: 'Todo', type: 'unstarted' }, parent: null, assignee: null } as any)
     check(openIssue.state === 'open', 'an unstarted workflow state reads as open', openIssue.state)
@@ -212,6 +220,15 @@ async function main(): Promise<void> {
       if (/(^|[^.\w])fetch\s*\(/.test(text) || /globalThis\s*\.\s*fetch/.test(text)) offenders.push(name)
     }
     check(offenders.length === 0, 'no room file calls the global fetch', offenders.join(', '))
+  }
+
+  console.log('L8 the closed-state list has exactly one definition')
+  {
+    const normalizeText = readFileSync(new URL('../src/tracker/rooms/linear/normalize.ts', import.meta.url), 'utf8')
+    const readText = readFileSync(new URL('../src/tracker/rooms/linear/read.ts', import.meta.url), 'utf8')
+    check(/export const CLOSED_STATE_TYPES/.test(normalizeText), 'normalize.ts exports the one closed-state list')
+    check(!/const CLOSED_STATE_TYPES/.test(readText), 'read.ts keeps no second copy of it')
+    check(/import \{[^}]*CLOSED_STATE_TYPES[^}]*\} from '\.\/normalize\.js'/.test(readText), 'read.ts imports it from normalize.ts instead')
   }
 
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')
