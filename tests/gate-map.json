@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T21:19:27.107Z",
+  "generatedAt": "2026-11-16T21:31:56.324Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 605,
   "gateCount": 605,
@@ -2861,6 +2861,7 @@
       "step": "node tests/verify-1439-panel-accounting.ts",
       "file": "tests/verify-1439-panel-accounting.ts",
       "guards": [
+        "src/deck/tools/identity-resolve.ts",
         "src/deck/tools/tracker-session.ts",
         "src/host/index.ts",
         "src/host/tracker/snapshot.ts",
@@ -2882,7 +2883,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：静态 import 说明符 4 条；源码里的路径字面量 7 条"
+      "reason": "归属来自：静态 import 说明符 4 条；源码里的路径字面量 8 条"
     },
     {
       "step": "node tests/verify-1442-tracker-tools.ts",
@@ -2954,6 +2955,7 @@
         "src",
         "src/deck",
         "src/deck/shell/call-shell.ts",
+        "src/deck/tools/identity-resolve.ts",
         "src/deck/tools/tracker-session.ts",
         "src/host",
         "src/host/index.ts",
@@ -2986,7 +2988,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 16 条；源码里的路径字面量 3 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 17 条；源码里的路径字面量 3 条"
     },
     {
       "step": "node tests/verify-1444-chain.ts",

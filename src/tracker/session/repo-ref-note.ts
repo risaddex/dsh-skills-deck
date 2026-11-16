@@ -11,7 +11,22 @@
  *  2. 认不出原因就回 `repo-ref`，不猜。
  */
 import type { RepositoryRef } from '../contract/entities.js'
-import type { RepoRefResolution } from './repo-ref.js'
+
+/**
+ * 补齐结果的形状：本文件只读两格（身份、每一步的诊断）。
+ *
+ * 为什么不直接引 `repo-ref.ts` 里的 `RepoRefResolution`：`src/tracker` 里同一层的干活文件
+ * 不许互相 import（门禁 `same-layer-import-tracker`），而这里要的是结构、不是那一份实现。
+ * 按结构声明的另一头好处是：`resolveSessionRepoRef` 的返回值天然对得上，调用方不必转换。
+ */
+export interface RepoRefResolutionLike {
+  /** 补齐到的身份；连壳都没有时是 null。 */
+  ref?: RepositoryRef | null
+  /** 这次身份从哪来（本文件不读它，留着是为了与真形状对得上、调用方不必转换）。 */
+  via?: string
+  /** 每一步的结局（按执行顺序）；本文件只读 ok 与 error 两格。 */
+  steps?: Array<{ step: string; ok: boolean; error?: string }>
+}
 
 /** 身份没补全的原因档位：日志的 `errorKind` 用它，回执照旧写整句。 */
 export type RepoRefFailureClass = 'quota-rest' | 'quota-graphql' | 'quota-both' | 'repo-ref'
@@ -34,7 +49,7 @@ function refIdOf(ref: RepositoryRef | null | undefined): string {
  * 带说明的那几步拼起来（一趟最多三步，不会长到读不下去）。这样 REST 见底时回执说的是
  * 「REST requests 见底、约几点恢复」，而不是让人去查 keyring 里的 token。
  */
-export function repoRefNoteOf(res: RepoRefResolution | null | undefined): string {
+export function repoRefNoteOf(res: RepoRefResolutionLike | null | undefined): string {
   if (!res) return ''
   if (refIdOf(res.ref)) return ''
   const steps = Array.isArray(res.steps) ? res.steps : []
