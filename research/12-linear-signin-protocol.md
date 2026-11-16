@@ -132,6 +132,13 @@ From Linear's own pages, fetched as plain markdown (`https://linear.app/develope
   token "has access to all public teams in the workspace", its team access is editable on the app details
   page, and rotating the client secret invalidates these tokens but not authorization-code pairs
   (`oauth-2-0-authentication.md`, "Client credentials tokens", "Rotating your client secret").
+  Two more rules from the same page's "When credentials become invalid" (re-fetched 2026-11-16, ticket #19):
+  a client-credentials request **replaces** an existing authorization-code installation of the same app in
+  that workspace, and switching back needs that authorization revoked first; and requesting a **different
+  scope set** revokes the app's existing app-actor tokens in that workspace, so every process sharing the app
+  must request identical scopes (`oauth-2-0-authentication.md`, "When credentials become invalid", "Switching
+  grants", "Client-credentials scope changes"). An app without client credentials enabled answers
+  `Client does not support the client_credentials grant type` (same page, "Client credentials tokens").
 - **What a non-admin app actor lacks.** Installation is workspace-scoped and "admin permissions are
   required to complete the installation"; with `app:assignable` the app is set as the issue's
   delegate, not its assignee, and agents "cannot be added as project members or set as project leads, even
