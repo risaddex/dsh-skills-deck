@@ -1,0 +1,26 @@
+name: notify-plugin-index
+
+# A dist/v<semver> tag is a built, installable release of this plugin.
+# Ask risaddex/dsh-plugins to regenerate and publish the public plugin index,
+# which pins the newest such tag. INDEX_DISPATCH_TOKEN needs permission to send
+# repository_dispatch to risaddex/dsh-plugins; the default token cannot.
+
+on:
+  push:
+    tags:
+      - 'dist/v*'
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Dispatch index publication
+        env:
+          GH_TOKEN: ${{ secrets.INDEX_DISPATCH_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh api repos/risaddex/dsh-plugins/dispatches \
+            -f event_type=skills-deck-dist-tag \
+            -f "client_payload[tag]=$TAG"
