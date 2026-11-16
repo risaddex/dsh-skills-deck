@@ -22,7 +22,7 @@ import { parseLabelColors, stringifyLabelColors, LABEL_COLORS_JSON_REL, LABEL_CO
 import { parseSettings, stringifySettings, SETTINGS_REL_SEGMENTS } from '../shared/config-store/src/settings.js'
 // #12: Linear account metadata is user data of its own (never a secret), kept in a file beside the
 // local settings for the reasons written at the top of that unit.
-import { parseLinearAccounts, stringifyLinearAccounts, LINEAR_ACCOUNTS_REL_SEGMENTS } from '../shared/config-store/src/linear-accounts.js'
+import { parseLinearAccounts, stringifyLinearAccounts } from '../shared/config-store/src/linear-accounts.js'
 import { parseWorkspace, stringifyWorkspace, WORKSPACE_JSON_REL, WORKSPACE_YAML_REL } from '../shared/config-store/src/workspace.js'
 // 布局取值的唯一真源（#1342）：核不自己留字面量，由调用方把名单传进去。
 import { DOC_LAYOUT_VALUES } from '../shared/doc-layout/src/layouts.js'
@@ -39,11 +39,6 @@ function settingsPath(homeDir: any): string {
   return String(homeDir || '').replace(/[\\/]+$/, '') + '/' + SETTINGS_REL_SEGMENTS.join('/')
 }
 
-/** 用户主目录 → Linear 账号文件的绝对路径（#12）。 */
-function linearAccountsPath(homeDir: any): string {
-  return String(homeDir || '').replace(/[\\/]+$/, '') + '/' + LINEAR_ACCOUNTS_REL_SEGMENTS.join('/')
-}
-
 /** 这次读到的上一级目录（写之前建它，免得目录不在写失败）。 */
 function parentDir(absPath: any): string {
   const s: string = String(absPath || '')
@@ -56,21 +51,21 @@ function parentDir(absPath: any): string {
 /** 「文件确实不在」的判据：只有它才允许按「还没有这份文件」处理。
  * 判据故意定得窄（照标签配色房间同一套）：权限、被占用、位置被换成目录都不能证明文件不存在，
  * 照「没有」处理会用默认内容把用户手写的东西整份覆盖，那是真实的数据丢失。 */
-function isMissingFile(e: any): boolean {
+export function isMissingFile(e: any): boolean {
   const code: string = String((e && (e.code || (e.cause && e.cause.code))) || '')
   if (code === 'ENOENT' || code === 'FS_NOT_FOUND') return true
   const msg: string = String((e && e.message) || e || '')
   return /ENOENT|FS_NOT_FOUND/i.test(msg) || /cannot read .*: not found/i.test(msg)
 }
 
-function needIo(io: any): void {
+export function needIo(io: any): void {
   if (!io || typeof io.readText !== 'function' || typeof io.writeText !== 'function') {
     throw new Error('configStore: pass a file IO port with at least readText and writeText; tests may use a fake implementation')
   }
 }
 
 /** 回执里只放相对路径，不放绝对路径、不放令牌（日志纪律：工作区原始路径不记原文）。 */
-function envFail(what: any, rel: any, detail: any): any {
+export function envFail(what: any, rel: any, detail: any): any {
   return {
     ok: false,
     reason: 'env',
