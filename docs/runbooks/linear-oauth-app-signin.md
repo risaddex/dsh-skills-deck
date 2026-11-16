@@ -69,8 +69,13 @@ accounts:
     previousAliases: []
 ```
 
-`orgId` stays empty on purpose: the first successful identity check pins it. Until the plugin restarts or reloads,
-the flow is not registered.
+`orgId` and `urlKey` start empty. **Nothing fills them in for you**: the plugin never writes the organization back to this
+file (`writeLinearAccounts` has no caller), and while `orgId` is empty the wrong-workspace check cannot fire. After the
+first sign-in (step 3), fill both in by hand from the identity query: ask Linear who the token is
+(`{ viewer { name } organization { id urlKey } }` with `Authorization: Bearer <token>`), then put `organization.id` in
+`orgId` and `organization.urlKey` in `urlKey`. With that done, a token pasted into the wrong account's record resolves
+as `identity_mismatch` instead of returning another workspace's issues (**checked** with two real accounts on
+2026-11-16). Until the plugin restarts or reloads, the flow is not registered.
 
 ### 3. Sign in (outside the chat)
 
@@ -117,7 +122,8 @@ block. **Not tested: a real request to `api.linear.app`.** The first time you ru
 Ask the account for its identity. When a Linear room or tool exists it will do this on its own; until then the only
 check is the one the resolver already does. In a session on this repo:
 
-- the account should read `ok` and pin an organization on first success;
+- the account should read `ok`. It only checks the organization once you filled `orgId` in (step 2); until then any
+  workspace's token reads `ok`;
 - if it reads `needs_auth`, the token was rejected (HTTP 401/403): repeat step 3;
 - if it reads `identity_mismatch`, the token belongs to a different workspace than the one pinned: use the right app.
 
