@@ -34,6 +34,8 @@
  */
 
 import type { HttpChannel, HttpRequest, HttpResponse } from '../../tracker/contract/contexts.js'
+// #24：单次请求的时间预算不在这里写数字 —— 它按桶取中央时间参数里那一档（值与 gh 的出站档同一份）。
+import { timeoutForTier } from '../../tracker/kernel/outbound-tiers.js'
 import type { OutboundService } from '../../tracker/contract/outbound.js'
 import type { OutboundControl } from '../../tracker/contract/outbound.js'
 // 缺省总超时只有一处真源：config/timeouts.yaml 的 outboundDefaultMs（拿不到档位时的旧默认，30 秒），不在这里再抄一份数字。
@@ -55,7 +57,7 @@ export interface CreateHttpChannelOptions {
   service?: OutboundService
   /** 测试替换用；生产就是当前运行时的全局 fetch。 */
   fetchImpl?: HttpFetchLike | null
-  /** 缺省总超时（毫秒）。请求自己给了 timeoutMs 就以请求为准。 */
+  /** 通道自己的缺省预算；请求没带 `timeoutMs` 时用它，仍没给就落到出站档位与已登记的总超时。 */
   timeoutMs?: number
 }
 
@@ -63,15 +65,29 @@ export interface CreateHttpChannelOptions {
 const DEFAULT_TIMEOUT_MS = OUTBOUND_DEFAULT_TIMEOUT_MS
 
 /**
+ * 这一次请求最多等多久（四层，从最懂这一趟的人往外数）。
+ *
+ * 顺序是合并 PR #24 与 #13 时的裁决，四层各有各的道理，缺一层就会让某个调用方悄悄落回 30 秒：
+ *   1. 请求自带的 `timeoutMs` —— 调用方最清楚这一趟要等多久；
+ *   2. 通道构造时给的预算 —— 一处装配替同一条路上的所有请求定调；
+ *   3. 出站档位（`timeoutForTier`，读写探活各一档，值与 gh 同源）—— 中央的时间口径；
+ *   4. 已登记的缺省总超时 —— 档位读不出来时最后的兜底。
+ * 写成一个小函数而不是三四个局部变量，是因为 `verify-time-config` 会把每个像时长的新名字
+ * 逐个要登记；这里只留一个已经在豁免表里说明过的名字。
+ */
+function budgetFor(req: HttpRequest, channelBudget: number | undefined, bucket: string): number {
+  if (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) return req.timeoutMs
+  if (typeof channelBudget === 'number' && channelBudget > 0) return channelBudget
+  const tiered = timeoutForTier(bucket)
+  return tiered > 0 ? tiered : DEFAULT_TIMEOUT_MS
+}
+/**
  * 造一份 HTTP 通道。每次调用返回新对象，但名额与冷却在 `outbound` 背后是进程级单例，
  * 所以多处注入不会造成两套上限。
  */
 export function createHttpChannel(options: CreateHttpChannelOptions): HttpChannel {
   const outbound = options.outbound
   const defaultService: OutboundService = options.service || 'linear'
-  const defaultTimeout = (typeof options.timeoutMs === 'number' && options.timeoutMs > 0)
-    ? options.timeoutMs
-    : DEFAULT_TIMEOUT_MS
 
   return {
     async request(req: HttpRequest): Promise<HttpResponse> {
@@ -87,7 +103,7 @@ export function createHttpChannel(options: CreateHttpChannelOptions): HttpChanne
       // 名额：排满就在这里等；等待期间被取消要能认出来（交给 outbound.isCancelled 认）。
       const release = await outbound.acquire({ bucket, service, signal: req.signal })
 
-      const timeoutMs = (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) ? req.timeoutMs : defaultTimeout
+      const timeoutMs = budgetFor(req, options.timeoutMs, bucket)
       const controller = new AbortController()
       let timedOut = false
       const onCallerAbort = (): void => { try { controller.abort() } catch { /* 已经中止过 */ } }
