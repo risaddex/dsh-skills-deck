@@ -75,6 +75,7 @@ export const MAP_PATH: string = path.join(ROOT, 'tests', 'gate-map.json')
 //   期望比实际小 = 有人加了断言却忘了改这里，也判红，顺手把数字改准。
 // 还没开闸的门禁一律不许写在这里 —— 编一个数字出来，真红就会变假绿。
 export const COMPLETION_RECORDED_GATES: Record<string, number> = {
+  'verify-release-dist-safety': 12,
   // 2026-11-05 #1887（规格 #1885 S2「统计改库算」）：真 SQLite 临时库 + 假后端——六个数字（总数/开放/
   // 已关闭/可接/阻塞/已认领）由库一次查询算出，与另一条完全独立的 SQL 遍历逐项相等（含已关闭、墓碑、
   // 拉取请求、缺指派组、只取到一部分、阻塞目标不存在这些分支）；完整度随「整仓完整枚举」标记变化且
