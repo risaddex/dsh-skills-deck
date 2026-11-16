@@ -22,6 +22,10 @@ Single-context layout — root `GLOSSARY.md` plus `docs/adr/`. See `docs/agents/
 
 Before you add a new value, or want to move a value into a data file under `config/`, read `docs/adr/20261021-config-ownership.md` first. In one sentence: a value is defined in exactly one place; whether a value should stay in the code or move into a data file is decided by asking "can the compiler connect the two copies directly" — when it can, connect them with imports; only when it cannot do you move the value into a data file and set up a generator and a gate.
 
+### Coding standards
+
+Reviewers check judgement rules in `CODING_STANDARDS.md`.
+
 ### Asking questions
 
 When a person has to make the call, write the question directly in the conversation body instead of using a popup-style question tool — a popup covers the explanation in the body, and the person cannot see the full background.
