@@ -82,8 +82,8 @@ async function main() {
     check(!!a && a.readKnown === false && a.offNetwork === false, '未知：readKnown=false、offNetwork=false（实得 ' + JSON.stringify({ readKnown: a && a.readKnown, offNetwork: a && a.offNetwork }) + '）');
     check(!!a && a.remaining === undefined, '未知：remaining 不出现（实得 ' + (a && a.remaining) + '）');
     check(!!a && a.tier === undefined, '未知：tier 不出现（实得 ' + (a && a.tier) + '）');
-    check(!!r && r.cost && String(r.cost.note || '').indexOf('额度读数还没同步上来') >= 0, '未知：cost.note 写「读数还没同步上来」（实得 ' + JSON.stringify(r && r.cost && r.cost.note) + '）');
-    check(!!r && Array.isArray(r.notes) && r.notes.join('').indexOf('额度读数') < 0, '未知：那句人话不再塞进 notes 数组（实得 ' + JSON.stringify(r && r.notes) + '）');
+    check(!!r && r.cost && String(r.cost.note || '').indexOf('The quota reading has not synced yet') >= 0, '未知：cost.note 写「读数还没同步上来」（实得 ' + JSON.stringify(r && r.cost && r.cost.note) + '）');
+    check(!!r && Array.isArray(r.notes) && r.notes.join('').indexOf('quota reading') < 0, '未知：那句人话不再塞进 notes 数组（实得 ' + JSON.stringify(r && r.notes) + '）');
   }
 
   // ── 三、离网后端：readKnown=true（量过了，本后端没有额度），不回水位，人话说明 ──
@@ -93,8 +93,8 @@ async function main() {
     check(!!a && a.backendId === 'markdown' && a.budgetKind === 'off-network', '离网：回执带后端与口径（实得 ' + JSON.stringify(a) + '）');
     check(!!a && a.readKnown === true && a.offNetwork === true, '离网：readKnown=true、offNetwork=true（实得 ' + JSON.stringify({ readKnown: a && a.readKnown, offNetwork: a && a.offNetwork }) + '）');
     check(!!a && a.remaining === undefined && a.tier === undefined, '离网：remaining/tier 都不出现（实得 ' + JSON.stringify({ remaining: a && a.remaining, tier: a && a.tier }) + '）');
-    check(!!r && r.cost && String(r.cost.note || '').indexOf('本后端不需要额度') >= 0, '离网：cost.note 写「本后端不需要额度」（实得 ' + JSON.stringify(r && r.cost && r.cost.note) + '）');
-    check(!!r && Array.isArray(r.notes) && r.notes.join('').indexOf('不需要额度') < 0, '离网：那句人话不再塞进 notes 数组');
+    check(!!r && r.cost && String(r.cost.note || '').indexOf('This backend needs no quota') >= 0, '离网：cost.note 写「本后端不需要额度」（实得 ' + JSON.stringify(r && r.cost && r.cost.note) + '）');
+    check(!!r && Array.isArray(r.notes) && r.notes.join('').indexOf('needs no quota') < 0, '离网：那句人话不再塞进 notes 数组');
   }
 
   // ── 四、只计请求：读请求那一格，带剩余与档位 ──

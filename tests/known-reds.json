@@ -7,15 +7,7 @@
   "sourceAt": 1794850070892,
   "failures": [
     {
-      "file": "tests/verify-deck-render-detail.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-1640-unopened-merge.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-wire-subissues-script.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
@@ -39,10 +31,6 @@
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-issue-body-script.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-1586-maintenance.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
@@ -55,23 +43,11 @@
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-1442-tracker-tools.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-656-subworkspace-acceptance.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-1610-parallel-read.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-wizard-exit-609.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1446-receipts.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {

@@ -66,7 +66,7 @@ async function main() {
   check(issueText.indexOf('someone') >= 0, '读票：认领人看得见')
   check(issueText.indexOf('做了一半') >= 0, '读票：正文节看得见')
   // 明细必须是能解析的 JSON，不能是拼起来的散文
-  const issueDetail = JSON.parse(issueText.slice(issueText.indexOf('明细（JSON）：') + '明细（JSON）：'.length))
+  const issueDetail = JSON.parse(issueText.slice(issueText.indexOf('Detail (JSON):\n') + 'Detail (JSON):\n'.length))
   check(!!issueDetail.data && issueDetail.data.ticket.key === '759', '读票：明细是合法 JSON 且带得上 data')
 
   // ── 3. 列薄行：每一行都得看得见 ──
@@ -120,22 +120,23 @@ async function main() {
   }
   const notesText = all(notesValue)
   check(notesText.indexOf('没找到标题含') >= 0, '降级警告看得见（不再静默吞掉）')
-  check(notesText.indexOf('本次调用的提示') < notesText.indexOf('明细（JSON）：'), '降级警告排在明细前面')
+  // indexOf 在缺失时是 -1，单看「<」会在警告标题整个消失时也成立；所以先要求标题真的在。
+  check(notesText.indexOf('Notes for this call:') >= 0 && notesText.indexOf('Notes for this call:') < notesText.indexOf('Detail (JSON):\n'), '降级警告排在明细前面')
   check(all({ status: 'unsupported', text: '没做成。', reason: 'no-backend' }).indexOf('no-backend') >= 0,
     '没做成时把 reason 一并给出')
 
   // ── 8. 截断必须写在明处：压掉了就要说，不许让人以为拿全了 ──
   const longString = '长'.repeat(DETAIL_STRING_CAP + 4000)
   const capped = all({ status: 'ok', text: '摘要。', data: { body: longString } })
-  check(capped.indexOf('本段已截断') >= 0, '长正文被压时写明截断')
-  check(capped.indexOf('原长 ' + longString.length + ' 字符') >= 0, '截断写明原有多长')
+  check(capped.indexOf('this passage was cut') >= 0, '长正文被压时写明截断')
+  check(capped.indexOf('its original length was ' + longString.length + ' characters') >= 0, '截断写明原有多长')
   const manyRows = { status: 'ok', text: '摘要。', data: { issues: [] } }
   for (let i = 0; i < 200; i++) manyRows.data.issues.push({ key: String(i), title: '标题' + i, body: '正文'.repeat(400) })
   const totalCapped = all(manyRows)
-  check(/还有 \d+ 项未带回/.test(totalCapped), '总量超上限时写明还有几项没带回')
+  check(/\d+ more items were not carried back/.test(totalCapped), '总量超上限时写明还有几项没带回')
   check(totalCapped.length < manyRows.data.issues.length * 1000, '总量超上限后确实变小了（不是照单全收）')
   // 截断后形状必须仍然是合法 JSON：从半截 JSON 里取值，模型只能靠猜
-  const cutJson = JSON.parse(totalCapped.slice(totalCapped.indexOf('明细（JSON）：') + '明细（JSON）：'.length))
+  const cutJson = JSON.parse(totalCapped.slice(totalCapped.indexOf('Detail (JSON):\n') + 'Detail (JSON):\n'.length))
   check(Array.isArray(cutJson.data.issues) && cutJson.data.issues.length < 200,
     '总量超上限后明细仍是合法 JSON（不是半截）')
   // 预算必须按共享余量往下传。曾经按值传，导致子级花掉的额度不归还父级，父级拿原额度去量子级，
@@ -176,7 +177,7 @@ async function main() {
   try { cycOut = all(cyclic) } catch (e) { cycOut = 'THREW:' + e }
   check(cycOut.indexOf('THREW') < 0, '明细里有循环引用时不抛')
   // 环回由嵌套门限挡住（展开到门限就写明没有展开），不会无限展开；真取不出来时另有交代
-  check(cycOut.indexOf('取不出来') >= 0 || cycOut.indexOf('嵌套太深') >= 0,
+  check(cycOut.indexOf('could not be taken out') >= 0 || cycOut.indexOf('nested too deeply') >= 0,
     '明细里有循环引用时如实交代（不静默只剩摘要，也不在半截 JSON 里糊弄）')
   // 嵌套深到门限就说一声，不静默钻到底也不抛栈溢出
   let deep = { leaf: '底' }
@@ -184,11 +185,11 @@ async function main() {
   let deepOut = null
   try { deepOut = all({ status: 'ok', text: '摘要。', data: deep }) } catch (e) { deepOut = 'THREW:' + e }
   check(deepOut.indexOf('THREW') < 0, '嵌套很深时不抛')
-  check(deepOut.indexOf('嵌套太深') >= 0, '嵌套深到门限时写明没有展开（不静默放过）')
+  check(deepOut.indexOf('nested too deeply') >= 0, '嵌套深到门限时写明没有展开（不静默放过）')
   let nullOut = null
   try { nullOut = all(null) } catch (e) { nullOut = 'THREW:' + e }
   check(nullOut.indexOf('THREW') < 0, '返回值整个是 null 时不抛')
-  check(all({ status: 'ok' }).indexOf('明细') < 0, '没有 data 就不硬造一个明细块')
+  check(all({ status: 'ok' }).indexOf('Detail') < 0, '没有 data 就不硬造一个明细块')
   // 有明细但摘要那句话是空的：明细照样要送到，不能因为 summary 空了就整份丢掉
   check(all({ status: 'ok', text: '', data: { key: '759' } }).indexOf('759') >= 0, '摘要为空但有明细时，明细照样送到')
   // 官方写法那一份渲染走的是同一个函数，行为必须一致

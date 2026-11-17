@@ -20,6 +20,10 @@
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
+// macOS 的 os.tmpdir() 是 /var/folders/...，/var 是指向 /private/var 的链接，而子进程里 process.cwd() 回读到的是真实路径。
+// 同一个目录两种写法，直接 === 会判错；两边都解开链接再比。子目录仍然是另一个路径，「必须在根这一层跑」的判据不变。
+const realDir = (p: string): string => { try { return fs.realpathSync.native(p) } catch (e) { return p } }
+
 const { spawnSync } = require('child_process')
 const { pathToFileURL } = require('url')
 
@@ -225,7 +229,7 @@ console.log('正文写回脚本门禁（#571 · 命令行黑盒）')
   const cwdLog = path.join(TMP, 'gh-cwd.log')
   const ran = runRealWithCwdLogging(['--issue', '571', '--body-file', body], deep, cwdLog)
   const ghCwds = String(fs.readFileSync(cwdLog, 'utf8')).trim().split(/\r?\n/).filter(Boolean)
-  check(ran.status === 0 && ghCwds.length > 0 && ghCwds.every(function (c) { return c === wsGithub }), '8b.2b 每条 gh 命令都在工作区根那一层跑（不是在子目录里；实得 ' + JSON.stringify(ghCwds) + '）')
+  check(ran.status === 0 && ghCwds.length > 0 && ghCwds.every(function (c) { return realDir(c) === realDir(wsGithub) }), '8b.2b 每条 gh 命令都在工作区根那一层跑（不是在子目录里；实得 ' + JSON.stringify(ghCwds) + '）')
 
   // 反向：更近的 .git 不再截住上溯（2026-11-03 定版：.git 不是根标记），仍归外层工作区。
   const nested = path.join(wsGithub, 'nested')
@@ -270,7 +274,7 @@ console.log('正文写回脚本门禁（#571 · 命令行黑盒）')
   const handCwdLog = path.join(TMP, 'gh-hand-cwd.log')
   const ranHand = runRealWithCwdLogging(['--issue', '571', '--body-file', body], handWritten, handCwdLog)
   const handCwds = String(fs.readFileSync(handCwdLog, 'utf8')).trim().split(/\r?\n/).filter(Boolean)
-  check(ranHand.status === 0 && handCwds.length > 0 && handCwds.every(function (c) { return c === wsGithub }), '8b.12 这时 gh 命令仍在真正的根上跑（实得 ' + JSON.stringify(handCwds) + '）')
+  check(ranHand.status === 0 && handCwds.length > 0 && handCwds.every(function (c) { return realDir(c) === realDir(wsGithub) }), '8b.12 这时 gh 命令仍在真正的根上跑（实得 ' + JSON.stringify(handCwds) + '）')
 
   // 2026-11-03 定版：从属记录机制已删除。本层只要有一份 workspace.yaml 就是根；
   //   这里故意再留一份已经没人认的 workspace-member.yaml，钉住它不再改变认根结果。

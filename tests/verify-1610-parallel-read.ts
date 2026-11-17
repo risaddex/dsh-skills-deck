@@ -268,7 +268,7 @@ async function main() {
   check(a1.requests === 2 && a1.points === 6, '成功路径回执照实报 2 条 6 点（实得 ' + JSON.stringify({ requests: a1.requests, points: a1.points }) + '）')
   check(a1.requests === probe1.calls.get + probe1.calls.deps, '回执条数等于实际发出的调用数（' + a1.requests + ' vs ' + (probe1.calls.get + probe1.calls.deps) + '）')
   check(!!r1 && !!r1.data && r1.data.dependenciesRaw !== null && r1.data.dependenciesRaw !== undefined, '依赖查询的结果进了回执（dependenciesRaw 非空）')
-  check(!!r1 && Array.isArray(r1.notes) && r1.notes.join('\n').indexOf('阻塞边这次没读到') < 0, '成功路径不说「阻塞边这次没读到」')
+  check(!!r1 && Array.isArray(r1.notes) && r1.notes.join('\n').indexOf('The blocking edges were not read this time') < 0, '成功路径不说「阻塞边这次没读到」')
   const h1 = w1.hour() as { requests: number; points: number }
   check(h1.requests === 2 && h1.points === 6, '账本记 2 条 6 点（实得 ' + JSON.stringify(h1) + '）')
 
@@ -282,7 +282,7 @@ async function main() {
     check(!g.threw && !!r && r.status === 'ok', 'blocking=false 读票成功（实得 ' + label(r, g.threw) + '）')
     check(probe.calls.get === 1 && probe.calls.deps === 0, 'blocking=false 只发读票一条（实得 ' + JSON.stringify(probe.calls) + '）')
     check(a.requests === 1 && a.points === 3, 'blocking=false 回执报 1 条 3 点（实得 ' + JSON.stringify({ requests: a.requests, points: a.points }) + '）')
-    check(!!r && Array.isArray(r.notes) && r.notes.join('\n').indexOf('反向阻塞边这次没取') >= 0, 'blocking=false 的注记说清没取反向边')
+    check(!!r && Array.isArray(r.notes) && r.notes.join('\n').indexOf('reverse blocking edges were not fetched this time') >= 0, 'blocking=false 的注记说清没取反向边')
     const h = w.hour() as { requests: number; points: number }
     check(h.requests === 1 && h.points === 3, 'blocking=false 账本记 1 条 3 点（实得 ' + JSON.stringify(h) + '）')
   }
@@ -311,7 +311,7 @@ async function main() {
     // #1831：超时不再回空手，回已经拿到的部分并明确标没读全；reason 仍走 #1799 的 backend-timeout 映射。
     check(!g.threw && !!r && r.status === 'partial' && r.reason === 'backend-timeout', '读票超时回部分结果、原因码 backend-timeout（实得 ' + label(r, g.threw) + '）')
     check(!!r && !!r.data && r.data.partial === true && r.data.incomplete === 'timeout', '超时回执明确标没读全：data.partial=true、data.incomplete=timeout（实得 ' + JSON.stringify(r && r.data) + '）')
-    check(!!r && String(r.text || '').indexOf('不要直接重放写操作') < 0 && String(r.text || '').indexOf('读') >= 0, '超时文案只用读口径、不出现写操作那句（实得 ' + String(r && r.text) + '）')
+    check(!!r && String(r.text || '').indexOf('do not replay') < 0 && String(r.text || '').indexOf('This read has no side effects') >= 0, '超时文案只用读口径、不出现写操作那句（实得 ' + String(r && r.text) + '）')
     check(a.requests === 2 && a.points === 6, '读票超时的回执照实际发出数报 2 条 6 点（实得 ' + JSON.stringify({ requests: a.requests, points: a.points }) + '）')
   }
 
@@ -322,7 +322,7 @@ async function main() {
     const g = await w.run('deck_issue_get', { key: key })
     const r: any = g.r
     const a = got(r)
-    check(!g.threw && !!r && r.status === 'unsupported' && r.reason === 'backend-threw' && String(r.text || '').indexOf('后端实现抛错') >= 0,
+    check(!g.threw && !!r && r.status === 'unsupported' && r.reason === 'backend-threw' && String(r.text || '').indexOf('The backend implementation threw') >= 0,
       '读票抛错收成 backend-threw 且带原话（实得 ' + label(r, g.threw) + '）')
     check(a.requests === 2 && a.points === 6, '读票抛错的回执照实际发出数报 2 条 6 点（实得 ' + JSON.stringify({ requests: a.requests, points: a.points }) + '）')
   }
@@ -337,7 +337,7 @@ async function main() {
     check(!g.threw && !!r && r.status === 'ok', '阻塞边没读到时票正文照回（实得 ' + label(r, g.threw) + '）')
     check(!!r && !!r.data && r.data.ticket && r.data.ticket.key === key, '票正文那份还在（key ' + key + '）')
     check(!!r && !!r.data && r.data.dependenciesRaw === null, '依赖那一格如实回 null（没读到就是没读到）')
-    check(!!r && Array.isArray(r.notes) && r.notes.join('\n').indexOf('阻塞边这次没读到') >= 0, '注记说清阻塞边这次没读到（实得 ' + JSON.stringify(r && r.notes) + '）')
+    check(!!r && Array.isArray(r.notes) && r.notes.join('\n').indexOf('The blocking edges were not read this time') >= 0, '注记说清阻塞边这次没读到（实得 ' + JSON.stringify(r && r.notes) + '）')
     check(a.requests === 2 && a.points === 6, '阻塞边失败时报账仍是 2 条 6 点（实得 ' + JSON.stringify({ requests: a.requests, points: a.points }) + '）')
   }
 
@@ -349,7 +349,7 @@ async function main() {
     const r: any = g.r
     const a = got(r)
     check(!g.threw && !!r && r.status === 'ok', '阻塞边超时时票正文照回（实得 ' + label(r, g.threw) + '）')
-    check(!!r && Array.isArray(r.notes) && r.notes.join('\n').indexOf('阻塞边查询超时了') >= 0, '注记说清阻塞边查询超时（实得 ' + JSON.stringify(r && r.notes) + '）')
+    check(!!r && Array.isArray(r.notes) && r.notes.join('\n').indexOf('the blocking-edge query timed out') >= 0, '注记说清阻塞边查询超时（实得 ' + JSON.stringify(r && r.notes) + '）')
     check(a.requests === 2 && a.points === 6, '阻塞边超时报账仍是 2 条 6 点（实得 ' + JSON.stringify({ requests: a.requests, points: a.points }) + '）')
   }
 
@@ -365,7 +365,7 @@ async function main() {
     check(probe.peak() === 2, '取消发生时两条查询都在途（峰值 ' + probe.peak() + '）')
     check(probe.calls.get === 1 && probe.calls.deps === 1, '取消时两条都已发出（实得 ' + JSON.stringify(probe.calls) + '）')
     check(!g.threw && !!r && r.status === 'unsupported' && r.reason === 'backend-threw', '取消后整次读停下，原因码走 backend-threw（实得 ' + label(r, g.threw) + '）')
-    check(!!r && String(r.text || '').indexOf('后端实现抛错') >= 0, '取消走执行层失败那一支，句子与老口径一字不差')
+    check(!!r && String(r.text || '').indexOf('The backend implementation threw') >= 0, '取消走执行层失败那一支，句子与老口径一字不差')
     check(a.requests === 2 && a.points === 6, '中途取消的回执照实际发出数报 2 条 6 点（实得 ' + JSON.stringify({ requests: a.requests, points: a.points }) + '）')
   }
 

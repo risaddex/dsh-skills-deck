@@ -266,7 +266,7 @@ async function main() {
       '离网回执带四格事实（实得 ' + JSON.stringify(actual) + '）');
     check(!!actual && actual.remaining === undefined && actual.tier === undefined,
       '离网回执不带 remaining / tier（实得 ' + JSON.stringify(actual) + '）');
-    check(!!ctx.r && !!ctx.r.cost && String(ctx.r.cost.note || '').indexOf('不需要额度') >= 0,
+    check(!!ctx.r && !!ctx.r.cost && String(ctx.r.cost.note || '').indexOf('needs no quota') >= 0,
       '离网回执用 cost.note 写明本后端不需要额度（实得 ' + JSON.stringify(ctx.r && ctx.r.cost) + '）');
   }
 
@@ -316,7 +316,7 @@ async function main() {
       '超单次硬顶仍是 ai-tool-refused 且带硬顶二字（实得 ' + (over.threw || JSON.stringify({ status: over.r && over.r.status, reason: over.r && over.r.reason })) + '）');
     const wb = await buildWorld('boom-1442', OFFLINE_READING, [boomModule]);
     const b = await wb.run('deck_issue_create', { title: '炸', kind: 'issue' });
-    check(!b.threw && !!b.r && b.r.ok === false && b.r.reason === 'backend-threw' && String(b.r.text || '').indexOf('后端实现抛错') >= 0,
+    check(!b.threw && !!b.r && b.r.ok === false && b.r.reason === 'backend-threw' && String(b.r.text || '').indexOf('The backend implementation threw') >= 0,
       '坏后端抛错仍收成 backend-threw（实得 ' + (b.threw || JSON.stringify({ ok: b.r && b.r.ok, reason: b.r && b.r.reason })) + '）');
     const nb = await buildWorld('markdown', OFFLINE_READING);
     const { r, threw } = await nb.run('deck_context', {});
@@ -339,7 +339,7 @@ async function main() {
       '评论那一步记下了自己的码与后端档位（实得 ' + JSON.stringify(cmt) + '）');
     check(!!txt && txt.status === 'failed' && txt.code === 'backend-timeout' && txt.errorKind === 'network',
       '改标题那一步记下了自己的码与后端档位（实得 ' + JSON.stringify(txt) + '）');
-    check(!!r && String(r.text || '').indexOf('最该先说的是「text」') >= 0,
+    check(!!r && String(r.text || '').indexOf('The most important thing to say first is "text"') >= 0,
       'text 指向与顶层 reason 同一条失败（改标题那一步）（实得 ' + (r && r.text) + '）');
   }
 
@@ -422,7 +422,7 @@ async function main() {
         name + ' 回执四条事实写明读数未知（实得 ' + JSON.stringify(actual) + '）');
       check(!!actual && actual.remaining === undefined && actual.tier === undefined,
         name + ' 读数未知时不带 remaining / tier（实得 ' + JSON.stringify(actual) + '）');
-      check(!!r && !!r.cost && String(r.cost.note || '').indexOf('读数还没同步上来') >= 0,
+      check(!!r && !!r.cost && String(r.cost.note || '').indexOf('The quota reading has not synced yet') >= 0,
         name + ' 成本说明写明读数还没同步上来（实得 ' + JSON.stringify(r && r.cost && r.cost.note) + '）');
     }
   }
