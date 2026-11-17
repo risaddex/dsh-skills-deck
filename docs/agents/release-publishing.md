@@ -1,5 +1,20 @@
 # Release publishing
 
+## How this fork publishes (read this first)
+
+This fork does **not** publish to npm. A release is a built tree pushed under a `dist/v<version>` tag, and the public plugin index points at that tag. The steps, in order:
+
+1. Bump `package.json` and `package/package.json` to the same version, add the `CHANGELOG.md` section, and make `node --import ./scripts/ts-hook.mts tests/verify-release-contract.ts --version <version>` pass.
+2. Run `npm run verify:parallel` on the release commit. `release-dist.mts --push` refuses to run unless `node_modules/.cache/dsh-verify-last.json` matches the commit being released.
+3. Run `node scripts/release-dist.mts --dry-run`, then `node scripts/release-dist.mts --push`. The push creates the `dist/v<version>` tag and sends a `repository_dispatch` of type `skills-deck-dist-tag` to `risaddex/dsh-plugins`, which republishes the index. The tag is one-way: the script fails if it already exists.
+4. Confirm the `publish-index` run in `risaddex/dsh-plugins` finished green and that `index.json` in `risaddex/dsh-plugins-index` lists the new version.
+
+The marketplace title, description, category and keywords come from the `dsh.market` block in `package/package.json`, so they ship with each tag. The generator in `risaddex/dsh-plugins` only falls back to its own text when that block is missing.
+
+## Inherited npm flow (not used by this fork)
+
+The rest of this page is the npm token flow inherited from the upstream repository. It is kept because `scripts/publish-token.ps1` and the gate `tests/verify-1646-publish-token-file.ts` still guard it; this fork does not run it.
+
 Publish `package` (the main plugin; skills ship inside it, never separately). `dsh-log` and `dsh-plugin-update` now live in standalone repos and are only consumed from npm, never published from here (#878, #892). Private package shells are skipped automatically.
 
 Unattended publishing (prefer it when there is a token with write permission; it needs no human click): **the token always goes through the file channel**. Writing the value as a command-line argument, or as an inline assignment such as `$env:NODE_AUTH_TOKEN='<value>'`, records the whole command in plain text in the session transcript and in the process arguments (#1646 leaked it for real), so neither of these may be used any more. The way to do it:

@@ -1,6 +1,6 @@
 {
   "name": "dsh-skills-deck",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/risaddex/dsh-skills-deck.git"
@@ -54,6 +54,18 @@
     "linear"
   ],
   "dsh": {
+    "market": {
+      "title": {
+        "en": "Skills deck",
+        "pt-br": "Skills deck"
+      },
+      "description": {
+        "en": "Bundles Matt Pocock's engineering and productivity skills and an issue-tracker deck: maps, specs and tickets on GitHub, GitLab, local Markdown or Linear, with English as the default language.",
+        "pt-br": "Traz as skills de engenharia e produtividade de Matt Pocock e um deck de issues: mapas, specs e tickets no GitHub, GitLab, Markdown local ou Linear, com inglês como idioma padrão."
+      },
+      "category": "tools",
+      "keywords": ["dsh-plugin", "deepseek-harness", "skills", "mattpocock", "issue-tracker", "wayfinder", "linear"]
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     },

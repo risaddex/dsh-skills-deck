@@ -1,3 +1,13 @@
+## 2026-11-17 · v2.0.0 stable: first stable release of the fork, with the native Linear backend and the plugin's own marketplace description (#16)
+
+- **What this is**: the version moves from `2.0.0-alpha.1` to `2.0.0`. The series was alpha while the Linear backend was being built; it is stable now that the backend, the inbox view and the Brazilian Portuguese README are in. This release adds no runtime change over `2.0.0-alpha.1` beyond what the Linear tickets below already merged.
+- **Linear backend**: the tracker room that speaks Linear's GraphQL API (#13), accounts and sign-in (#12), and the inbox work (#14): Linear reads through explicit account selectors that keep project scope and report partial results, and the account list in `deck_context`. It replaces the separate `dsh-plugin-linear` plugin, which was removed from `risaddex/dsh-plugins`, from the plugin index and from the `desktop` profile on 2026-11-17.
+- **README**: rewritten in Brazilian Portuguese (#15); the status banner now says the series is stable instead of alpha.
+- **Marketplace description now ships with the plugin**: `package/package.json` carries a `dsh.market` block, so the title, the description (English and Brazilian Portuguese), the category and the keywords travel with each `dist/v` tag. The description names GitHub, GitLab, local Markdown and Linear. The generator in `risaddex/dsh-plugins` reads `manifest.dsh.market` first and only falls back to its own text when the block is missing, so the old fixed text there no longer applies to this plugin.
+- **Install**: uninstall `dsh-mattpocock-skills-deck` and `dsh-plugin-linear` first; the plugin index lists `dsh-skills-deck` `2.0.0` once the `dist/v2.0.0` tag is pushed.
+- **Verification**: see the ticket for the run that matches the release commit.
+- **Commit**: this commit.
+
 ## 2026-11-16 · v2.0.0-alpha.1 alpha: fix the panel crash on new map tickets and ship the tracker and progress-heading fixes (#7, #9, #10)
 
 - **What this is**: the version moves from `2.0.0-alpha.0` to `2.0.0-alpha.1`. It ships a crash fix found while the maintainer was testing the installed alpha.0 by hand, plus two fixes already reviewed for tickets #7 and #10.
