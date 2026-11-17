@@ -8,6 +8,7 @@
 //   A7  the real resolver, with a stored grant, produces a result that crosses clean.
 //   A8  the file imports nothing from the tracker rooms and no DSH service (it is a pure narrowing);
 //       since #13 landed the contract shapes, the contract's type import is the only other import allowed.
+//   A9  listing accounts crosses each alias with its teams and review rules, and never a credential (#14).
 // Usage: node --import ./scripts/ts-hook.mts tests/verify-19-linear-account-seam.ts
 const path = require('path')
 const fs = require('fs')
@@ -88,6 +89,39 @@ async function main() {
     const missing = await host.resolveLinearAccountWithHost({ get: () => null }, { alias: 'nobody', authType: 'oauth_app' }, { env: () => undefined, probe: false })
     const seam2 = toAccountResolution(missing)
     check(seam2.ok === false && seam2.status === 'needs_auth', 'A7 no record becomes needs_auth', JSON.stringify(seam2))
+  }
+
+  {
+    // A9 (#14): 列账把「有哪些账、各自看哪个团队、review 怎么认」带过边界，但不带任何凭据。
+    const os = require('os')
+    const host = await import(pathToFileURL(path.join(ROOT, 'src', 'host', 'linearAccounts.js')).href)
+    const factory = await import(pathToFileURL(path.join(ROOT, 'src', 'host', 'platform', 'linearAccountSeam.js')).href)
+    const home: string = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-deck-accounts-'))
+    // 账号文档住在 `<home>/.dsh/mattskillsdeck/` 下，写入前得先有这两层目录（真实机器上由插件建）。
+    fs.mkdirSync(path.join(home, '.dsh', 'mattskillsdeck'), { recursive: true })
+    const io = {
+      async readText(p: string): Promise<string> { return fs.promises.readFile(p, 'utf8') },
+      async writeText(p: string, t: string): Promise<void> { await fs.promises.writeFile(p, t, 'utf8') },
+    }
+    const wrote = await host.writeLinearAccounts({
+      version: 1,
+      accounts: [
+        { alias: 'ombrello', authType: 'api_key', orgId: 'org-1', teams: ['OMB'], reviewScope: 'team' },
+        { alias: 'guedder', authType: 'api_key', orgId: 'org-2', teams: [] },
+      ],
+    }, home, io)
+    check(wrote && wrote.ok === true, 'A9 the fixture accounts document is written', wrote && wrote.message)
+    const seam = factory.createLinearAccountSeam({ ctx: {}, getPlatform: async () => ({ getHome: async () => home, env: { get: () => '' } }) })
+    const listed = await seam.list()
+    check(listed.ok === true && listed.accounts.length === 2, 'A9 list answers every configured account', JSON.stringify(listed).slice(0, 200))
+    const first = listed.ok ? listed.accounts[0] : null
+    check(!!first && first.alias === 'ombrello' && first.teams.join(',') === 'OMB' && first.reviewScope === 'team', 'A9 an entry carries the alias, its teams and its review scope', JSON.stringify(first))
+    check(!!first && first.reviewPattern === 'review|revisando|revisão|revisao|qa', 'A9 a missing review pattern falls back to the documented default', first && first.reviewPattern)
+    const listedText = JSON.stringify(listed)
+    check(listedText.indexOf('authorization') < 0 && listedText.indexOf('token') < 0, 'A9 no credential crosses the list', listedText.slice(0, 200))
+    const emptyHome: string = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-deck-empty-'))
+    const none = await factory.createLinearAccountSeam({ ctx: {}, getPlatform: async () => ({ getHome: async () => emptyHome, env: { get: () => '' } }) }).list()
+    check(none.ok === false && none.status === 'unconfigured', 'A9 a machine with no accounts answers unconfigured', JSON.stringify(none))
   }
 
   {
