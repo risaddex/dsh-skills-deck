@@ -18,12 +18,13 @@ import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
 import { issueOf, type LinearIssueNode } from './normalize.js'
+import { ISSUE_CORE } from './queries.js'
 
-/** 与读侧同一份选择集：写完之后回的那张票要能直接过 `issueOf`。 */
-const ISSUE_FIELDS = 'identifier title description url createdAt updatedAt state { name type } team { key name } parent { identifier } assignee { name displayName } labels { nodes { name color } }'
+/** 与读侧同一份选择集（`queries.ts` 的 `ISSUE_CORE`）：写完之后回的那张票要能直接过 `issueOf`。 */
+const ISSUE_FIELDS = '...LinearIssueCore'
 
 const COMMENT_CREATE = 'mutation DeckCommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id body createdAt updatedAt url user { name displayName } } } }'
-const ISSUE_UPDATE = 'mutation DeckIssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { ' + ISSUE_FIELDS + ' } } }'
+const ISSUE_UPDATE = 'mutation DeckIssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { ' + ISSUE_FIELDS + ' } } } ' + ISSUE_CORE
 const ISSUE_STATES = 'query DeckIssueStates($id: String!) { issue(id: $id) { team { key states { nodes { id name type position } } } } }'
 
 /** 一条评论节点 → 契约的 Comment。作者给不出就写空串，不编一个名字。 */

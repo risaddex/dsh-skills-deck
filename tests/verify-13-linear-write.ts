@@ -13,6 +13,7 @@
 // Usage: node --import ./scripts/ts-hook.mts tests/verify-13-linear-write.ts
 import type { OpContext } from '../src/tracker/contract/contexts.ts'
 import { commentOnIssue, updateIssue, setIssueStateType } from '../src/tracker/rooms/linear/write.ts'
+import { createLinearBackend } from '../src/tracker/rooms/linear/index.ts'
 import type { LinearAccount } from '../src/tracker/rooms/linear/client.ts'
 
 let failed = false
@@ -102,6 +103,30 @@ async function main(): Promise<void> {
     const stuck = await setIssueStateType(noStates.ctx, ACCOUNT, 'ENG-123', 'completed')
     check(stuck.ok === false && stuck.error.kind === 'unsupported', 'a team with no such state is refused', stuck.ok ? 'ok' : stuck.error.kind)
     check(noStates.calls.length === 1, 'and no write is attempted', String(noStates.calls.length))
+  }
+
+  console.log('W4 a close reason is recorded, and a close without it still closes')
+  {
+    const states = { issue: { team: { key: 'ENG', states: { nodes: [
+      { id: 's-todo', name: 'Todo', type: 'unstarted', position: 1 },
+      { id: 's-done', name: 'Done', type: 'completed', position: 2 },
+    ] } } } }
+    // 调用顺序：先写原因（评论），再读团队状态，最后改状态。
+    const { ctx, calls } = ctxAnswering([
+      { commentCreate: { success: true, comment: { id: 'c1', body: 'shipped in 1.2', createdAt: '2026-11-03T10:00:00Z', user: { name: 'danilo' } } } },
+      { issue: states.issue },
+      { issueUpdate: { success: true, issue: ISSUE_NODE } },
+    ])
+    const backend = createLinearBackend(ctx, ACCOUNT)
+    const closed: any = await backend.close({ cwd: '', refId: 'ENG' } as any, 'ENG-123', { reason: 'shipped in 1.2' }, ctx)
+    check(closed.ok === true, 'the ticket closes with a reason', closed.ok ? 'ok' : JSON.stringify(closed.error))
+    const bodies = calls.map((c) => String(JSON.parse(c.body).query || ''))
+    check(bodies.some((q) => q.indexOf('commentCreate') >= 0), 'the reason goes out as a comment first', String(bodies.length))
+    const commentCall = calls.filter((c) => String(JSON.parse(c.body).query || '').indexOf('commentCreate') >= 0)[0]
+    const sentBody = commentCall ? JSON.parse(commentCall.body).variables.input.body : ''
+    check(sentBody === 'shipped in 1.2', 'the comment carries the reason verbatim', String(sentBody))
+    const order = bodies.findIndex((q) => q.indexOf('commentCreate') >= 0) < bodies.findIndex((q) => q.indexOf('issueUpdate') >= 0)
+    check(order, 'the comment is written before the state changes')
   }
 
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')

@@ -110,10 +110,18 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       if (!got.ok) return { ok: false, error: got.error }
       return updateIssue(opCtx || (ctx as never), got.account, key, patch)
     },
-    close: async (_repo, key, _opts, opCtx) => {
+    close: async (_repo, key, opts, opCtx) => {
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
-      return setIssueStateType(opCtx || (ctx as never), got.account, key, 'completed')
+      const requestCtx = opCtx || (ctx as never)
+      // 契约要求关闭原因被记下来。Linear 的状态改动不存原因，所以先把原因写成一条评论；
+      // 评论写不成就不关 —— 关掉却不留原因，等于把调用方给的解释丢了。
+      const reason = String(((opts || {}) as { reason?: string }).reason || '').trim()
+      if (reason) {
+        const noted = await commentOnIssue(requestCtx, got.account, key, reason)
+        if (!noted.ok) return { ok: false, error: noted.error }
+      }
+      return setIssueStateType(requestCtx, got.account, key, 'completed')
     },
     reopen: async (_repo, key, opCtx) => {
       const got = await using(opCtx || (ctx as never))

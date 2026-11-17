@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T01:40:45.716Z",
+  "generatedAt": "2026-11-17T01:54:08.610Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 613,
   "gateCount": 613,
@@ -2353,6 +2353,7 @@
       "guards": [
         "src/tracker/contract/contexts.ts",
         "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/index.ts",
         "src/tracker/rooms/linear/write.ts"
       ],
       "dirs": [
@@ -2363,7 +2364,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：静态 import 说明符 3 条"
+      "reason": "归属来自：静态 import 说明符 4 条"
     },
     {
       "step": "node tests/verify-1302-panel-list-skeleton.ts",
