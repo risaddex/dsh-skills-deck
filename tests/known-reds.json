@@ -11,10 +11,6 @@
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-841-write-phones.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-1640-unopened-merge.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
@@ -39,23 +35,11 @@
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-1776-vc-live-tab.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-settings-view.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-1586-config-hooks.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-issue-body-script.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1709-deck-entry.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
@@ -75,19 +59,11 @@
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
-      "file": "tests/verify-1082-work-route-table.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-656-subworkspace-acceptance.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {
       "file": "tests/verify-1610-parallel-read.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1605-map-routing-guard.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {

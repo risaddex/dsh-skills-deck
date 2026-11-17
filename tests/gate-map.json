@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T19:29:47.740Z",
+  "generatedAt": "2026-11-17T20:59:08.098Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 622,
   "gateCount": 622,
@@ -9299,7 +9299,8 @@
         "src/shared/version-control/src/push-plan.ts",
         "src/shared/version-control/src/write-reasons.ts",
         "src/shared/version-control/src/write-ticket.ts",
-        "tests/lib/gate-result.ts"
+        "tests/lib/gate-result.ts",
+        "tests/lib/git-fixture-env.ts"
       ],
       "dirs": [
         "src/host",
@@ -9310,7 +9311,7 @@
       "buildOutputOnly": false,
       "completionRecord": true,
       "expectedAssertions": 296,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 8 条；载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 4 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 8 条；载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 4 条"
     },
     {
       "step": "node tests/verify-842-version-control-write-view.ts",

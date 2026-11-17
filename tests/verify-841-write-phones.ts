@@ -10,6 +10,8 @@ const path = require('path')
 const { spawnSync } = require('child_process')
 // #1763：门禁收尾打一行完成记录（GATE-RESULT），测试图按它核对期望断言数。
 const { printGateResult } = require('./lib/gate-result.ts')
+// 夹具只验证仓库行为：关签名、屏蔽本机全局 git 配置（core.hooksPath 会让钩子读到用户目录，gpgsign 会让签名失败用例意外成功）。
+require('./lib/git-fixture-env.ts')
 const { pathToFileURL } = require('url')
 const ROOT = path.resolve(__dirname, '..')
 let failed = false
@@ -932,7 +934,8 @@ async function main(): Promise<void> {
   const kArgv = after(configWrites()[kWriteSpawns0] || [])
   check(kWrite.ok === true && kWrite.oldValue === 'x' && kWrite.newValue === '新名字', 'Q4 12.2 执行成功并回旧值与新值（界面显示的是真的改前改后）')
   // cwd 比大小写与斜杠方向：本机 git 会把 D:\Temp 规范成 D:/temp，两边必须用同一份写法（照 #1752 造工作树那条注释的口径）。
-  const kFlat = (p: any): string => String(p || '').toLowerCase().replace(/\\/g, '/')
+  const kReal = (p: any): string => { try { return fs.realpathSync.native(String(p || '')) } catch { return String(p || '') } } // macOS 的 /var 是指向 /private/var 的链接，子进程回读的是真实路径
+  const kFlat = (p: any): string => kReal(p).toLowerCase().replace(/\\/g, '/')
   const kWriteCwds = requests.filter((q) => after(q.argv)[0] === 'config' && after(q.argv)[1] === '--local').map((q) => q.cwd)
   check(kArgv.join(' ') === 'config --local user.name 新名字' && kWriteCwds.length > 0 && kWriteCwds.every((cfgC) => kFlat(cfgC) === kFlat(cfgRK)), 'Q5 12.2 的 argv 是「config --local user.name <新值>」且 cwd 钉在票据那个仓库（--local 是默认作用域）')
   check(git(cfgRK, ['config', '--local', 'user.name']).out.trim() === '新名字', 'Q6 12.2 真的落到仓库配置里（用真 git 读回来是新值）')
@@ -1189,7 +1192,7 @@ async function main(): Promise<void> {
   const tPruneRun = await vcT.handleGitMaintenanceWrite({ cwd: rT, op: 'prune', ticketId: tPruneCheck.ticket.id, requestId: 'req-841-maint-5', confirmed: true })
   check(tPruneRun.ok === true && JSON.stringify(tPruneRun.steps) === JSON.stringify(['backup', 'task']), 'T20 凭票执行：先真做备份、再起清除任务，回包按这一步序说清楚')
   check(!!tPruneRun.backup && fs.existsSync(tPruneRun.backup.path) === true && Number(tPruneRun.backup.bytes) > 0, 'T21 备份真的落在盘上且有大小（备份成功才允许继续）')
-  check(typeof tPruneRun.backupSummary === 'string' && tPruneRun.backupSummary.indexOf('备份在') >= 0 && Array.isArray(tPruneRun.backupRestoreSteps) && tPruneRun.backupRestoreSteps.length === 3, 'T22 回包带人话备份摘要与三步还原指引（面板不代做恢复，只说清怎么做）')
+  check(typeof tPruneRun.backupSummary === 'string' && tPruneRun.backupSummary.indexOf('Backup at') >= 0 && Array.isArray(tPruneRun.backupRestoreSteps) && tPruneRun.backupRestoreSteps.length === 3, 'T22 回包带人话备份摘要与三步还原指引（面板不代做恢复，只说清怎么做）')
   const tDriftCheck = await vcT.handleGitMaintenanceCheck({ cwd: rT, op: 'gc' })
   fs.writeFileSync(path.join(rT, 'a.txt'), 'a\nb\nc\n')
   git(rT, ['add', 'a.txt'])

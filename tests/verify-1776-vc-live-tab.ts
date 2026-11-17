@@ -363,11 +363,11 @@ async function scenarioMain() {
   const emptyRows = m.qa('[data-vc-palette-row]')
   const allRows = view.vcPaletteRowsOf('', view.VC_PALETTE_RENDER_MAX, '')
   check(emptyRows.length === allRows.length && emptyRows.length > 0, 'T10c 面板按渲染上限画出前 ' + emptyRows.length + ' 条')
-  await m.type('[data-vc-palette-input]', '暂存')
-  const hit = view.vcPaletteMatchOf('暂存', '')
+  await m.type('[data-vc-palette-input]', 'staged')
+  const hit = view.vcPaletteMatchOf('staged', '')
   const rowsAfter = m.qa('[data-vc-palette-row]').length
   const hintAfter = m.text('[data-vc-palette] .vcs-pal-hint')
-  check(hintAfter.indexOf(String(hit.length)) >= 0 && rowsAfter === Math.min(hit.length, view.VC_PALETTE_RENDER_MAX), 'T10d 输入「暂存」后命中 ' + hit.length + ' 条，面板画出 ' + rowsAfter + ' 条')
+  check(hit.length > 0 && hintAfter.indexOf(String(hit.length)) >= 0 && rowsAfter === Math.min(hit.length, view.VC_PALETTE_RENDER_MAX), 'T10d 输入「staged」后命中 ' + hit.length + ' 条，面板画出 ' + rowsAfter + ' 条')
   const pickTarget = view.vcPaletteTargetOf('2.1')
   const pickOk = await m.click('[data-vc-palette-row="2.1"]')
   // #1860：能力清单退役后页面体没有可高亮的能力行；选中命令面板里的能力只负责跳到它所在的页。
@@ -1738,7 +1738,12 @@ async function main() {
   LOC = { zh: zh, en: {} }
 
   scenarioRegistration()
-  await scenarioMain()
+  // T4d/T4d2 比的是「读取于」念相对时间；夹具时刻 NOW 是固定日期，真实时钟走远（超过一周）后界面会正确地改念精确时刻，
+  // 门禁就会假红。所以只在场景一里把 Date.now 钉在 NOW 之后五分钟，念出来恒为「5 分钟前」。其余场景不受影响（finally 还原）。
+  // 反例：不要把 NOW 本身改成跟着真实时钟走——后面几十处夹具（「1 小时前」「3 天前」）都以 NOW 为基准。
+  const realDateNow = Date.now
+  Date.now = function () { return NOW + 5 * 60000 }
+  try { await scenarioMain() } finally { Date.now = realDateNow }
   await scenarioSliceFail()
   await scenarioEmptyCwd()
   await scenarioReverseProof()

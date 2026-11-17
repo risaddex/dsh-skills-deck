@@ -196,10 +196,21 @@ function displayArgv(argv: string[]): string {
   return argv.map((item) => (/\s/.test(item) ? JSON.stringify(item) : item)).join(' ')
 }
 
-/** 两个路径是不是同一个（Windows 大小写不敏感；子进程回读的 cwd 可能把 D:\Temp 写成 D:\temp）。 */
+/**
+ * 路径存在就取真实路径（解开符号链接），不存在就退回 path.resolve 的结果。
+ * 为什么要解链接：macOS 上 os.tmpdir() 是 /var/folders/...，而 /var 是指向 /private/var 的链接；子进程里
+ * process.cwd() 回读到的是 /private/var/...。同一个目录两种写法，只做 path.resolve 会判成「不是同一个」。
+ * 反例：不存在的路径（比如断言「这个文件没被写出」）不能因为 realpath 抛错而报错，所以要退回字面路径。
+ */
+function realOrResolved(value: string): string {
+  const resolved = path.resolve(String(value || ''))
+  try { return fs.realpathSync.native(resolved) } catch { return resolved }
+}
+
+/** 两个路径是不是同一个（Windows 大小写不敏感；子进程回读的 cwd 可能把 D:\Temp 写成 D:\temp；符号链接与真实路径算同一个）。 */
 export function samePath(left: string, right: string): boolean {
-  const a = path.resolve(String(left || ''))
-  const b = path.resolve(String(right || ''))
+  const a = realOrResolved(left)
+  const b = realOrResolved(right)
   return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 

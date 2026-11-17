@@ -256,7 +256,7 @@ async function main() {
   // ── 一之二、#1793：running 标记（宿主现报的「此刻真有一轮开着」）──
   // 先验缺这一支时的口径：一格都不标、notes 也不说「没人在跑」——不知道就只是不知道。
   check(toolOut.data.groups.every((g: any) => !('running' in g)), '缺 workRouteRunning 依赖：组上不出 running 键（不知道就不说，不冒充没人在跑）')
-  check(!(toolOut.notes || []).some((n: string) => n.indexOf('正在跑一轮') >= 0), '缺 workRouteRunning 依赖：notes 里不提在跑（同上）')
+  check(!(toolOut.notes || []).some((n: string) => n.indexOf('running a turn right now') >= 0), '缺 workRouteRunning 依赖：notes 里不提在跑（同上）')
   const otherLabel = toolOut.data.groups[1].sessionLabel
   const runningSeen: any[] = []
   const runningTool = workRouteMod.createDeckWorkRoute(Object.assign({}, toolDeps, {
@@ -265,7 +265,7 @@ async function main() {
   const runningOut: any = await runningTool.run({ agent: { session: { id: SID_B, cwd: ROOT_CWD } } }, {})
   check(runningOut && runningOut.status === 'ok', '带 workRouteRunning 的读工具照常成功')
   check(runningOut.data.groups[1].running === true && !('running' in runningOut.data.groups[0]), '宿主现报在跑的组标 running:true；当前会话组不标（自己发起调用时必然在跑，不算「谁在跑」）')
-  check((runningOut.notes || []).some((n: string) => n.indexOf('1 个会话组此刻正在跑一轮') >= 0), 'notes 说清有几个会话组此刻正在跑')
+  check((runningOut.notes || []).some((n: string) => n.indexOf('1 session groups are running a turn right now') >= 0), 'notes 说清有几个会话组此刻正在跑')
   check(runningSeen.length === 1 && runningSeen[0] && runningSeen[0].sessionId === SID_B && runningSeen[0].workspaceKey === rootKey && runningSeen[0].cwd === ROOT_CWD, 'running 出口收到的入参是本次会话、工作区键与工作区根')
   const throwRunningTool = workRouteMod.createDeckWorkRoute(Object.assign({}, toolDeps, {
     workRouteRunning: async () => { throw new Error('探针：宿主状态读不到') },

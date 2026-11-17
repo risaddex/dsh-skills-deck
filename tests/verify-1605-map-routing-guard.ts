@@ -45,7 +45,7 @@ const issueListSrc = fs.readFileSync(path.join(process.cwd(), 'src/deck/tools/is
 check(issueListSrc.indexOf("String(thinBody.error.kind) === 'unsupported'") >= 0, '回落条件仍是“仅当 kind 为 unsupported”')
 // #1799 起顶层 reason 由统一映射给出，不再手写 BACKEND_UNSUPPORTED；这里跟着判「拒绝支仍走统一映射、
 // 且仍直接返回不回落到老路」，判据本意（薄查失败是拒绝，不是拿半份当整仓）不变。
-check(issueListSrc.indexOf("failureOf(thinBody, 'read')") >= 0 && issueListSrc.indexOf('ISSUE 列表没取回来') >= 0, '其余薄查失败走统一映射的拒绝、不回落')
+check(issueListSrc.indexOf("failureOf(thinBody, 'read')") >= 0 && issueListSrc.indexOf('The ISSUE list did not come back') >= 0, '其余薄查失败走统一映射的拒绝、不回落')
 
 if (failures > 0) { console.error('verify-1605-map-routing-guard: ' + failures + ' 处未过'); process.exit(1) }
 else console.log('verify-1605-map-routing-guard: 全过')
