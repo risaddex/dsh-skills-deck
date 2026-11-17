@@ -23,6 +23,22 @@ The gates themselves are `tests/verify-*`. `tests/` currently holds about three 
 about three hundred steps of them are on the chain; the ones not on the chain are for local investigation and do not run
 automatically before a commit.
 
+## 1.5 Two things worth knowing before the tiers
+
+**Reading the verdict of the last run.** `npm run verify:parallel` writes its machine-readable result to
+`node_modules/.cache/dsh-verify-last.json`; `npm run verify:last` turns that into five lines — when the run
+happened, which head it covered, how many gates were red, how many of those are on `tests/known-reds.json`,
+how many are new (by name), and how the smoke runs did. It exits non-zero when a red gate is not on the
+register, so it doubles as a check. It never runs a gate and never decides anything on its own: the merging
+rule stays the one in section 4 — apart from the known reds, truly red gates must be zero.
+
+**A type error inside `node_modules`' own types is usually a stale install, not broken code.** When a commit
+bumps a package this repository consumes (`dsh-featherhunter-plugin-base`, for instance) and its
+`.d.ts` gains a field, a tree whose `node_modules` predates `pnpm-lock.yaml` fails the type check inside
+`scripts/**` with a message like `'statusRoles' does not exist in type 'ChecklistFormat'` — no source file
+changed, and editing one is the wrong move. Run `pnpm install --frozen-lockfile --prefer-offline` and check
+again before touching any file. The same symptom on a machine that never installed is the same cause.
+
 ## 2. Gates come in three tiers
 
 | Tier | How to run it | When to run it |

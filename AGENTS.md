@@ -73,6 +73,8 @@ The gates come in three tiers; picking the wrong tier either makes you wait for 
 - Change one place, verify one place: run only that one gate — `node --import ./scripts/ts-hook.mts tests/verify-xxx.ts`; to spot-check by name, use `node scripts/verify-chain.ts --only <a fragment of the file name>`.
 - A module is finished: `npm run verify:changed` (runs only the gates this change can affect, on the order of tens of seconds).
 - Before committing: `npm run verify:parallel` (the whole chain, 8-way concurrency, and after the main chain finishes it runs the five smoke runs serially; about one minute when the build cache is ready). The serial whole chain `node scripts/verify-chain.ts` is used only for diagnosing ordering problems.
+- To read the result of the last run without decoding its JSON: `npm run verify:last` (five lines; exits non-zero when a red gate is not on the register).
+- A type error inside a package's own type (`.d.ts` from `node_modules`) is a stale install, not broken code: run `pnpm install --frozen-lockfile --prefer-offline` before editing anything. Both cases are in [docs/agents/verification.md](docs/agents/verification.md) §1.5.
 
 When a change touches `tests/**`, `scripts/**`, `docs/**` or any `*.md`, the selection rule decides "the whole chain is required"; that is deliberate, not a bug. How to pick a tier, what each tier cannot detect, and how to read a two-thousand-line gate while sparing context are all in `docs/agents/verification.md`.
 
