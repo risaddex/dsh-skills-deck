@@ -282,7 +282,15 @@ async function probeThroughChannel(http: any, alias: string, authorization: stri
       return { ok: false, status: refused ? 'needs_auth' : 'error', message: 'the identity probe answered HTTP ' + response.status }
     }
     const payload: any = JSON.parse(String(response.body || '{}'))
-    if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) return { ok: false, status: 'error', message: 'the identity probe was refused: ' + String(payload.errors[0] && payload.errors[0].message || 'unknown reason').slice(0, 160) }
+    if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) {
+      const first: any = payload.errors[0] || {}
+      const type = String((first.extensions && first.extensions.type) || '').toLowerCase()
+      // 探活只分两档：凭据本身不行（要去重新登录）与其它（上游/网络/格式）。房间自己那份更细的分类
+      // 在 `src/tracker/rooms/linear/errors.ts`，宿主不许 import 房间，所以这里按同一套关键词只取
+      // 「认证类」这一档 —— 把认证失败说成 error，会把「去登录」这句唯一有用的动作丢掉。
+      const authLike = type.indexOf('authentication') >= 0 || type.indexOf('forbidden') >= 0 || type.indexOf('not accessible') >= 0
+      return { ok: false, status: authLike ? 'needs_auth' : 'error', message: 'the identity probe was refused: ' + String(first.message || 'unknown reason').slice(0, 160) }
+    }
     if (!payload || !payload.data || !payload.data.viewer) return { ok: false, status: 'needs_auth', message: 'the identity probe answered without a viewer (' + alias + ')' }
     // 只看「有没有 viewer」不够：钉住组织 A 的账如果配了组织 B 的 token，那本票会被当成 A 的票读回来。
     // 所以按共享解析层同一套判定：先解出身份，再比对账号钉住的组织（与 resolveLinearAccount 内部同源）。
