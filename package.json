@@ -32,6 +32,7 @@
     "verify:parallel": "node scripts/verify-parallel.mts --keep-going --json node_modules/.cache/dsh-verify-last.json",
     "verify:fast": "node scripts/verify-parallel.mts --tier fast",
     "verify:changed": "node scripts/verify-parallel.mts --changed",
+    "verify:last": "node scripts/verify-last.mts",
     "verify": "node scripts/verify-chain.ts",
     "verify:self-check": "dsh-verify self-check --profile web",
     "verify:self-check:json": "dsh-verify self-check --profile web --json",

@@ -623,6 +623,7 @@ function printFailureDetail(f: StepResult, title: string): void {
 for (const f of failed) printFailureDetail(f, 'FAIL')
 for (const f of smokeFailed) printFailureDetail(f, '冒烟 FAIL')
 
+
 if (has('--json')) {
   const outPath: string = optOf('--json', '')
   if (outPath) {
@@ -646,12 +647,14 @@ if (has('--json')) {
             stepsRan: chainRan,
             stepsTotal: steps.length,
             // red 是整趟的总红数（主链 + 冒烟）；chainRed 单独给出，好让发布脚本分辨是哪一段红了。
+            // 逐扇结果里的 optional 必须落盘：预构建是可选步（构建锁超时后面还能恢复），判定会排除它，
+            // 任何读这份缓存的程序（例如 scripts/verify-last.mts）得能做同样的排除，否则两边结论相反。
             red: failed.length + smokeRedTotal,
             chainRed: failed.length,
             knownRed: classified.known.length,
             newRed: classified.fresh.length + (smokeProblem ? 1 : 0),
             flaky: flaky.length,
-            results: results.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, evidence: r.evidence || '' })),
+            results: results.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, optional: !!r.optional, evidence: r.evidence || '' })),
             smoke: {
               ran: smokeRan,
               reason: smokeSkip,
@@ -659,7 +662,7 @@ if (has('--json')) {
               stepsTotal: smokePlanned.steps.length,
               stepsRan: smokeResults.length,
               red: smokeRedTotal,
-              results: smokeResults.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, evidence: r.evidence || '' })),
+              results: smokeResults.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, optional: !!r.optional, evidence: r.evidence || '' })),
             },
           },
           null,
@@ -673,4 +676,24 @@ if (has('--json')) {
     }
   }
 }
+// 最后一行的事实：哪几步是「新红」。上面的明细可能有几百行，只看末尾几行（或被 tail 截断）的人否则只会读到
+// 「新红 N」这个数，要再翻一遍日志才知道是哪一步。放在 --json 那一段之后，才真的是最后一行。已知红不在这里重复，
+// 它们有自己的登记表。
+//
+// 「与已登记的基线一致」只在整条链都跑完时才成立：--only / --changed 只跑了一部分，主链首红即停或环境硬停之后
+// 后面的步骤没跑，这时零新红说明不了「基线没变」，所以改写成「执行不完整」并点明原因，不让一次抽查冒充全绿。
+const freshNames: string[] = classified.fresh.map((r) => r.file)
+if (smokeProblem) freshNames.push('smoke planning: ' + smokeProblem)
+const incomplete: string = changedNarrowed
+  ? '--changed 只跑了一部分'
+  : has('--only')
+    ? '--only 只跑了一部分'
+    : tier !== 'full'
+      ? '--tier ' + tier + ' 去掉了浏览器步骤'
+      : smokeSkip
+console.log('')
+console.log(
+  '[verification] 新红 ' + freshNames.length + ' 步' +
+    (freshNames.length ? '：' + freshNames.join('、') : incomplete ? '（执行不完整：' + incomplete + '，这个 0 不代表与基线一致）' : '（与已登记的基线一致）'),
+)
 process.exit(failed.length + smokeRedTotal ? 1 : 0)

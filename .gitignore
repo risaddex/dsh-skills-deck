@@ -128,3 +128,6 @@ _research/
 # 这里同时把它们移出索引，免得每次跑测试都看见两份没人读的改动。
 /tests/.tmp-repo-out/
 /tests/.tmp-repo-out2/
+
+# scripts/probe.mts grava aqui o código de sondagem e apaga ao terminar; sobra só se o processo for morto à força.
+/.probe-*.mts

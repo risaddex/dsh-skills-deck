@@ -564,6 +564,9 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // gh 票面适配器形状合规；六条规则的输入用假适配器 + 假 git 端口驱动，不碰真 gh、不发网络请求。
   // 16 组 A–L 共 88 条，单跑实测得出的。
   'verify-release-gate': 93,
+  // 2026-11-17 retro da sessão do #17: Markdown já versionado não pode perder seções '## ' sem declarar.
+  // A contagem é de execução isolada; muda junto com as asserções de tests/verify-md-sections.ts.
+  'verify-md-sections': 48,
   // 2026-11-02 #1802 合并（用户并行会话的提交）：两窗共用一份设置文件时补丁写、指纹基底与冲突重读；
   // 74 条是单跑实测得出的。这份门禁随合并进来时没登记，会让 verify-gate-map 判「在交完成记录却没登记期望」。
   'verify-1802-settings-cross-window': 74,

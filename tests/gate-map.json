@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T14:08:27.242Z",
+  "generatedAt": "2026-11-17T16:14:23.967Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 618,
-  "gateCount": 618,
+  "chainLength": 620,
+  "gateCount": 620,
   "attributedGates": 561,
-  "unattributedGates": 57,
+  "unattributedGates": 59,
   "buildOutputOnlyGates": 20,
-  "completionRecordedGates": 144,
+  "completionRecordedGates": 145,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 989,
@@ -7775,6 +7775,21 @@
       "reason": "归属来自：静态 import 说明符 5 条"
     },
     {
+      "step": "node tests/verify-34-verify-last.ts",
+      "file": "tests/verify-34-verify-last.ts",
+      "guards": [
+        "scripts/verify-last.mts"
+      ],
+      "dirs": [
+        "scripts"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "读到的路径都落在 scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
+    },
+    {
       "step": "node tests/verify-344-chain-auto-refresh.ts",
       "file": "tests/verify-344-chain-auto-refresh.ts",
       "guards": [
@@ -12165,6 +12180,23 @@
       "reason": "读到的路径都落在 docs、package、scripts、tests/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
+      "step": "node tests/verify-md-sections.ts",
+      "file": "tests/verify-md-sections.ts",
+      "guards": [
+        "docs/agents/md-section-removals.json",
+        "scripts/lib/md-sections.mts"
+      ],
+      "dirs": [
+        "docs/agents",
+        "scripts/lib"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 48,
+      "reason": "读到的路径都落在 docs、scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
+    },
+    {
       "step": "node tests/verify-motion-tokens.ts",
       "file": "tests/verify-motion-tokens.ts",
       "guards": [
@@ -14538,6 +14570,7 @@
       "node tests/verify-detection-evidence.ts",
       "node tests/verify-github-label-colors.ts",
       "node tests/verify-issue-body-script.ts",
+      "node tests/verify-md-sections.ts",
       "node tests/verify-t1-getrepokey.ts",
       "node tests/verify-wire-subissues-script.ts"
     ],
@@ -14753,6 +14786,7 @@
       "node tests/verify-1776-vc-live-tab.ts",
       "node tests/verify-1802-settings-cross-window.ts",
       "node tests/verify-1879-suggest-deck-gate.ts",
+      "node tests/verify-34-verify-last.ts",
       "node tests/verify-640-dock-width-browser.ts",
       "node tests/verify-818-version-control-view.ts",
       "node tests/verify-bundled-skills-zh.ts",
@@ -14844,6 +14878,7 @@
       "node tests/verify-log-selfmon.ts",
       "node tests/verify-map-drill.ts",
       "node tests/verify-market-tarball.ts",
+      "node tests/verify-md-sections.ts",
       "node tests/verify-multi-effort-panel.ts",
       "node tests/verify-parse-leaf.ts",
       "node tests/verify-platform-contract.ts",
