@@ -73,3 +73,7 @@
 
 后端不得直接 `ctx.get('fs')`/`path.join`/硬编码分隔符；一律经 `src/host/platform`（`createPlatform(ctx)`，
 `#113` 实现）。这消除 `#110` 那类「getHome 只认 Windows / 反斜杠硬编码」bug。
+
+房间的**分页与额度数字**只有一处真源：`src/tracker/contract/pagination.ts` 的 `PAGINATION`（按后端分组）。
+房内不许写 `const PAGE_SIZE = 50` 这类字面量，`tests/verify-pagination-limits.ts` 会把它判红；
+新增一组数字时，同一份 diff 里连门禁的期望值清单一起改，这样「哪个数从多少改成多少」能被看见。
