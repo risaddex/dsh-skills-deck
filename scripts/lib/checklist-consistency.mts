@@ -495,13 +495,25 @@ function readBodyClaims(body: string): BodyClaims {
   return { total, sources, groups }
 }
 
-/** 带「通过 N / 失败 M / 豁免 K」这种斜杠分隔计数的段落，返回每一段里的状态与数字。 */
-function readSlashCounts(text: string): { status: string; count: number }[] {
-  const found: { status: string; count: number }[] = []
-  const runPattern = new RegExp('(?:' + STATUS_ALTERNATION + ')\\s*\\d+(?:\\s*/\\s*(?:' + STATUS_ALTERNATION + ')\\s*\\d+)+', 'g')
+/**
+ * 带「通过 N / 失败 M / 豁免 K」或「passed N / failed M / exempt K」这种斜杠分隔计数的段落，
+ * 返回每一段里的状态与数字。
+ *
+ * 两点都是读英文记录时才暴露的：
+ *   1. 状态要先还原成内部状态（statusFromWord）再交给调用方。调用方按内部状态取期望值，
+ *      拿「passed」去比「通过」永远不相等，于是英文写错的发布计数被当成「没有可比的总数」悄悄放过，
+ *      而同样的错误写成中文就会被拦下——两种语言的检查力度不能不一样。
+ *   2. 正则要忽略大小写：英文句首常写成「Passed 2 / Failed 0」，中文没有大小写问题。
+ * 认不出的词（statusFromWord 返回 null）不入账，和以前「正则没匹配上」是同一个结果。
+ */
+function readSlashCounts(text: string): { status: ScenarioStatus; word: string; count: number }[] {
+  const found: { status: ScenarioStatus; word: string; count: number }[] = []
+  const runPattern = new RegExp('(?:' + STATUS_ALTERNATION + ')\\s*\\d+(?:\\s*/\\s*(?:' + STATUS_ALTERNATION + ')\\s*\\d+)+', 'gi')
   for (const run of text.matchAll(runPattern)) {
-    for (const pair of run[0].matchAll(new RegExp('(' + STATUS_ALTERNATION + ')\\s*(\\d+)', 'g'))) {
-      found.push({ status: pair[1], count: Number(pair[2]) })
+    for (const pair of run[0].matchAll(new RegExp('(' + STATUS_ALTERNATION + ')\\s*(\\d+)', 'gi'))) {
+      const status = statusFromWord(pair[1])
+      if (status === null) continue
+      found.push({ status, word: pair[1], count: Number(pair[2]) })
     }
   }
   return found
@@ -548,7 +560,7 @@ function collectSlashCountFindings(sources: CountSource[], counts: StatusCounts)
       if (expected === null || expected === pair.count) continue
       findings.push({
         code: 'release-count-mismatch',
-        message: 'Release count mismatch: ' + source.where + ' says "' + pair.status + ' ' + pair.count + '", but the scenario overview table gives ' + expected + '.',
+        message: 'Release count mismatch: ' + source.where + ' says "' + pair.word + ' ' + pair.count + '", but the scenario overview table gives ' + expected + '.',
         fix: 'Recount passed/failed/exempted from the overview table (已验证 counts as 通过), then ' + source.fixTail,
       })
     }

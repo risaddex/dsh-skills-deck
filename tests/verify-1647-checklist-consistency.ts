@@ -110,6 +110,37 @@ check(
   '评论里没有场景块时，说明里指出要按「## 场景块」写（missing-scenario-block）',
 )
 
+// #17：发布计数写成英文时，写错的数字也必须被拦下，强度与中文一样。
+// 起因：读斜杠计数时曾把状态词原样（英文 passed）交给「按内部状态取期望值」的那一步，
+// 两边永远对不上，英文写错的计数被当成「没有可比的总数」放过，而同样的错误写成中文会被拦下。
+// 这一组用同一份记录，只换计数行的语言与对错：对的两种语言都绿，错的两种语言（含句首大写）都红。
+{
+  const englishBlocks = [{ body: '## Scenario block: 2201 s\n\nScenario 2201-02: passed', createdAt: '2026-01-01T00:00:01Z' }]
+  const englishBody = (reconcile: string): string =>
+    [
+      '## Scenario overview',
+      '',
+      '| Scenario number | Source ticket | One sentence | Status | Notes |',
+      '| --- | --- | --- | --- | --- |',
+      '| 2201-02 | #2201 | b | passed | batch 1 |',
+      '',
+      '## Pre-release reconciliation',
+      '',
+      reconcile,
+    ].join('\n')
+  const codesFor = (reconcile: string): string[] =>
+    checkChecklistConsistency({ body: englishBody(reconcile), comments: englishBlocks }).findings.map((finding) => finding.code)
+  check(!codesFor('- passed 1 / failed 0 / exempt 0').includes('release-count-mismatch'), '英文发布计数写对：不报 release-count-mismatch')
+  check(codesFor('- passed 9 / failed 0 / exempt 0').includes('release-count-mismatch'), '英文发布计数写错：报 release-count-mismatch')
+  check(codesFor('- Passed 9 / Failed 0 / Exempt 0').includes('release-count-mismatch'), '英文发布计数句首大写写错：同样报 release-count-mismatch')
+  check(codesFor('- 通过 9 / 失败 0 / 豁免 0').includes('release-count-mismatch'), '中文发布计数写错：仍然报 release-count-mismatch（语言换了，强度不变）')
+  const wrongWord = checkChecklistConsistency({ body: englishBody('- passed 9 / failed 0 / exempt 0'), comments: englishBlocks }).findings
+  check(
+    wrongWord.some((finding) => finding.message.includes('"passed 9"')),
+    '报错里引用的是作者实际写的词（passed 9），不是内部的中文状态值',
+  )
+}
+
 if (failed) {
   console.log('\n存在失败（共 ' + total + ' 项）')
   process.exit(1)
