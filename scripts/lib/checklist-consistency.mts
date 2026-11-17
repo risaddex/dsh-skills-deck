@@ -102,6 +102,32 @@ export type ConsistencyReport = {
 const STATUS_WORDS: ScenarioStatus[] = ['待验证', '已验证', '通过', '失败', '豁免', '未测', '阻塞', '作废']
 
 /**
+ * 每个状态实际会出现的写法，两种语言都收。
+ *
+ * 为什么两种都读：已经登记在票上的记录是中文，而从这次改版起新记录写英文；只认一种语言的话，
+ * 换语言的那一刻起另一半记录就读不出来了。判断顺序不变（最早出现的词胜），同一个位置上有多个候选时
+ * 取更长的那个，免得「already verified」被更短的词抢先认成别的状态。
+ */
+const STATUS_SPELLINGS: ReadonlyArray<{ status: ScenarioStatus; word: string }> = [
+  { status: '待验证', word: '待验证' },
+  { status: '待验证', word: 'to be verified' },
+  { status: '已验证', word: '已验证' },
+  { status: '已验证', word: 'already verified' },
+  { status: '通过', word: '通过' },
+  { status: '通过', word: 'passed' },
+  { status: '失败', word: '失败' },
+  { status: '失败', word: 'failed' },
+  { status: '豁免', word: '豁免' },
+  { status: '豁免', word: 'exempt' },
+  { status: '未测', word: '未测' },
+  { status: '未测', word: 'not tested' },
+  { status: '阻塞', word: '阻塞' },
+  { status: '阻塞', word: 'blocked' },
+  { status: '作废', word: '作废' },
+  { status: '作废', word: 'void' },
+]
+
+/**
  * 必须在评论里有明确结果的状态：通过、失败是批次执行出来的结论，正文写了就得说得出是哪条评论给的。
  * 已验证（登记前验过，证据在来源票）、豁免（主持人接受，登记在正文豁免表）不强制评论结果——
  * 那是证据与接受判断，不属于「记录内部一致性」。
@@ -124,7 +150,9 @@ const RESULT_PRIORITY: Record<ScenarioStatus, number> = {
 }
 
 /** 状态词的正则写法：几处正则都从同一份列表生成，改状态集合时不会漏掉某一处。 */
-const STATUS_ALTERNATION = STATUS_WORDS.join('|')
+const STATUS_ALTERNATION = STATUS_SPELLINGS.map((entry) => entry.word)
+  .sort((left, right) => right.length - left.length)
+  .join('|')
 
 /**
  * 场景编号的形状只在这里定义一次：来源票号 3~5 位、连字符、两位序号；前后不能紧挨数字或连字符，
@@ -141,7 +169,7 @@ const EXACT_ID_PATTERN = new RegExp('^' + SCENARIO_ID_SOURCE + '$')
 const ID_PREFIX_PATTERN = new RegExp('^' + SCENARIO_ID_SOURCE + SCENARIO_ID_AFTER)
 /** 编号列表之间允许出现的连接物：收口评论里「…、1600-01、1599-01 为登记前已验证」这种写法。 */
 const CONNECTOR_PATTERN = /^(?:[\s、，,和与及/]|为|均|都|已|全部|登记前|本版|真机)*$/u
-const CLOSING_COMMENT_PATTERN = /发布就绪|验证收口|收口关闭|已登记场景/u
+const CLOSING_COMMENT_PATTERN = /发布就绪|验证收口|收口关闭|已登记场景|ready to release|verification closed|closing closed|registered scenarios/iu
 
 /** 去 Markdown 加粗与行内代码标记，只留人读的文字；编号本身不含这些字符，不会误伤。 */
 function stripMarkup(text: string): string {
@@ -150,14 +178,23 @@ function stripMarkup(text: string): string {
 
 /** 一段文字里的状态词：取最早出现的那个，一个都没有时返回 null。 */
 function classifyStatus(text: string): ScenarioStatus | null {
-  const source = stripMarkup(text)
-  let best: { status: ScenarioStatus; at: number } | null = null
-  for (const status of STATUS_WORDS) {
-    const at = source.indexOf(status)
+  const source = stripMarkup(text).toLowerCase()
+  let best: { status: ScenarioStatus; at: number; length: number } | null = null
+  for (const { status, word } of STATUS_SPELLINGS) {
+    const at = source.indexOf(word.toLowerCase())
     if (at < 0) continue
-    if (!best || at < best.at) best = { status, at }
+    if (!best || at < best.at || (at === best.at && word.length > best.length)) {
+      best = { status, at, length: word.length }
+    }
   }
   return best ? best.status : null
+}
+
+/** 把一段文字里的状态词还原成内部状态；认不出时返回 null。 */
+function statusFromWord(word: string): ScenarioStatus | null {
+  const wanted = stripMarkup(word).toLowerCase()
+  const found = STATUS_SPELLINGS.find((entry) => entry.word.toLowerCase() === wanted)
+  return found ? found.status : null
 }
 
 /**
@@ -236,10 +273,10 @@ const DEFAULT_OVERVIEW_COLUMNS: OverviewColumns = { id: 0, source: 1, status: 3 
  */
 function overviewColumnsFrom(header: string[]): OverviewColumns | null {
   const labels = header.map((cell) => stripMarkup(cell))
-  const id = labels.findIndex((label) => label.includes('场景编号'))
+  const id = labels.findIndex((label) => label.includes('场景编号') || /scenario (number|id)/i.test(label))
   if (id < 0) return null
-  const source = labels.findIndex((label) => label.includes('来源票'))
-  const status = labels.findIndex((label) => label.includes('状态'))
+  const source = labels.findIndex((label) => label.includes('来源票') || /source ticket/i.test(label))
+  const status = labels.findIndex((label) => label.includes('状态') || /^status$/i.test(label))
   return {
     id,
     source: source >= 0 ? source : DEFAULT_OVERVIEW_COLUMNS.source,
@@ -263,7 +300,7 @@ function parseOverview(section: BodySection): OverviewResult {
       continue
     }
     const first = stripMarkup(cells[columns.id] || '')
-    if (!first || first.includes('暂无')) continue
+    if (!first || first.includes('暂无') || /^none yet$/i.test(first)) continue
     const line = section.startLine + index
     if (!EXACT_ID_PATTERN.test(first)) {
       result.malformed.push({ line, text: first })
@@ -299,7 +336,7 @@ function extractResults(commentText: string): Map<string, ScenarioStatus> {
 
   for (const line of lines) {
     // 第一类：批次结果段落「场景 1600-02（仓库 #1600 评论 5）：通过。」
-    const named = /^\s*(?:[-*]\s*)?场景\s+(.+?)\s*[:：]\s*(.+)$/u.exec(line)
+    const named = /^\s*(?:[-*]\s*)?(?:场景|scenario)\s+(.+?)\s*[:：]\s*(.+)$/iu.exec(line)
     if (named) {
       const idPart = named[1].replace(/（[^）]*）/g, '')
       const status = classifyStatus(named[2])
@@ -330,7 +367,7 @@ function extractResults(commentText: string): Map<string, ScenarioStatus> {
   // 第四类：收口评论里的「通过 17 / 失败 0 / 豁免 3（场景级：995-01、1627-01、1627-02）」。
   // 括号里必须只剩编号与分隔符、编号个数与前面的数字相符，才认为这是「给这些场景的结论」；
   // 括号里夹着散文的（例如「豁免 3（995-01 由 1474-01 覆盖；…）」）不在这里认，避免把被覆盖的票算成豁免。
-  const counted = new RegExp('(' + STATUS_ALTERNATION + ')\\s*(\\d+)\\s*[（(]([^）)]{0,200})[）)]', 'gu')
+  const counted = new RegExp('(' + STATUS_ALTERNATION + ')\\s*(\\d+)\\s*[（(]([^）)]{0,200})[）)]', 'giu')
   let countedMatch: RegExpExecArray | null
   while ((countedMatch = counted.exec(commentText)) !== null) {
     const content = countedMatch[3]
@@ -339,9 +376,11 @@ function extractResults(commentText: string): Map<string, ScenarioStatus> {
     const rest = content
       .replace(new RegExp(ID_PATTERN.source, 'g'), '')
       .replace(/[、，,\/\s]/g, '')
-    if (!/^(?:场景级|场景编号|场景|编号)?[:：]?$/.test(rest)) continue
+    if (!/^(?:场景级|场景编号|场景|编号|scenario ids?|scenarios?|numbers?|ids?|levels?)?[:：]?$/iu.test(rest)) continue
     if (Number(countedMatch[2]) !== ids.length) continue
-    add(ids, countedMatch[1] as ScenarioStatus)
+    const countedStatus = statusFromWord(countedMatch[1])
+    if (countedStatus === null) continue
+    add(ids, countedStatus)
   }
 
   // 第五类：编号列表后面紧跟结果词，覆盖收口评论的分批判述与「…为登记前已验证」。
@@ -387,12 +426,12 @@ function parseComment(comment: ChecklistCommentInput): ParsedComment {
   const tickets: string[] = []
   // 场景块标题里写的是来源票号（不是场景编号），单独一个三位到五位数字，所以不复用场景编号的常量。
   for (const line of lines) {
-    const heading = /^#{2,6}\s*场景块[:：]\s*#?(\d{3,5})(?!\d)/.exec(line.trim())
+    const heading = /^#{2,6}\s*(?:场景块|scenario block)[:：]\s*#?(\d{3,5})(?!\d)/i.exec(line.trim())
     if (heading) tickets.push(heading[1])
   }
   const registered: string[] = []
   if (tickets.length > 0) {
-    const explicit = [...text.matchAll(new RegExp('^#{2,6}\\s*场景\\s+(' + SCENARIO_ID_SOURCE + ')' + SCENARIO_ID_AFTER, 'gm'))].map((matched) => matched[1])
+    const explicit = [...text.matchAll(new RegExp('^#{2,6}\\s*(?:场景|scenario)\\s+(' + SCENARIO_ID_SOURCE + ')' + SCENARIO_ID_AFTER, 'gim'))].map((matched) => matched[1])
     if (explicit.length > 0) registered.push(...explicit)
     else for (const ticket of tickets) registered.push(ticket + '-01')
   }
@@ -444,12 +483,14 @@ type BodyClaims = {
 
 function readBodyClaims(body: string): BodyClaims {
   const total: number[] = []
-  for (const matched of body.matchAll(/(\d+)\s*条场景/g)) total.push(Number(matched[1]))
+  for (const matched of body.matchAll(/(\d+)\s*(?:条场景|scenarios?)/gi)) total.push(Number(matched[1]))
   const sources: number[] = []
-  for (const matched of body.matchAll(/(\d+)\s*张来源票/g)) sources.push(Number(matched[1]))
+  for (const matched of body.matchAll(/(\d+)\s*(?:张来源票|source tickets?)/gi)) sources.push(Number(matched[1]))
   const groups: { status: ScenarioStatus; count: number }[] = []
-  for (const matched of body.matchAll(new RegExp('(\\d+)\\s*条「(' + STATUS_ALTERNATION + ')」', 'g'))) {
-    groups.push({ status: matched[2] as ScenarioStatus, count: Number(matched[1]) })
+  for (const matched of body.matchAll(new RegExp('(\\d+)\\s*(?:条「(' + STATUS_ALTERNATION + ')」|(' + STATUS_ALTERNATION + '))', 'gi'))) {
+    const groupStatus = statusFromWord(matched[2] ?? matched[3] ?? '')
+    if (groupStatus === null) continue
+    groups.push({ status: groupStatus, count: Number(matched[1]) })
   }
   return { total, sources, groups }
 }
@@ -491,7 +532,7 @@ type CountSource = { where: string; text: string; fixTail: string }
 function closingCountLines(body: string): string {
   return String(body || '')
     .split(/\r?\n/)
-    .filter((line) => line.includes('计数') || line.includes('[发布就绪]'))
+    .filter((line) => line.includes('计数') || line.includes('[发布就绪]') || /\[(?:ready to release|counts?)\]/i.test(line) || /\bcounts?\b/i.test(line))
     .join('\n')
 }
 
@@ -519,10 +560,10 @@ function collectSlashCountFindings(sources: CountSource[], counts: StatusCounts)
 function collectSealClaimFindings(closing: ChecklistCommentInput[], rows: ScenarioRow[], counts: StatusCounts): ConsistencyFinding[] {
   const findings: ConsistencyFinding[] = []
   const claimPatterns: { pattern: RegExp; label: string; expected: number }[] = [
-    { pattern: /(\d+)\s*条已登记场景/g, label: '已登记场景', expected: rows.length },
-    { pattern: /(\d+)\s*条登记前已验证/g, label: '已验证', expected: counts.已验证 },
-    { pattern: /(\d+)\s*条本版真机通过/g, label: '通过', expected: counts.通过 },
-    { pattern: /(\d+)\s*条豁免/g, label: '豁免', expected: counts.豁免 },
+    { pattern: /(\d+)\s*(?:条已登记场景|registered scenarios?)/gi, label: '已登记场景', expected: rows.length },
+    { pattern: /(\d+)\s*(?:条登记前已验证|already verified)/gi, label: '已验证', expected: counts.已验证 },
+    { pattern: /(\d+)\s*(?:条本版真机通过|verified on a real machine)/gi, label: '通过', expected: counts.通过 },
+    { pattern: /(\d+)\s*(?:条豁免|exempt)/gi, label: '豁免', expected: counts.豁免 },
   ]
   for (const comment of closing) {
     for (const claim of claimPatterns) {
@@ -547,7 +588,7 @@ function collectSealClaimFindings(closing: ChecklistCommentInput[], rows: Scenar
 export function checkChecklistConsistency(input: { body: string; comments: ChecklistCommentInput[] }): ConsistencyReport {
   const body = String(input.body || '')
   const findings: ConsistencyFinding[] = []
-  const overview = findSection(body, /^##\s*场景总览/)
+  const overview = findSection(body, /^##\s*(?:场景总览|scenario overview)/i)
   const emptyReport = (): ConsistencyReport => ({
     ok: false,
     findings,
@@ -693,7 +734,7 @@ export function checkChecklistConsistency(input: { body: string; comments: Check
   }
 
   // 发布计数：正文「## 发布前对账」与收口评论里的「通过 N / 失败 M / 豁免 K」都要等于总览表导出的值。
-  const reconcile = findSection(body, /^##\s*发布前对账/)
+  const reconcile = findSection(body, /^##\s*(?:发布前对账|pre-release reconciliation)/i)
   const countSources: CountSource[] = []
   if (reconcile) {
     countSources.push({
