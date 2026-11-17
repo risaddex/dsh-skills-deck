@@ -2,9 +2,13 @@
 //
 // Why this gate exists: the room cannot import the host, so the account it acts as arrives through
 // `ctx.accounts.resolve(alias)`, and the alias itself comes from the repository's own declaration.
-// Five things would fail silently if that drifted, and each is pinned here:
+// Six things would fail silently if that drifted, and each is pinned here:
 //   S1  no seam means an environment gap that names the slot, and no request goes out;
-//   S2  a resolved account is exactly what the request goes out as, resolved once per backend instance;
+//   S2  a resolved account is exactly what the request goes out as, and it is resolved again on every
+//       operation: the registry reuses one tracker instance for every workspace, so a result remembered
+//       on the instance would hand the second workspace the first one's credentials;
+//   S2b one instance driven against two workspaces whose declarations name different accounts — each
+//       workspace sends its own credentials, which is the shape the registry actually builds;
 //   S3  a refused resolution keeps the account status it was given, translated to the room's kind;
 //   S4  the alias comes from `docs/agents/issue-tracker.md`, and `matches` answers from it alone —
 //       an unconfigured Linear workspace is claimed so the person is sent to sign in;
@@ -83,6 +87,43 @@ async function main(): Promise<void> {
     check(calls[0] && calls[0].url === 'https://api.linear.app/graphql', 'the request goes to the resolved endpoint', calls[0] ? calls[0].url : '(none)')
     const second: any = await backend.get(handle, 'ENG-1', {}, ctx as any)
     check(second.ok === true && resolutions === 2, 'each operation resolves the account for itself, so no workspace reuses another one', String(resolutions))
+  }
+
+  console.log('S2b one instance serves two workspaces with their own accounts')
+  {
+    // This is the shape the registry really builds: `createRegistry` makes one tracker per module and
+    // reuses it for every workspace. Two declarations, one instance — the second workspace must not
+    // send the first one's credentials.
+    const calls: any[] = []
+    const asked: string[] = []
+    const docFor = (cwd: string): string => '# Issue tracker: linear\n\nalias: ' + (cwd.indexOf('/repo/b') === 0 ? 'second' : 'first') + '\nteam: ENG\n'
+    const ctx = {
+      http: {
+        async request(req: any) {
+          calls.push(req)
+          return { status: 200, headers: { forEach() {} }, body: JSON.stringify({ data: { issue: { identifier: 'ENG-1', title: 'A ticket' } } }) }
+        },
+      },
+      fs: {
+        async resolve(rel: string, opts?: any) { return String((opts && opts.cwd) || '') + '/' + rel },
+        async readText(path: string) { return docFor(String(path).replace('/docs/agents/issue-tracker.md', '')) },
+      },
+      cwd: '/repo',
+      logEvent: () => {},
+      isEnabled: () => false,
+      accounts: {
+        resolve: async (alias: string): Promise<AccountSeamResult> => {
+          asked.push(alias)
+          return { ok: true, alias: alias, authorization: 'Bearer ' + alias, endpoint: 'https://api.linear.app/graphql' }
+        },
+      },
+    } as unknown as BackendContext
+    const backend = createLinearBackend(ctx)
+    const readA: any = await backend.get(handle, 'ENG-1', {}, Object.assign({}, ctx, { cwd: '/repo/a' }) as any)
+    const readB: any = await backend.get(handle, 'ENG-1', {}, Object.assign({}, ctx, { cwd: '/repo/b' }) as any)
+    check(readA.ok === true && readB.ok === true, 'both workspaces read through', String(readA.ok) + '/' + String(readB.ok))
+    check(asked.length === 2 && asked[0] === 'first' && asked[1] === 'second', 'each workspace asks for the account its own declaration names', asked.join(','))
+    check(calls.length === 2 && calls[1].headers.Authorization === 'Bearer second', 'the second workspace does not send the first one\'s credentials', calls[1] ? String(calls[1].headers.Authorization) : '(none)')
   }
 
   console.log('S3 a refused resolution keeps the status it was given')

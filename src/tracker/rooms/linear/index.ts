@@ -24,6 +24,7 @@ import type { BackendModule } from '../../contract/backend-module.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import type { LinearAccount } from './client.js'
 import { getIssue, listIssues } from './read.js'
+import { commentOnIssue, updateIssue, setIssueStateType } from './write.js'
 import { preflightLinear } from './preflight.js'
 import { failLinear } from './errors.js'
 import { readBinding } from './binding.js'
@@ -33,6 +34,7 @@ export { gql } from './client.js'
 export { issueOf, stateOf, issueTypeOf } from './normalize.js'
 export { preflightLinear, readIdentity } from './preflight.js'
 export { getIssue, listIssues, buildIssuesFilter, unsupportedFilters } from './read.js'
+export { commentOnIssue, updateIssue, setIssueStateType } from './write.js'
 export { parseBinding, readBinding, BINDING_PATH } from './binding.js'
 
 /** 契约的账号缝回包 → 这一层要的那三格；缺 authorization 就当没解出来。 */
@@ -97,6 +99,34 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
       return listIssues(opCtx || (ctx as never), got.account, filter)
+    },
+    comment: async (_repo, key, body, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return commentOnIssue(opCtx || (ctx as never), got.account, key, body)
+    },
+    update: async (_repo, key, patch, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return updateIssue(opCtx || (ctx as never), got.account, key, patch)
+    },
+    close: async (_repo, key, opts, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      const requestCtx = opCtx || (ctx as never)
+      // 契约要求关闭原因被记下来。Linear 的状态改动不存原因，所以先把原因写成一条评论；
+      // 评论写不成就不关 —— 关掉却不留原因，等于把调用方给的解释丢了。
+      const reason = String(((opts || {}) as { reason?: string }).reason || '').trim()
+      if (reason) {
+        const noted = await commentOnIssue(requestCtx, got.account, key, reason)
+        if (!noted.ok) return { ok: false, error: noted.error }
+      }
+      return setIssueStateType(requestCtx, got.account, key, 'completed')
+    },
+    reopen: async (_repo, key, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return setIssueStateType(opCtx || (ctx as never), got.account, key, 'unstarted')
     },
   }
 }
