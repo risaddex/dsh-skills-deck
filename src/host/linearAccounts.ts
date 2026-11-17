@@ -245,7 +245,12 @@ export function createLinearAccountSeam(deps: LinearSeamDeps): AccountSeam {
       const cacheKey = wanted + ':' + token
       if (deps.http && !probeCache.has(cacheKey)) {
         const probed = await probeThroughChannel(deps.http, wanted, String(resolved.authorization || ''), chosen)
-        if (!probed.ok) return { ok: false, status: 'identity_mismatch', message: String(probed.message || 'the identity probe failed').slice(0, 200) }
+        if (!probed.ok) {
+          // 探活失败对人是三种不同的下一步：组织对不上要去改这本账配的 token，token 不再被承认要去
+          // 重新登录，其余（网络、上游）等一等再试。一律报成「组织不对」会把人指去做没用的事。
+          const status = probed.status === 'needs_auth' || probed.status === 'identity_mismatch' ? probed.status : 'error'
+          return { ok: false, status: status, message: String(probed.message || 'the identity probe failed').slice(0, 220) }
+        }
         probeCache.set(cacheKey, true)
       }
       return { ok: true, alias: String(resolved.alias || wanted), authorization: String(resolved.authorization || ''), endpoint: LINEAR_GRAPHQL_ENDPOINT }
@@ -256,8 +261,13 @@ export function createLinearAccountSeam(deps: LinearSeamDeps): AccountSeam {
 /** 探活依赖：平台（家目录/环境）、宿主上下文（凭据面）、以及走名额闸的 HTTP 通道。 */
 export interface LinearSeamDeps { ctx: any; getPlatform?: () => Promise<any>; http?: any }
 
-/** 经房间同一条 HTTP 通道探一次身份（bucket=probe）：不走全局 fetch，也不额外记账。 */
-async function probeThroughChannel(http: any, alias: string, authorization: string, account?: any): Promise<{ ok: true } | { ok: false; message: string }> {
+/**
+ * 经房间同一条 HTTP 通道探一次身份（bucket=probe）：不走全局 fetch，也不额外记账。
+ *
+ * 失败要带上「这是哪一档」，因为调用方会把它翻成账号状态给人看：401/403 是 token 不再被承认
+ * （去重新登录），组织对不上是这本账配错了 token（去改账），其余是网络或上游（等一等再试）。
+ */
+async function probeThroughChannel(http: any, alias: string, authorization: string, account?: any): Promise<{ ok: true } | { ok: false; status: string; message: string }> {
   try {
     const response = await http.request({
       method: 'POST',
@@ -267,18 +277,21 @@ async function probeThroughChannel(http: any, alias: string, authorization: stri
       bucket: 'probe',
       service: 'linear',
     })
-    if (response.status < 200 || response.status >= 300) return { ok: false, message: 'the identity probe answered HTTP ' + response.status }
+    if (response.status < 200 || response.status >= 300) {
+      const refused = response.status === 401 || response.status === 403
+      return { ok: false, status: refused ? 'needs_auth' : 'error', message: 'the identity probe answered HTTP ' + response.status }
+    }
     const payload: any = JSON.parse(String(response.body || '{}'))
-    if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) return { ok: false, message: 'the identity probe was refused: ' + String(payload.errors[0] && payload.errors[0].message || 'unknown reason').slice(0, 160) }
-    if (!payload || !payload.data || !payload.data.viewer) return { ok: false, message: 'the identity probe answered without a viewer (' + alias + ')' }
+    if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) return { ok: false, status: 'error', message: 'the identity probe was refused: ' + String(payload.errors[0] && payload.errors[0].message || 'unknown reason').slice(0, 160) }
+    if (!payload || !payload.data || !payload.data.viewer) return { ok: false, status: 'needs_auth', message: 'the identity probe answered without a viewer (' + alias + ')' }
     // 只看「有没有 viewer」不够：钉住组织 A 的账如果配了组织 B 的 token，那本票会被当成 A 的票读回来。
     // 所以按共享解析层同一套判定：先解出身份，再比对账号钉住的组织（与 resolveLinearAccount 内部同源）。
     const parsed: any = parseLinearIdentity(payload)
-    if (!parsed || parsed.ok !== true) return { ok: false, message: 'the identity probe answered with something that is not an identity (' + alias + ')' }
+    if (!parsed || parsed.ok !== true) return { ok: false, status: parsed && parsed.reason === 'needs_auth' ? 'needs_auth' : 'error', message: 'the identity probe answered with something that is not an identity (' + alias + ')' }
     const pinned: any = account ? checkLinearIdentity(account, parsed.identity) : { ok: true }
-    if (pinned && pinned.ok !== true) return { ok: false, message: String(pinned.message || 'the token belongs to another organization than the account pins').slice(0, 180) }
+    if (pinned && pinned.ok !== true) return { ok: false, status: 'identity_mismatch', message: String(pinned.message || 'the token belongs to another organization than the account pins').slice(0, 180) }
     return { ok: true }
   } catch (e: any) {
-    return { ok: false, message: 'the identity probe could not be sent: ' + String((e && e.message) || e).slice(0, 160) }
+    return { ok: false, status: 'error', message: 'the identity probe could not be sent: ' + String((e && e.message) || e).slice(0, 160) }
   }
 }
