@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T18:00:02.335Z",
+  "generatedAt": "2026-11-17T18:18:11.397Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 620,
   "gateCount": 620,
@@ -10,7 +10,7 @@
   "completionRecordedGates": 145,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 989,
+  "graphFileCount": 990,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -7386,16 +7386,18 @@
       "file": "tests/verify-19-linear-account-seam.ts",
       "guards": [
         "src/host/linearAccountSeam.ts",
-        "src/host/linearAccounts.ts"
+        "src/host/linearAccounts.ts",
+        "src/host/platform/linearAccountSeam.ts"
       ],
       "dirs": [
-        "src/host"
+        "src/host",
+        "src/host/platform"
       ],
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 2 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 3 条"
     },
     {
       "step": "node tests/verify-19-linear-protocol.ts",
@@ -15637,6 +15639,7 @@
       "node tests/verify-visible-truth.ts"
     ],
     "src/host/platform": [
+      "node tests/verify-19-linear-account-seam.ts",
       "node tests/verify-24-http-channel.ts",
       "node tests/verify-497-slash.ts",
       "node tests/verify-gh-gateway.ts",
@@ -17002,9 +17005,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1012,
+    "fileCount": 1013,
     "dirCount": 106,
-    "coveredFileCount": 1012,
+    "coveredFileCount": 1013,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 82,
@@ -17413,6 +17416,7 @@
       "src/host/platform/darwin/index.ts",
       "src/host/platform/httpChannel.ts",
       "src/host/platform/index.ts",
+      "src/host/platform/linearAccountSeam.ts",
       "src/host/platform/linux/index.ts",
       "src/host/platform/namingSummary.ts",
       "src/host/platform/namingSummaryText.ts",

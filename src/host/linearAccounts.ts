@@ -23,7 +23,6 @@ import { LINEAR_ACCOUNTS_REL_SEGMENTS } from '../shared/config-store/src/linear-
 // 时间参数只有一处真源：config/timeouts.yaml 的 linearProbeMs，由构建期生成的 values.ts 带进来。
 import { LINEAR_PROBE_TIMEOUT_MS } from '../shared/time-config/src/values.js'
 import type { LinearAccountInput, LinearResolution, LinearCredentialRecord } from '../shared/linear-accounts/src/resolve.js'
-import type { AccountSeam, AccountSeamResult } from '../tracker/contract/accounts.js'
 
 /** Read the accounts file from this path instead of the default one (CI, tests, an administrator with one shared file). */
 export const LINEAR_ACCOUNTS_REGISTRY_ENV = 'DSH_DECK_LINEAR_REGISTRY'
@@ -199,75 +198,8 @@ export async function writeLinearAccounts(value: any, homeDir: any, io: any, ove
  *   3. **过边界的是可直接用的 Authorization，不是 token 本身**；失败用账号状态说
  *      （`needs_auth` / `identity_mismatch` / `error` / `unconfigured`），下一步动作按这四档分。
  */
-export function createLinearAccountSeam(deps: LinearSeamDeps): AccountSeam {
-  const ctx = deps.ctx
-  const probeCache = new Map<string, true>()
-  const io = {
-    async readText(p: string): Promise<string> {
-      const fsp: any = (globalThis as any).process && (globalThis as any).process.getBuiltinModule ? (globalThis as any).process.getBuiltinModule('node:fs/promises') : null
-      if (!fsp) throw new Error('no filesystem in this runtime')
-      return fsp.readFile(String(p), 'utf8')
-    },
-    async writeText(p: string, text: string): Promise<void> {
-      const fsp: any = (globalThis as any).process && (globalThis as any).process.getBuiltinModule ? (globalThis as any).process.getBuiltinModule('node:fs/promises') : null
-      if (!fsp) throw new Error('no filesystem in this runtime')
-      await fsp.writeFile(String(p), String(text), 'utf8')
-    },
-  }
-  return {
-    resolve: async function (alias: string, signal?: AbortSignal): Promise<AccountSeamResult> {
-      const wanted = String(alias || '').trim()
-      if (!wanted) return { ok: false, status: 'unconfigured', message: 'the binding names no Linear account alias' }
-      const pl: any = typeof deps.getPlatform === 'function' ? await deps.getPlatform().catch(() => null) : null
-      if (!pl || typeof pl.getHome !== 'function') return { ok: false, status: 'error', message: 'this composition cannot reach the platform, so the Linear account file cannot be located' }
-      let home = ''
-      try { home = String((await pl.getHome()) || '') } catch { home = '' }
-      if (!home) return { ok: false, status: 'error', message: 'this composition cannot read the home directory, so the Linear account file cannot be located' }
-      const env = function (name: string): string | undefined { try { return pl.env && typeof pl.env.get === 'function' ? pl.env.get(name) : undefined } catch { return undefined } }
-      const read: any = await readLinearAccounts(home, io, linearRegistryPath(env))
-      if (read.ok !== true) {
-        return read.reason === 'missing'
-          ? { ok: false, status: 'unconfigured', message: 'this machine has no Linear account configured (' + String(read.message || '').slice(0, 160) + ')' }
-          : { ok: false, status: 'error', message: String(read.message || read.reason || 'the Linear account document could not be read').slice(0, 200) }
-      }
-      const doc: any = read.value
-      const list: any[] = (doc && Array.isArray(doc.accounts) ? doc.accounts : []).filter((a: any) => a && typeof a.alias === 'string' && a.alias)
-      const chosen = list.find((a: any) => a.alias === wanted)
-      if (!chosen) return { ok: false, status: 'unconfigured', message: 'the Linear account document has no account called ' + wanted }
-      const probe = false
-      const resolved: any = await resolveLinearAccountWithHost(ctx, chosen, { env, probe })
-      if (!resolved || resolved.status !== 'ok') {
-        const status = resolved && resolved.status === 'needs_auth' ? 'needs_auth' : (resolved && resolved.status === 'identity_mismatch' ? 'identity_mismatch' : 'error')
-        return { ok: false, status: status, message: String((resolved && resolved.message) || 'the Linear account could not be resolved').slice(0, 300) }
-      }
-      if (signal && signal.aborted) return { ok: false, status: 'error', message: 'the caller gave up before the Linear account was resolved' }
-      const token = String(resolved.token || '')
-      const cacheKey = wanted + ':' + token
-      if (deps.http && !probeCache.has(cacheKey)) {
-        const probed = await probeThroughChannel(deps.http, wanted, String(resolved.authorization || ''), chosen)
-        if (!probed.ok) {
-          // 探活失败对人是三种不同的下一步：组织对不上要去改这本账配的 token，token 不再被承认要去
-          // 重新登录，其余（网络、上游）等一等再试。一律报成「组织不对」会把人指去做没用的事。
-          const status = probed.status === 'needs_auth' || probed.status === 'identity_mismatch' ? probed.status : 'error'
-          return { ok: false, status: status, message: String(probed.message || 'the identity probe failed').slice(0, 220) }
-        }
-        probeCache.set(cacheKey, true)
-      }
-      return { ok: true, alias: String(resolved.alias || wanted), authorization: String(resolved.authorization || ''), endpoint: LINEAR_GRAPHQL_ENDPOINT }
-    },
-  }
-}
 
-/** 探活依赖：平台（家目录/环境）、宿主上下文（凭据面）、以及走名额闸的 HTTP 通道。 */
-export interface LinearSeamDeps { ctx: any; getPlatform?: () => Promise<any>; http?: any }
-
-/**
- * 经房间同一条 HTTP 通道探一次身份（bucket=probe）：不走全局 fetch，也不额外记账。
- *
- * 失败要带上「这是哪一档」，因为调用方会把它翻成账号状态给人看：401/403 是 token 不再被承认
- * （去重新登录），组织对不上是这本账配错了 token（去改账），其余是网络或上游（等一等再试）。
- */
-async function probeThroughChannel(http: any, alias: string, authorization: string, account?: any): Promise<{ ok: true } | { ok: false; status: string; message: string }> {
+export async function probeThroughChannel(http: any, alias: string, authorization: string, account?: any): Promise<{ ok: true } | { ok: false; status: string; message: string }> {
   try {
     const response = await http.request({
       method: 'POST',
