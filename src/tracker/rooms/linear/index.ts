@@ -24,6 +24,7 @@ import type { BackendModule } from '../../contract/backend-module.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import type { LinearAccount } from './client.js'
 import { getIssue, listIssues } from './read.js'
+import { listAccountIssues, getAccountIssue, listConfiguredAccounts } from './account-read.js'
 import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 import { setLabelsOfIssue } from './labels.js'
 import { setAssigneesOfIssue } from './assignees.js'
@@ -94,16 +95,21 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
   return {
     id: 'linear',
     preflight: async (_handle, opCtx) => {
-      const got = await using(opCtx || (ctx as never))
-      if (!got.ok) return { ok: false, error: got.error } as never
-      return preflightLinear(opCtx || (ctx as never), got.account) as never
+      const requestCtx = opCtx || (ctx as never)
+      const configured = await listConfiguredAccounts(requestCtx)
+      const metadata = configured.ok ? { accounts: configured.data } : { accountsError: configured.error }
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error, ...metadata }
+      return { ...await preflightLinear(requestCtx, got.account), ...metadata }
     },
     get: async (_repo, key, opts, opCtx) => {
+      if (opts?.account !== undefined) return getAccountIssue(opCtx || (ctx as never), key, opts)
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
       return getIssue(opCtx || (ctx as never), got.account, key, opts)
     },
     list: async (_repo, filter, opCtx) => {
+      if (filter?.account !== undefined || filter?.scope !== undefined) return listAccountIssues(opCtx || (ctx as never), filter)
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
       return listIssues(opCtx || (ctx as never), got.account, filter)

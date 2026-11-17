@@ -27,6 +27,10 @@ import type { CustomField, Milestone } from './entities.js'
  * 前者明确要「根票」，后者是「全部」（含子票）。
  */
 export interface ListFilter {
+  /** 按账号读票；星号表示当前项目可达的账号，省略时仍读绑定后端。 */
+  account?: string
+  /** 账号读面的个人指派或待评审范围；省略时不额外收窄。 */
+  scope?: 'assigned' | 'review'
   /** 只要某一类（票或地图）。 */
   type?: IssueType
   /**
@@ -58,6 +62,8 @@ export interface ListFilter {
 
 /** 读单票的选项（今天只有评论分页一项）。 */
 export interface GetOpts {
+  /** 显式账号别名；工具从 alias:IDENTIFIER 中拆出，不接受星号。 */
+  account?: string
   /** 评论分页：要前几条、从哪个游标之后开始。first 为 0 表示一条评论正文都不要（只拿总数，能给就给）。 */
   comments?: { first: number; after?: string }
 }

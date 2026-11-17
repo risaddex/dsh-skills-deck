@@ -5,6 +5,7 @@ import type { OpContext, RepoHandle } from '../../contract/contexts.js'
 import type { Actor } from '../../contract/identity.js'
 import type { OpResult, PreflightResult, Counts, PageResult, Dependencies, RepoPermissions, SubIssueList, LabelColorsFilePlacement, LabelColorBatchResult, MapListResult } from '../../contract/results.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
+import { refuseAccountRead } from '../../kernel/account-read-refusal.js'
 import { readTextFile, exists } from './read.js'
 // #1572：认领与判定层共用同一套声明解析器（GitLab 房 #1555 已是这条口径），避免同一个文件两处各答一套。
 import { normalizeTrackerText, parseIssueTracker } from '../../kernel/issue-tracker-declaration.js'
@@ -278,7 +279,7 @@ export function createMarkdownBackend(ctx: OpContext) {
         return failAs(kind,(e&&caught.message?caught.message:String(e)) as string,e) as PreflightResult
       }
     },
-    list:(repo,filter,opCtx)=>asOpResult<Issue[]>(listIssues(opCtx||ctx,repo,filter)),
+    list:async(repo,filter,opCtx)=>refuseAccountRead(filter)||asOpResult<Issue[]>(listIssues(opCtx||ctx,repo,filter)),
     // #691：本地 Markdown 补上契约的 counts（数「列举会返回的那些票行」，地图容器行分开算）。
     // 语义见 tracker/contract.js 的「计数契约」；本后端数的口径见 counts.js 顶部注释。
     counts:(repo,filter,opCtx)=>asOpResult<Counts>(countIssues(opCtx||ctx,repo,filter)),
@@ -292,7 +293,7 @@ export function createMarkdownBackend(ctx: OpContext) {
     //   因为 00 这个编号在每个工作单元里都重复。宿主首屏靠它把「做完了已经关掉」的子票补回来，
     //   进度环的分母才数得全。
     listSubIssues:(repo,mapKey,opts,opCtx)=>asOpResult<SubIssueList>(listSubIssues(opCtx||ctx,repo,mapKey,opts)),
-    get:(repo,key,opts,opCtx)=>asOpResult<Issue>(getIssue(opCtx||ctx,repo,key,opts)),
+    get:async(repo,key,opts,opCtx)=>refuseAccountRead(opts)||asOpResult<Issue>(getIssue(opCtx||ctx,repo,key,opts)),
     getDependencies:(repo,key,opts,opCtx)=>asOpResult<Dependencies>(getDependenciesForKey(opCtx||ctx,repo,key,opts)),
     create:(repo,input,opCtx)=>asOpResult<Issue>(createIssue(opCtx||ctx,repo,input)),
     close:(repo,key,opts,opCtx)=>asOpResult<Issue>(closeIssue(opCtx||ctx,repo,key,opts)),

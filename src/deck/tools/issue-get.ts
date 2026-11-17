@@ -100,7 +100,7 @@ export const definition = {
   parameters: {
     type: 'object',
     properties: {
-      key: { type: 'string', description: 'The ticket number, for example 713' },
+      key: { type: 'string', description: 'The ticket number, for example 713; alias:ENG-123 explicitly selects a Linear account reachable from this project. A bare key keeps the bound backend. Account-qualified reads do not fetch comments or reverse dependencies.' },
       body: { type: 'string', description: 'How the body comes back: excerpt returns only the first 2000 characters (the default, to save context); full returns the whole body in chunks (a large body is not cut, and the digest lets you verify it is complete). The body appears in exactly one place: data.body.text, data.body.chunks or data.section.text.' },
       comments: { type: 'number', description: 'How many comments to bring back at most; the default is 0, which returns only the total and none of the text; ask for the text when you need it, up to 200' },
       section: { type: 'string', description: 'Return only this section of the body (a substring of its ## heading); when omitted, the first 2000 characters of the body come back' },
@@ -173,6 +173,7 @@ function issueBrief(issue: Record<string, unknown> | null | undefined) {
   if (!issue || typeof issue !== 'object') return null
   return {
     key: issue.key, title: issue.title, state: issue.state, type: issue.type,
+    ...(typeof issue.account === 'string' ? { account: issue.account } : {}),
     labels: Array.isArray(issue.labels) ? issue.labels.map((l) => (l && l.name) || String(l)) : [],
     assignees: assigneeNames(issue.assignees),
     updatedAt: issue.updatedAt || '', closedAt: issue.closedAt || '', url: issue.url || '',
@@ -245,7 +246,11 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
     // 预算起算点：入口前耗时（会话归一、选后端、探沙箱）也要算进预算（#1195）。
     const toolEntryAt = (typeof d.now === 'function') ? d.now() : Date.now()
     const a: Record<string, unknown> = args || {}
-    const key = String(a.key === undefined || a.key === null ? '' : a.key).trim()
+    const requestedKey = String(a.key === undefined || a.key === null ? '' : a.key).trim()
+    // 只拆 Linear 的显式票号形状；本地 effort:01 等已有键不能被当成账号。
+    const qualified = /^([a-z][a-z0-9-]*):([A-Za-z][A-Za-z0-9_]*-\d+)$/.exec(requestedKey)
+    const account = qualified ? qualified[1] : ''
+    const key = qualified ? qualified[2] : requestedKey
     const est = shell.estimateFor('deck_issue_get', a)
     const s = await sessionContextOfAsync(exec, { canonicalKey: d.canonicalKey, workspaceKeyOf: d.workspaceKeyOf })
     // 会话没解析出来时回的是「为什么」那一支。编译器分不出两支（ok 在会话壳里是运行时布尔，
@@ -288,11 +293,11 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       }
       // 两条查询一起发出去（#1610）：读票与读阻塞边各是一次远端调用，串行等于把两次等待相加，
       // 并发之后只等较长的那一条，发出去的请求数一条不少。
-      const gotP = t.get(repo, key, { comments: { first: first } }, opCtx)
+      const gotP = t.get(repo, key, { comments: { first: first }, ...(account ? { account } : {}) }, opCtx)
       // 依赖查询先挂上失败兜底：读票先失败的话整次读会提前返回，这一条的拒绝没人接手就成未处理拒绝。
       // depSettled 记「这条已经落地」：超时回执只等已落地的那半份，不为它再等第二段 90 秒（#1831）。
       let depSettled = false
-      const depP = (wantBlocking && typeof t.getDependencies === 'function')
+      const depP = (wantBlocking && !account && typeof t.getDependencies === 'function')
         ? t.getDependencies(repo, key, {}, opCtx).then(function (v: OpOutcome): OpOutcome {
           depSettled = true
           return v
@@ -391,6 +396,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       const rel = relationsOf(issue, dependencies)
       if (!wantBlocking) rel.blocking = []
       const notes = []
+      if (account) notes.push('Account-qualified read: reverse dependencies were not queried because that operation cannot select an account; empty relation arrays do not confirm that no edges exist.')
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId))
       if (!wantBlocking) notes.push('The reverse blocking edges were not fetched this time (blocking=false, one reverse-edge query skipped): the empty blocks entry above does not mean 0, so call again with blocking=true if you need them.')
       if (dep && dep.ok !== true) notes.push('The blocking edges were not read this time (' + (depTimeout ? 'the blocking-edge query timed out: ' + depTimeout.slice(0, 200) : 'the backend said: ' + String((dep.error && dep.error.message) || '').slice(0, 200)) + '): only the ones the ticket carries itself are listed above.')
@@ -433,8 +439,8 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
       const stateText = String(issue.state || 'unknown state')
       const closedText = issue.closedAt ? ' (closed on ' + String(issue.closedAt).slice(0, 10) + ')' : ''
       // 反向边不全时，条数后面跟一句「可能不全」：数字本身照给（已经看到的那些是真的），但别让读者当成全量。
-      const blockingText = wantBlocking
-        ? ('blocks ' + rel.blocking.length + (dependencies && dependencies.blockingComplete === false ? ' (possibly incomplete, see the notes).' : '.'))
+      const blockingText = account ? 'blocks not fetched (account-qualified read).'
+        : wantBlocking ? ('blocks ' + rel.blocking.length + (dependencies && dependencies.blockingComplete === false ? ' (possibly incomplete, see the notes).' : '.'))
         : 'blocks not fetched (blocking=false).'
       const brief = issueBrief(issue)
       // #1828：正文只装一处。只读某一节时 data.body 只报档位、全文长度与指纹，节原文放 data.section.text；
@@ -458,6 +464,7 @@ export function createDeckIssueGet(deps?: DeckIssueGetDeps) {
             commentCount: commentTotal,
             section: sectionPayload,
             relations: rel,
+            ...(account ? { relationsComplete: false, commentsComplete: false, qualifiedKey: requestedKey } : {}),
             landings: {
               // 读路径只知道「契约的字段里有这条关系」，分不出原生层级与平级链接，如实降一档（判据见 shell.js）。
               parent: rel.parentKey ? EDGE_LANDING.CONTRACT_PARENT_FIELD : EDGE_LANDING.UNKNOWN,

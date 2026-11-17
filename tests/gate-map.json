@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T17:43:26.812Z",
+  "generatedAt": "2026-11-17T18:56:55.292Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 620,
-  "gateCount": 620,
-  "attributedGates": 561,
+  "chainLength": 623,
+  "gateCount": 623,
+  "attributedGates": 564,
   "unattributedGates": 59,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 145,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 990,
+  "graphFileCount": 992,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -2667,6 +2667,70 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-14-account-refusal.ts",
+      "file": "tests/verify-14-account-refusal.ts",
+      "guards": [
+        "src/tracker/kernel/account-read-refusal.ts",
+        "src/tracker/rooms/github/room/backend.ts",
+        "src/tracker/rooms/gitlab/index.ts",
+        "src/tracker/rooms/markdown/index.ts"
+      ],
+      "dirs": [
+        "src/tracker/kernel",
+        "src/tracker/rooms/github/room",
+        "src/tracker/rooms/gitlab",
+        "src/tracker/rooms/markdown"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
+    },
+    {
+      "step": "node tests/verify-14-deck-account-tools.ts",
+      "file": "tests/verify-14-deck-account-tools.ts",
+      "guards": [
+        "src/deck/tools/context.ts",
+        "src/deck/tools/issue-get.ts",
+        "src/deck/tools/issue-list.ts",
+        "src/refresh/rooms/host/quota-ledger.ts",
+        "src/refresh/rooms/host/refresh-gate.ts",
+        "src/tracker/registry/core.ts",
+        "tests/lib/deck-decide-stub.ts"
+      ],
+      "dirs": [
+        "src/deck/tools",
+        "src/refresh/rooms/host",
+        "src/tracker/registry",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 7 条"
+    },
+    {
+      "step": "node tests/verify-14-linear-account-read.ts",
+      "file": "tests/verify-14-linear-account-read.ts",
+      "guards": [
+        "src/tracker/contract/accounts.ts",
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/rooms/linear/account-read.ts",
+        "src/tracker/rooms/linear/index.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
     },
     {
       "step": "node tests/verify-1403-kind-two-layer.ts",
@@ -15463,6 +15527,7 @@
       "node tests/verify-1245-plan-resume.ts",
       "node tests/verify-1298-spec-close.ts",
       "node tests/verify-1385-howto.ts",
+      "node tests/verify-14-deck-account-tools.ts",
       "node tests/verify-1403-kind-two-layer.ts",
       "node tests/verify-1409-suggest-stream.ts",
       "node tests/verify-1413-map-plan-two-layer.ts",
@@ -15860,6 +15925,7 @@
       "node tests/verify-1363-first-run-recovery.ts",
       "node tests/verify-1373-stale-table-graft.ts",
       "node tests/verify-1392-disposed-timer.ts",
+      "node tests/verify-14-deck-account-tools.ts",
       "node tests/verify-1418-probe-cost-and-failure.ts",
       "node tests/verify-1431-snapshot-refresh-parity.ts",
       "node tests/verify-1433-snapshot-layout-file.ts",
@@ -16224,6 +16290,7 @@
       "node tests/verify-13-linear-relations.ts",
       "node tests/verify-13-linear-room.ts",
       "node tests/verify-13-linear-write.ts",
+      "node tests/verify-14-linear-account-read.ts",
       "node tests/verify-1444-list-detail-thin.ts",
       "node tests/verify-1676-blocked-ref-unknown.ts",
       "node tests/verify-1765-read-channel-plan.ts",
@@ -16281,6 +16348,7 @@
       "node tests/verify-1286-detail.ts",
       "node tests/verify-1286-list.ts",
       "node tests/verify-1302-panel-list-skeleton.ts",
+      "node tests/verify-14-account-refusal.ts",
       "node tests/verify-1431-snapshot-refresh-parity.ts",
       "node tests/verify-1475-predicate-budget.ts",
       "node tests/verify-1482-graphql-accounting.ts",
@@ -16311,6 +16379,7 @@
       "node tests/verify-1092-original-words-roundtrip.ts",
       "node tests/verify-1144-markdown-issue-address.ts",
       "node tests/verify-1150-plan-store-durable.ts",
+      "node tests/verify-14-deck-account-tools.ts",
       "node tests/verify-1442-tracker-tools.ts",
       "node tests/verify-1447-gitlab-e2e.ts",
       "node tests/verify-1495-deck-close-reason.ts",
@@ -16420,6 +16489,7 @@
       "node tests/verify-deck-slots.ts",
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-1223-catalog-runtime-parity.ts",
+      "node tests/verify-14-account-refusal.ts",
       "node tests/verify-1443-github-readbudget.ts",
       "node tests/verify-1799-input-stage.ts",
       "node tests/verify-663-gh-install-inject.ts",
@@ -16489,6 +16559,7 @@
       "node tests/verify-1130-gitlab-marker-read.ts",
       "node tests/verify-1179-gitlab-endpoint-coverage.ts",
       "node tests/verify-1187-gitlab-chain-predicates.ts",
+      "node tests/verify-14-account-refusal.ts",
       "node tests/verify-1446-gitlab-budget.ts",
       "node tests/verify-1446-static-gate.ts",
       "node tests/verify-1447-gitlab-e2e.ts",
@@ -16541,6 +16612,7 @@
       "node tests/verify-13-linear-relations.ts",
       "node tests/verify-13-linear-room.ts",
       "node tests/verify-13-linear-write.ts",
+      "node tests/verify-14-linear-account-read.ts",
       "node tests/verify-27-account-seam.ts",
       "node tests/verify-33-linear-create.ts"
     ],
@@ -16561,6 +16633,7 @@
       "node tests/verify-1182-ticket-file-publish.ts",
       "node tests/verify-1199-row-closed-link.ts",
       "node tests/verify-1277-md-spec-container.ts",
+      "node tests/verify-14-account-refusal.ts",
       "node tests/verify-1403-kind-two-layer.ts",
       "node tests/verify-1442-tracker-tools.ts",
       "node tests/verify-1446-static-gate.ts",
@@ -16826,6 +16899,7 @@
       "node tests/verify-1286-list.ts",
       "node tests/verify-1297-entry.ts",
       "node tests/verify-1302-panel-list-skeleton.ts",
+      "node tests/verify-14-deck-account-tools.ts",
       "node tests/verify-1409-suggest-stream.ts",
       "node tests/verify-1411-suggest-appearance.ts",
       "node tests/verify-1411-suggest-bubble.ts",
@@ -17004,9 +17078,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1013,
+    "fileCount": 1015,
     "dirCount": 106,
-    "coveredFileCount": 1013,
+    "coveredFileCount": 1015,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 82,
@@ -17784,6 +17858,7 @@
       "src/tracker/fix-contract.ts",
       "src/tracker/index.ts",
       "src/tracker/kernel/README.md",
+      "src/tracker/kernel/account-read-refusal.ts",
       "src/tracker/kernel/error-rules.ts",
       "src/tracker/kernel/git-remote.ts",
       "src/tracker/kernel/grouping.ts",
@@ -17901,6 +17976,7 @@
       "src/tracker/rooms/gitlab/support/capability-register.ts",
       "src/tracker/rooms/gitlab/support/read-log.ts",
       "src/tracker/rooms/gitlab/support/read-sources.ts",
+      "src/tracker/rooms/linear/account-read.ts",
       "src/tracker/rooms/linear/anchor.ts",
       "src/tracker/rooms/linear/assignees.ts",
       "src/tracker/rooms/linear/binding.ts",

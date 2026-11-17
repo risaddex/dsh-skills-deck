@@ -99,5 +99,7 @@ export const PAGINATION = {
     // 计数要一页页走到 hasNextPage=false；最多翻 40 页（=1 万张）就如实回 unsupported，
     // 防远端异常时死翻 —— 计数宁可失败，也不给一个只是下界的数。
     countMaxPages: 40,
+    // 多账号读取共用一次工具预算；每本账最多五页，撞上限报告截断而非无限翻页。
+    accountListMaxPages: 5,
   },
 } as const
