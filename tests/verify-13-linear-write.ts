@@ -9,6 +9,7 @@
 //   W3  close reads the team's workflow states and writes the first `completed`; reopen the first
 //       `unstarted`; a team with no such state is refused rather than moved somewhere else.
 //   W4  a successful mutation returns the ticket through the same normalisation the reads use.
+//   W5  create resolves the team by key and sends the title and the body (labels, containers and the anchor: tests/verify-33-linear-create.ts).
 //
 // Usage: node --import ./scripts/ts-hook.mts tests/verify-13-linear-write.ts
 import type { OpContext } from '../src/tracker/contract/contexts.ts'
@@ -129,7 +130,7 @@ async function main(): Promise<void> {
     check(order, 'the comment is written before the state changes')
   }
 
-  console.log('W5 create resolves the team by key and refuses what it cannot configure')
+  console.log('W5 create resolves the team by key and sends the title and the body')
   {
     const { ctx, calls } = ctxAnswering([
       { teams: { nodes: [{ id: 'team-1', key: 'ENG', name: 'Engineering' }] } },
@@ -139,16 +140,12 @@ async function main(): Promise<void> {
     check(created.ok === true && created.data.key === 'ENG-123', 'creating returns the normalised ticket', created.ok ? created.data.key : JSON.stringify(created.error))
     const sent = calls[1] ? JSON.parse(calls[1].body).variables.input : {}
     check(sent.teamId === 'team-1' && sent.title === 'A new ticket' && sent.description === 'body', 'the mutation carries the team id, the title and the body', JSON.stringify(sent))
+    check(sent.labelIds === undefined, 'a create with no labels sends no labelIds', JSON.stringify(sent))
 
     const noTitle = ctxAnswering([{ teams: { nodes: [] } }])
     const blank = await createIssue(noTitle.ctx, ACCOUNT, { title: '   ' } as any, 'ENG')
     check(blank.ok === false && blank.error.kind === 'conflict', 'a ticket without a title is refused', blank.ok ? 'ok' : blank.error.kind)
     check(noTitle.calls.length === 0, 'and nothing is sent for it', String(noTitle.calls.length))
-
-    const withLabels = ctxAnswering([{ teams: { nodes: [] } }])
-    const half = await createIssue(withLabels.ctx, ACCOUNT, { title: 'x', labels: [{ name: 'bug' }] } as any, 'ENG')
-    check(half.ok === false && half.error.kind === 'unsupported', 'labels at creation are refused, not dropped', half.ok ? 'ok' : half.error.kind)
-    check(withLabels.calls.length === 0, 'and nothing is sent for it', String(withLabels.calls.length))
   }
 
   console.log('W6 a parent change is one field, and null means the root')
@@ -178,17 +175,6 @@ async function main(): Promise<void> {
     const unguarded = ctxAnswering([{ issueUpdate: { success: true, issue: ISSUE_NODE } }])
     await setParentOfIssue(unguarded.ctx, ACCOUNT, 'ENG-123', 'ENG-100')
     check(unguarded.calls.length === 1, 'no timestamp means no extra read', String(unguarded.calls.length))
-  }
-
-  console.log('W8 a container cannot be created while labels cannot be written')
-  {
-    const map = ctxAnswering([{ teams: { nodes: [{ id: 'team-1', key: 'ENG' }] } }])
-    const refusedMap = await createIssue(map.ctx, ACCOUNT, { title: 'A map', type: 'map' } as any, 'ENG')
-    check(refusedMap.ok === false && refusedMap.error.kind === 'unsupported', 'creating a map is refused, not downgraded to an issue', refusedMap.ok ? 'ok' : refusedMap.error.kind)
-    check(map.calls.length === 0, 'and nothing is sent for it', String(map.calls.length))
-    const spec = ctxAnswering([{ teams: { nodes: [{ id: 'team-1', key: 'ENG' }] } }])
-    const refusedSpec = await createIssue(spec.ctx, ACCOUNT, { title: 'A spec', type: 'spec' } as any, 'ENG')
-    check(refusedSpec.ok === false && refusedSpec.error.kind === 'unsupported', 'the same holds for a spec', refusedSpec.ok ? 'ok' : refusedSpec.error.kind)
   }
 
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')

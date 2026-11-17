@@ -59,7 +59,7 @@ const LABEL_CREATE = 'mutation DeckIssueLabelCreate($input: IssueLabelCreateInpu
 const TEAMS_BY_KEY = 'query DeckTeamsByKey($key: String!) { teams(filter: { key: { eq: $key } }) { nodes { id key name } } }'
 
 /** 调用方给的一条标签，归一成这里真正要用的三格。 */
-interface WantedLabel {
+export interface WantedLabel {
   /** 标签名，**原样**用：契约说名字原样读回，所以写也原样写，不折叠大小写、不去空白。 */
   name: string
   /** 建新标签时用的颜色，形如 `#EB5757`；空串表示调用方没给，建的时候整个省掉。 */
@@ -86,7 +86,7 @@ function hexColorOf(color: unknown): string {
  * 而调用方那张清单常常是「票上已有的 + 这次加的」拼起来的，重名是常态而不是错误。
  * 为什么名字不合规要整条拒绝而不是跳过：少贴一个标签而照样回「成功」，调用方只会以为已经贴上了。
  */
-function wantedLabelsOf(labels: LabelInput[]): OpResult<WantedLabel[]> {
+export function wantedLabelsOf(labels: LabelInput[]): OpResult<WantedLabel[]> {
   const list = Array.isArray(labels) ? labels : []
   const seen = new Set<string>()
   const wanted: WantedLabel[] = []
@@ -189,46 +189,16 @@ async function writeLabelIds(ctx: OpContext, account: LinearAccount, key: string
 }
 
 /**
- * 覆盖式改标签：`labels` 里有什么，票上就正好是什么（空数组清空全部）。
+ * 名字 → 标签 id（按调用方给的顺序），缺的建成本团队标签。
  *
- * `opts.expectedUpdatedAt` 是契约的乐观并发：给了就先读一次这张票的 `updatedAt`，对不上回
- * `conflict` 且**一个查询都不多花**、一个写都不发（与 `write.ts` 的 `setParentOfIssue` 同一份写法）。
- * 不比对就写，会把别人刚做的标签改动整组盖掉，还回「成功」。
- * `opts.status` 只给本地 Markdown 房用（那边状态存在标签里），Linear 的状态是 workflow state 不是标签，
- * 所以这里无视它 —— 无视而不是拒绝，因为它不改变这次标签写的结果。
+ * 为什么单独导出：覆盖式改标签（`setLabelsOfIssue`）与建票（`write.ts` 的 `createIssue`）都要把标签名换成 id，
+ * 而「翻到底再判断缺不缺」「只认本团队或工作区标签」「建成本团队标签」这三条规矩只能有一份 ——
+ * 建票若自己再写一遍，两处迟早会对同一个名字给出不同的 id（#33）。
+ *
+ * 失败是返回值不是异常；失败时票上一个字都没动（建票时则是一张票都没建），已建出的标签留在工作区里（理由见 `createLabel`）。
+ * 入参 `wanted` 必须已经过 `wantedLabelsOf` 归一（去重、名字非空）。
  */
-export async function setLabelsOfIssue(
-  ctx: OpContext,
-  account: LinearAccount,
-  key: string,
-  labels: LabelInput[],
-  opts: SetOpts | undefined,
-  teamKey: string,
-): Promise<OpResult<Issue>> {
-  // 缺了这份清单（调用方 bug，类型上说不可能）不能当空清单读：这里的空清单是「清空全部标签」，
-  // 于是一个漏传的参数会安静地把票上的标签全摘掉。宁可当场拒绝，让人去修调用点。
-  if (!Array.isArray(labels)) {
-    return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'setting labels needs the full replacement list; a missing one is refused instead of being read as "remove every label"') }
-  }
-  const normalized = wantedLabelsOf(labels)
-  if (!normalized.ok) return { ok: false, error: normalized.error }
-  const wanted = normalized.data
-
-  const expected = opts && typeof opts.expectedUpdatedAt === 'string' ? opts.expectedUpdatedAt : ''
-  if (expected) {
-    const current: any = await gql<any>(ctx, account, { query: ISSUE_UPDATED_AT, variables: { id: key }, bucket: 'read' })
-    if (!current.ok) return { ok: false, error: current.error }
-    const node = current.data && current.data.issue
-    if (!node) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'the ticket ' + key + ' does not exist, so its labels cannot be changed') }
-    if (String(node.updatedAt || '') !== expected) {
-      return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'the ticket changed since ' + expected + ' (now ' + String(node.updatedAt || 'unknown') + '), so its labels were not changed') }
-    }
-  }
-
-  // 空的替换清单就是「清空标签」。这一格**不发任何查询**：既不用知道票上现在有什么标签，
-  // 也不用把名字换成 id —— 那样做只是多花请求，还会在「票上一堆标签、一个都不留」时读到一半就失败。
-  if (wanted.length === 0) return writeLabelIds(ctx, account, key, [])
-
+export async function resolveLabelIds(ctx: OpContext, account: LinearAccount, wanted: WantedLabel[], teamKey: string): Promise<OpResult<string[]>> {
   // 翻到底再判断「缺不缺」：只看第一页就建标签，会把别人的同名标签当成不存在。
   const found: any[] = []
   let after: string | null = null
@@ -277,5 +247,51 @@ export async function setLabelsOfIssue(
     if (!id) return { ok: false, error: linearError(ERROR_KIND.PARSE, 'the label ' + want.name + ' could not be resolved to an id, so the ticket was left untouched') }
     ordered.push(id)
   }
-  return writeLabelIds(ctx, account, key, ordered)
+  return { ok: true, data: ordered }
+}
+
+/**
+ * 覆盖式改标签：`labels` 里有什么，票上就正好是什么（空数组清空全部）。
+ *
+ * `opts.expectedUpdatedAt` 是契约的乐观并发：给了就先读一次这张票的 `updatedAt`，对不上回
+ * `conflict` 且**一个查询都不多花**、一个写都不发（与 `write.ts` 的 `setParentOfIssue` 同一份写法）。
+ * 不比对就写，会把别人刚做的标签改动整组盖掉，还回「成功」。
+ * `opts.status` 只给本地 Markdown 房用（那边状态存在标签里），Linear 的状态是 workflow state 不是标签，
+ * 所以这里无视它 —— 无视而不是拒绝，因为它不改变这次标签写的结果。
+ */
+export async function setLabelsOfIssue(
+  ctx: OpContext,
+  account: LinearAccount,
+  key: string,
+  labels: LabelInput[],
+  opts: SetOpts | undefined,
+  teamKey: string,
+): Promise<OpResult<Issue>> {
+  // 缺了这份清单（调用方 bug，类型上说不可能）不能当空清单读：这里的空清单是「清空全部标签」，
+  // 于是一个漏传的参数会安静地把票上的标签全摘掉。宁可当场拒绝，让人去修调用点。
+  if (!Array.isArray(labels)) {
+    return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'setting labels needs the full replacement list; a missing one is refused instead of being read as "remove every label"') }
+  }
+  const normalized = wantedLabelsOf(labels)
+  if (!normalized.ok) return { ok: false, error: normalized.error }
+  const wanted = normalized.data
+
+  const expected = opts && typeof opts.expectedUpdatedAt === 'string' ? opts.expectedUpdatedAt : ''
+  if (expected) {
+    const current: any = await gql<any>(ctx, account, { query: ISSUE_UPDATED_AT, variables: { id: key }, bucket: 'read' })
+    if (!current.ok) return { ok: false, error: current.error }
+    const node = current.data && current.data.issue
+    if (!node) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'the ticket ' + key + ' does not exist, so its labels cannot be changed') }
+    if (String(node.updatedAt || '') !== expected) {
+      return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'the ticket changed since ' + expected + ' (now ' + String(node.updatedAt || 'unknown') + '), so its labels were not changed') }
+    }
+  }
+
+  // 空的替换清单就是「清空标签」。这一格**不发任何查询**：既不用知道票上现在有什么标签，
+  // 也不用把名字换成 id —— 那样做只是多花请求，还会在「票上一堆标签、一个都不留」时读到一半就失败。
+  if (wanted.length === 0) return writeLabelIds(ctx, account, key, [])
+
+  const resolved = await resolveLabelIds(ctx, account, wanted, teamKey)
+  if (!resolved.ok) return { ok: false, error: resolved.error }
+  return writeLabelIds(ctx, account, key, resolved.data)
 }
