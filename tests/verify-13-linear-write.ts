@@ -12,7 +12,7 @@
 //
 // Usage: node --import ./scripts/ts-hook.mts tests/verify-13-linear-write.ts
 import type { OpContext } from '../src/tracker/contract/contexts.ts'
-import { commentOnIssue, updateIssue, setIssueStateType } from '../src/tracker/rooms/linear/write.ts'
+import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from '../src/tracker/rooms/linear/write.ts'
 import { createLinearBackend } from '../src/tracker/rooms/linear/index.ts'
 import type { LinearAccount } from '../src/tracker/rooms/linear/client.ts'
 
@@ -127,6 +127,40 @@ async function main(): Promise<void> {
     check(sentBody === 'shipped in 1.2', 'the comment carries the reason verbatim', String(sentBody))
     const order = bodies.findIndex((q) => q.indexOf('commentCreate') >= 0) < bodies.findIndex((q) => q.indexOf('issueUpdate') >= 0)
     check(order, 'the comment is written before the state changes')
+  }
+
+  console.log('W5 create resolves the team by key and refuses what it cannot configure')
+  {
+    const { ctx, calls } = ctxAnswering([
+      { teams: { nodes: [{ id: 'team-1', key: 'ENG', name: 'Engineering' }] } },
+      { issueCreate: { success: true, issue: ISSUE_NODE } },
+    ])
+    const created = await createIssue(ctx, ACCOUNT, { title: 'A new ticket', body: 'body' } as any, 'ENG')
+    check(created.ok === true && created.data.key === 'ENG-123', 'creating returns the normalised ticket', created.ok ? created.data.key : JSON.stringify(created.error))
+    const sent = calls[1] ? JSON.parse(calls[1].body).variables.input : {}
+    check(sent.teamId === 'team-1' && sent.title === 'A new ticket' && sent.description === 'body', 'the mutation carries the team id, the title and the body', JSON.stringify(sent))
+
+    const noTitle = ctxAnswering([{ teams: { nodes: [] } }])
+    const blank = await createIssue(noTitle.ctx, ACCOUNT, { title: '   ' } as any, 'ENG')
+    check(blank.ok === false && blank.error.kind === 'conflict', 'a ticket without a title is refused', blank.ok ? 'ok' : blank.error.kind)
+    check(noTitle.calls.length === 0, 'and nothing is sent for it', String(noTitle.calls.length))
+
+    const withLabels = ctxAnswering([{ teams: { nodes: [] } }])
+    const half = await createIssue(withLabels.ctx, ACCOUNT, { title: 'x', labels: [{ name: 'bug' }] } as any, 'ENG')
+    check(half.ok === false && half.error.kind === 'unsupported', 'labels at creation are refused, not dropped', half.ok ? 'ok' : half.error.kind)
+    check(withLabels.calls.length === 0, 'and nothing is sent for it', String(withLabels.calls.length))
+  }
+
+  console.log('W6 a parent change is one field, and null means the root')
+  {
+    const { ctx, calls } = ctxAnswering([{ issueUpdate: { success: true, issue: ISSUE_NODE } }])
+    await setParentOfIssue(ctx, ACCOUNT, 'ENG-123', 'ENG-100')
+    const sent = calls[0] ? JSON.parse(calls[0].body).variables.input : {}
+    check(sent.parentId === 'ENG-100', 'a parent key goes out as parentId', JSON.stringify(sent))
+    const root = ctxAnswering([{ issueUpdate: { success: true, issue: ISSUE_NODE } }])
+    await setParentOfIssue(root.ctx, ACCOUNT, 'ENG-123', null)
+    const sentRoot = root.calls[0] ? JSON.parse(root.calls[0].body).variables.input : {}
+    check(sentRoot.parentId === null, 'null asks Linear for a top-level ticket', JSON.stringify(sentRoot))
   }
 
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')

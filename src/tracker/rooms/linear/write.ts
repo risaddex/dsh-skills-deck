@@ -13,7 +13,7 @@
 import type { Comment, Issue } from '../../contract/entities.js'
 import type { OpResult } from '../../contract/results.js'
 import type { OpContext } from '../../contract/contexts.js'
-import type { UpdatePatch } from '../../contract/inputs.js'
+import type { UpdatePatch, CreateInput } from '../../contract/inputs.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
@@ -99,4 +99,45 @@ export async function setIssueStateType(ctx: OpContext, account: LinearAccount, 
   if (!stateId) return { ok: false, error: linearError(ERROR_KIND.PARSE, 'the workflow state Linear returned has no id') }
   const result = await gql<any>(ctx, account, { query: ISSUE_UPDATE, variables: { id: key, input: { stateId } }, bucket: 'write' })
   return issueFromMutation(result, 'the state change')
+}
+
+/** 团队 key → 团队 id：建票必须带 teamId，而绑定声明里写的是 key（例如 ENG）。 */
+const TEAMS_BY_KEY = 'query DeckTeamsByKey($key: String!) { teams(filter: { key: { eq: $key } }) { nodes { id key name } } }'
+const ISSUE_CREATE = 'mutation DeckIssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { ' + ISSUE_FIELDS + ' } } } ' + ISSUE_CORE
+
+/**
+ * 建一张票。
+ *
+ * 必须带团队：Linear 的 `issueCreate` 要 `teamId`，而绑定声明写的是团队 key，所以先按 key 查一次。
+ * 这一版只翻 `title` / `body` / `parentKey`；`labels`、`assignees` 与幂等锚都要先做各自的解析（标签 id、
+ * 用户 id、以及 Linear 没有幂等键这件事），所以在实现之前如实回 `unsupported`，不静默丢掉。
+ */
+export async function createIssue(ctx: OpContext, account: LinearAccount, input: CreateInput, teamKey: string): Promise<OpResult<Issue>> {
+  const wanted = input || ({} as CreateInput)
+  const title = String(wanted.title || '').trim()
+  if (!title) return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'a ticket needs a title: Linear refuses one without it') }
+  if (!teamKey) return { ok: false, error: linearError(ERROR_KIND.ENV, 'the workspace binding names no Linear team, so a ticket cannot be created in one') }
+  if ((Array.isArray(wanted.labels) && wanted.labels.length > 0) || (Array.isArray(wanted.assignees) && wanted.assignees.length > 0) || wanted.idempotencyKey) {
+    return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this room cannot set labels, assignees or an idempotency anchor while creating a ticket yet; creating it half-configured would be a guess') }
+  }
+  const teams = await gql<any>(ctx, account, { query: TEAMS_BY_KEY, variables: { key: teamKey }, bucket: 'read' })
+  if (!teams.ok) return { ok: false, error: teams.error }
+  const nodes = (teams.data && teams.data.teams && teams.data.teams.nodes) || []
+  const team = (Array.isArray(nodes) ? nodes : []).find((n: any) => n && String(n.key || '').toUpperCase() === String(teamKey).toUpperCase())
+  if (!team || !team.id) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'Linear has no team with key ' + teamKey + ', so the ticket cannot be created') }
+  const payload: Record<string, unknown> = { teamId: String(team.id), title }
+  if (typeof wanted.body === 'string') payload.description = wanted.body
+  if (wanted.parentKey) payload.parentId = String(wanted.parentKey)
+  const result = await gql<any>(ctx, account, { query: ISSUE_CREATE, variables: { input: payload }, bucket: 'write' })
+  if (!result.ok) return { ok: false, error: result.error }
+  const created = result.data && result.data.issueCreate
+  if (!created || created.success === false || !created.issue) return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'Linear accepted the create mutation but reported no issue') }
+  return { ok: true, data: issueOf(created.issue as LinearIssueNode) }
+}
+
+/** 改父票：`null` 表示移到根（Linear 用 `parentId: null` 表达，省略表示保持原样）。 */
+export async function setParentOfIssue(ctx: OpContext, account: LinearAccount, key: string, parentKey: string | null): Promise<OpResult<Issue>> {
+  const input = { parentId: parentKey === null || parentKey === undefined ? null : String(parentKey) }
+  const result = await gql<any>(ctx, account, { query: ISSUE_UPDATE, variables: { id: key, input }, bucket: 'write' })
+  return issueFromMutation(result, 'the parent change')
 }

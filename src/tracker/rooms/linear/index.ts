@@ -24,7 +24,7 @@ import type { BackendModule } from '../../contract/backend-module.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import type { LinearAccount } from './client.js'
 import { getIssue, listIssues } from './read.js'
-import { commentOnIssue, updateIssue, setIssueStateType } from './write.js'
+import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 import { preflightLinear } from './preflight.js'
 import { failLinear } from './errors.js'
 import { readBinding } from './binding.js'
@@ -34,7 +34,7 @@ export { gql } from './client.js'
 export { issueOf, stateOf, issueTypeOf } from './normalize.js'
 export { preflightLinear, readIdentity } from './preflight.js'
 export { getIssue, listIssues, buildIssuesFilter, unsupportedFilters } from './read.js'
-export { commentOnIssue, updateIssue, setIssueStateType } from './write.js'
+export { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 export { parseBinding, readBinding, BINDING_PATH } from './binding.js'
 
 /** 契约的账号缝回包 → 这一层要的那三格；缺 authorization 就当没解出来。 */
@@ -122,6 +122,19 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
         if (!noted.ok) return { ok: false, error: noted.error }
       }
       return setIssueStateType(requestCtx, got.account, key, 'completed')
+    },
+    create: async (_repo, input, opCtx) => {
+      const requestCtx = opCtx || (ctx as never)
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error }
+      // 团队来自绑定声明：Linear 的 issueCreate 必须带 teamId，而声明里写的是团队 key。
+      const binding = await readBinding(requestCtx)
+      return createIssue(requestCtx, got.account, input, binding ? binding.team : '')
+    },
+    setParent: async (_repo, key, parentKey, _opts, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return setParentOfIssue(opCtx || (ctx as never), got.account, key, parentKey)
     },
     reopen: async (_repo, key, opCtx) => {
       const got = await using(opCtx || (ctx as never))
