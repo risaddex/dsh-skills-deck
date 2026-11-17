@@ -1,30 +1,9 @@
 {
-  "note": "Maintainer accepted these 24 baseline failures on 2026-11-16 for issue #3 promotion. Classification is informational; any failing gate still makes verification exit non-zero.",
+  "note": "Empty since 2026-11-17: every one of the 24 baseline failures accepted on 2026-11-16 for issue #3 promotion was repaired in issue #42. Any failing gate is now a new red. A failure may only be added here on purpose, with a maintainer decision and a dated reason.",
   "acceptedPromotionHead": "ae2ccb9d",
   "scope": "Historical acceptance for issue #3 promotion only; not approval of future failures or releases.",
   "registerCreatedFromCheckout": "73894f26",
   "sourceHead": "0a612fca212c953bc9f6a06a43b2b73c4923af29",
   "sourceAt": 1794850070892,
-  "failures": [
-    {
-      "file": "tests/verify-1586-maintenance.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-666-subws-mark-root.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1766-release-audit.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-wizard-exit-609.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-verify-checks.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    }
-  ]
+  "failures": []
 }
