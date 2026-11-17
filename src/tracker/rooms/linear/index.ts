@@ -131,10 +131,10 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       const binding = await readBinding(requestCtx)
       return createIssue(requestCtx, got.account, input, binding ? binding.team : '')
     },
-    setParent: async (_repo, key, parentKey, _opts, opCtx) => {
+    setParent: async (_repo, key, parentKey, opts, opCtx) => {
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
-      return setParentOfIssue(opCtx || (ctx as never), got.account, key, parentKey)
+      return setParentOfIssue(opCtx || (ctx as never), got.account, key, parentKey, opts)
     },
     reopen: async (_repo, key, opCtx) => {
       const got = await using(opCtx || (ctx as never))

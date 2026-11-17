@@ -163,6 +163,34 @@ async function main(): Promise<void> {
     check(sentRoot.parentId === null, 'null asks Linear for a top-level ticket', JSON.stringify(sentRoot))
   }
 
+  console.log('W7 a guarded parent change reads first, and refuses on a mismatch')
+  {
+    const stale = ctxAnswering([{ issue: { identifier: 'ENG-123', updatedAt: '2026-11-09T00:00:00Z' } }])
+    const refused = await setParentOfIssue(stale.ctx, ACCOUNT, 'ENG-123', 'ENG-100', { expectedUpdatedAt: '2026-11-01T00:00:00Z' })
+    check(refused.ok === false && refused.error.kind === 'conflict', 'a stale expectedUpdatedAt is a conflict', refused.ok ? 'ok' : refused.error.kind)
+    check(stale.calls.length === 1, 'and no write is sent', String(stale.calls.length))
+
+    const fresh = ctxAnswering([{ issue: { identifier: 'ENG-123', updatedAt: '2026-11-01T00:00:00Z' } }, { issueUpdate: { success: true, issue: ISSUE_NODE } }])
+    const ok = await setParentOfIssue(fresh.ctx, ACCOUNT, 'ENG-123', 'ENG-100', { expectedUpdatedAt: '2026-11-01T00:00:00Z' })
+    check(ok.ok === true, 'a matching timestamp lets the write through', ok.ok ? 'ok' : JSON.stringify(ok.error))
+    check(fresh.calls.length === 2, 'the read and the write both happen', String(fresh.calls.length))
+
+    const unguarded = ctxAnswering([{ issueUpdate: { success: true, issue: ISSUE_NODE } }])
+    await setParentOfIssue(unguarded.ctx, ACCOUNT, 'ENG-123', 'ENG-100')
+    check(unguarded.calls.length === 1, 'no timestamp means no extra read', String(unguarded.calls.length))
+  }
+
+  console.log('W8 a container cannot be created while labels cannot be written')
+  {
+    const map = ctxAnswering([{ teams: { nodes: [{ id: 'team-1', key: 'ENG' }] } }])
+    const refusedMap = await createIssue(map.ctx, ACCOUNT, { title: 'A map', type: 'map' } as any, 'ENG')
+    check(refusedMap.ok === false && refusedMap.error.kind === 'unsupported', 'creating a map is refused, not downgraded to an issue', refusedMap.ok ? 'ok' : refusedMap.error.kind)
+    check(map.calls.length === 0, 'and nothing is sent for it', String(map.calls.length))
+    const spec = ctxAnswering([{ teams: { nodes: [{ id: 'team-1', key: 'ENG' }] } }])
+    const refusedSpec = await createIssue(spec.ctx, ACCOUNT, { title: 'A spec', type: 'spec' } as any, 'ENG')
+    check(refusedSpec.ok === false && refusedSpec.error.kind === 'unsupported', 'the same holds for a spec', refusedSpec.ok ? 'ok' : refusedSpec.error.kind)
+  }
+
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')
   process.exit(failed ? 1 : 0)
 }

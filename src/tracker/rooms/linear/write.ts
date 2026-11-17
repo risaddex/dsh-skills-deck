@@ -13,7 +13,7 @@
 import type { Comment, Issue } from '../../contract/entities.js'
 import type { OpResult } from '../../contract/results.js'
 import type { OpContext } from '../../contract/contexts.js'
-import type { UpdatePatch, CreateInput } from '../../contract/inputs.js'
+import type { UpdatePatch, CreateInput, SetOpts } from '../../contract/inputs.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
@@ -117,6 +117,11 @@ export async function createIssue(ctx: OpContext, account: LinearAccount, input:
   const title = String(wanted.title || '').trim()
   if (!title) return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'a ticket needs a title: Linear refuses one without it') }
   if (!teamKey) return { ok: false, error: linearError(ERROR_KIND.ENV, 'the workspace binding names no Linear team, so a ticket cannot be created in one') }
+  // `map` / `spec` 在契约里是「带 wayfinder:* 标签的父票」，而这一版写不了标签：
+  // 照常建票会建出一张普通 issue，随后每次读都把它当 issue —— 那是把调用方要的东西换成了别的。
+  if (wanted.type === 'map' || wanted.type === 'spec') {
+    return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this room cannot create a ' + wanted.type + ' yet: it needs the wayfinder label, and label writing is not implemented') }
+  }
   if ((Array.isArray(wanted.labels) && wanted.labels.length > 0) || (Array.isArray(wanted.assignees) && wanted.assignees.length > 0) || wanted.idempotencyKey) {
     return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this room cannot set labels, assignees or an idempotency anchor while creating a ticket yet; creating it half-configured would be a guess') }
   }
@@ -135,8 +140,23 @@ export async function createIssue(ctx: OpContext, account: LinearAccount, input:
   return { ok: true, data: issueOf(created.issue as LinearIssueNode) }
 }
 
-/** 改父票：`null` 表示移到根（Linear 用 `parentId: null` 表达，省略表示保持原样）。 */
-export async function setParentOfIssue(ctx: OpContext, account: LinearAccount, key: string, parentKey: string | null): Promise<OpResult<Issue>> {
+/**
+ * 改父票：`null` 表示移到根（Linear 用 `parentId: null` 表达，省略表示保持原样）。
+ *
+ * `opts.expectedUpdatedAt` 是契约的乐观并发：给了就先读当前票比一次 `updatedAt`，对不上回
+ * `conflict` 且**不写**。不比对就写，会把别人刚做的父改动盖掉还报成功。
+ */
+export async function setParentOfIssue(ctx: OpContext, account: LinearAccount, key: string, parentKey: string | null, opts?: SetOpts): Promise<OpResult<Issue>> {
+  const expected = opts && typeof opts.expectedUpdatedAt === 'string' ? opts.expectedUpdatedAt : ''
+  if (expected) {
+    const current: any = await gql<any>(ctx, account, { query: 'query DeckIssueUpdatedAt($id: String!) { issue(id: $id) { identifier updatedAt } }', variables: { id: key }, bucket: 'read' })
+    if (!current.ok) return { ok: false, error: current.error }
+    const node = current.data && current.data.issue
+    if (!node) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'the ticket ' + key + ' does not exist, so its parent cannot be changed') }
+    if (String(node.updatedAt || '') !== expected) {
+      return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'the ticket changed since ' + expected + ' (now ' + String(node.updatedAt || 'unknown') + '), so the parent was not changed') }
+    }
+  }
   const input = { parentId: parentKey === null || parentKey === undefined ? null : String(parentKey) }
   const result = await gql<any>(ctx, account, { query: ISSUE_UPDATE, variables: { id: key, input }, bucket: 'write' })
   return issueFromMutation(result, 'the parent change')
