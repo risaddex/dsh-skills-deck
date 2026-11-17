@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T12:37:39.781Z",
+  "generatedAt": "2026-11-17T13:04:52.237Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 617,
   "gateCount": 617,
@@ -2366,6 +2366,7 @@
       "file": "tests/verify-13-linear-paging.ts",
       "guards": [
         "src/tracker/contract/contexts.ts",
+        "src/tracker/contract/pagination.ts",
         "src/tracker/rooms/linear/client.ts",
         "src/tracker/rooms/linear/normalize.ts",
         "src/tracker/rooms/linear/paging.ts",
@@ -2379,7 +2380,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：静态 import 说明符 5 条"
+      "reason": "归属来自：静态 import 说明符 6 条"
     },
     {
       "step": "node tests/verify-13-linear-relations.ts",

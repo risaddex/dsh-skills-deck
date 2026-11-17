@@ -231,10 +231,15 @@ export async function countsOf(ctx: OpContext, account: LinearAccount, filter: L
  * 1..250（Linear 每个连接的上限，见 `queries.ts` 的 `MAX_PAGE`）。两条都守，是因为调用方的毛病
  * 不该变成一条会被 Linear 拒绝的查询：越界不报错，按边界给（契约：「要多了不报错，按上限给」）。
  */
-function pageSizeOf(given: number): number {
-  const n = Number(given)
-  if (!Number.isFinite(n) || n < 1) return PAGINATION.linear.listPageSize
-  return Math.min(Math.floor(n), MAX_PAGE)
+/**
+ * 这一次要几行：契约的缺省与上限（共享表的 limitDefault / limitMax）先夹一次，再夹进本房这条连接
+ * 的硬上限 `MAX_PAGE`。`opts.limit` 是调用方真正要的行数 —— 传了就用它，不看它就会出现
+ * 「要 3 行拿回 50 行、要 200 行也只拿 50 行」（PR #32 review 的 P2）。
+ */
+function pageSizeOf(opts: PageOpts | undefined): number {
+  const asked = opts && typeof opts.limit === 'number' ? opts.limit : NaN
+  const wanted = Number.isFinite(asked) && asked >= 1 ? Math.floor(asked) : PAGINATION.linear.limitDefault
+  return Math.min(wanted, PAGINATION.linear.limitMax, MAX_PAGE)
 }
 
 /**
@@ -263,11 +268,10 @@ export async function listPageOf(
   account: LinearAccount,
   filter: ListFilter | undefined,
   opts: PageOpts | undefined,
-  pageSize: number,
 ): Promise<ReadPageResult> {
   const missing = unsupportedFilters(filter)
   if (missing.length > 0) return refusedFilters(missing)
-  const first = pageSizeOf(pageSize)
+  const first = pageSizeOf(opts)
   const cursor = opts && typeof opts.cursor === 'string' ? opts.cursor : ''
   const replied = await gql<{ issues?: ConnectionReply | null }>(ctx, account, {
     query: ISSUE_PAGE_QUERY,

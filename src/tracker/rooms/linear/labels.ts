@@ -118,7 +118,10 @@ function pickLabel(found: any[], name: string, teamKey: string): any | null {
     const own = same.find((node: any) => node.team && String(node.team.key || '').toUpperCase() === wantedTeam)
     if (own) return own
   }
-  return same.find((node: any) => !node.team) || same[0]
+  // 只认「本团队的」或「工作区的」：别的团队的标签**不能**用在这张票上（Linear 要求标签对该票所在
+  // 团队可用，见研究笔记 §4）。回 null 让上游把它当缺失、走建标签那条路 —— 拿另一个团队的 id 去写，
+  // 换来的是对端拒绝，而调用方看到的是一次「本来合法」的失败（PR #32 review 的 P2）。
+  return same.find((node: any) => !node.team) || null
 }
 
 /**

@@ -116,8 +116,8 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
     listPage: async (_repo, filter, opts, opCtx) => {
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
-      // 页大小由房间自己定（契约的 ListFilter 不带它）：与读侧同一份 50。
-      return listPageOf(opCtx || (ctx as never), got.account, filter, opts, 50)
+      // 页大小由 opts.limit 决定（缺省与上限在共享表）；不在这里写死一个数。
+      return listPageOf(opCtx || (ctx as never), got.account, filter, opts)
     },
     readBudget: async (opCtx) => readBudgetOf(opCtx || (ctx as never)),
     comment: async (_repo, key, body, opCtx) => {

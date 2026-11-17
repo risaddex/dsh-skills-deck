@@ -30,6 +30,7 @@ import type { LinearAccount } from '../src/tracker/rooms/linear/client.ts'
 import { CLOSED_STATE_TYPES } from '../src/tracker/rooms/linear/normalize.ts'
 import { MAX_PAGE } from '../src/tracker/rooms/linear/queries.ts'
 import { countsOf, listPageOf, readBudgetOf } from '../src/tracker/rooms/linear/paging.ts'
+import { PAGINATION } from '../src/tracker/contract/pagination.ts'
 
 let failed = false
 let total = 0
@@ -156,9 +157,9 @@ async function main(): Promise<void> {
       { payload: page([node('2')], false, null) },
       { payload: page([node('3')], false, null) },
     ])
-    const answer = await listPageOf(ctx, ACCOUNT, undefined, undefined, 999)
+    const answer = await listPageOf(ctx, ACCOUNT, undefined, { limit: 999 })
     check(answer.ok === true, 'the page answers', answer.ok ? 'ok' : JSON.stringify(answer.error))
-    check(sent(calls[0]).variables.first === MAX_PAGE, 'a page size above the connection cap is clamped to 250', String(sent(calls[0]).variables.first))
+    check(sent(calls[0]).variables.first === PAGINATION.linear.limitMax, 'a page size above the contract limit is clamped to limitMax (200)', String(sent(calls[0]).variables.first))
     check(sent(calls[0]).variables.after === null, 'the first page asks for no cursor', JSON.stringify(sent(calls[0]).variables.after))
     check(String(sent(calls[0]).query).indexOf('orderBy: createdAt') >= 0, 'pages are asked in creation-time order', String(sent(calls[0]).query).slice(0, 120))
     check(answer.ok && answer.data.items.length === 1 && answer.data.items[0].key === 'ENG-1', 'the row is a normalised ticket', answer.ok ? JSON.stringify(answer.data.items) : '')
@@ -170,12 +171,12 @@ async function main(): Promise<void> {
       { payload: page([node('4')], false, null) },
       { payload: page([node('5')], false, null) },
     ])
-    const filtered = await listPageOf(narrowed.ctx, ACCOUNT, { state: 'open' }, undefined, 50)
+    const filtered = await listPageOf(narrowed.ctx, ACCOUNT, { state: 'open' }, undefined, undefined)
     check(narrowed.calls.length === 2, 'a narrowed page counts only its own state', String(narrowed.calls.length))
     check(filtered.ok && filtered.data.total === 1, 'and the total is that state count', filtered.ok ? String(filtered.data.total) : JSON.stringify(filtered.error))
 
     const sized = ctxAnswering([{ payload: page([], false, null) }, { payload: page([], false, null) }, { payload: page([], false, null) }])
-    await listPageOf(sized.ctx, ACCOUNT, undefined, undefined, 0)
+    await listPageOf(sized.ctx, ACCOUNT, undefined, { limit: 0 })
     check(sent(sized.calls[0]).variables.first === 50, 'a page size of 0 falls back to Linear default 50', String(sent(sized.calls[0]).variables.first))
   }
 
@@ -186,7 +187,7 @@ async function main(): Promise<void> {
       { payload: page([], false, null) },
       { payload: page([], false, null) },
     ])
-    const answer = await listPageOf(middle.ctx, ACCOUNT, undefined, { cursor: 'prev-==?&/y' }, 50)
+    const answer = await listPageOf(middle.ctx, ACCOUNT, undefined, { cursor: 'prev-==?&/y' }, undefined)
     check(sent(middle.calls[0]).variables.after === 'prev-==?&/y', 'the caller cursor goes back exactly as it arrived', JSON.stringify(sent(middle.calls[0]).variables.after))
     check(answer.ok && answer.data.nextCursor === 'next-==?&/x', 'a middle page offers Linear cursor verbatim', answer.ok ? JSON.stringify(answer.data.nextCursor) : '')
 
@@ -195,7 +196,7 @@ async function main(): Promise<void> {
       { payload: page([], false, null) },
       { payload: page([], false, null) },
     ])
-    const done = await listPageOf(last.ctx, ACCOUNT, undefined, undefined, 50)
+    const done = await listPageOf(last.ctx, ACCOUNT, undefined, undefined, undefined)
     check(done.ok === true, 'the last page answers', done.ok ? 'ok' : JSON.stringify(done.error))
     check(done.ok && done.data.nextCursor === null, 'the last page offers no cursor at all (null, not an empty string)', done.ok ? JSON.stringify(done.data.nextCursor) : '')
   }
@@ -207,19 +208,19 @@ async function main(): Promise<void> {
       { payload: page([node('1')], false, null) },
       { payload: { issues: { nodes: [], pageInfo: {} } } },
     ])
-    const whole = await listPageOf(brokenCount.ctx, ACCOUNT, undefined, undefined, 50)
+    const whole = await listPageOf(brokenCount.ctx, ACCOUNT, undefined, undefined, undefined)
     check(whole.ok === false, 'a page without a fresh count fails as a whole', whole.ok ? 'ok' : JSON.stringify(whole.error))
     check(whole.ok === false && whole.error.kind === 'parse', 'and the failure is the count one, passed through', whole.ok ? 'ok' : whole.error.kind)
 
     const refusedFilter = ctxAnswering([{ payload: page([], false, null) }])
-    const listLabels = await listPageOf(refusedFilter.ctx, ACCOUNT, { labels: ['bug'] }, undefined, 50)
+    const listLabels = await listPageOf(refusedFilter.ctx, ACCOUNT, { labels: ['bug'] }, undefined, undefined)
     check(listLabels.ok === false && listLabels.error.kind === 'unsupported', 'a filter this room cannot express is refused by listPage', listLabels.ok ? 'ok' : listLabels.error.kind)
     const countLabels = await countsOf(refusedFilter.ctx, ACCOUNT, { labels: ['bug'] })
     check(countLabels.ok === false && countLabels.error.kind === 'unsupported', 'and by counts, with the same table', countLabels.ok ? 'ok' : countLabels.error.kind)
     check(refusedFilter.calls.length === 0, 'and nothing is sent for either', String(refusedFilter.calls.length))
 
     const stale = ctxAnswering([{ errors: [{ message: 'Invalid input: the cursor is malformed' }] }])
-    const staleAnswer = await listPageOf(stale.ctx, ACCOUNT, undefined, { cursor: 'gone' }, 50)
+    const staleAnswer = await listPageOf(stale.ctx, ACCOUNT, undefined, { cursor: 'gone' }, undefined)
     check(staleAnswer.ok === false && staleAnswer.error.kind === 'not-found', 'a stale cursor is a not-found', staleAnswer.ok ? 'ok' : staleAnswer.error.kind)
     check(staleAnswer.ok === false && staleAnswer.error.message.indexOf('please reload') >= 0, 'and it says the caller should reload', staleAnswer.ok ? '' : staleAnswer.error.message)
   }
@@ -232,6 +233,14 @@ async function main(): Promise<void> {
     check(answer.ok && answer.data.known === false, 'it says the number was not measured', answer.ok ? JSON.stringify(answer.data) : '')
     check(answer.ok && answer.data.known === false && answer.data.reason === 'not-measured', 'the reason is "not measured", not "measured and failed"', answer.ok ? JSON.stringify(answer.data) : '')
     check(quiet.calls.length === 0, 'and reading the budget sends no request', String(quiet.calls.length))
+  }
+
+  console.log('P9 the caller limit is the page size, not a house default')
+  {
+    const { ctx, calls } = ctxAnswering([{ issues: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } }, { issues: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } }, { issues: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } }])
+    await listPageOf(ctx, ACCOUNT, undefined, { limit: 3 })
+    const listCall = calls.filter((c) => String(JSON.parse(c.body).query || '').indexOf('issues(') >= 0)[0]
+    check(listCall && JSON.parse(listCall.body).variables.first === 3, 'a caller asking for 3 rows sends first: 3', listCall ? String(JSON.parse(listCall.body).variables.first) : '(no list call)')
   }
 
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')
