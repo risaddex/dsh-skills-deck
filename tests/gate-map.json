@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T18:56:55.292Z",
+  "generatedAt": "2026-11-17T19:13:38.005Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 623,
   "gateCount": 623,
@@ -5480,6 +5480,7 @@
       "file": "tests/verify-1646-publish-token-file.ts",
       "guards": [
         "docs/agents/real-machine-verification.md",
+        "docs/agents/release-publishing.md",
         "docs/releases/RELEASE-RUNBOOK.md",
         "scripts/publish-token.ps1"
       ],
