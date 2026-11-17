@@ -23,7 +23,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CACHE = process.env.DSH_VERIFY_LAST_FILE || path.join(ROOT, 'node_modules', '.cache', 'dsh-verify-last.json')
 const REGISTER = path.join(ROOT, 'tests', 'known-reds.json')
 
-interface RunResult { file?: string; code?: number | null; exitCode?: number | null; evidence?: string }
+interface RunResult { file?: string; code?: number | null; exitCode?: number | null; optional?: boolean; evidence?: string }
 interface LastRun {
   at?: number
   head?: string
@@ -68,7 +68,11 @@ const results = Array.isArray(last.results) ? last.results : []
 // 否则「主链全绿、冒烟红了」会被读成「没有新红」（PR #35 review 的 P1）。
 const smokeRows = last.smoke && Array.isArray(last.smoke.results) ? (last.smoke.results as RunResult[]) : []
 const smokeProblem = String((last.smoke && last.smoke.problem) || '')
-const failing = results.concat(smokeRows).filter(judgedRed)
+// 预构建（scripts/build.mts）是可选步：构建锁超时后面还能恢复，跑者因此把它排除在 failed 之外。
+// 缓存里以前不记 optional，于是「预构建红、其余全过」会被读成新红、退出码 1，与跑者的 red 0 相反
+// （PR #35 review 的 P2）。现在跑者写这一栏，这里做同样的排除。
+const optionalRed = results.concat(smokeRows).filter((row) => row.optional && judgedRed(row)).map((row) => String(row.file || '(unnamed)'))
+const failing = results.concat(smokeRows).filter((row) => !row.optional && judgedRed(row))
 const fresh = failing.map((row) => String(row.file || '(unnamed)')).filter((file) => !onRegister.has(file))
 if (smokeProblem) fresh.push('smoke plan: ' + smokeProblem.slice(0, 120))
 const when = last.at ? new Date(last.at).toISOString().replace('T', ' ').slice(0, 19) : 'unknown time'
@@ -79,6 +83,7 @@ const smoke = last.smoke || {}
 console.log('last run   ' + when + ' · head ' + head + ' · ' + String(last.stepsRan ?? '?') + '/' + String(last.stepsTotal ?? '?') + ' steps · ' + seconds)
 console.log('red gates  ' + String(last.red ?? failing.length) + ' · on the register ' + String(last.knownRed ?? '?') + ' · new ' + String(last.newRed ?? fresh.length) + ' · flaky ' + String(last.flaky ?? 0))
 console.log('new reds   ' + (fresh.length > 0 ? fresh.join(', ') : 'none'))
+if (optionalRed.length > 0) console.log('optional   ' + optionalRed.join(', ') + ' (excluded, as the runner does)')
 console.log('smoke      ' + String(smoke.red ?? smokeRows.filter(judgedRed).length) + ' red of ' + String(smoke.stepsRan ?? 0) + '/' + String(smoke.stepsTotal ?? 0) + (smokeProblem ? ' · plan failed: ' + smokeProblem.slice(0, 80) : ''))
 
 if (fresh.length > 0) {
