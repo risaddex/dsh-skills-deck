@@ -16,6 +16,7 @@
 import type { Actor, BackendId, ErrorKind } from './identity.js'
 import type { Issue, IssueRef, LabelColor, RepositoryRef } from './entities.js'
 import type { ReadProvenance } from './read-provenance.js'
+import type { AccountSeamEntry } from './accounts.js'
 import type { BudgetReading } from './budget-model.js'
 // #1698：企业版主机上的运行时能力回答（探测出来的支持程度 + 原因 + 票号），挂在读结果信封上。
 import type { RuntimeCapabilityAnswer } from './runtime-capability.js'
@@ -125,6 +126,10 @@ export interface OpUsage {
  * 绝不预判能力 —— 能力永远由真正调用的结果说话。
  */
 export interface PreflightResult {
+  /** 只列当前项目可达的账号配置，不代表登录有效；探活失败时仍可带这份公开清单。 */
+  accounts?: AccountSeamEntry[]
+  /** 列账失败与绑定账号探活失败是两件事，不能把前者伪装成空清单。 */
+  accountsError?: TrackerError
   ok: boolean
   /** `ok:false` 时给出原因；`ok:true` 时不写。 */
   error?: TrackerError
@@ -247,6 +252,10 @@ export const READ_DEGRADED_EVENT = 'read.degraded'
  * `fallback` / `fallbackReason` 是更早的同类先例（走了 REST 降级通道），一并收在这一份里。
  */
 export type IssueListResult = OpResult<Issue[]> & {
+  /** 有账号失败时保留已读到的行；调用方必须显示部分结果，不能报整份成功。 */
+  partial?: boolean
+  /** 每个失败账号各记一项；别名把错误与成功行的来源对上，不含凭据。 */
+  errors?: Array<{ account: string; error: TrackerError }>
   /** 主路不可用、走了 REST 降级通道时给 `'rest'`；正常走 GraphQL 主路时不给。 */
   fallback?: string
   /** REST 降级的原因：`quota` = 真配额耗尽，`other` = 其它原因；未知时不给。 */

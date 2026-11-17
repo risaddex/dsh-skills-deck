@@ -127,6 +127,7 @@ export function filterRows(rows: unknown, opts: FilterRowsOptions): Record<strin
     // A3（用户 m00239 拍板）：行里带着正文、且正文里真有「## 维护者原话」区时，才给这一行留一个布尔标记；
     // 没有原话时整个键都不出现（薄行要紧凑，空值不写）。纯地图薄查那条路没有正文，不经过这里，照旧不带。
     if (typeof rec.body === 'string' && parseOriginalWords(rec.body).length > 0) row.hasOriginalWords = true
+    if (typeof rec.account === 'string') row.account = rec.account
     matched.push(row)
   }
   return matched

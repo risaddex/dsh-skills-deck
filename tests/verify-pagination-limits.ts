@@ -71,6 +71,7 @@ const EXPECTED = {
     connectionMax: 250,
     listPageSize: 50,
     countMaxPages: 40,
+    accountListMaxPages: 5,
   },
   markdown: {
     limitDefault: 50,

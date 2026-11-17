@@ -101,6 +101,8 @@ export const definition = {
   parameters: {
     type: 'object',
     properties: {
+      account: { type: 'string', description: 'Linear account alias, or * for all accounts reachable from this project; omitted keeps the bound backend' },
+      scope: { type: 'string', enum: ['assigned', 'review'], description: 'Narrow Linear tickets to those assigned to me or awaiting review; without account, uses the bound account' },
       state: { type: 'string', enum: ['open', 'closed', 'all'], description: 'Which state to list; the default is open' },
       type: { type: 'string', enum: ['issue', 'map', 'spec', 'all'], description: 'Which type to list; the default is all' },
       labels: { type: 'array', items: { type: 'string' }, description: 'A row must carry all of these labels (AND); no filter by default' },
@@ -263,6 +265,8 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
       // 列表过滤是本文件自己拼的，两个可选条件（state / type）下面按需补：先声明成一张表，
       // 补字段时编译器才不拦（运行时拼出来的形状一字不变）。
       const filter: Record<string, unknown> = {}
+      if (a.account !== undefined) filter.account = String(a.account).trim()
+      if (a.scope !== undefined) filter.scope = String(a.scope).trim()
       if (state !== 'all') filter.state = state
       if (type !== 'all') filter.type = type
       // #1830：标签与状态一样是「取数窗口」的筛选，必须下推给后端 —— 否则 500 条的窗口里装的是整仓
@@ -272,7 +276,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
       // #1604：纯地图筛走薄查快速回（只筛地图标签、不读正文时调 listMaps），
       // 其余（文本搜、规格识别、指派、目录限定、掺杂其它标签）一律走下面的老全量路径。
       // 薄查只有「不支持」才回落：超时与传输失败直接失败，不拿半份当整仓。
-      if (shouldUseThinMapList({ type: type, labels: wantLabels, assignee: wantAssignee, query: wantQuery, effortId: (scope && scope.effortId) || '' }) && typeof t.listMaps === 'function') {
+      if (a.account === undefined && a.scope === undefined && shouldUseThinMapList({ type: type, labels: wantLabels, assignee: wantAssignee, query: wantQuery, effortId: (scope && scope.effortId) || '' }) && typeof t.listMaps === 'function') {
         const thin = await t.listMaps(repo, opCtx)
         const thinBody = (thin || {}) as { ok?: unknown; error?: { kind?: unknown; message?: unknown }; data?: { rows?: unknown; total?: unknown; truncated?: unknown } }
         const thinUnsupported = thinBody.ok === false && thinBody.error && String(thinBody.error.kind) === 'unsupported'
@@ -349,11 +353,12 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
             text: 'The ISSUE list did not come back (the backend said: ' + msg + '). ' + nextStepText(ev.code),
-            data: { error: Object.assign({ message: msg }, evidenceFields(ev)) },
+            data: { error: Object.assign({ message: msg }, evidenceFields(ev)), ...(Array.isArray(listed?.errors) ? { errors: listed.errors } : {}) },
           },
           claimed: { requests: 1, points: 3 },
         }
       }
+      const accountErrors = Array.isArray(listed.errors) ? listed.errors as Array<{ account: string; error: unknown }> : []
       const rows = Array.isArray(listed.data) ? listed.data : []
       // 后端自己的列表都有安全上限：GitHub 是「工单 500 条、拉取请求 1000 条」的总量上限，
       // GitLab 是「每页最多 100 条、只取第一页」的页上限（#1770）；它到顶就停，却仍回成功。
@@ -391,7 +396,7 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
         if (fallbackReason === 'quota') notes.push('The main path of the backend hit its quota this time, so the REST fallback path was used (opId ' + (opId || 'unknown') + '): REST has its own page cap, so when the last page fails only what was already fetched comes back.' + backendIncompleteNote)
         else notes.push('The main path of the backend was not available this time, so the REST fallback path was used (reason ' + (fallbackReason || 'other') + ', opId ' + (opId || 'unknown') + '; looking up read.degraded by that opId in the log finds the same run): REST has its own page cap, so when the last page fails only what was already fetched comes back.' + backendIncompleteNote)
       }
-      else if (backendTruncated) notes.push('The backend stopped at its own limit this time (GitLab takes at most 100 per page and only the first page; GitHub caps issues at 500 and pull requests at 1000), so this list may be incomplete: narrow state or label and query again (those two are really pushed down to the backend; assignee and query are filtered in this layer only, so narrowing them does not make the backend fetch less).')
+      else if (backendTruncated) notes.push(a.account !== undefined || a.scope !== undefined ? 'The account read reached its page limit. This list may be incomplete; narrow the account or scope and query again. Raising the receipt limit does not fetch additional pages.' : 'The backend stopped at its own limit this time (GitLab takes at most 100 per page and only the first page; GitHub caps issues at 500 and pull requests at 1000), so this list may be incomplete: narrow state or label and query again (those two are really pushed down to the backend; assignee and query are filtered in this layer only, so narrowing them does not make the backend fetch less).')
       if (truncated) notes.push('Only the first ' + sliced.length + ' rows came back (out of ' + total + ' that match): narrow the filters or raise limit and fetch again.')
       // #1559：宿主收工具返回值时要求无损 JSON，data 上不许出现 undefined。缺省的键就不出现
       // （不用 null 顶替：金标准 03-deck_issue_list.golden.json 里本来就没有这两个键，序列化后的形状与它一致）；
@@ -408,14 +413,22 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
         issues: sliced,
         opId: opId,
       }
+      if (accountErrors?.length) {
+        data.errors = listed.errors
+        data.partial = true
+        notes.push('Some accounts could not be read; errors lists each failed account. Rows from the other accounts are preserved.')
+      }
+      if (a.account !== undefined) data.account = String(a.account).trim()
+      if (a.scope !== undefined) data.scope = String(a.scope).trim()
       if (backendFallback) {
         data.fallback = 'rest'
         data.fallbackReason = fallbackReason || 'other'
       }
       return {
         value: {
-          status: DECK_STATUS.OK,
-          text: 'ISSUE list: ' + total + ' rows match (' + cond.join(', ') + '), returning ' + sliced.length + ', of which ' + statusConflictCount + ' have a status conflict.' + backendIncompleteText,
+          status: listed.partial === true ? DECK_STATUS.PARTIAL : DECK_STATUS.OK,
+          ...(listed.partial === true ? { reason: reasonForResult({ ok: false, error: accountErrors?.[0]?.error }, 'read') } : {}),
+          text: (listed.partial === true ? 'Partial account read. ' : '') + 'ISSUE list: ' + total + ' rows match (' + cond.join(', ') + '), returning ' + sliced.length + ', of which ' + statusConflictCount + ' have a status conflict.' + backendIncompleteText,
           data: data,
           notes: notes,
           touched: [],

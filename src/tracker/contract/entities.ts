@@ -190,6 +190,8 @@ export interface StatusConflict {
  * 只允许出现在 `getDependencies` 的返回值里。放进来就是第二真源，两处迟早对不上。
  */
 export interface Issue {
+  /** 跨账号读面必须携带来源别名；票号可能在不同账号里重复，不能只按 key 合并。 */
+  account?: string
   /** 规范 id，**在本工作单元内**唯一；全局身份是 (仓库引用, effortId, key) 三元组。 */
   key: string
   /**

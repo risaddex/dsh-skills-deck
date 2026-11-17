@@ -194,11 +194,11 @@ export function createDeckContext(deps?: DeckContextDeps) {
         claimed: mapClaimed,
       }
       const preTransport = transportMessage(pre as TransportResult)
-      if (preTransport) throw new Error(preTransport)
+      if (preTransport && !pre?.accounts && !pre?.accountsError) throw new Error(preTransport)
       const listedTransport = transportMessage(listed as TransportResult)
-      if (listedTransport) throw new Error(listedTransport)
+      if (listedTransport && !pre?.accounts && !pre?.accountsError) throw new Error(listedTransport)
       const permTransport = transportMessage(perm as TransportResult)
-      if (permTransport) throw new Error(permTransport)
+      if (permTransport && !pre?.accounts && !pre?.accountsError) throw new Error(permTransport)
       // 薄行口回来的已经是薄行（key/title/state/url），不再过 mapRow；
       // 老路回来的完整行照原来的样子投影成薄行。
       const thinRows = (listMapsUsed && listed.ok === true && listed.data && Array.isArray(listed.data.rows)) ? listed.data.rows : []
@@ -211,6 +211,8 @@ export function createDeckContext(deps?: DeckContextDeps) {
         permissions = { push: perm.data.push, triage: perm.data.triage }
       } else permissions = { unknown: true }
       const notes = []
+      if (pre?.accounts) notes.push('Accounts are configured metadata only, not live authentication status; each account is checked when it is read.')
+      if (pre?.accountsError) notes.push('The account configuration could not be listed: ' + String((pre.accountsError as { message?: unknown }).message || '').slice(0, 200))
       if (!listed.ok) notes.push('The map list did not come back this time (the backend said: ' + String((listed.error && listed.error.message) || '').slice(0, 200) + ').')
       if (listMapsUsed && listed.ok === true && listed.data && listed.data.truncated === true) notes.push('Only the first ' + thinRows.length + ' maps came back (out of ' + listed.data.total + ', the page cap was hit); the rest was not fetched this time.')
       if (pre && pre.ok === false) notes.push('The environment preflight did not pass (' + String((pre.error && pre.error.message) || '').slice(0, 200) + '): tickets can still be read, but write operations may fail.')
@@ -223,14 +225,15 @@ export function createDeckContext(deps?: DeckContextDeps) {
       // 有后端 kind 就按读阶段映射；没有就落 backend-unsupported（停）。文字要把「0 张不是真的没有」
       // 和续法说清，不能只换个码。
       const listedEv = listed.ok ? null : failureOf(listed, 'read')
-      const status = listed.ok ? DECK_STATUS.OK : DECK_STATUS.PARTIAL
+      const accountsEv = pre?.accountsError ? failureOf({ ok: false, error: pre.accountsError }, 'read') : null
+      const status = listed.ok && !pre?.accountsError ? DECK_STATUS.OK : DECK_STATUS.PARTIAL
       const mapsLine = listed.ok
         ? 'Maps: ' + maps.length + '.'
         : 'The map list did not come back this time (the 0 below does not mean the repo really has no maps). ' + partialNextStep(listedEv ? listedEv.code : '')
       return {
         value: {
           status: status,
-          reason: listedEv ? listedEv.code : '',
+          reason: listedEv ? listedEv.code : accountsEv ? accountsEv.code : '',
           text: 'This is ' + s.cwd + ', backend ' + pick.backendId + ' (' + pick.source + ', manual user choice > anchor file > auto-detected), repo ' + (repo.refId || '(this backend has no repo identifier)') + '. ' + mapsLine,
           data: {
             workspace: { root: s.cwd, key: s.workspaceKey, sessionId: s.sessionId, source: s.source },
@@ -239,12 +242,15 @@ export function createDeckContext(deps?: DeckContextDeps) {
             initialized: pre ? pre.ok === true : null,
             preflight: pre ? { ok: pre.ok === true, message: String((pre.error && pre.error.message) || '').slice(0, 300) } : null,
             maps: maps,
+            ...(pre?.accounts ? { accounts: pre.accounts, accountsStatus: 'configured-not-probed' } : {}),
+            ...(pre?.accountsError ? { accountsError: pre.accountsError } : {}),
             // 这一句是给 AI 的用法说明（描述只有路由，语义放这里；本地后端追加建票契约，见上面 howtoFor）。
             howto: howtoFor(pick.backendId),
             quota: { perCallPoints: budget.AI_TOOL_MAX_POINTS_PER_CALL, perCallRequests: budget.AI_TOOL_MAX_REQUESTS_PER_CALL, perHourPoints: budget.AI_TOOL_MAX_POINTS_PER_HOUR, perHourRequests: budget.AI_TOOL_MAX_REQUESTS_PER_HOUR, maxChildTicketsPerCall: budget.AI_TOOL_MAX_CHILD_TICKETS_PER_CALL },
             // 失败证据只在失败时出现，成功回执的形状一字不动（金标准回执在 tests/tracker-contract/fixtures/golden-receipts/）。
             // #1831：地图清单没读全时明确标出「这是部分结果、缺在哪一档」，调用方不必从文字里猜。
             ...(listedEv ? { partial: true, incomplete: listedEv.code === REFUSAL_REASONS.BACKEND_TIMEOUT ? 'timeout' : 'read-failed', listError: evidenceFields(listedEv, 'errorKind') } : {}),
+            ...(accountsEv && !listedEv ? { partial: true, incomplete: 'accounts-unavailable' } : {}),
           },
           notes: notes,
           touched: [],

@@ -32,7 +32,7 @@ export function adaptSession(session: TrackerSession): UnknownRecord {
       }
       const got = (await fn(...args)) as UnknownRecord | null;
       const err = (got && got.ok === false) ? (got.error || null) as UnknownRecord | null : null;
-      if (err && str(err.kind) === 'env') return { ok: false, error: { kind: 'backend-threw', message: str(err.message) || 'the execution layer gave no answer' } };
+      if (err && str(err.kind) === 'env') return { ...got, ok: false, error: { kind: 'backend-threw', message: str(err.message) || 'the execution layer gave no answer' } };
       return got;
     };
   }

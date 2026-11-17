@@ -25,6 +25,7 @@ import { ghPreflight } from '../read/preflight.js'
 // #1533：认领只看 `.git/config` 里的远端地址，不扫整份文本（分支名带 github 不再误认领）。
 import { remoteUrlsOfGitConfig } from '../../../kernel/git-remote.js'
 import { listIssues, getIssue } from '../read/issues.js'
+import { refuseAccountRead } from '../../../kernel/account-read-refusal.js'
 import { countIssues } from '../read/counts.js'
 import { listIssuesPage } from '../read/page.js'
 import { listMaps } from '../read/maps.js'
@@ -124,7 +125,7 @@ export function createGithubBackend(ctx: OpContext) {
   const backend = {
     id: 'github',
     preflight: (handle, opCtx) => ghPreflight(handle, opCtx || ctx),
-    list: (repo, filter, opCtx) => listIssues(repo, filter, opCtx || ctx),
+    list: async (repo, filter, opCtx) => refuseAccountRead(filter) || listIssues(repo, filter, opCtx || ctx),
     // #689：后端计数（一次 GraphQL 的 totalCount，只数工单）。语义见 contract.js 的「计数契约」。
     counts: (repo, filter, opCtx) => countIssues(repo, filter, opCtx || ctx),
     // #690：按页取票（创建时间倒序 + 薄片段 + 游标 + 总数）。语义见 tracker/contract-page.js 的「分页契约」。
@@ -135,7 +136,7 @@ export function createGithubBackend(ctx: OpContext) {
     listSubIssues: (repo, mapKey, opts, opCtx) => listSubIssues(repo, mapKey, opts, opCtx || ctx),
     // #1603：一次取全量地图薄行（内部翻页 + 内存二次校验 + 更新时间重排 + 封顶截断），给 deck_context 首屏用。
     listMaps: (repo, opCtx) => listMaps(repo, opCtx || ctx),
-    get: (repo, key, opts, opCtx) => getIssue(repo, key, opts, opCtx || ctx),
+    get: async (repo, key, opts, opCtx) => refuseAccountRead(opts) || getIssue(repo, key, opts, opCtx || ctx),
     getDependencies: (repo, key, opts, opCtx) => getDependencies(repo, key, opts, opCtx || ctx),
     create: (repo, input, opCtx) => createIssue(repo, input, opCtx || ctx),
     close: (repo, key, opts, opCtx) => closeIssue(repo, key, opts, opCtx || ctx),
