@@ -21,7 +21,8 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // 缓存位置可被环境变量改写：读法要能被夹具验证，不能只能靠跑一整条链来试。
 const CACHE = process.env.DSH_VERIFY_LAST_FILE || path.join(ROOT, 'node_modules', '.cache', 'dsh-verify-last.json')
-const REGISTER = path.join(ROOT, 'tests', 'known-reds.json')
+// 登记表位置同样可被环境变量改写：登记表现在是空的，读法门禁要用自带的一份样例登记表去验「在案的红不算新红」。
+const REGISTER = process.env.DSH_KNOWN_REDS_FILE || path.join(ROOT, 'tests', 'known-reds.json')
 
 interface RunResult { file?: string; code?: number | null; exitCode?: number | null; optional?: boolean; evidence?: string }
 interface LastRun {

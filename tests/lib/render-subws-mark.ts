@@ -63,11 +63,16 @@ function subwsCmpKey(keyOf: any, v: any): string {
 }
 
 /** 真源里的纯函数那把规整钥匙（与门禁同一件，不另写仿制品）。 */
-function keyOfFn(): any {
+function keyOfFn(os?: string): any {
   // 2026-10-19 第三阶段起共享层产物住仓库根的 .build/shared/（真源 src/shared/workspaceKey.ts）。
   const src = fs.readFileSync(path.join(ROOT, '.build/shared/workspaceKey.js'), 'utf8').replace(/^\s*export\s+/gm, '')
   // 本处走 compileFn：这段真源码不引用本文件任何外层变量，参数名给空数组即可。
-  return compileFn([], src + '\nreturn keyOf')()
+  const keyOf = compileFn([], src + '\nreturn keyOf')()
+  // 不给 os：与以前完全一样，由 keyOf 自己按运行平台判（其他门禁照旧）。
+  // 给了 os（例如 'win32'）：把第二个参数钉死。keyOf 的契约就是「显式 os 参数优先」，真客户端在 Windows 上走的是
+  // win32 那一半；门禁里用 D:\ilife 这类 Windows 路径时必须走那一半，否则在 macOS/Linux 上折叠规则对不上。
+  if (typeof os !== 'string' || os === '') return keyOf
+  return function (raw: any) { return keyOf(raw, os) }
 }
 
 /**
@@ -75,15 +80,16 @@ function keyOfFn(): any {
  * @param {string} src 组件源码文本
  * @param {object} env { React, h, keyOf, tr, Tip, host, flash, localStorage, chainStep, openFolderAt }
  */
-function makeMark(src: string, env: { React: any; h: any; keyOf: any; tr: any; Tip: any; host: any; flash: any; localStorage: any; chainStep: any; openFolderAt: any }): any {
+function makeMark(src: string, env: { React: any; h: any; keyOf: any; tr: any; Tip: any; host: any; flash: any; localStorage: any; chainStep: any; openFolderAt: any; currentOs?: any }): any {
   const body = src.replace(/^\s*export\s+/gm, '')
   // 本处走 compileFn：组件要的外层名字（React、tr、Tip…）本来就一个不少地按参数传进来，不靠外层作用域。
   // #1582：打开文件夹那一步走共用函数 openFolderAt，失败提示走 flash，名字表与 env 都得多这两个。
+  // currentOs 是可选的：组件拼分隔符时先问它，没有（undefined）就退回进程平台，与不传这个参数时的行为一致。
   const factory = compileFn(
-    ['keyOf', 'tr', 'Tip', 'host', 'React', 'h', 'localStorage', 'chainStep', 'openFolderAt', 'flash'],
+    ['keyOf', 'tr', 'Tip', 'host', 'React', 'h', 'localStorage', 'chainStep', 'openFolderAt', 'flash', 'currentOs'],
     body + '\nreturn SubworkspaceMark'
   )
-  return factory(env.keyOf, env.tr, env.Tip, env.host, env.React, env.h, env.localStorage, env.chainStep, env.openFolderAt, env.flash)
+  return factory(env.keyOf, env.tr, env.Tip, env.host, env.React, env.h, env.localStorage, env.chainStep, env.openFolderAt, env.flash, env.currentOs)
 }
 
 /**
@@ -110,9 +116,10 @@ function tipTextOf(tipCalls: any): string {
  *   lang 取 'zh'（默认）| 'en'，决定浮层文案；src 换一版组件源码（复现脚本用它喂旧版）；
  *   click 为真时渲染完真的点一下那枚标志，把 host.call 的记录收回来；
  *   autoShown 为真时假装「这个工作区以前已经自动展开过」（记的键与组件读的键是同一条）；
- *   chainInit 给出检查链里 tracker:initialized 那一步的状态（'done' / 'current' / 不给）。
+ *   chainInit 给出检查链里 tracker:initialized 那一步的状态（'done' / 'current' / 不给）；
+ *   os 把键函数与分隔符判断钉到某个平台（'win32' 等）；不给就按运行平台，与以前一致。
  */
-async function renderMark(store: any, opts?: { lang?: string; src?: string; click?: boolean; autoShown?: boolean; chainInit?: string }): Promise<any> {
+async function renderMark(store: any, opts?: { lang?: string; src?: string; click?: boolean; autoShown?: boolean; chainInit?: string; os?: string }): Promise<any> {
   const o = opts || {}
   const lang = o.lang === 'en' ? 1 : 0
   const src = o.src || fs.readFileSync(path.join(ROOT, MARK_REL), 'utf8')
@@ -176,7 +183,9 @@ async function renderMark(store: any, opts?: { lang?: string; src?: string; clic
   //   （叶子是纯函数，宿主调用对象从参数进；ts-hook 下 require .ts 可用）。组件把这里的 host 替身交给它，
   //   所以 hostCalls 记的仍是真发出去的那一次 wf.openFolder（E9 断言不变），失败时走的也是真函数的规矩。
   const { openFolderAt } = require('../../src/client/views/shared/openFolder.ts')
-  const keyOf = keyOfFn()
+  // os 给了就把键函数与组件的 currentOs 一起钉到那个平台（见 keyOfFn 的说明）；不给则与以前完全一致。
+  const keyOf = keyOfFn(o.os)
+  const currentOsStub = o.os ? function () { return o.os } : undefined
   // 「已经自动展开过」这份记录按**工作区根**那把键记，与组件里读它的地方同一把键
   //   （组件读的是 subwsMarkCmpKey(root)，root 取的是快照里那个 workspaceRoot）。
   if (o.autoShown && store && store.snapshot && store.snapshot.workspaceRoot) {
@@ -189,7 +198,7 @@ async function renderMark(store: any, opts?: { lang?: string; src?: string; clic
     if (id !== 'tracker:initialized' || !o.chainInit) return null
     return { id: id, status: o.chainInit }
   }
-  const Comp = makeMark(src, { React: React, h: React.createElement, keyOf: keyOf, tr: tr, Tip: Tip, host: host, flash: flash, localStorage: window.localStorage, chainStep: chainStep, openFolderAt: openFolderAt })
+  const Comp = makeMark(src, { React: React, h: React.createElement, keyOf: keyOf, tr: tr, Tip: Tip, host: host, flash: flash, localStorage: window.localStorage, chainStep: chainStep, openFolderAt: openFolderAt, currentOs: currentOsStub })
 
   const container = window.document.createElement('div')
   window.document.body.appendChild(container)

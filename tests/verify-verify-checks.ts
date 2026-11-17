@@ -8,6 +8,7 @@
 // 这扇门禁不启动实例、不跑真 glab：命令端口与文件端口都由测试自己拼，读源码时直接读仓库里的真实文件。
 // 构造不出输入的那一项会写成静态断言并说明，不做 silent skip。
 import fs from 'node:fs'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import {
@@ -29,7 +30,10 @@ import { printGateResult } from './lib/gate-result.ts'
 const GATE = 'verify-verify-checks'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..')
-const TEMP_ROOT = 'D:/Temp'
+// 临时工作区必须是绝对路径：原来写死的 'D:/Temp' 在 macOS/Linux 上是相对路径，会在仓库根建出名为 'D:' 的目录，
+// 且 workspace-fixture 的 resolve(cwd, 相对路径) 会把路径拼两遍而找不到工作区，于是被当成「没有 fixture」软跳过，
+// C2 到 C6 失败而 C1 空过。这里走真实的系统临时目录（realpath 掉 macOS 的 /var -> /private/var 链接）。
+const TEMP_ROOT = join(fs.realpathSync(os.tmpdir()), 'dsh-verify-checks')
 const NEWLINE = String.fromCharCode(10)
 const PROFILE_SOURCE = join(ROOT, 'verify', 'profile.ts')
 const CHECKS_SOURCE = join(ROOT, 'verify', 'checks', 'index.ts')
@@ -354,7 +358,12 @@ async function main(): Promise<void> {
     fs.writeFileSync(join(validWorkspace, 'docs', 'agents', 'workspace.yaml'), 'backendId: markdown' + NEWLINE + 'schema: 2' + NEWLINE, 'utf8')
     const emptyCwd = makeTempDir('ws-cwd')
     const validObs = await fixture.run(makeContext({ cwd: emptyCwd, env: { DSH_VERIFY_WORKSPACE_DIR: validWorkspace } }))
-    check(validObs.ok === true, 'C1 合法工作区（.git + backendId=markdown）通过', show(validObs))
+    // 「软跳过」同样返回 ok:true，所以必须同时要求说明里写着「bound to backendId」，否则找不到工作区也会空过。
+    check(
+      validObs.ok === true && typeof validObs.detail === 'string' && validObs.detail.includes('bound to backendId markdown'),
+      'C1 合法工作区（.git + backendId=markdown）通过，且确实找到了工作区而不是软跳过',
+      show(validObs),
+    )
     check(
       typeof validObs.detail === 'string' &&
         validObs.detail.includes(validWorkspace) &&

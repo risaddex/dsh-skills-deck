@@ -717,8 +717,9 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 单跑实测 353 条。
   'verify-1586-rewrite': 353,
   // 2026-10-31 #1766：发布候选审计与发布字节对账（身份行、候选提交祖先、差异审计、候选包哈希、
-  // validate/match 命令行入口、publish-token.ps1 传 -Candidate 时的真实冒烟）；59 条单跑实测。
-  'verify-1766-release-audit': 59,
+  // validate/match 命令行入口）；56 条单跑实测。publish-token.ps1 传 -Candidate 的真实冒烟需要 pwsh，已搬到
+  // tests/verify-1766-publish-token-candidate-smoke.ts（没有 pwsh 时明确 INFO 跳过，不受断言数约束）。
+  'verify-1766-release-audit': 56,
   // 2026-11-03 #1837：技能页色点从「状态」改成「重要程度」三档的源码门禁——27 项档位与随包技能目录
   // 一一对应、外观表三档只引用皮肤令牌、行与图例查同一张表、旧状态词与 act.load 清零、8 个图例词条
   // 中英齐全，末尾把 ask-matt 故意改成 rare 的反证；单跑实测 30 条。

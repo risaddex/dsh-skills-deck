@@ -35,9 +35,9 @@ function check(ok: boolean, label: string, detail?: string): void {
   console.log('  ✗ ' + label + (detail ? ' —— ' + detail : ''))
 }
 
-// 读登记表里第一个已知红：用它验证「在案的红不算新红」，不写死名字，登记表改了这扇门也不假红。
-const register = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'known-reds.json'), 'utf8')) as { failures: Array<string | { file?: string }> }
-const registered = register.failures.map((entry) => (typeof entry === 'string' ? entry : String(entry.file || ''))).filter(Boolean)[0] || ''
+// 验证「在案的红不算新红」用的是本门禁自带的一份样例登记表（经 DSH_KNOWN_REDS_FILE 交给读法），不读真登记表：
+// 真登记表的目标就是空（#42 已清空），空了这扇门也不能假红或假绿。
+const registered = 'tests/verify-sample-registered.ts'
 
 interface Fixture { name: string; cache: unknown | null; expectExit: number; expectLines: string[]; forbidLines?: string[] }
 
@@ -109,7 +109,9 @@ console.log('')
 console.log('[6] 登记表里的已知红不算新红；缓存不存在时退 2 并说清要先跑门禁')
 const knownFile = path.join(TMP, 'cache-known.json')
 fs.writeFileSync(knownFile, JSON.stringify(base({ red: 1, knownRed: 1, results: [row(registered, 1, 1)] }), null, 2))
-const knownRun = spawnSync(process.execPath, [READER], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, DSH_VERIFY_LAST_FILE: knownFile } })
+const sampleRegister = path.join(TMP, 'sample-known-reds.json')
+fs.writeFileSync(sampleRegister, JSON.stringify({ failures: [{ file: registered, note: 'fixture entry for the reader gate' }] }, null, 2))
+const knownRun = spawnSync(process.execPath, [READER], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, DSH_VERIFY_LAST_FILE: knownFile, DSH_KNOWN_REDS_FILE: sampleRegister } })
 check(knownRun.status === 0, '在案的红不判成新红，退出码 0', String(knownRun.stdout || '').replace(/\n/g, ' | ').slice(0, 200))
 const missing = spawnSync(process.execPath, [READER], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, DSH_VERIFY_LAST_FILE: path.join(TMP, 'absent.json') } })
 check(missing.status === 2, '没有缓存时退出码 2', String(missing.status))

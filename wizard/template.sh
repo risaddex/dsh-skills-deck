@@ -169,8 +169,8 @@ set_secret() {
       return
     fi
   fi
-  SKIPPED+=("GitHub secret $name（手工：gh secret set $name）")
-  warn "已跳过 GitHub secret $name：gh 未就绪，稍后手工设置"
+  SKIPPED+=("GitHub secret ${name}（手工：gh secret set ${name}）")
+  warn "已跳过 GitHub secret ${name}：gh 未就绪，稍后手工设置"
 }
 
 # set_var NAME VALUE — 设置 GitHub Actions 仓库变量（非 secret）
@@ -183,14 +183,14 @@ set_var() {
     fi
   fi
   SKIPPED+=("GitHub variable $name")
-  warn "已跳过 GitHub variable $name，gh 未就绪，稍后手工设置"
+  warn "已跳过 GitHub variable ${name}，gh 未就绪，稍后手工设置"
 }
 
 # finish — 清屏并展示收尾汇总（已写入、已设置、待手工）
 finish() {
   _clear
   printf '\n%s%s  ✓ 全部完成%s\n' "$BOLD" "$GREEN" "$RESET"
-  (( ${#WRITTEN_ENV[@]} ))    && note "已写入 ${#WRITTEN_ENV[@]} 项到 $ENV_FILE：${WRITTEN_ENV[*]}"
+  (( ${#WRITTEN_ENV[@]} ))    && note "已写入 ${#WRITTEN_ENV[@]} 项到 ${ENV_FILE}：${WRITTEN_ENV[*]}"
   (( ${#WRITTEN_SECRET[@]} )) && note "已设置 ${#WRITTEN_SECRET[@]} 个 GitHub secret：${WRITTEN_SECRET[*]}"
   if (( ${#SKIPPED[@]} )); then
     printf '\n'; warn "仍需手工处理："
@@ -213,6 +213,6 @@ poll_npm_version() {
     printf '  %s·%s 第 %s/18 次：当前 latest=%s，等待 5s 后重试…\n' "$DIM" "$RESET" "$i" "${latest:-<空>}"
     sleep 5
   done
-  warn "轮询超时：官方源仍未出现 $ver（latest=$latest），可能是网络或发布尚未完成"
+  warn "轮询超时：官方源仍未出现 ${ver}（latest=${latest}），可能是网络或发布尚未完成"
   return 1
 }

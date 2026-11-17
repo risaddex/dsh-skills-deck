@@ -52,7 +52,10 @@ const { renderMark, tipTextOf, keyOfFn, tipsFromLocale, localeTextOf } = require
 console.log('=== #666 面板归属标志：取根 · 该不该出现 · 显示哪几行 ===')
 
 // ── 真件一：内核里那把规整函数（与 verify-653 同口径，不是另写的仿制品）
-const keyOf = keyOfFn()
+// 平台怎么定：本门禁的夹具几乎全是 Windows 路径（D:\ilife），产品对 Windows 路径的折叠与分隔符规则只在 win32 那一半生效，
+// 所以这些断言把平台钉死成 'win32'（keyOf 的契约就是显式 os 参数优先；组件拼分隔符时先问 currentOs），与在哪台机器上跑无关。
+// 只有 F3 与 G7 例外：它们在真盘（系统临时目录）上跑，路径是本机的写法，必须走本机平台，所以另备一份 apiHost。
+const WINDOWS_OS = 'win32'
 
 // ── 真件二：真实 locale 里的四行文案（zh 在前、en 在后，与文件里两处的顺序一致）
 const grabs = tipsFromLocale()
@@ -70,23 +73,25 @@ if (start < 0 || end < 0 || end <= start) {
 }
 const block = noExport(markSrc.slice(start, end))
 // 手法：compileFn——这段纯函数只是从真源里切出来的文本，交给 tests/lib/eval-probe.js 统一造函数，参数名照原样拆开。
-const makeApi = (tmpl: unknown) => compileFn(
-  ['keyOf', 'tr'],
+const makeApi = (tmpl: unknown, os: string) => compileFn(
+  ['keyOf', 'tr', 'currentOs'],
   block + '\nreturn { rootOf: subwsMarkRootOf, cmpKey: subwsMarkCmpKey, shows: subwsMarkShows, relOf: subwsMarkRelOf, rootShown: subwsMarkRootShown, linesOf: subwsMarkLinesOf }'
-)(keyOf, function (k: any) {
+)(keyOfFn(os), function (k: any) {
   // 浮层四行模板从真词表取，不在门禁里手抄。
   if (k === 'panel.wsMarkTip') return tmpl
   return localeTextOf(k, 'zh')
-})
-const api = makeApi(grabs[0] || '')
-const apiEn = makeApi(grabs[1] || '')
+}, function () { return os })
+const api = makeApi(grabs[0] || '', WINDOWS_OS)
+const apiEn = makeApi(grabs[1] || '', WINDOWS_OS)
+// 本机平台版：只给 F3 与 G7 这两条在真盘上跑的断言用。
+const apiHost = makeApi(grabs[0] || '', process.platform)
 
 // E / F 两组要把组件放进真浏览器环境渲染。渲染工具（tests/lib/render-subws-mark.js）默认自己从
 // src/client/views/SubworkspaceMark.js 读源码 —— 那个 .js 是构建产物，已经删除，直接调用会报 ENOENT。
 // 这里把上面已经取好的真源文本（spliceableJs 转成的可拼接 JavaScript）交给它，渲染的仍是同一份组件
 // 代码；下面每条断言一条没动、也没放宽。
 const renderMarkFromSource = (store: any, opts?: any): Promise<any> =>
-  renderMark(store, Object.assign({}, opts, { src: markSrc }))
+  renderMark(store, Object.assign({ os: WINDOWS_OS }, opts, { src: markSrc }))
 
 console.log('\nA) 取根：快照优先，wf.cwd 带回来的根作早到来源')
 let got = api.rootOf({ cwd: SUB_DIR, snapshot: { workspaceRoot: ROOT_DIR } })
@@ -386,7 +391,7 @@ try {
   // 关键一条：把关掉大小写的那个真实产出，连同会话原始目录一起喂给标志，看画出来的是哪种写法
   const hostValue = canonDeep                       // 宿主放进快照的 workspaceRoot，就是它
   const sessionCwd = deep                           // 会话原始目录（wf.cwd 回的是 header.cwd，保留用户写法）
-  const fLines = api.linesOf(hostValue, sessionCwd, true)
+  const fLines = apiHost.linesOf(hostValue, sessionCwd, true)
   if (fLines.length === 3 && fLines[0] === '面板数据来自工作区 ' + wsRoot && fLines[2] === '点一下打开 ' + wsRoot)
     ok('F3 宿主真给的那个值，画出来还是用户自己的写法（不会显示成小写或正斜杠）')
   else bad('F3 宿主真给的值画出来写法不对：' + JSON.stringify(fLines))
@@ -396,10 +401,10 @@ try {
 
   // 反向：这一份数据就该出现标志，而它的根会话版本不该出现
   const fSubStore = { cwd: sessionCwd, snapshot: { ok: true, maps: [], workspaceRoot: hostValue } }
-  const rHost = await renderMarkFromSource(fSubStore)
+  const rHost = await renderMarkFromSource(fSubStore, { os: process.platform })
   if (rHost.isSub === true && /面板数据来自工作区 /.test(rHost.html)) ok('F5 宿主真给的那份快照，渲染出来确实有这枚标志')
   else bad('F5 宿主真给的那份快照没画出标志：' + JSON.stringify(rHost.html.slice(0, 160)))
-  const rHostRoot = await renderMarkFromSource({ cwd: wsRoot, snapshot: { ok: true, maps: [], workspaceRoot: hostValue } })
+  const rHostRoot = await renderMarkFromSource({ cwd: wsRoot, snapshot: { ok: true, maps: [], workspaceRoot: hostValue } }, { os: process.platform })
   if (rHostRoot.isSub === false) ok('F6 同一个工作区的根会话里不画（那时根就是它自己）')
   else bad('F6 根会话里画出来了')
 
@@ -494,7 +499,7 @@ try {
   if (r6 && r6.workspaceRoot && String(r6.workspaceRoot) === String(await canon(deep)))
     ok('G6 真盘上跑一遍：带回来的工作区根就是 canonicalKey 在子目录上算出来的那个（与快照同一个来源）')
   else bad('G6 真盘上算出来的根不对：' + JSON.stringify(r6))
-  const linesEarly = api.linesOf(r6 && r6.workspaceRoot, deep, true)
+  const linesEarly = apiHost.linesOf(r6 && r6.workspaceRoot, deep, true)
   if (linesEarly.length === 3 && linesEarly[0] === '面板数据来自工作区 ' + wsRoot)
     ok('G7 把这个早到的根直接喂给标志，第一行就是那个工作区（面板一打开就能画）')
   else bad('G7 早到的根喂给标志画不出来：' + JSON.stringify(linesEarly))
