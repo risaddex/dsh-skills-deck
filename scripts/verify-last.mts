@@ -14,9 +14,13 @@
  */
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
-const CACHE = path.join(ROOT, 'node_modules', '.cache', 'dsh-verify-last.json')
+// `fileURLToPath` 而不是 `new URL(...).pathname`：后者在 Windows 上是 `/C:/…`，在带空格的目录里还是
+// `%20` 编码的，于是缓存永远找不到、每次都报「还没跑过」（PR #35 review 的 P2）。
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+// 缓存位置可被环境变量改写：读法要能被夹具验证，不能只能靠跑一整条链来试。
+const CACHE = process.env.DSH_VERIFY_LAST_FILE || path.join(ROOT, 'node_modules', '.cache', 'dsh-verify-last.json')
 const REGISTER = path.join(ROOT, 'tests', 'known-reds.json')
 
 interface RunResult { file?: string; code?: number | null; exitCode?: number | null; evidence?: string }
@@ -52,10 +56,21 @@ for (const entry of (register && register.failures) || []) {
   if (file) onRegister.add(file)
 }
 
-// 红的判据与并行跑者一致：退出码非零；缺退出码时退回 code。
+// 红的判据与并行跑者一致：**以 `code` 为准**。`runStepJudged` 在「退出码 0 但完成证据对不上」时
+// 专门把 `code` 记成 1、把真实退出码留在 `exitCode` 里 —— 先看 `exitCode` 就会把这种失败读掉
+// （PR #35 review 的 P1）。
+function judgedRed(row: RunResult): boolean {
+  const judged = typeof row.code === 'number' ? row.code : row.exitCode
+  return typeof judged === 'number' && judged !== 0
+}
 const results = Array.isArray(last.results) ? last.results : []
-const failing = results.filter((row) => (typeof row.exitCode === 'number' ? row.exitCode !== 0 : (typeof row.code === 'number' && row.code !== 0)))
+// 冒烟单独记在 `smoke.results` 里；计划本身失败记在 `smoke.problem`。两处都算进判据，
+// 否则「主链全绿、冒烟红了」会被读成「没有新红」（PR #35 review 的 P1）。
+const smokeRows = last.smoke && Array.isArray(last.smoke.results) ? (last.smoke.results as RunResult[]) : []
+const smokeProblem = String((last.smoke && last.smoke.problem) || '')
+const failing = results.concat(smokeRows).filter(judgedRed)
 const fresh = failing.map((row) => String(row.file || '(unnamed)')).filter((file) => !onRegister.has(file))
+if (smokeProblem) fresh.push('smoke plan: ' + smokeProblem.slice(0, 120))
 const when = last.at ? new Date(last.at).toISOString().replace('T', ' ').slice(0, 19) : 'unknown time'
 const head = String(last.head || '').slice(0, 8) || 'unknown head'
 const seconds = typeof last.wallMs === 'number' ? Math.round(last.wallMs / 100) / 10 + 's' : 'unknown'
@@ -64,14 +79,14 @@ const smoke = last.smoke || {}
 console.log('last run   ' + when + ' · head ' + head + ' · ' + String(last.stepsRan ?? '?') + '/' + String(last.stepsTotal ?? '?') + ' steps · ' + seconds)
 console.log('red gates  ' + String(last.red ?? failing.length) + ' · on the register ' + String(last.knownRed ?? '?') + ' · new ' + String(last.newRed ?? fresh.length) + ' · flaky ' + String(last.flaky ?? 0))
 console.log('new reds   ' + (fresh.length > 0 ? fresh.join(', ') : 'none'))
-console.log('smoke      ' + String(smoke.red ?? 0) + ' red of ' + String(smoke.stepsRan ?? 0) + '/' + String(smoke.stepsTotal ?? 0))
+console.log('smoke      ' + String(smoke.red ?? smokeRows.filter(judgedRed).length) + ' red of ' + String(smoke.stepsRan ?? 0) + '/' + String(smoke.stepsTotal ?? 0) + (smokeProblem ? ' · plan failed: ' + smokeProblem.slice(0, 80) : ''))
 
 if (fresh.length > 0) {
   console.log('')
   console.log('this run is NOT mergeable: ' + fresh.length + ' gate(s) red that are not on tests/known-reds.json')
-  for (const row of failing) {
+  for (const row of failing.concat(smokeProblem ? [{ file: 'smoke plan', evidence: smokeProblem } as RunResult] : [])) {
     const file = String(row.file || '')
-    if (onRegister.has(file)) continue
+    if (file !== 'smoke plan' && onRegister.has(file)) continue
     const why = String(row.evidence || '').slice(0, 200)
     console.log('  - ' + file + (why ? ' — ' + why : ''))
   }
