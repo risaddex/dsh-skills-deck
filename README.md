@@ -1,301 +1,217 @@
-<h1 align="center">dsh-mattpocock-skills-deck</h1>
+<h1 align="center">dsh-skills-deck</h1>
 
 <div align="center">
 
-**中文** · [English](docs/README.en.md)
+**Mapas, specs e tickets dentro do DeepSeek Harness, mais as skills de engenharia de Matt Pocock.**
 
-**拨开战争迷雾看见终点，剩下的交给 MattSkillsDeck。**  
-让 [mattpocock/skills](https://github.com/mattpocock/skills) 在 DSH 里化作游戏系统的任务面板。
+Backends: GitHub, GitLab, Markdown local e **Linear**.
 
-你的 ⭐是我夜空中最亮的星。
-
-*Part the fog of war, see the end — MattSkillsDeck handles the rest.*
-
-[![版本](https://img.shields.io/npm/v/dsh-mattpocock-skills-deck?label=%E7%89%88%E6%9C%AC)](https://www.npmjs.com/package/dsh-mattpocock-skills-deck) [![下载量](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.npmjs.org%2Fdownloads%2Fpoint%2Flast-month%2Fdsh-mattpocock-skills-deck&query=%24.downloads&label=%E4%B8%8B%E8%BD%BD%E9%87%8F&suffix=%2F%E6%9C%88&color=brightgreen)](https://www.npmjs.com/package/dsh-mattpocock-skills-deck) [![下载总量](https://img.shields.io/npm/dt/dsh-mattpocock-skills-deck?label=%E4%B8%8B%E8%BD%BD%E6%80%BB%E9%87%8F&color=red)](https://www.npmjs.com/package/dsh-mattpocock-skills-deck) [![最近更新](https://img.shields.io/github/last-commit/FeatherHunter/dsh-mattpocock-skills-deck?label=%E6%9C%80%E8%BF%91%E6%9B%B4%E6%96%B0&color=FE7D37)](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/commits/main) [![月提交](https://img.shields.io/github/commit-activity/m/FeatherHunter/dsh-mattpocock-skills-deck?label=%E6%8F%90%E4%BA%A4%E6%95%B0&color=DFAB01)](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/graphs/commit-activity) [![技能包](https://img.shields.io/badge/%E6%8A%80%E8%83%BD%E5%8C%85-mattpocock%2Fskills-9D7CD8)](https://github.com/mattpocock/skills) [![欢迎提交PR🌹](https://img.shields.io/badge/%E6%AC%A2%E8%BF%8E%E6%8F%90%E4%BA%A4PR%F0%9F%8C%B9-red.svg)](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues)
-
-<span style="color:red">欢迎提交PR，不要求完美无瑕，有缺陷也会在合入后进行优化而不是拒绝，星星之火🔥可以燎原！</span><br>
-唯一要求：使用技能 /pr 填写PR信息。
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey.svg)](https://github.com/risaddex/dsh-skills-deck/blob/main/LICENSE) [![Último commit](https://img.shields.io/github/last-commit/risaddex/dsh-skills-deck?label=%C3%BAltimo%20commit&color=FE7D37)](https://github.com/risaddex/dsh-skills-deck/commits/main) [![Skills](https://img.shields.io/badge/skills-mattpocock%2Fskills-9D7CD8)](https://github.com/mattpocock/skills)
 
 </div>
 
-<h2 align="center"><sub>INSTALL</sub><br>安装</h2>
+> **Estado: alpha da série 2.0.0.** O plugin funciona e é usado todos os dias pelo mantenedor, mas a versão estável 2.0.0 ainda não saiu. As partes que nunca rodaram contra um serviço real estão marcadas como tal nas seções abaixo.
+
+## O que é
+
+`dsh-skills-deck` é um plugin do [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh) (DSH) com duas partes:
+
+- **O deck**: um painel na barra lateral do DSH e um conjunto de ferramentas `deck_*` para o agente. Os dois leem e escrevem **mapas** (um problema grande quebrado em tickets de decisão), **specs** e **tickets** no seu gerenciador de issues. O painel mostra o que está livre, o que está bloqueado e o que já foi fechado, e entrega ao agente o prompt certo com um clique, para que várias sessões trabalhem em paralelo sem pisar nos mesmos tickets.
+- **As skills**: as 27 skills de [mattpocock/skills](https://github.com/mattpocock/skills), com `wayfinder`, `grilling`, `to-tickets`, `triage` e `tdd` entre elas, empacotadas junto com o plugin.
+
+Este repositório é um **hard fork** de [FeatherHunter/dsh-mattpocock-skills-deck](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck). Ele passou a ter o inglês como idioma padrão e ganhou um backend nativo para o Linear. A decisão está em [docs/adr/20261113-hard-fork-dsh-skills-deck.md](docs/adr/20261113-hard-fork-dsh-skills-deck.md).
+
+## Instalação
+
+O pacote **não está no npm**. Ele é instalado pelo marketplace do DSH, a partir de um índice público, ou com `link:` a partir de um clone.
+
+**Antes de tudo**, desinstale o plugin do upstream (`dsh-mattpocock-skills-deck`), se o tiver. Os dois registram as mesmas ferramentas `deck_*`, e deixar os dois instalados faz um sobrepor o outro.
+
+**Pelo marketplace** (o caminho normal):
+
+1. No DSH, abra **Settings → Plugin market → Add index** (ou **Plugins → Discover → Add index**).
+2. Cole o endereço do índice:
+
+   ```
+   https://raw.githubusercontent.com/risaddex/dsh-plugins-index/main/index.json
+   ```
+
+3. Instale `dsh-skills-deck` na lista que aparecer.
+4. Reinicie o DSH por completo. No aplicativo desktop, isso é fechar e abrir de novo; no `dsh web`, reiniciar o servidor e atualizar a página.
+
+**A partir de um clone** (para desenvolver ou testar uma branch):
 
 ```bash
-# ① 安装 DSH CLI（已装跳过）
-npm install -g @deepseek-ai/dsh
-
-# ② 安装 MattSkillsDeck —— --profile 必填：装进你实际使用的 DSH 入口对应的 profile
-#    （装错 profile 等于没装，重启多少次都不会加载）
-dsh plugin --profile web add dsh-mattpocock-skills-deck     # 用自启 web 服务（dsh web）
-#     或者
-dsh plugin --profile desktop add dsh-mattpocock-skills-deck   # 用 DSH Desktop 桌面应用
-# 锁定最新版更稳（当前 1.9.0-beta.34）：
-dsh plugin --profile web add dsh-mattpocock-skills-deck@1.9.0-beta.34 --registry https://registry.npmjs.org
-#     或者
-dsh plugin --profile desktop add dsh-mattpocock-skills-deck@1.9.0-beta.34 --registry https://registry.npmjs.org
+git clone https://github.com/risaddex/dsh-skills-deck.git
+cd dsh-skills-deck
+pnpm install --frozen-lockfile
+node scripts/build.mts          # o perfil carrega a saída do build, não os fontes
+dsh plugin --profile web add link:$PWD
 ```
 
-> **用 GitHub 后端前的权限前提**：插件替你改 ISSUE，用的是本机 `gh` 已登录账号的权限——建标签、改票需要仓库的 `push` 权限；改指派、流转标签需要 `triage` 权限。账号在该仓库只有 `只读` 权限时，插件会把仓库如实标成只读：改票、打标签与标签流转不可用，浏览与刷新照常。
+O perfil `desktop` é gerido pelo aplicativo e o CLI `dsh` o recusa. Nele, use o **plugin manager** do próprio DSH (`remove_bundle` seguido de `install_bundle` apontando para o clone) e reinicie o aplicativo: o host lê o código só na partida.
 
-<h2 align="center"><sub>BOARD</sub><br>任务板</h2>
+Instalar o plugin no perfil errado equivale a não instalar: ele nunca carrega, por mais que você reinicie. Confira que o perfil é o da entrada do DSH que você realmente usa.
 
-<div align="center">
+## O painel
 
-DSH侧边栏-总览任务面板全貌。通过插件内置SKILLS的任务拆分，可以做到session并发处理。效率加倍省心。
+O painel abre na barra lateral direita do DSH.
 
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 列表中展示：探索地图、实施地图、普通ISSUE。并且提供便捷按钮一键注入prompt。<br><img src="assets/readme/中文-深色-右侧面板-列表-列表.png" width="100%" alt="任务板列表：可接阻塞已关闭归位" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 实战案例：任务经过拆分，可以大量同时执行任务。<br><img src="assets/readme/中文-深色-工作区-多ISSUE并发.png" width="100%" alt="多工作区多会话并发" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
+- **Lista**: mapas de exploração, mapas de implementação e issues comuns, com o estado de cada um (livre, bloqueado, fechado) e botões que injetam o prompt certo na conversa.
+- **Detalhe do mapa**: um cartão por ticket, separando o que já dá para pegar do que espera outro ticket.
+- **Detalhe do ticket**: descrição, critérios de aceite, progresso e comentários, sem abrir o arquivo ou a página da issue.
+- **Barra de cápsula** sobre o campo de entrada: tickets livres, falhas, itens que pedem triagem, atualização e a rota de trabalho, que mostra o que cada sessão está tratando agora.
+- **Novo pedido**: escolha entre o fluxo de exploração (um mapa) e o de implementação (spec e tickets).
+- **Skills**: lista das skills, com detalhe do texto original.
+- **Backend e ambiente**: troca de backend e uma verificação item a item do que falta (CLI instalado, login, permissões), com botão para checar de novo.
+- **Controle de versão**: alterações, histórico de commits e worktrees.
+- **Configurações**: inclusive as cores dos rótulos, que colorem os botões.
 
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 地图详情：像素风卡片呈现所有可以执行的任务。<br><img src="assets/readme/中文-深色-右侧面板-列表-Map详情.png" width="100%" alt="地图详情卡片墙可接与已结案" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 单票详情：描述、验收、进度、评论等信息不再需要打开原始文件。<br><img src="assets/readme/中文-深色-右侧面板-列表-ISSUE详情.png" width="100%" alt="单票详情描述验收进度评论" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
+Ao abrir um workspace novo, o painel pede o backend e injeta na conversa o prompt de inicialização. Se a verificação de ambiente reprovar algum item, corrija e atualize.
 
-</div>
+## Os quatro backends
 
-<h2 align="center"><sub>STATUSBAR</sub><br>对话框胶囊栏</h2>
-
-<div align="center">
-
-胶囊状态栏：核心信息直接呈现，快捷入口方便高效。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 可接任务、故障、需要诊断分流、刷新、ISSUE处理路径表。清晰可见。<br><img src="assets/readme/中文-深色-胶囊状态栏-输入框区域.png" width="100%" alt="对话框胶囊栏输入框区域" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 工作路线：清晰展示当前会话处理ISSUE的心路历程。<br><img src="assets/readme/中文-深色-胶囊状态栏-WorkRoute.png" width="100%" alt="工作路线浮层多会话处理中" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>DEMAND</sub><br>新增需求</h2>
-
-<div align="center">
-
-新增需求：在“探索流程”和“实施流程”中二选一，通过插件引导最终将所有IDEA落地。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 右侧面板，按需选择不同流程。<br><img src="assets/readme/中文-深色-右侧面板-新增需求-选择弹窗.png" width="100%" alt="右侧面板新建需求选择弹窗" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 胶囊栏，按需选择不同流程。<br><img src="assets/readme/中文-深色-胶囊状态栏-新增需求-选择弹窗.png" width="100%" alt="胶囊状态栏新建需求选择弹窗" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>SKILLS</sub><br>技能面板</h2>
-
-<div align="center">
-
-内置 27 个技能（v1.3.2）：同时提供技能原文，在使用过程中提供便利的学习原文途径。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 可以注入到对话框。可以查看技能详情<br><img src="assets/readme/中文-深色-右侧面板-技能页面-列表.png" width="100%" alt="技能页面列表一行讲清用途" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 技能详情页面，方便学习原始技能。<br><img src="assets/readme/中文-深色-右侧面板-技能页面-详情.png" width="100%" alt="技能页面详情完整说明" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>BACKENDS · ENV</sub><br>多后端切换与环境检查</h2>
-
-<div align="center">
-
-根据办公环境不同提供多样后端：GitHub、本地 Markdown、GitLab。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 在不同后端中进行切换。<br><img src="assets/readme/中文-深色-右侧面板-切换后端.png" width="100%" alt="设置页后端选择器" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 环境逐项自检。如果不准确点击刷新重新检测。<br><img src="assets/readme/中文-深色-右侧面板-环境检查-列表.png" width="100%" alt="环境检查列表" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>VERSION</sub><br>版本管理</h2>
-
-<div align="center">
-
-提供简化的版本管理页面，方便查看。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="33%">👇 改动：fetch、pull、push、add、commit<br><img src="assets/readme/中文-深色-右侧面板-版本管理-改动.png" width="100%" alt="版本管理改动" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="33%">👇 提交历史<br><img src="assets/readme/中文-深色-右侧面板-版本管理-提交历史.png" width="100%" alt="版本管理提交历史" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="33%">👇 工作树<br><img src="assets/readme/中文-深色-右侧面板-版本管理-worktree.png" width="100%" alt="版本管理工作树" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>APPEARANCE</sub><br>设置与外观</h2>
-
-<div align="center">
-
-按钮颜色 = label标签颜色。调色板可以给每类标签配置颜色。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 设置主页<br><img src="assets/readme/中文-深色-设置面板-主页.png" width="100%" alt="设置面板主页" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 调色板：设置标签颜色可以改变按钮颜色。<br><img src="assets/readme/中文-深色-右侧面板-调色板-设置label颜色.png" width="100%" alt="调色板设置标签颜色" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>INIT FLOW</sub><br>初始化流程</h2>
-
-<div align="center">
-
-六步完成工作区的初始化。
-
-<table width="100%">
-  <tr>
-    <td valign="top" width="50%">👇 第 1 步：选择工作区并新建会话<br><img src="assets/init/中文-深色-1-创建新工作区.png" width="100%" alt="第1步：创建新工作区" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 第 2 步：新会话提示选择后端<br><img src="assets/init/中文-深色-2-新建会话-选择后端.png" width="100%" alt="第2步：新建会话并选择后端" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-  <tr>
-    <td valign="top" width="50%">👇 第 3 步：选择后端为 GitHub<br><img src="assets/init/中文-深色-3-选择后端为github.png" width="100%" alt="第3步：选择后端为 GitHub" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 第 4 步：点击确认后注入提示词<br><img src="assets/init/中文-深色-4-点击确认后-注入prompt.png" width="100%" alt="第4步：点击确认后注入提示词" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-  <tr>
-    <td valign="top" width="50%">👇 第 5 步：等待 AI 执行初始化<br><img src="assets/init/中文-深色-5-等待AI执行.png" width="100%" alt="第5步：等待 AI 执行初始化" style="border:1px solid #30363d;border-radius:6px"></td>
-    <td valign="top" width="50%">👇 第 6 步：环境检测不通过时需要补齐并刷新。<br><img src="assets/init/中文-深色-6-环境检测页面-提示用户2项失败.png" width="100%" alt="第6步：环境检测提示用户两项失败" style="border:1px solid #30363d;border-radius:6px"></td>
-  </tr>
-</table>
-
-</div>
-
-<h2 align="center"><sub>JOIN</sub><br>欢迎您加入我们</h2>
-
-<div align="center">
-
-非常欢迎提交PR、共同维护项目，现在迭代中很缺对markdown后端的开发和完善，Gitlab目前无人力开发。
-
-</div>
-
-<h2 align="center"><sub>THANKS</sub><br>致谢</h2>
-
-<div align="left">
-
-感谢每一位提交 Issue、PR 与参与讨论的朋友，是你们让这个插件一点点变好。
-
-<!-- THANKS-TABLE-ZH-START -->
-| 贡献者 | 致敬 | 贡献 |
+| Backend | O que precisa | Como é escolhido |
 | --- | --- | --- |
-| [@zhengcookie](https://github.com/zhengcookie) | 🌹🌹🌹🌹🌹🌹 | [#960](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/960) [#1003](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1003) [#1160](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1160) [#1291](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1291) [#1942](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1942) [#1005](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/discussions/1005) |
-| [@pioneerAlone](https://github.com/pioneerAlone) | 🌹🌹🌹🌹🌹🌹 | [#234](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/234) [#274](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/274) [#298](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/298) [#645](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/645) [#273](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/273) [#316](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/316) |
-| [@15326325141](https://github.com/15326325141) | 🌹🌹🌹🌹🌹 | [#1786](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1786) [#1788](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1788) [#1789](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1789) [#1790](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1790) [#1791](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1791) |
-| [@Shimmernight](https://github.com/Shimmernight) | 🌹🌹🌹🌹 | [#277](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/277) [#106](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/106) [#275](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/275) [#287](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/287) |
-| [@Drayee](https://github.com/Drayee) | 🌹🌹🌹 | [#1101](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1101) [#1606](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1606) [#1941](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1941) |
-| [@SAXEM1997](https://github.com/SAXEM1997) | 🌹🌹🌹 | [#1566](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1566) [#1612](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1612) [#1879](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1879) |
-| [@gzy31007](https://github.com/gzy31007) | 🌹🌹🌹 | [#1272](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1272) [#1273](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1273) [#1838](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1838) |
-| [@ACGNnsj](https://github.com/ACGNnsj) | 🌹🌹🌹 | [#1498](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1498) [#1809](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1809) [#1771](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/1771) |
-| [@anupamme](https://github.com/anupamme) | 🌹🌹🌹 | [#727](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/727) [#728](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/728) [#1156](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/1156) |
-| [@9agj](https://github.com/9agj) | 🌹🌹🌹 | [#992](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/992) [#993](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/993) [#994](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/994) |
-| [@f2406293319-star](https://github.com/f2406293319-star) | 🌹🌹 | [#1859](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1859) [#1880](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1880) |
-| [@CypressStar](https://github.com/CypressStar) | 🌹🌹 | [#1671](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1671) [#1808](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1808) |
-| [@q4452542007](https://github.com/q4452542007) | 🌹🌹 | [#1555](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1555) [#1578](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/discussions/1578) |
-| [@Niefee](https://github.com/Niefee) | 🌹🌹 | [#1516](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1516) [#1569](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1569) |
-| [@654970](https://github.com/654970) | 🌹🌹 | [#1375](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1375) [#1481](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1481) |
-| [@xingmulee](https://github.com/xingmulee) | 🌹🌹 | [#1421](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1421) [#1422](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1422) |
-| [@776317107](https://github.com/776317107) | 🌹🌹 | [#1375](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1375) [#1376](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/1376) |
-| [@qq1393950873-bit](https://github.com/qq1393950873-bit) | 🌹🌹 | [#970](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/970) [#974](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/974) |
-| [@hyperion2144](https://github.com/hyperion2144) | 🌹🌹 | [#110](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/110) [#646](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/646) |
-| [@arnold117](https://github.com/arnold117) | 🌹🌹 | [#574](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/574) [#575](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/575) |
-| [@tafcear](https://github.com/tafcear) | 🌹🌹 | [#422](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/422) [#432](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/432) |
-| [@xiSage](https://github.com/xiSage) | 🌹🌹 | [#435](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/435) [#436](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/discussions/436) |
-| [@angenet](https://github.com/angenet) | 🌹🌹 | [#262](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/262) [#295](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/295) |
-| [@metapeka](https://github.com/metapeka) | 🌹 | [#1940](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1940) |
-| [@fogandsun-5467](https://github.com/fogandsun-5467) | 🌹 | [#1939](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1939) |
-| [@ericheroster](https://github.com/ericheroster) | 🌹 | [#1906](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1906) |
-| [@liuke101](https://github.com/liuke101) | 🌹 | [#1875](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1875) |
-| [@Creativeguys037](https://github.com/Creativeguys037) | 🌹 | [#1781](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/discussions/1781) |
-| [@jimorsm](https://github.com/jimorsm) | 🌹 | [#1779](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1779) |
-| [@clipsheep6](https://github.com/clipsheep6) | 🌹 | [#1767](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1767) |
-| [@Ba7nice](https://github.com/Ba7nice) | 🌹 | [#1733](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1733) |
-| [@shadapang](https://github.com/shadapang) | 🌹 | [#1672](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1672) |
-| [@yzysdq](https://github.com/yzysdq) | 🌹 | [#1621](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1621) |
-| [@SupingZhou](https://github.com/SupingZhou) | 🌹 | [#1598](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1598) |
-| [@danyanp](https://github.com/danyanp) | 🌹 | [#1595](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1595) |
-| [@Iwassoobsessedwith](https://github.com/Iwassoobsessedwith) | 🌹 | [#1568](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1568) |
-| [@TangSuann](https://github.com/TangSuann) | 🌹 | [#1505](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1505) |
-| [@nolifeking0916](https://github.com/nolifeking0916) | 🌹 | [#1504](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1504) |
-| [@GuanpengLu](https://github.com/GuanpengLu) | 🌹 | [#1478](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/1478) |
-| [@zyf0625-990](https://github.com/zyf0625-990) | 🌹 | [#1476](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1476) |
-| [@Lichxier](https://github.com/Lichxier) | 🌹 | [#1435](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1435) |
-| [@mdc707](https://github.com/mdc707) | 🌹 | [#1394](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/discussions/1394) |
-| [@firewfly](https://github.com/firewfly) | 🌹 | [#1392](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1392) |
-| [@lilincen](https://github.com/lilincen) | 🌹 | [#1301](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/discussions/1301) |
-| [@2980691758](https://github.com/2980691758) | 🌹 | [#998](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/998) |
-| [@WDXXZH](https://github.com/WDXXZH) | 🌹 | [#1137](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1137) |
-| [@30892096](https://github.com/30892096) | 🌹 | [#1100](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/1100) |
-| [@fishke22](https://github.com/fishke22) | 🌹 | [#1000](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/1000) |
-| [@jack2jiehua](https://github.com/jack2jiehua) | 🌹 | [#930](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/930) |
-| [@asesr](https://github.com/asesr) | 🌹 | [#926](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/926) |
-| [@SKADI0718](https://github.com/SKADI0718) | 🌹 | [#856](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/856) |
-| [@li873582595](https://github.com/li873582595) | 🌹 | [#835](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/835) |
-| [@zerocodefast](https://github.com/zerocodefast) | 🌹 | [#823](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/823) |
-| [@seameafst](https://github.com/seameafst) | 🌹 | [#793](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/793) |
-| [@SbDonger](https://github.com/SbDonger) | 🌹 | [#640](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/640) |
-| [@snmtg1008](https://github.com/snmtg1008) | 🌹 | [#476](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/476) |
-| [@dis0neplay](https://github.com/dis0neplay) | 🌹 | [#493](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/493) |
-| [@21967201](https://github.com/21967201) | 🌹 | [#321](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/pull/321) |
-| [@271912980](https://github.com/271912980) | 🌹 | [#257](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/issues/257) |
-<!-- THANKS-TABLE-ZH-END -->
+| **GitHub** | CLI `gh` com login feito (`gh auth login`) | Painel, na inicialização do workspace |
+| **GitLab** | CLI `glab` com login feito | Painel, na inicialização do workspace |
+| **Markdown local** | Nada: os tickets são arquivos na pasta `.scratch/` do repositório | Painel, na inicialização do workspace |
+| **Linear** | Uma conta configurada (veja a seção seguinte) | Seção `# Issue tracker: linear` em `docs/agents/issue-tracker.md` |
 
-也感谢在评论区与讨论区留下想法的每一位朋友。如果你也遇到了问题或有新想法，欢迎直接提 Issue 或发起讨论。
+Você troca o backend depois nas configurações do painel. O workspace declara o que usa; nenhum backend é adivinhado.
 
-</div>
+**Permissões no GitHub.** O plugin age com as permissões do `gh` logado nesta máquina. Criar rótulos e editar tickets exige permissão `push` no repositório; mudar o responsável e fazer os rótulos de estado andarem exige `triage`. Com acesso somente leitura, o plugin marca o repositório como somente leitura: criar tickets, aplicar rótulos e mover rótulos de estado ficam indisponíveis, e navegar e atualizar continuam funcionando.
 
-<!-- CONTACT-START -->
-<h2 align="center"><sub>CONNECT</sub><br>反馈与联系</h2>
+Toda a escrita passa pelas ferramentas `deck_*`, que verificam o resultado lendo de volta. O agente não digita comandos do gerenciador de issues à mão. As regras completas, backend por backend, estão em [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
 
-<div align="center">
+## Linear
 
-👏欢迎提交PR、ISSUE。星星之火可以燎原🔥有任何建议、意见、想法、吐槽、idea都可以进群交流。
+O backend Linear fala direto com a API GraphQL do Linear. Não existe CLI do Linear envolvido. Ele substitui o antigo `dsh-plugin-linear`, que foi aposentado.
 
-<table align="center"><tr><td align="center"><b>飞书群（主）</b></td><td align="center"><b>QQ群（新）</b></td><td align="center"><b>微信群（新）</b></td></tr><tr><td><img src="https://cdn.jsdelivr.net/npm/dsh-featherhunter-plugin-base@0.1.7/data/img/card-feishu.png" width="260" alt="DSH 插件交流群 飞书群二维码" /></td><td><img src="https://cdn.jsdelivr.net/npm/dsh-featherhunter-plugin-base@0.1.7/data/img/card-qq.png" width="260" alt="DSH 插件交流群 QQ 群二维码" /></td><td><img src="https://cdn.jsdelivr.net/npm/dsh-featherhunter-plugin-base@0.1.7/data/img/card-wechat-2026-10-31.png?v=20261031" width="260" alt="DSH 插件交流群微信群二维码" /></td></tr></table>
+Como o Linear modela o trabalho:
 
-</div>
-<!-- CONTACT-END -->
+- um mapa ou uma spec é uma issue-mãe com rótulo `wayfinder:*`; os tickets são sub-issues dela;
+- "bloqueado por" é uma relação `blocks` do próprio Linear;
+- fechar usa o primeiro estado concluído do time; reabrir usa o primeiro estado não iniciado.
 
-<!-- STAR-HISTORY-START -->
-<div align="center">
+### Configurar uma conta
 
-<a href="https://featherhunter.github.io/dsh-mattpocock-skills-deck/star-history.html">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FeatherHunter/dsh-mattpocock-skills-deck/main/docs/star-history-dark.svg?v=202611130000" />
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/FeatherHunter/dsh-mattpocock-skills-deck/main/docs/star-history-light.svg?v=202611130000" />
-  <img alt="Star History Chart" src="https://raw.githubusercontent.com/FeatherHunter/dsh-mattpocock-skills-deck/main/docs/star-history-light.svg?v=202611130000" />
-  </picture>
-</a>
+Uma conta é um workspace (organização) do Linear que esta máquina conhece. Você pode ter várias.
 
-</div>
-<!-- STAR-HISTORY-END -->
+**1. Descreva a conta** em `~/.dsh/mattskillsdeck/linear-accounts.yaml`:
 
+```yaml
+version: 1
+defaultAccount: ombrello
+accounts:
+  - alias: ombrello
+    label: Ombrello
+    authType: api_key        # api_key, oauth_user ou oauth_app
+    orgId: ""
+    urlKey: ""
+    teams: []
+    reviewPattern: review|revisando|revisão|revisao|qa
+    reviewScope: subscribed  # subscribed, team ou assigned
+    previousAliases: []
+```
 
-<!-- MORE-START -->
-<h2 align="center"><sub>MORE</sub><br>作者的其他作品</h2>
+O `alias` tem de 2 a 16 caracteres: letras minúsculas, dígitos e hífens, começando por letra. O arquivo não guarda segredo nenhum. `reviewPattern` decide quais estados do fluxo contam como "esperando revisão".
 
-<div align="left">
+**2. Forneça o segredo**, conforme o `authType`:
 
-喜欢这个插件的话，这些可能你也用得上：
+- `api_key`: defina a variável de ambiente `LINEAR_KEY_<ALIAS>` antes de iniciar o DSH, com o alias em maiúsculas e hífens trocados por sublinhados (`ombrello` vira `LINEAR_KEY_OMBRELLO`).
+- `oauth_app`: o login é um script que você roda no **seu** terminal, a partir de um clone do repositório (o script não vai dentro do pacote instalado). O segredo do cliente nunca passa pela conversa nem por um log:
 
-**[dsh-prompt](https://github.com/FeatherHunter/dsh-prompt)** —— 经常反复重复的模板化提示词，存成自定义模板，选中后直接注入，不再需要耗费精力。
+  ```bash
+  node scripts/linear-app-signin.mts ombrello
+  ```
 
-**[dsh-opencode-palette](https://github.com/FeatherHunter/dsh-opencode-palette)** —— 38 款 opencode 经典配色 + 20+自定义主题 一键换装 DSH。
+  Ele pede o client id e o client secret, e grava o registro `skills-deck/linear-ombrello` em `~/.dsh/.credentials.yaml`. No aplicativo do Linear, ligue **Client credentials tokens** na aplicação OAuth. O passo a passo completo, com as consequências de cada escolha, está em [docs/runbooks/linear-oauth-app-signin.md](docs/runbooks/linear-oauth-app-signin.md).
+- `oauth_user`: o fluxo com PKCE está registrado no DSH, mas **nenhuma tela o inicia ainda**. Por enquanto, use `api_key` ou `oauth_app`.
 
-**[dsh-im-companion](https://github.com/FeatherHunter/dsh-im-companion)** —— 给 dsh-im 加了「助理」和「家」的概念。
+**3. Fixe a organização.** Depois do primeiro login, preencha `orgId` e `urlKey` à mão (o plugin não os escreve de volta). Com isso preenchido, um token colado na conta errada é recusado como `identity_mismatch`, em vez de devolver as issues de outro workspace.
 
-**[ilife](https://github.com/FeatherHunter/ilife)** —— ⚠️建设中⚠️爱生活：居家生活套件，记账、运动、饮食、体重、食谱、物品管理、作息规划、备忘录等。
+**4. Declare o Linear no repositório.** No `docs/agents/issue-tracker.md` do workspace, acrescente:
 
-</div>
-<!-- MORE-END -->
+```markdown
+# Issue tracker: linear
+
+alias: ombrello
+team: ENG
+```
+
+`team` é a chave do time onde os tickets nascem. Uma linha `project:` é opcional. Sem `alias`, a seção não vale como declaração e o workspace não é tratado como Linear.
+
+### Ler de várias contas
+
+`deck_issue_list` aceita `account` (um alias, ou `*` para todas as contas que este projeto alcança) e `scope` (`assigned` para o que é seu, `review` para o que espera revisão). `deck_issue_get` aceita `alias:ENG-123`. O `deck_context` lista as contas e o estado de cada uma (`ok`, `needs_auth`, `identity_mismatch`, `error` ou `unconfigured`).
+
+Com `*`, se uma conta falha e outras respondem, o resultado vem como `partial`: as linhas das contas que responderam são mantidas, cada uma marcada com o alias, e cada conta com falha entra em `errors`. Uma leitura qualificada por alias não traz comentários nem dependências inversas, e isso vem dito no recibo.
+
+Não existe uma caixa de entrada do Linear separada: a lista do painel, alimentada pelo backend, já mostra "meus" e "para revisar" do projeto que está aberto.
+
+### O que já foi provado contra o Linear de verdade
+
+- Provado: criar, comentar e fechar um ticket com o aplicativo OAuth (2026-11-17).
+- **Ainda não provado:** uma renovação real de token, uma escrita na segunda conta e as ferramentas `deck_*` de ponta a ponta com o Linear selecionado. Os testes automáticos cobrem esses caminhos com simuladores, mas simulador não é o serviço.
+
+## Skills
+
+O plugin empacota as 27 skills do pin `v1.3.2` de [mattpocock/skills](https://github.com/mattpocock/skills), em inglês (o original), com um espelho em chinês no pacote. O texto de cada skill fica no painel, na aba de skills. `npm run sync:matt` as ressincroniza com o upstream.
+
+| Skill | Para que serve |
+| --- | --- |
+| `ask-matt` | Diz qual skill ou fluxo serve à sua situação |
+| `code-review` | Revisa as mudanças desde um ponto fixo em dois eixos: padrões do repositório e aderência à spec |
+| `codebase-design` | Vocabulário para desenhar módulos profundos e achar onde cortar uma costura |
+| `diagnosing-bugs` | Laço de diagnóstico para bugs difíceis e regressões de desempenho |
+| `domain-modeling` | Afina o modelo de domínio: glossário e ADRs |
+| `grill-me` | Entrevista implacável para afiar um plano ou desenho |
+| `grill-with-docs` | A mesma entrevista, criando glossário e ADRs pelo caminho |
+| `grilling` | Interroga você sobre um plano, decisão ou ideia até ela aguentar |
+| `handoff` | Compacta a conversa em um documento para outro agente continuar |
+| `implement` | Implementa um trabalho a partir de uma spec ou de um conjunto de tickets |
+| `implement-spec` | Implementa em código o resultado de `to-spec` e `to-tickets` |
+| `improve-codebase-architecture` | Procura oportunidades de aprofundar módulos e apresenta em um relatório HTML |
+| `pr` | Escreve o corpo de um pull request |
+| `prototype` | Constrói um protótipo descartável para responder a uma pergunta de desenho |
+| `research` | Pesquisa uma pergunta em fontes primárias e guarda o resultado em Markdown no repositório |
+| `retro` | Conduz uma retrospectiva da sessão de código |
+| `setup-matt-pocock-skills` | Configura o repositório: gerenciador de issues, vocabulário de triagem, layout dos docs de domínio |
+| `tdd` | Desenvolvimento guiado por testes, no ciclo vermelho-verde-refatora |
+| `teach` | Ensina uma habilidade ou conceito novo dentro do workspace |
+| `to-questionnaire` | Transforma uma decisão que você não consegue fechar sozinho em questionário para outra pessoa |
+| `to-spec` | Transforma a conversa em uma spec e a publica no gerenciador de issues |
+| `to-tickets` | Quebra um plano ou spec em tickets, cada um com suas dependências |
+| `triage` | Move issues por uma máquina de estados de triagem e escreve briefs prontos para agentes |
+| `wait-what` | Para tudo: a última mensagem não foi entendida, então reapresente |
+| `wayfinder` | Planeja um trabalho grande como um mapa compartilhado de tickets de decisão e resolve um por vez |
+| `wizard` | Gera um roteiro interativo em bash para os passos que só uma pessoa pode executar |
+| `writing-for-agents` | Escreve documentos para agentes: skills e os arquivos de instruções para agentes (como o `AGENTS.md`) |
+
+## Idioma
+
+O inglês é o idioma padrão e o último recurso: texto que falte em outro idioma cai no inglês. O chinês continua selecionável no seletor de idioma do DSH. A decisão está em [docs/adr/20261113-english-first.md](docs/adr/20261113-english-first.md). Este README é a exceção: está em português do Brasil.
+
+## Desenvolvimento
+
+```bash
+pnpm install --frozen-lockfile
+node scripts/build.mts
+npm run verify:parallel
+```
+
+- Use **Node 24.15 ou mais novo** para rodar a cadeia de verificação. Em Node 22 ela falha por motivos que não têm a ver com o código.
+- `npm run verify:parallel` é o único árbitro: rode antes de cada commit e de cada push. Não há verificação remota.
+- `package/README.md` é gerado a partir deste arquivo pelo `scripts/build.mts`. Edite só este `README.md` e rode o build de novo; editar o gerado deixa o portão `verify-readme-sync` vermelho.
+- O guia para agentes que trabalham no repositório é o [AGENTS.md](https://github.com/risaddex/dsh-skills-deck/blob/main/AGENTS.md); o histórico de versões está no [CHANGELOG.md](https://github.com/risaddex/dsh-skills-deck/blob/main/CHANGELOG.md), que continua em inglês.
+- Decisões de arquitetura recentes: [por que o backend Linear fala por um canal HTTP injetado](docs/adr/20261116-room-http-channel.md) e [como ele recebe a conta com que age](docs/adr/20261117-room-account-seam.md).
+
+Issues e pull requests são bem-vindos no [GitHub](https://github.com/risaddex/dsh-skills-deck/issues).
+
+## Créditos e licença
+
+Licença [MIT](https://github.com/risaddex/dsh-skills-deck/blob/main/LICENSE). O arquivo de licença mantém o aviso de copyright original (2026 王辰浩).
+
+- O deck, o painel e a base do código vêm de [FeatherHunter/dsh-mattpocock-skills-deck](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck). As pessoas que contribuíram para o projeto original estão na [página de contribuidores dele](https://github.com/FeatherHunter/dsh-mattpocock-skills-deck/graphs/contributors).
+- As skills são de [Matt Pocock](https://github.com/mattpocock/skills), também sob MIT.

@@ -18,5 +18,4 @@
 # 钉死这几个文件的检出形态为 LF，门禁在任何机器上都成立。
 README.md text eol=lf
 package/README.md text eol=lf
-docs/README.en.md text eol=lf
 CHANGELOG.md text eol=lf

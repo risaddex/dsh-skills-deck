@@ -260,10 +260,10 @@ async function main(): Promise<void> {
   // ── G) 能力位 + 文档 + 提示词 ──
   {
     const fs = require('fs')
-    const zh = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')
-    check(zh.includes('push') && zh.includes('triage') && /只读|读权限/.test(zh), 'G1 README 有 push/triage 前置条件（只读时标签链不可用）')
-    const en = fs.readFileSync(path.join(ROOT, 'docs', 'README.en.md'), 'utf8')
-    check(en.includes('push access') && en.includes('triage'), 'G2 英文 README 同步了权限前置')
+    // The README is Brazilian Portuguese now and is the only README (#15): the permission prerequisite is
+    // asserted once, on the words that README actually uses.
+    const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')
+    check(readme.includes('push') && readme.includes('triage') && /somente leitura/.test(readme), 'G1 README has the push/triage prerequisite (labels are unavailable on a read-only repository)')
     const gh = await imp('src/tracker/rooms/github/room/index.ts')
     const zhP = gh.prompts.ensureLabels.zh
     const enP = gh.prompts.ensureLabels.en

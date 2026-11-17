@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T18:56:55.292Z",
+  "generatedAt": "2026-11-17T19:22:08.650Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 623,
-  "gateCount": 623,
+  "chainLength": 622,
+  "gateCount": 622,
   "attributedGates": 564,
-  "unattributedGates": 59,
-  "buildOutputOnlyGates": 20,
+  "unattributedGates": 58,
+  "buildOutputOnlyGates": 19,
   "completionRecordedGates": 145,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
@@ -10139,7 +10139,6 @@
       "step": "node tests/verify-992-readonly-labels.ts",
       "file": "tests/verify-992-readonly-labels.ts",
       "guards": [
-        "docs/README.en.md",
         "src/deck/tools/context.ts",
         "src/deck/tools/issue-create.ts",
         "src/refresh/kernel/host-budget.ts",
@@ -10158,7 +10157,6 @@
         "tests/lib/deck-decide-stub.ts"
       ],
       "dirs": [
-        "docs",
         "src/deck/tools",
         "src/refresh/kernel",
         "src/refresh/rooms/host",
@@ -10175,7 +10173,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条；载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 14 条"
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 14 条"
     },
     {
       "step": "node tests/verify-997-vc-sight-browser.ts",
@@ -12921,7 +12919,6 @@
       "step": "node tests/verify-release-contract.ts",
       "file": "tests/verify-release-contract.ts",
       "guards": [
-        "docs/README.en.md",
         "docs/releases/release-issue-template.md",
         "package/README.md",
         "package/lib/client.js",
@@ -12931,7 +12928,6 @@
         "wizard/template.sh"
       ],
       "dirs": [
-        "docs",
         "docs/releases",
         "package",
         "package/lib",
@@ -14477,26 +14473,6 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "读到的路径都落在 scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
-    },
-    {
-      "step": "node tests/verify-thanks-table.ts",
-      "file": "tests/verify-thanks-table.ts",
-      "guards": [
-        "docs/README.en.md",
-        "docs/thanks-data.json",
-        "package/README.md",
-        "scripts/update-thanks.mts"
-      ],
-      "dirs": [
-        "docs",
-        "package",
-        "scripts"
-      ],
-      "unattributed": true,
-      "buildOutputOnly": true,
-      "completionRecord": false,
-      "expectedAssertions": 0,
-      "reason": "读到的路径都落在 docs、package、scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     }
   ],
   "smokeGates": [
@@ -14595,11 +14571,7 @@
       "node tests/verify-b2-map-newsession.ts",
       "node tests/verify-prompts.ts"
     ],
-    "docs": [
-      "node tests/verify-992-readonly-labels.ts",
-      "node tests/verify-release-contract.ts",
-      "node tests/verify-thanks-table.ts"
-    ],
+    "docs": [],
     "docs/adr": [
       "node tests/verify-1922-retire-eviction.ts",
       "node tests/verify-error-rule-samples.ts",
@@ -14684,8 +14656,7 @@
       "node tests/verify-parse-leaf.ts",
       "node tests/verify-release-contract.ts",
       "node tests/verify-tabsfold-leaf.ts",
-      "node tests/verify-readme-sync.ts",
-      "node tests/verify-thanks-table.ts"
+      "node tests/verify-readme-sync.ts"
     ],
     "package/bundled-skills": [
       "node tests/verify-1206-glossary-naming.ts",
@@ -14880,8 +14851,7 @@
       "node tests/verify-wire-subissues-script.ts",
       "node tests/verify-wizard-exit-609.ts",
       "node tests/verify-md-format-config.ts",
-      "node tests/verify-star-history.ts",
-      "node tests/verify-thanks-table.ts"
+      "node tests/verify-star-history.ts"
     ],
     "scripts/generated": [
       "node tests/verify-build-artifacts.ts",

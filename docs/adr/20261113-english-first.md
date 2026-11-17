@@ -58,3 +58,7 @@ host's expectation are the same thing instead of two arrangements that happen to
   `node scripts/generate-prompt-config.mts`, then build. Both generators are also checked by `--check` from
   `npm run typecheck`, so a forgotten regeneration is caught early. The full mechanism (which data file, which generator,
   which gate) is documented in `docs/design/1294-locale-gate-strength.md`.
+
+## Amendment (2026-11-17): the README is Brazilian Portuguese
+
+Decision item 3 listed the README among the texts written in English. The destination of the fork map says the fork ships a Brazilian Portuguese README, and the maintainer confirmed on 2026-11-17 that it is a single `README.md` with no English copy. So the README is the one document of the product surface that is written in Brazilian Portuguese; `docs/README.en.md` was deleted in [Rewrite README in Brazilian Portuguese](https://github.com/risaddex/dsh-skills-deck/issues/15). Everything else in item 3 stands.

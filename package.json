@@ -20,9 +20,6 @@
   },
   "scripts": {
     "build": "node scripts/build.mts",
-    "readme:init": "node --preserve-symlinks-main node_modules/dsh-featherhunter-plugin-base/dist/node/cli.js readme:init --repo .",
-    "readme:sync": "node --preserve-symlinks-main node_modules/dsh-featherhunter-plugin-base/dist/node/cli.js readme:sync --repo .",
-    "readme:check": "node --preserve-symlinks-main node_modules/dsh-featherhunter-plugin-base/dist/node/cli.js readme:sync --check --repo .",
     "typecheck": "node scripts/generate-locale-config.mts --check && node scripts/generate-prompt-config.mts --check && node scripts/generate-time-config.mts --check && node scripts/generate-md-format-config.mts --check && node scripts/typecheck.mts",
     "prepare": "node scripts/build.mts",
     "test": "npm run typecheck && node scripts/build.mts && node scripts/verify-chain.ts && npm run test:smoke",
@@ -39,8 +36,7 @@
     "verify:acceptance": "dsh-verify single-instance --profile web",
     "verify:ui": "node --import ./scripts/ts-hook.mts node_modules/dsh-featherhunter-plugin-base/dist/real-machine-verification/cli/main.js run verify/scenarios/ui.ts",
     "verify:smoke": "node --import ./scripts/ts-hook.mts node_modules/dsh-featherhunter-plugin-base/dist/real-machine-verification/cli/main.js run verify/scenarios/smoke.ts",
-    "sync:matt": "node scripts/sync-matt-skills.mts --verify",
-    "thanks:update": "node scripts/update-thanks.mts"
+    "sync:matt": "node scripts/sync-matt-skills.mts --verify"
   },
   "dependencies": {
     "dsh-log": "^0.4.1",

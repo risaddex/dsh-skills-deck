@@ -6,7 +6,7 @@
  *       不为每项各起低层测试。向导在发布前调用本门禁，校验失败时给出待改清单。
  *
  * 断言覆盖：
- *   A. 版本同源 — 根与包清单版本 == 目标 vX.Y.Z，且 README 三处锁定、英中文档、包说明首段均对齐
+ *   A. 版本同源 — 根与包清单版本 == 目标 vX.Y.Z，且 README 三处锁定、包说明首段均对齐（英文副本已在 #15 删除）
  *   B. 说明锁定 — package.json description/human-first、keywords、话题包含，与 About 同源可检索
  *   C. 变更历史与 Release 同文 — CHANGELOG 含新节且与发布模板语义一致
  *   D. 包白名单 — npm pack --dry-run 仅含白名单文件，不含密钥与多余文档
@@ -119,7 +119,7 @@ assert(rootPkg?.version === pkgPkg?.version, `根与包清单版本同源（${ro
 if (isPrerelease) {
   // 预发布不签这三处版本锁定：README、英文文档、包说明跟的都是上一个稳定版，
   // 把测试版号写进去，等转正时还要再改一遍，得不偿失。
-  assert(true, `预发布 ${targetNum}：README 三处版本锁定与英文文档、包说明首段的版本锁定跳过（它们跟上一个稳定版）`);
+  assert(true, `预发布 ${targetNum}：README 三处版本锁定与包说明首段的版本锁定跳过（它们跟上一个稳定版）`);
 } else {
 // README 三处锁定
 const readme = read("README.md") || "";
@@ -139,9 +139,8 @@ if (targetVersion !== "v1.7.8") {
   assert(true, `README.md 旧版本残留检查跳过（目标即 1.7.8）`);
 }
 
-const readmeEn = read("docs/README.en.md") || "";
-const enCount = (readmeEn.match(new RegExp(targetNum.replace(".", "\\."), "g")) || []).length;
-assert(enCount >= 1, `docs/README.en.md 含 ${targetNum} 至少 1 处（实际 ${enCount}）`);
+// The English copy (docs/README.en.md) was removed in #15: the README is one Brazilian Portuguese file now,
+// so there is no second file to keep in step with it.
 
 const pkgReadme = read("package/README.md") || "";
 const pkgReadmeFirst = pkgReadme.slice(0, 2000);
