@@ -10,7 +10,7 @@ import { timeoutForGhArgs, queueTimeoutForTier, isWriteGhArgs, ghCommandLabel, r
 // #1007：这一层的 gh 出站结局上报与冷却回话都走 tracker/kernel/outbound-tiers.ts（界面口径、日志口径与宿主两路共用一份）。
 import { getGhLane } from '../refresh/rooms/host/outbound-admission.js'
 // #1159：给房间的那份后端上下文要挂上出站控制面；#24 起 HTTP 通道也从同一处取（只做转发）。
-import { createHttpChannel, createOutboundControl } from '../refresh/rooms/host/room-host-services.js'
+import { createHttpChannel, createLinearAccountSeam, createOutboundControl } from '../refresh/rooms/host/room-host-services.js'
 // #1115：宿主计时器服务交回的是可调用的撤销器（不是数字句柄、也没有 dispose 方法），
 //   撤销的三档判据收在共享层一处；本文件两处 timers 口都只用它，不再各写一遍。
 import { hostTimers } from '../refresh/contract/host-timer-ports.js'
@@ -169,7 +169,7 @@ export function createPlatformChannel(deps: Deps) {
   // 房间只认契约形状（src/tracker/contract/outbound.ts），不再从宿主 import；这一处与
   // src/refresh/rooms/host/refresh-runtime.js 与 src/refresh/registry/deck-tool-bridge.ts 的 backendObj 是三处注入点，缺一处那条路上的房间会按环境失败。
   // #1224：三处都要把各自的 logCtx 带进 createOutboundControl，否则 gh.lane.wait / gh.transport 在生产永不落盘。
-  const backendCtxForRooms = { logEvent: backendLogEvent, isEnabled: backendLogEnabled, outbound: createOutboundControl(backendLogCtx), http: createHttpChannel({ outbound: createOutboundControl(backendLogCtx) }) }
+  const backendCtxForRooms = { logEvent: backendLogEvent, isEnabled: backendLogEnabled, outbound: createOutboundControl(backendLogCtx), http: createHttpChannel({ outbound: createOutboundControl(backendLogCtx) }), accounts: createLinearAccountSeam({ ctx: ctx, getPlatform: getPlatform, http: createHttpChannel({ outbound: createOutboundControl(backendLogCtx) }) }) }
   // #606 房外埋点 helper：工作区只记短指纹，不记原始路径。
   function hash8(s: unknown): string { try { const t = String(s || ''); let h = 5381; for (let i = 0; i < t.length; i++) h = (((h << 5) + h + t.charCodeAt(i)) >>> 0); return ('0000000' + h.toString(16)).slice(-8) } catch { return '00000000' } }
   // #606 命令名只留程序名：调用方通常给的是 'gh' / 'git' 这种裸名字，但若给了带目录的完整路径，

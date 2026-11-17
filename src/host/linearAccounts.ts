@@ -23,6 +23,7 @@ import { LINEAR_ACCOUNTS_REL_SEGMENTS } from '../shared/config-store/src/linear-
 // 时间参数只有一处真源：config/timeouts.yaml 的 linearProbeMs，由构建期生成的 values.ts 带进来。
 import { LINEAR_PROBE_TIMEOUT_MS } from '../shared/time-config/src/values.js'
 import type { LinearAccountInput, LinearResolution, LinearCredentialRecord } from '../shared/linear-accounts/src/resolve.js'
+import type { AccountSeam, AccountSeamResult } from '../tracker/contract/accounts.js'
 
 /** Read the accounts file from this path instead of the default one (CI, tests, an administrator with one shared file). */
 export const LINEAR_ACCOUNTS_REGISTRY_ENV = 'DSH_DECK_LINEAR_REGISTRY'
@@ -182,4 +183,96 @@ export async function writeLinearAccounts(value: any, homeDir: any, io: any, ove
     return envFail('Save failed: could not write this file', rel, 'Check that its parent directory exists and the current account can write to it, then retry. Original error: ' + String((e && e.message) || e).slice(0, 120))
   }
   return { ok: true, from: 'yaml', legacyDeleted: false, warnings: [] }
+}
+
+/**
+ * 账号缝的宿主实现（#27 的决定，形状在 `src/tracker/contract/accounts.ts`）。
+ *
+ * 放在本文件而不是新开一个宿主模块：它要读的账号文档与解析函数都在这里，另起文件会多出两条
+ * `same-layer-import-host` 边（`tests/verify-dependency-rules.ts` 只许减不许增）。
+ *
+ * 三件事值得记住：
+ *   1. **按别名解析**：工作区用哪本账是仓库的声明，房间把别名交进来；本文件不认识项目绑定。
+ *   2. **身份探活走 `http`（bucket probe），不用全局 fetch**，并且按 (别名, token) 缓存在进程里：
+ *      同一本账同一个 token 一趟进程只探一次；token 变了（登录刷新过）就重新探 —— 否则一个从别的
+ *      组织粘来的 token 会安静地读回那家的票，看起来还像成功。
+ *   3. **过边界的是可直接用的 Authorization，不是 token 本身**；失败用账号状态说
+ *      （`needs_auth` / `identity_mismatch` / `error` / `unconfigured`），下一步动作按这四档分。
+ */
+export function createLinearAccountSeam(deps: LinearSeamDeps): AccountSeam {
+  const ctx = deps.ctx
+  const probeCache = new Map<string, true>()
+  const io = {
+    async readText(p: string): Promise<string> {
+      const fsp: any = (globalThis as any).process && (globalThis as any).process.getBuiltinModule ? (globalThis as any).process.getBuiltinModule('node:fs/promises') : null
+      if (!fsp) throw new Error('no filesystem in this runtime')
+      return fsp.readFile(String(p), 'utf8')
+    },
+    async writeText(p: string, text: string): Promise<void> {
+      const fsp: any = (globalThis as any).process && (globalThis as any).process.getBuiltinModule ? (globalThis as any).process.getBuiltinModule('node:fs/promises') : null
+      if (!fsp) throw new Error('no filesystem in this runtime')
+      await fsp.writeFile(String(p), String(text), 'utf8')
+    },
+  }
+  return {
+    resolve: async function (alias: string, signal?: AbortSignal): Promise<AccountSeamResult> {
+      const wanted = String(alias || '').trim()
+      if (!wanted) return { ok: false, status: 'unconfigured', message: 'the binding names no Linear account alias' }
+      const pl: any = typeof deps.getPlatform === 'function' ? await deps.getPlatform().catch(() => null) : null
+      if (!pl || typeof pl.getHome !== 'function') return { ok: false, status: 'error', message: 'this composition cannot reach the platform, so the Linear account file cannot be located' }
+      let home = ''
+      try { home = String((await pl.getHome()) || '') } catch { home = '' }
+      if (!home) return { ok: false, status: 'error', message: 'this composition cannot read the home directory, so the Linear account file cannot be located' }
+      const env = function (name: string): string | undefined { try { return pl.env && typeof pl.env.get === 'function' ? pl.env.get(name) : undefined } catch { return undefined } }
+      const read: any = await readLinearAccounts(home, io, linearRegistryPath(env))
+      if (read.ok !== true) {
+        return read.reason === 'missing'
+          ? { ok: false, status: 'unconfigured', message: 'this machine has no Linear account configured (' + String(read.message || '').slice(0, 160) + ')' }
+          : { ok: false, status: 'error', message: String(read.message || read.reason || 'the Linear account document could not be read').slice(0, 200) }
+      }
+      const doc: any = read.value
+      const list: any[] = (doc && Array.isArray(doc.accounts) ? doc.accounts : []).filter((a: any) => a && typeof a.alias === 'string' && a.alias)
+      const chosen = list.find((a: any) => a.alias === wanted)
+      if (!chosen) return { ok: false, status: 'unconfigured', message: 'the Linear account document has no account called ' + wanted }
+      const probe = false
+      const resolved: any = await resolveLinearAccountWithHost(ctx, chosen, { env, probe })
+      if (!resolved || resolved.status !== 'ok') {
+        const status = resolved && resolved.status === 'needs_auth' ? 'needs_auth' : (resolved && resolved.status === 'identity_mismatch' ? 'identity_mismatch' : 'error')
+        return { ok: false, status: status, message: String((resolved && resolved.message) || 'the Linear account could not be resolved').slice(0, 300) }
+      }
+      if (signal && signal.aborted) return { ok: false, status: 'error', message: 'the caller gave up before the Linear account was resolved' }
+      const token = String(resolved.token || '')
+      const cacheKey = wanted + ':' + token
+      if (deps.http && !probeCache.has(cacheKey)) {
+        const probed = await probeThroughChannel(deps.http, wanted, String(resolved.authorization || ''))
+        if (!probed.ok) return { ok: false, status: 'identity_mismatch', message: String(probed.message || 'the identity probe failed').slice(0, 200) }
+        probeCache.set(cacheKey, true)
+      }
+      return { ok: true, alias: String(resolved.alias || wanted), authorization: String(resolved.authorization || ''), endpoint: LINEAR_GRAPHQL_ENDPOINT }
+    },
+  }
+}
+
+/** 探活依赖：平台（家目录/环境）、宿主上下文（凭据面）、以及走名额闸的 HTTP 通道。 */
+export interface LinearSeamDeps { ctx: any; getPlatform?: () => Promise<any>; http?: any }
+
+/** 经房间同一条 HTTP 通道探一次身份（bucket=probe）：不走全局 fetch，也不额外记账。 */
+async function probeThroughChannel(http: any, alias: string, authorization: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const response = await http.request({
+      method: 'POST',
+      url: LINEAR_GRAPHQL_ENDPOINT,
+      headers: { Authorization: authorization, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: LINEAR_IDENTITY_QUERY, variables: {} }),
+      bucket: 'probe',
+      service: 'linear',
+    })
+    if (response.status < 200 || response.status >= 300) return { ok: false, message: 'the identity probe answered HTTP ' + response.status }
+    const payload: any = JSON.parse(String(response.body || '{}'))
+    if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) return { ok: false, message: 'the identity probe was refused: ' + String(payload.errors[0] && payload.errors[0].message || 'unknown reason').slice(0, 160) }
+    if (!payload || !payload.data || !payload.data.viewer) return { ok: false, message: 'the identity probe answered without a viewer (' + alias + ')' }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, message: 'the identity probe could not be sent: ' + String((e && e.message) || e).slice(0, 160) }
+  }
 }

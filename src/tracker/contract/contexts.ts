@@ -10,6 +10,7 @@
  */
 
 import type { OutboundBucket, OutboundControl, OutboundService } from './outbound.js'
+import type { AccountSeam } from './accounts.js'
 import type { ReadSpendChannel } from './operations-encyclopedia.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,7 +186,13 @@ export interface BackendContext {
    * **必填**：与 `outbound` 同一条理由 —— 缺了就是接线漏了一处，房间大声失败，不静默绕过。
    */
   http: HttpChannel
+  /**
+   * 账号缝：房间问「以哪本账说话」的唯一入口（#27 的决定）。形状、为什么按别名解析、失败为什么
+   * 用账号状态说，都在 `accounts.ts` 的文档里。**可选**：缺了按环境失败大声报，不静默跳过。
+   */
+  accounts?: AccountSeam
 }
+
 
 /**
  * 一次出站 HTTP 请求。字段是「发给远端的那几件事」，不是某个后端的私有习惯。

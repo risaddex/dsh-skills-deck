@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T23:24:19.056Z",
+  "generatedAt": "2026-11-17T01:05:22.140Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 610,
-  "gateCount": 610,
-  "attributedGates": 553,
+  "chainLength": 611,
+  "gateCount": 611,
+  "attributedGates": 554,
   "unattributedGates": 57,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 144,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 980,
+  "graphFileCount": 982,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -7600,6 +7600,25 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自：静态 import 说明符 2 条；源码里的路径字面量 1 条"
+    },
+    {
+      "step": "node tests/verify-27-account-seam.ts",
+      "file": "tests/verify-27-account-seam.ts",
+      "guards": [
+        "src/tracker/contract/accounts.ts",
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/rooms/linear/binding.ts",
+        "src/tracker/rooms/linear/index.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
     },
     {
       "step": "node tests/verify-3-workspace-switch.ts",
@@ -16035,6 +16054,7 @@
       "node tests/verify-1799-input-stage.ts",
       "node tests/verify-1832-single-triage-state.ts",
       "node tests/verify-24-http-channel.ts",
+      "node tests/verify-27-account-seam.ts",
       "node tests/verify-895-github-memo.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
@@ -16338,7 +16358,8 @@
       "node tests/verify-operation-catalog.ts"
     ],
     "src/tracker/rooms/linear": [
-      "node tests/verify-13-linear-room.ts"
+      "node tests/verify-13-linear-room.ts",
+      "node tests/verify-27-account-seam.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-tools-matrix.ts",
@@ -16800,9 +16821,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1003,
+    "fileCount": 1005,
     "dirCount": 106,
-    "coveredFileCount": 1003,
+    "coveredFileCount": 1005,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 82,
@@ -17541,6 +17562,7 @@
       "src/tracker/body-parse.ts",
       "src/tracker/capability-assertions.ts",
       "src/tracker/contract/README.md",
+      "src/tracker/contract/accounts.ts",
       "src/tracker/contract/backend-module.ts",
       "src/tracker/contract/budget-model.ts",
       "src/tracker/contract/canonical-labels.ts",
@@ -17694,6 +17716,7 @@
       "src/tracker/rooms/gitlab/support/capability-register.ts",
       "src/tracker/rooms/gitlab/support/read-log.ts",
       "src/tracker/rooms/gitlab/support/read-sources.ts",
+      "src/tracker/rooms/linear/binding.ts",
       "src/tracker/rooms/linear/client.ts",
       "src/tracker/rooms/linear/errors.ts",
       "src/tracker/rooms/linear/index.ts",

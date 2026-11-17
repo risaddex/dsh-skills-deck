@@ -11,3 +11,4 @@
  */
 export { createOutboundControl } from './outbound-control.js'
 export { createHttpChannel } from '../../../host/platform/httpChannel.js'
+export { createLinearAccountSeam } from '../../../host/linearAccounts.js'
