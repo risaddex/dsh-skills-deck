@@ -647,12 +647,14 @@ if (has('--json')) {
             stepsRan: chainRan,
             stepsTotal: steps.length,
             // red 是整趟的总红数（主链 + 冒烟）；chainRed 单独给出，好让发布脚本分辨是哪一段红了。
+            // 逐扇结果里的 optional 必须落盘：预构建是可选步（构建锁超时后面还能恢复），判定会排除它，
+            // 任何读这份缓存的程序（例如 scripts/verify-last.mts）得能做同样的排除，否则两边结论相反。
             red: failed.length + smokeRedTotal,
             chainRed: failed.length,
             knownRed: classified.known.length,
             newRed: classified.fresh.length + (smokeProblem ? 1 : 0),
             flaky: flaky.length,
-            results: results.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, evidence: r.evidence || '' })),
+            results: results.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, optional: !!r.optional, evidence: r.evidence || '' })),
             smoke: {
               ran: smokeRan,
               reason: smokeSkip,
@@ -660,7 +662,7 @@ if (has('--json')) {
               stepsTotal: smokePlanned.steps.length,
               stepsRan: smokeResults.length,
               red: smokeRedTotal,
-              results: smokeResults.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, evidence: r.evidence || '' })),
+              results: smokeResults.map((r) => ({ file: r.file, code: r.code, ms: r.ms, at: r.at, exitCode: r.exitCode != null ? r.exitCode : r.code, optional: !!r.optional, evidence: r.evidence || '' })),
             },
           },
           null,
