@@ -1,0 +1,11 @@
+# Release publishing
+
+Publish `package` (the main plugin; skills ship inside it, never separately). `dsh-log` and `dsh-plugin-update` now live in standalone repos and are only consumed from npm, never published from here (#878, #892). Private package shells are skipped automatically.
+
+Unattended publishing (prefer it when there is a token with write permission; it needs no human click): **the token always goes through the file channel**. Writing the value as a command-line argument, or as an inline assignment such as `$env:NODE_AUTH_TOKEN='<value>'`, records the whole command in plain text in the session transcript and in the process arguments (#1646 leaked it for real), so neither of these may be used any more. The way to do it:
+
+1. A person writes the token with write permission as the first line of a temporary file that only they can read, for example `%TEMP%\dsh-publish-token.txt`; do not put it in the repository directory, and do not add comments. For how to tighten the file permissions and how to write the value in, see section 12 of `docs/releases/RELEASE-RUNBOOK.md`.
+2. The agent's command mentions only a path: run `pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile <path> -Probe` first (it must say PROBE-OK), then run `pwsh -NoProfile -File scripts\publish-token.ps1 -TokenFile <path>` for the real publish (build and test gates → publish → one visibility sample; add `-FullPost` before announcing it publicly).
+3. Delete the temporary file immediately after every run (`Remove-Item -LiteralPath <path> -Force`). Once the token may have leaked, revoke that one at npm first and then issue a new one; otherwise rotate it quarterly.
+
+The `$env:NODE_AUTH_TOKEN` environment-variable entry point is still compatible (`-TokenEnv` changes the preferred variable name), but it is only recommended that a person sets it in their own terminal: when an agent runs, always use the file channel. Accepted is not the same as visible: `E409 previously-staged` means the registry received the package, so wait a few minutes instead of republishing or bumping the version. The old interactive flow (`scripts\publish-all-window.ps1` via schtasks) stays as fallback. Publishing ends the job; installing is always done by the user (marketplace upgrade, in-app upgrade, or their own install command).

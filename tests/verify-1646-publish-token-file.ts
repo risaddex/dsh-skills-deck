@@ -9,13 +9,14 @@
 //        临时 npmrc 里只放环境变量占位符，不写值；
 //     ③ 真能用：拿假 token 文件跑只读的 -DryRun 与 -Probe，假 registry 必须在 Authorization 里收到
 //        文件里的那个值，同时 stdout、stderr、日志文件、命令行参数里都搜不到这个值。
-//   静态部分查脚本与三份文档的写法；动态部分起假 registry、spawn 真的 pwsh 跑脚本。
+//   静态部分查脚本、AGENTS.md 的入口与三份按需文档的写法；动态部分起假 registry、spawn 真的 pwsh 跑脚本。
 //   pwsh 不可用时（非 Windows 的 CI 机器等）静态照跑、动态明确跳过并打 INFO 行。
 //
 // 门禁归属: scripts/publish-token.ps1
 // 门禁归属: docs/releases/RELEASE-RUNBOOK.md
 // 门禁归属: docs/agents/real-machine-verification.md
-// 另外守 AGENTS.md 的发布段：根目录文件不在 gate-map 的目录前缀名单里，写归属行会被静默丢掉
+// 门禁归属: docs/agents/release-publishing.md
+// 另外守 AGENTS.md 的发布入口：根目录文件不在 gate-map 的目录前缀名单里，写归属行会被静默丢掉
 //（先例是 verify-1596 的 GLOSSARY.md 那条），所以不写成归属行，改在这里说明。
 
 const fs = require('fs')
@@ -96,9 +97,12 @@ function staticChecks(): void {
 
   // AGENTS.md 在 #1561 之后是英文（本仓库 English-first 的那一半），判据认英文原句，不再认中文词。
   const agents = fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8')
-  check(agents.indexOf('-TokenFile') >= 0, 'AGENTS.md 的发布说明写了 -TokenFile 文件通道')
-  check(agents.indexOf('Delete the temporary file immediately') >= 0, 'AGENTS.md 要求跑完立刻删掉临时 token 文件')
-  check(agents.indexOf('rotate it quarterly') >= 0 && agents.indexOf('revoke') >= 0, 'AGENTS.md 写明轮换与泄露后撤销的处置')
+  // #37：发布规则已完整移到按需文档；同时守住入口与正文，避免只剩一个失效链接。
+  check(agents.indexOf('Before publishing a release') >= 0 && agents.indexOf('(docs/agents/release-publishing.md)') >= 0, 'AGENTS.md 在发布前明确要求读取发布文档')
+  const publishing = fs.readFileSync(path.join(ROOT, 'docs', 'agents', 'release-publishing.md'), 'utf8')
+  check(publishing.indexOf('-TokenFile') >= 0, '发布文档写了 -TokenFile 文件通道')
+  check(publishing.indexOf('Delete the temporary file immediately') >= 0, '发布文档要求跑完立刻删掉临时 token 文件')
+  check(publishing.indexOf('rotate it quarterly') >= 0 && publishing.indexOf('revoke') >= 0, '发布文档写明轮换与泄露后撤销的处置')
 
   const runbook = fs.readFileSync(path.join(ROOT, 'docs', 'releases', 'RELEASE-RUNBOOK.md'), 'utf8')
   check(runbook.indexOf('## 12. 发布 token 的文件通道与轮换') >= 0, 'RELEASE-RUNBOOK.md 有第 12 节讲 token 文件通道与轮换')
