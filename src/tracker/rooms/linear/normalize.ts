@@ -7,12 +7,13 @@
  *
  * 三个翻译点值得记住，它们都在研究笔记里有出处：
  *   · 状态只有 open/closed 两态，Linear 的七个 type 里 completed / canceled / duplicate 算关；
- *   · 地图靠 wayfinder:map 标签认（与另外两房同一口径）；
+ *   · 地图靠 wayfinder:map 标签认、规格靠正文文件头的 DSH-ISSUE-KIND: spec 标记认（与另外三房同一口径）；
  *   · 票的稳定身份是 uuid，显示用 identifier；契约的 key 用 identifier，因为它与另外两房同形。
  */
 import type { Issue, Label } from '../../contract/entities.js'
 import type { IssueType, State } from '../../contract/identity.js'
 import { normalizeColor } from '../../../shared/label-color/src/colors.js'
+import { markerKindInHeader } from '../../../shared/issue-file/src/marker.js'
 
 /** Linear 的节点形状（只声明本文件读到的格，多的一律不碰）。 */
 export interface LinearIssueNode {
@@ -42,8 +43,18 @@ export function stateOf(type: string | undefined): State {
   return CLOSED_STATE_TYPES.includes(String(type || '').toLowerCase()) ? 'closed' : 'open'
 }
 
-/** 地图与规格是容器，普通票是 issue。规格的正文标记要读正文文件头，等写侧切片一起做。 */
-export function issueTypeOf(labels: Label[]): IssueType {
+/**
+ * 地图与规格是容器，普通票是 issue。判定顺序与另外三间房一致：**正文文件头的标记最前**，其次才是标签。
+ *
+ * 为什么规格看正文、不看标签：规格没有自己的标签（也不许带 `wayfinder:map`，带了会被认成探索地图），
+ * 它的唯一真源是正文文件头独占一行的 `<!-- DSH-ISSUE-KIND: spec -->`（见 `contract/vocabulary.ts` 的
+ * `SPEC_BODY_MARKER`）。GitHub 房、GitLab 房、本地 Markdown 房读的是同一个共享函数 `markerKindInHeader`，
+ * 这里不另写一套判据，否则同一张规格换一间房读就变成普通票。
+ *
+ * `body` 是可选的第二个参数：只有手里有正文的调用方（`issueOf`）才传；不传就只看标签，旧调用点行为不变。
+ */
+export function issueTypeOf(labels: Label[], body?: unknown): IssueType {
+  if (markerKindInHeader(body) === 'spec') return 'spec'
   return labels.some((label) => label.name === 'wayfinder:map') ? 'map' : 'issue'
 }
 
@@ -69,7 +80,7 @@ export function issueOf(node: LinearIssueNode): Issue {
   const issue: Issue = {
     key: String(node.identifier || node.id || ''),
     effortId: '',
-    type: issueTypeOf(labels),
+    type: issueTypeOf(labels, node.description),
     title: String(node.title || ''),
     state: stateOf(node.state?.type),
     body: String(node.description ?? ''),

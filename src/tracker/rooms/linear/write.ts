@@ -12,13 +12,18 @@
  */
 import type { Comment, Issue } from '../../contract/entities.js'
 import type { OpResult } from '../../contract/results.js'
+import { TRACKER_ERROR_STAGE } from '../../contract/results.js'
 import type { OpContext } from '../../contract/contexts.js'
-import type { UpdatePatch, CreateInput, SetOpts } from '../../contract/inputs.js'
+import type { UpdatePatch, CreateInput, SetOpts, LabelInput } from '../../contract/inputs.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
 import { issueOf, type LinearIssueNode } from './normalize.js'
 import { ISSUE_CORE } from './queries.js'
+import { resolveLabelIds, wantedLabelsOf } from './labels.js'
+import { lookupByAnchor, withAnchor } from './anchor.js'
+import { checkIdempotencyKey } from '../../../refresh/contract/idempotency-keys.js'
+import { markerKindInHeader, markerLineFor } from '../../../shared/issue-file/src/marker.js'
 
 /** 与读侧同一份选择集（`queries.ts` 的 `ISSUE_CORE`）：写完之后回的那张票要能直接过 `issueOf`。 */
 const ISSUE_FIELDS = '...LinearIssueCore'
@@ -103,36 +108,74 @@ export async function setIssueStateType(ctx: OpContext, account: LinearAccount, 
 
 /** 团队 key → 团队 id：建票必须带 teamId，而绑定声明里写的是 key（例如 ENG）。 */
 const TEAMS_BY_KEY = 'query DeckTeamsByKey($key: String!) { teams(filter: { key: { eq: $key } }) { nodes { id key name } } }'
+/** 探索地图的类型标签：与 `normalize.ts` 的 `issueTypeOf` 认的是同一个名字。 */
+const MAP_LABEL = 'wayfinder:map'
 const ISSUE_CREATE = 'mutation DeckIssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { ' + ISSUE_FIELDS + ' } } } ' + ISSUE_CORE
 
 /**
  * 建一张票。
  *
  * 必须带团队：Linear 的 `issueCreate` 要 `teamId`，而绑定声明写的是团队 key，所以先按 key 查一次。
- * 这一版只翻 `title` / `body` / `parentKey`；`labels`、`assignees` 与幂等锚都要先做各自的解析（标签 id、
- * 用户 id、以及 Linear 没有幂等键这件事），所以在实现之前如实回 `unsupported`，不静默丢掉。
+ *
+ * 标签与类型（#33）：
+ *   · `labels` 经 `labels.ts` 的 `resolveLabelIds` 换成 id（与覆盖式改标签同一份解析：翻到底、只认本团队或
+ *     工作区标签、缺的建成本团队标签），随同一个 `issueCreate` 的 `labelIds` 发出 —— 不存在「先建票、再贴标签」
+ *     的窗口，所以一张 `map` 不会有一刻是普通 issue；
+ *   · `type: 'map'` 在调用方给的标签之外再加 `wayfinder:map`（已经给了就不重复）；
+ *   · `type: 'spec'` 不带标签：规格由正文文件头的标记认（见 `normalize.ts` 的 `issueTypeOf`），而写标记的是 deck
+ *     的建票工具。这里只负责**不丢**它，并在正文里没有标记时补上，免得直接调用本房的人建出一张读回来是普通票的规格。
+ *
+ * 幂等锚（#33）：给了 `idempotencyKey` 就先按锚回查（`anchor.ts`）：命中就把旧票交回去、不发任何写请求；
+ * 回查没做成如实失败、绝不建票；没命中才建，并把锚写成正文第一行。不给就与没有这个字段之前完全一样。
+ *
+ * 仍然如实回 `unsupported` 的只有 `assignees`：用户 id 的解析不在这一版里，丢掉它等于「看起来做了」。
  */
 export async function createIssue(ctx: OpContext, account: LinearAccount, input: CreateInput, teamKey: string): Promise<OpResult<Issue>> {
   const wanted = input || ({} as CreateInput)
   const title = String(wanted.title || '').trim()
   if (!title) return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'a ticket needs a title: Linear refuses one without it') }
   if (!teamKey) return { ok: false, error: linearError(ERROR_KIND.ENV, 'the workspace binding names no Linear team, so a ticket cannot be created in one') }
-  // `map` / `spec` 在契约里是「带 wayfinder:* 标签的父票」，而这一版写不了标签：
-  // 照常建票会建出一张普通 issue，随后每次读都把它当 issue —— 那是把调用方要的东西换成了别的。
-  if (wanted.type === 'map' || wanted.type === 'spec') {
-    return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this room cannot create a ' + wanted.type + ' yet: it needs the wayfinder label, and label writing is not implemented') }
+  if (Array.isArray(wanted.assignees) && wanted.assignees.length > 0) {
+    return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this room cannot set assignees while creating a ticket yet: resolving them to Linear users is not implemented, and creating the ticket without them would be a guess') }
   }
-  if ((Array.isArray(wanted.labels) && wanted.labels.length > 0) || (Array.isArray(wanted.assignees) && wanted.assignees.length > 0) || wanted.idempotencyKey) {
-    return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this room cannot set labels, assignees or an idempotency anchor while creating a ticket yet; creating it half-configured would be a guess') }
+  // 键不合规当场失败，而且早于任何请求：键不合法时连回查都无从做起；不「清洗」成另一个键。
+  let idemKey = ''
+  if (wanted.idempotencyKey !== undefined && wanted.idempotencyKey !== null) {
+    const checked = checkIdempotencyKey(wanted.idempotencyKey)
+    if (!checked.ok) return { ok: false, error: Object.assign(linearError(ERROR_KIND.PARSE, 'create: idempotencyKey cannot be used: ' + checked.reason), { stage: TRACKER_ERROR_STAGE.INPUT_REFUSED }) }
+    idemKey = checked.key
   }
+  // 标签名先归一（去重、拒绝空名）：不合规就整条拒绝，绝不发一个丢了标签的建票请求。
+  const names: LabelInput[] = Array.isArray(wanted.labels) ? [...wanted.labels] : []
+  if (wanted.type === 'map' && !names.some((l: any) => (typeof l === 'string' ? l : (l && l.name)) === MAP_LABEL)) names.push({ name: MAP_LABEL })
+  const normalized = wantedLabelsOf(names)
+  if (!normalized.ok) return { ok: false, error: normalized.error }
+
+  // 回查在一切写之前：命中就一个写请求都不发。
+  if (idemKey) {
+    const found = await lookupByAnchor(ctx, account, teamKey, idemKey)
+    if (!found.ok) return { ok: false, error: found.error }
+    if (found.hit) return { ok: true, data: found.issue }
+  }
+
   const teams = await gql<any>(ctx, account, { query: TEAMS_BY_KEY, variables: { key: teamKey }, bucket: 'read' })
   if (!teams.ok) return { ok: false, error: teams.error }
   const nodes = (teams.data && teams.data.teams && teams.data.teams.nodes) || []
   const team = (Array.isArray(nodes) ? nodes : []).find((n: any) => n && String(n.key || '').toUpperCase() === String(teamKey).toUpperCase())
   if (!team || !team.id) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'Linear has no team with key ' + teamKey + ', so the ticket cannot be created') }
+
   const payload: Record<string, unknown> = { teamId: String(team.id), title }
-  if (typeof wanted.body === 'string') payload.description = wanted.body
+  let description = typeof wanted.body === 'string' ? wanted.body : ''
+  // 规格的类型在正文标记里：调用方（deck）已经写了就保持原样；没写就补，补在正文最前面（锚会再排到它前面）。
+  if (wanted.type === 'spec' && markerKindInHeader(description) !== 'spec') description = markerLineFor('spec') + description
+  if (idemKey) description = withAnchor(description, idemKey)
+  if (description || typeof wanted.body === 'string') payload.description = description
   if (wanted.parentKey) payload.parentId = String(wanted.parentKey)
+  if (normalized.data.length > 0) {
+    const ids = await resolveLabelIds(ctx, account, normalized.data, teamKey)
+    if (!ids.ok) return { ok: false, error: ids.error }
+    payload.labelIds = ids.data
+  }
   const result = await gql<any>(ctx, account, { query: ISSUE_CREATE, variables: { input: payload }, bucket: 'write' })
   if (!result.ok) return { ok: false, error: result.error }
   const created = result.data && result.data.issueCreate
