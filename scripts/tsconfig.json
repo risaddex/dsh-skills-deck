@@ -57,6 +57,10 @@
     "lib/build-lock.mts",
     "lib/build-products.mts",
     "lib/select-gates.mts",
+    // 2026-11-17 retro do #17: a regra pura que tests/verify-md-sections.ts aplica, e a sondagem descartável
+    // que substitui criar arquivos zz-* na raiz.
+    "lib/md-sections.mts",
+    "probe.mts",
     // #1766：候选清单校验、发布字节对账与身份行解析共用的纯规则。
     "lib/release-candidate-audit.mts",
     "lib/transpile-domains.mts",

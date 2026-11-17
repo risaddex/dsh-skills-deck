@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T13:17:40.619Z",
+  "generatedAt": "2026-11-17T15:53:30.149Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 617,
-  "gateCount": 617,
+  "chainLength": 618,
+  "gateCount": 618,
   "attributedGates": 560,
-  "unattributedGates": 57,
+  "unattributedGates": 58,
   "buildOutputOnlyGates": 20,
-  "completionRecordedGates": 144,
+  "completionRecordedGates": 145,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 988,
@@ -12144,6 +12144,23 @@
       "reason": "读到的路径都落在 docs、package、scripts、tests/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
+      "step": "node tests/verify-md-sections.ts",
+      "file": "tests/verify-md-sections.ts",
+      "guards": [
+        "docs/agents/md-section-removals.json",
+        "scripts/lib/md-sections.mts"
+      ],
+      "dirs": [
+        "docs/agents",
+        "scripts/lib"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 48,
+      "reason": "读到的路径都落在 docs、scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
+    },
+    {
       "step": "node tests/verify-motion-tokens.ts",
       "file": "tests/verify-motion-tokens.ts",
       "guards": [
@@ -14517,6 +14534,7 @@
       "node tests/verify-detection-evidence.ts",
       "node tests/verify-github-label-colors.ts",
       "node tests/verify-issue-body-script.ts",
+      "node tests/verify-md-sections.ts",
       "node tests/verify-t1-getrepokey.ts",
       "node tests/verify-wire-subissues-script.ts"
     ],
@@ -14823,6 +14841,7 @@
       "node tests/verify-log-selfmon.ts",
       "node tests/verify-map-drill.ts",
       "node tests/verify-market-tarball.ts",
+      "node tests/verify-md-sections.ts",
       "node tests/verify-multi-effort-panel.ts",
       "node tests/verify-parse-leaf.ts",
       "node tests/verify-platform-contract.ts",
