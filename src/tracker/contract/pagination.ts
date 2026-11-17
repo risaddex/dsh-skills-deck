@@ -1,5 +1,5 @@
 /**
- * src/tracker/contract/pagination.ts —— 三个后端房间（GitHub、GitLab、本地 Markdown）共用的分页与额度数字表。
+ * src/tracker/contract/pagination.ts —— 四个后端房间（GitHub、GitLab、Linear、本地 Markdown）共用的分页与额度数字表。
  *
  * 为什么要有这一份：
  *   这三个数字族原先在各房各写一份，同一个含义散在十几个文件里 —— 列出给界面的分页契约（缺省 50、上限 200）
@@ -20,7 +20,7 @@
  *
  * 谁在读它：GitHub 房（page / maps / sub-issues / pulls / issues / label-colors-ops / idempotency / queries /
  * graph / parent-repair）、GitLab 房（pages / maps / labels-ops / sub-issues / idempotency / graph-blocking）、
- * 本地 Markdown 房（page）。各房原来的导出名与导出位置保持不变，只是值改成从这里取，外部调用方与现有测试
+ * Linear 房（paging：计数翻页上限与列表页大小）、本地 Markdown 房（page）。各房原来的导出名与导出位置保持不变，只是值改成从这里取，外部调用方与现有测试
  * 不需要改。
  *
  * 改这里的数字必须同时改 tests/verify-pagination-limits.ts 里的期望值清单：那份门禁逐项比对本表，
@@ -85,5 +85,16 @@ export const PAGINATION = {
     // 本地 Markdown 房只有分页契约这一组数字：缺省 50、上限 200，与另外两房同一口径。
     limitDefault: 50,
     limitMax: 200,
+  },
+  linear: {
+    // Linear 的连接上限是 250（研究笔记 §9：「Between 1 and 250. Defaults to 50 when neither
+    // first nor last is supplied」），与 GitHub 的 200 不是同一个接口事实，所以各自照实写。
+    limitDefault: 50,
+    limitMax: 250,
+    // 列表一页要多少张：与 Linear 读侧同一个 50（整页带全字段时的保守值）。
+    listPageSize: 50,
+    // 计数要一页页走到 hasNextPage=false；最多翻 40 页（=1 万张）就如实回 unsupported，
+    // 防远端异常时死翻 —— 计数宁可失败，也不给一个只是下界的数。
+    countMaxPages: 40,
   },
 } as const

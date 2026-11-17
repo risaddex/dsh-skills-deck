@@ -191,3 +191,23 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Frontier query**: read this map's open child tickets with `deck_map_snapshot`, drop the ones that can still be blocked (dependency edges pointing at tickets not yet closed, or tickets not yet closed left in the body's `Blocked by` line) and the ones already claimed; take the first of what remains, in the order the map lists them.
 - **Claim**: point this ticket at the current user with `deck_issue_patch` — this is the first write operation of the session.
 - **Resolve**: with `deck_issue_patch`, first post a comment stating the conclusion, then close this ticket; then go to the map's Decisions-so-far and add a line pointing at it (a one-sentence conclusion plus a link). Neither the order nor its reversal may be skipped: comment first, close second (the reason is in the section "Closing a ticket always means commenting first, then closing" above).
+
+# Issue tracker: linear
+
+This section is how a workspace says that its tracker is Linear, and which account the room acts as.
+The Linear room reads it and nothing else: `matches` claims a workspace from this section alone, and
+the alias below is what it hands to the account seam, which returns a ready authorization header
+(never a token). Without this section the room stays out of the way, which is what every GitHub and
+GitLab workspace wants.
+
+Put real values in only when this workspace really uses Linear; then create tickets with the same
+`deck_*` tools as above, which pick the backend from the workspace's own choice.
+
+alias: ombrello
+team: ENG
+project: (optional)
+
+`alias` is the account name in the Linear accounts file, `team` is the team key tickets are created in
+(creation needs a team id, and the room resolves it from this key), and `project` is optional.
+A missing alias means the section is not a declaration at all: the room then treats the workspace as
+not Linear rather than guessing an account.
