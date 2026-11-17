@@ -177,6 +177,29 @@ async function main(): Promise<void> {
     check(JSON.stringify(sentOf(otherTeam.calls[1]).variables.input.labelIds) === JSON.stringify(['lbl-ws']), 'with no label of its own team, the workspace label is preferred', JSON.stringify(sentOf(otherTeam.calls[1]).variables.input))
   }
 
+  console.log('L7 the label lookup is read to the end before anything is created')
+  {
+    // 第一页没有本团队那份、第二页才有：只看第一页就会重复建标签。
+    const replies = [
+      { issueLabels: { nodes: [{ id: 'lbl-other', name: 'bug', color: '#EB5757', team: { id: 'team-sales', key: 'SALES' } }], pageInfo: { hasNextPage: true, endCursor: 'c1' } } },
+      { issueLabels: { nodes: [{ id: 'lbl-own', name: 'bug', color: '#EB5757', team: { id: 'team-1', key: 'ENG' } }], pageInfo: { hasNextPage: false, endCursor: null } } },
+      { issueUpdate: { success: true, issue: ISSUE_NODE } },
+    ]
+    const { ctx, calls } = ctxAnswering(replies)
+    const answer = await setLabelsOfIssue(ctx, ACCOUNT, 'ENG-123', [{ name: 'bug' } as any], undefined, 'ENG')
+    check(answer.ok === true, 'the replacement succeeds with a label found on the second page', answer.ok ? 'ok' : JSON.stringify(answer.error))
+    const lookups = calls.filter((c) => String(JSON.parse(c.body).query || '').indexOf('issueLabels') >= 0)
+    check(lookups.length === 2 && JSON.parse(lookups[1].body).variables.after === 'c1', 'the lookup follows the cursor', String(lookups.length))
+    const writes = calls.filter((c) => String(JSON.parse(c.body).query || '').indexOf('issueUpdate') >= 0)
+    check(writes.length === 1 && JSON.parse(writes[0].body).variables.input.labelIds[0] === 'lbl-own', 'the write uses the team own label, not the other team one', writes.length ? JSON.stringify(JSON.parse(writes[0].body).variables.input) : '(none)')
+
+    // 翻到上限还没到底：拒绝写，绝不建重复标签。
+    const deep = ctxAnswering([{ issueLabels: { nodes: [], pageInfo: { hasNextPage: true, endCursor: 'c1' } } }])
+    const refused = await setLabelsOfIssue(deep.ctx, ACCOUNT, 'ENG-123', [{ name: 'bug' } as any], undefined, 'ENG')
+    check(refused.ok === false && refused.error.kind === 'unsupported', 'an endless label list is refused', refused.ok ? 'ok' : refused.error.kind)
+    check(!deep.calls.some((c) => String(JSON.parse(c.body).query || '').indexOf('issueUpdate') >= 0), 'and nothing is written', String(deep.calls.length))
+  }
+
   console.log('\n' + (failed ? 'FAIL' : 'PASS') + ' ' + total + ' assertions')
   process.exit(failed ? 1 : 0)
 }

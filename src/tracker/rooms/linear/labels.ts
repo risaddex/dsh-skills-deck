@@ -22,6 +22,7 @@ import type { OpResult } from '../../contract/results.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
+import { PAGINATION } from '../../contract/pagination.js'
 import { issueOf, type LinearIssueNode } from './normalize.js'
 import { ISSUE_CORE } from './queries.js'
 
@@ -44,7 +45,12 @@ const ISSUE_UPDATED_AT = 'query DeckIssueUpdatedAt($id: String!) { issue(id: $id
  * 不传 includeArchived：退休（retire）的标签本来就「不能再被新指派」（§4 的生命周期一节），
  * 把它查出来再用反而是错的。
  */
-const LABELS_BY_NAME = 'query DeckLabelsByName($names: [String!]!) { issueLabels(filter: { name: { in: $names } }, first: 250) { nodes { id name color team { id key } } } }'
+/**
+ * 按名字找标签，**必须能翻页**：同名标签可以在不同团队里各有一份，一页 250 条在小工作区够用，
+ * 在大的组织里却可能把「本团队那份」挤到下一页 —— 于是它被判成缺失、进而被重复创建，
+ * 或者一次本来合法的替换因为撞名而失败（PR #32 review 的 P2）。所以这里带回游标，由调用方翻到底。
+ */
+const LABELS_BY_NAME = 'query DeckLabelsByName($names: [String!]!, $after: String) { issueLabels(filter: { name: { in: $names } }, first: 250, after: $after) { nodes { id name color team { id key } } pageInfo { hasNextPage endCursor } } }'
 
 /** 缺的名字建出来（§4：`IssueLabelCreateInput` 只有 `name` 必填，`color` 不接受 null）。 */
 const LABEL_CREATE = 'mutation DeckIssueLabelCreate($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name color team { id key } } } }'
@@ -223,10 +229,25 @@ export async function setLabelsOfIssue(
   // 也不用把名字换成 id —— 那样做只是多花请求，还会在「票上一堆标签、一个都不留」时读到一半就失败。
   if (wanted.length === 0) return writeLabelIds(ctx, account, key, [])
 
-  const lookup: any = await gql<any>(ctx, account, { query: LABELS_BY_NAME, variables: { names: wanted.map((item) => item.name) }, bucket: 'read' })
-  if (!lookup.ok) return { ok: false, error: lookup.error }
-  const nodes = (lookup.data && lookup.data.issueLabels && lookup.data.issueLabels.nodes) || []
-  const found = Array.isArray(nodes) ? nodes : []
+  // 翻到底再判断「缺不缺」：只看第一页就建标签，会把别人的同名标签当成不存在。
+  const found: any[] = []
+  let after: string | null = null
+  for (let page = 0; page < PAGINATION.linear.countMaxPages; page += 1) {
+    const lookup: any = await gql<any>(ctx, account, { query: LABELS_BY_NAME, variables: { names: wanted.map((item) => item.name), after }, bucket: 'read' })
+    if (!lookup.ok) return { ok: false, error: lookup.error }
+    const conn = lookup.data && lookup.data.issueLabels
+    const nodes = (conn && conn.nodes) || []
+    if (!Array.isArray(nodes)) return { ok: false, error: linearError(ERROR_KIND.PARSE, 'Linear answered the label lookup without a node list') }
+    found.push(...nodes)
+    const more = !!(conn && conn.pageInfo && conn.pageInfo.hasNextPage)
+    if (!more) break
+    if (!conn.pageInfo.endCursor) return { ok: false, error: linearError(ERROR_KIND.PARSE, 'Linear said there are more labels but gave no cursor to read them') }
+    after = String(conn.pageInfo.endCursor)
+    // 翻到上限还没到底：宁可整条操作失败，也不在「可能没看全」的名单上决定新建标签。
+    if (page === PAGINATION.linear.countMaxPages - 1) {
+      return { ok: false, error: linearError(ERROR_KIND.UNSUPPORTED, 'this workspace has more labels than the room will walk in one go, so the label list cannot be read completely; nothing was written') }
+    }
+  }
 
   const ids = new Map<string, string>()
   const missing: WantedLabel[] = []

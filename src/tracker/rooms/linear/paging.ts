@@ -151,7 +151,7 @@ async function countConnection(
   for (let page = 0; page < PAGINATION.linear.countMaxPages; page += 1) {
     const replied: GqlResult<{ issues?: ConnectionReply | null }> = await gql<{ issues?: ConnectionReply | null }>(ctx, account, {
       query: COUNT_PAGE_QUERY,
-      variables: { first: MAX_PAGE, after, filter: condition ?? null },
+      variables: { first: Math.min(MAX_PAGE, PAGINATION.linear.connectionMax), after, filter: condition ?? null },
       bucket: 'read',
     })
     if (!replied.ok) return { ok: false, error: replied.error }
@@ -239,7 +239,8 @@ export async function countsOf(ctx: OpContext, account: LinearAccount, filter: L
 function pageSizeOf(opts: PageOpts | undefined): number {
   const asked = opts && typeof opts.limit === 'number' ? opts.limit : NaN
   const wanted = Number.isFinite(asked) && asked >= 1 ? Math.floor(asked) : PAGINATION.linear.limitDefault
-  return Math.min(wanted, PAGINATION.linear.limitMax, MAX_PAGE)
+  // 两层上限各管一件事：对外按契约的 200 封顶，对内再收进这条连接的硬上限。
+  return Math.min(wanted, PAGINATION.linear.limitMax, PAGINATION.linear.connectionMax, MAX_PAGE)
 }
 
 /**

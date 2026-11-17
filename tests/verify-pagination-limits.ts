@@ -67,7 +67,8 @@ const EXPECTED = {
   },
   linear: {
     limitDefault: 50,
-    limitMax: 250,
+    limitMax: 200,
+    connectionMax: 250,
     listPageSize: 50,
     countMaxPages: 40,
   },

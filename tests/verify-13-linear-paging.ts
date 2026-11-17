@@ -159,7 +159,7 @@ async function main(): Promise<void> {
     ])
     const answer = await listPageOf(ctx, ACCOUNT, undefined, { limit: 999 })
     check(answer.ok === true, 'the page answers', answer.ok ? 'ok' : JSON.stringify(answer.error))
-    check(sent(calls[0]).variables.first === PAGINATION.linear.limitMax, 'a page size above the contract limit is clamped to limitMax (200)', String(sent(calls[0]).variables.first))
+    check(sent(calls[0]).variables.first === 200, 'a page size above the contract limit is clamped to the contract 200, not the connection 250', String(sent(calls[0]).variables.first))
     check(sent(calls[0]).variables.after === null, 'the first page asks for no cursor', JSON.stringify(sent(calls[0]).variables.after))
     check(String(sent(calls[0]).query).indexOf('orderBy: createdAt') >= 0, 'pages are asked in creation-time order', String(sent(calls[0]).query).slice(0, 120))
     check(answer.ok && answer.data.items.length === 1 && answer.data.items[0].key === 'ENG-1', 'the row is a normalised ticket', answer.ok ? JSON.stringify(answer.data.items) : '')

@@ -87,10 +87,13 @@ export const PAGINATION = {
     limitMax: 200,
   },
   linear: {
-    // Linear 的连接上限是 250（研究笔记 §9：「Between 1 and 250. Defaults to 50 when neither
-    // first nor last is supplied」），与 GitHub 的 200 不是同一个接口事实，所以各自照实写。
+    // 分页契约这一格与另外三房同一口径：缺省 50、上限 200。它是**对外承诺**（PageOpts.limit 的语义），
+    // 不让某一家接口更宽就跟着放宽 —— 放宽之后调用方要 200 会拿到 250，别家的行为就对不上。
     limitDefault: 50,
-    limitMax: 250,
+    limitMax: 200,
+    // 连接硬上限 250 是 Linear 自己的接口事实（研究笔记 §9：「Between 1 and 250. Defaults to 50 when
+    // neither first nor last is supplied」），只在本房内部（例如计数一页取多少）用，不外露成契约上限。
+    connectionMax: 250,
     // 列表一页要多少张：与 Linear 读侧同一个 50（整页带全字段时的保守值）。
     listPageSize: 50,
     // 计数要一页页走到 hasNextPage=false；最多翻 40 页（=1 万张）就如实回 unsupported，
