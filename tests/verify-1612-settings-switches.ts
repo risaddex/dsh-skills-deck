@@ -151,7 +151,7 @@ async function main() {
   check(written.indexOf('bannerFolded') < 0, '写出去的一份里不再出现旧字段 bannerFolded。', written.slice(0, 400))
   check(written.indexOf('statusBar: hide') >= 0 && written.indexOf('statusBar: show') >= 0, '写出去的一份里出现换算后的 statusBar 两档值（收起→hide、展开→show）。', written.slice(0, 400))
   check(written.indexOf('deckTools: "on"') >= 0, '写出去的一份里出现 deckTools: "on"（缺省打开的开关照写）。', written.slice(0, 400))
-  check(written.indexOf('# 胶囊状态栏') >= 0 && written.indexOf('# deck 工具箱') >= 0, '写出去的一份里两格各带一行看得懂的注释。', written.slice(0, 400))
+  check(written.indexOf('# Capsule status bar:') >= 0 && written.indexOf('# Deck toolbox:') >= 0, '写出去的一份里两格各带一行看得懂的注释。', written.slice(0, 400))
   const backAgain = parseSettingsText(written)
   check(backAgain.ok === true && JSON.stringify(backAgain.value.workspaces) === JSON.stringify(legacyOut.value.workspaces), '写出去再读回来，工作区那几格的值不变（升级后是稳定的）。', JSON.stringify(backAgain.ok ? backAgain.value.workspaces : backAgain.message))
 
@@ -207,7 +207,7 @@ async function main() {
       log: function (level, event, fields) { logs.push({ level: level, event: event, fields: fields }) },
       dswsLogHash: function (s) { return 'h' + String(s || '').length },
       timer: undefined,
-      currentOs: CURRENT_OS,
+      currentOs: () => 'win32',
     })
     return { mod, ls, calls, logs, home, cwd, root }
   }

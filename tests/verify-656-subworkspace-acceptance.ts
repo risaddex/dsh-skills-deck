@@ -298,7 +298,8 @@ async function main() {
   // —— A6 盘符根与 UNC 根：到顶就停，不转圈 ——
   {
     const noMarker = makeFsSvc(null)          // 真服务形状但一条都不存在：只剩「往上走」这一件事
-    const drive = await wm.resolveWorkspaceRoot('d:\\', { platform: PLATFORM, getFs: () => noMarker })
+    // 盘符根（d:\）只有按 Windows 的路径规则才是绝对路径，所以这一支喂 win32 平台；UNC 那一支仍用本机平台（它在 POSIX 下本来就成立）。
+    const drive = await wm.resolveWorkspaceRoot('d:\\', { platform: { os: 'win32', path: nodePath.win32, async getHome() { return nodeOs.homedir() } }, getFs: () => noMarker })
     const unc = await wm.resolveWorkspaceRoot('//srv/share', { platform: PLATFORM, getFs: () => noMarker })
     must(drive.root === 'd:\\' && drive.source === 'self' && unc.root === '//srv/share' && unc.source === 'self',
       '盘符根与 UNC 共享根都是上溯的终点：到顶就停，工作区根就是那一条根目录（不会往上溢出、也不会转不出来）',

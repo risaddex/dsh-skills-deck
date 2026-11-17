@@ -7,30 +7,6 @@
   "sourceAt": 1794850070892,
   "failures": [
     {
-      "file": "tests/verify-1640-unopened-merge.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1641-listed-workspace-flags.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1612-settings-switches.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1802-settings-cross-window.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-1654-ws-pending-hint.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-settings-view.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
       "file": "tests/verify-1586-maintenance.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
@@ -40,10 +16,6 @@
     },
     {
       "file": "tests/verify-1766-release-audit.ts",
-      "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
-    },
-    {
-      "file": "tests/verify-656-subworkspace-acceptance.ts",
       "note": "Maintainer accepted 2026-11-16 for issue #3 promotion."
     },
     {

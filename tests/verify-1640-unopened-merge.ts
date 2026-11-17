@@ -131,7 +131,7 @@ async function main() {
       log: function (level, event, fields) { logs.push({ level: level, event: event, fields: fields }) },
       dswsLogHash: function (s) { return 'h' + String(s || '').length },
       timer: undefined,
-      currentOs: CURRENT_OS,
+      currentOs: () => 'win32',
     })
     return { mod, ls, calls, logs, home, cwd, root, st, rootTable }
   }

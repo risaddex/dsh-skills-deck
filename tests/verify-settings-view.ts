@@ -298,7 +298,7 @@ async function main() {
       dswsLogHash: function (s) { return 'h' + String(s || '').length },
       timer: undefined,
       // 拼回可读写法时用哪个分隔符由这一片按平台判，所以这里喂的是真 currentOs（与 keyOf 同源那份真源码）。
-      currentOs: CURRENT_OS,
+      currentOs: () => 'win32',
     })
     return { mod, ls, calls, logs, home, cwd, root, st, shared, stores, fnCalls }
   }
@@ -1273,7 +1273,7 @@ const wait = (env) => realSleep(300)
       shared: { cwd: '', subs: [], tick: 0 }, stores: {}, emit: function () {},
       host: { call: function () { return Promise.resolve({ ok: true, value: crafted }) } },
       localStorage: makeLocalStorage({}), log: function () {}, dswsLogHash: function () { return 'h' },
-      timer: undefined, currentOs: CURRENT_OS,
+      timer: undefined, currentOs: () => 'win32',
     })
     mod.settingsViewLoad()
     await waitFor(async () => mod.viewFlagReadyNow() === true)

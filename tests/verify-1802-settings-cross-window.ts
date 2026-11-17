@@ -283,7 +283,7 @@ function makeEnv(o) {
     log: function (level, event, fields) { logs.push({ level: level, event: event, fields: fields }) },
     dswsLogHash: function (s) { return 'h' + String(s || '').length },
     timer: undefined,
-    currentOs: CURRENT_OS,
+    currentOs: () => 'win32',
   })
   return { mod: mod, ls: ls, calls: calls, logs: logs, home: home, cwd: cwd, root: root, st: st, shared: shared, stores: stores, fnCalls: fnCalls, phones: phones, host: host }
 }
