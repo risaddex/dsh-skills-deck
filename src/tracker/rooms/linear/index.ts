@@ -25,6 +25,10 @@ import { ERROR_KIND } from '../../contract/vocabulary.js'
 import type { LinearAccount } from './client.js'
 import { getIssue, listIssues } from './read.js'
 import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
+import { setLabelsOfIssue } from './labels.js'
+import { setAssigneesOfIssue } from './assignees.js'
+import { setBlockedByOfIssue } from './relations.js'
+import { countsOf, listPageOf, readBudgetOf } from './paging.js'
 import { preflightLinear } from './preflight.js'
 import { failLinear } from './errors.js'
 import { readBinding } from './binding.js'
@@ -35,6 +39,10 @@ export { issueOf, stateOf, issueTypeOf } from './normalize.js'
 export { preflightLinear, readIdentity } from './preflight.js'
 export { getIssue, listIssues, buildIssuesFilter, unsupportedFilters } from './read.js'
 export { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
+export { setLabelsOfIssue } from './labels.js'
+export { setAssigneesOfIssue } from './assignees.js'
+export { setBlockedByOfIssue } from './relations.js'
+export { countsOf, listPageOf, readBudgetOf } from './paging.js'
 export { parseBinding, readBinding, BINDING_PATH } from './binding.js'
 
 /** 契约的账号缝回包 → 这一层要的那三格；缺 authorization 就当没解出来。 */
@@ -100,6 +108,18 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       if (!got.ok) return { ok: false, error: got.error }
       return listIssues(opCtx || (ctx as never), got.account, filter)
     },
+    counts: async (_repo, filter, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return countsOf(opCtx || (ctx as never), got.account, filter)
+    },
+    listPage: async (_repo, filter, opts, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      // 页大小由 opts.limit 决定（缺省与上限在共享表）；不在这里写死一个数。
+      return listPageOf(opCtx || (ctx as never), got.account, filter, opts)
+    },
+    readBudget: async (opCtx) => readBudgetOf(opCtx || (ctx as never)),
     comment: async (_repo, key, body, opCtx) => {
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
@@ -130,6 +150,24 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       // 团队来自绑定声明：Linear 的 issueCreate 必须带 teamId，而声明里写的是团队 key。
       const binding = await readBinding(requestCtx)
       return createIssue(requestCtx, got.account, input, binding ? binding.team : '')
+    },
+    setLabels: async (_repo, key, labels, opts, opCtx) => {
+      const requestCtx = opCtx || (ctx as never)
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error }
+      // 团队 key 来自绑定：新建标签时决定标签归属哪个团队（见 labels.ts 的注释）。
+      const binding = await readBinding(requestCtx)
+      return setLabelsOfIssue(requestCtx, got.account, key, labels, opts, binding ? binding.team : '')
+    },
+    setAssignees: async (_repo, key, assignees, opts, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return setAssigneesOfIssue(opCtx || (ctx as never), got.account, key, assignees, opts)
+    },
+    setBlockedBy: async (_repo, key, blockedBy, opts, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return setBlockedByOfIssue(opCtx || (ctx as never), got.account, key, blockedBy, opts)
     },
     setParent: async (_repo, key, parentKey, opts, opCtx) => {
       const got = await using(opCtx || (ctx as never))

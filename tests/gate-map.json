@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T11:50:49.556Z",
+  "generatedAt": "2026-11-17T13:17:40.619Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 613,
-  "gateCount": 613,
-  "attributedGates": 556,
+  "chainLength": 617,
+  "gateCount": 617,
+  "attributedGates": 560,
   "unattributedGates": 57,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 144,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 984,
+  "graphFileCount": 988,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -2326,6 +2326,80 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 6 条）"
+    },
+    {
+      "step": "node tests/verify-13-linear-assignees.ts",
+      "file": "tests/verify-13-linear-assignees.ts",
+      "guards": [
+        "src/tracker/rooms/linear"
+      ],
+      "dirs": [
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
+    },
+    {
+      "step": "node tests/verify-13-linear-labels.ts",
+      "file": "tests/verify-13-linear-labels.ts",
+      "guards": [
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/contract/inputs.ts",
+        "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/labels.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
+    },
+    {
+      "step": "node tests/verify-13-linear-paging.ts",
+      "file": "tests/verify-13-linear-paging.ts",
+      "guards": [
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/contract/pagination.ts",
+        "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/normalize.ts",
+        "src/tracker/rooms/linear/paging.ts",
+        "src/tracker/rooms/linear/queries.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 6 条"
+    },
+    {
+      "step": "node tests/verify-13-linear-relations.ts",
+      "file": "tests/verify-13-linear-relations.ts",
+      "guards": [
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/contract/vocabulary.ts",
+        "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/relations.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
     },
     {
       "step": "node tests/verify-13-linear-room.ts",
@@ -16085,6 +16159,9 @@
       "node tests/verify-1059-issue-write.ts",
       "node tests/verify-1060-edge-log.ts",
       "node tests/verify-1182-docs-paths.ts",
+      "node tests/verify-13-linear-labels.ts",
+      "node tests/verify-13-linear-paging.ts",
+      "node tests/verify-13-linear-relations.ts",
       "node tests/verify-13-linear-room.ts",
       "node tests/verify-13-linear-write.ts",
       "node tests/verify-1444-list-detail-thin.ts",
@@ -16397,6 +16474,10 @@
       "node tests/verify-operation-catalog.ts"
     ],
     "src/tracker/rooms/linear": [
+      "node tests/verify-13-linear-assignees.ts",
+      "node tests/verify-13-linear-labels.ts",
+      "node tests/verify-13-linear-paging.ts",
+      "node tests/verify-13-linear-relations.ts",
       "node tests/verify-13-linear-room.ts",
       "node tests/verify-13-linear-write.ts",
       "node tests/verify-27-account-seam.ts"
@@ -16861,9 +16942,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1007,
+    "fileCount": 1011,
     "dirCount": 106,
-    "coveredFileCount": 1007,
+    "coveredFileCount": 1011,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 82,
@@ -17757,14 +17838,18 @@
       "src/tracker/rooms/gitlab/support/capability-register.ts",
       "src/tracker/rooms/gitlab/support/read-log.ts",
       "src/tracker/rooms/gitlab/support/read-sources.ts",
+      "src/tracker/rooms/linear/assignees.ts",
       "src/tracker/rooms/linear/binding.ts",
       "src/tracker/rooms/linear/client.ts",
       "src/tracker/rooms/linear/errors.ts",
       "src/tracker/rooms/linear/index.ts",
+      "src/tracker/rooms/linear/labels.ts",
       "src/tracker/rooms/linear/normalize.ts",
+      "src/tracker/rooms/linear/paging.ts",
       "src/tracker/rooms/linear/preflight.ts",
       "src/tracker/rooms/linear/queries.ts",
       "src/tracker/rooms/linear/read.ts",
+      "src/tracker/rooms/linear/relations.ts",
       "src/tracker/rooms/linear/write.ts",
       "src/tracker/rooms/markdown/budget.ts",
       "src/tracker/rooms/markdown/capability-register.ts",
