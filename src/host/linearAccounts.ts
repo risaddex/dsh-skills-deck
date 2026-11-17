@@ -17,7 +17,7 @@
  * No token ever appears in a log line, a status or a message from this file.
  */
 
-import { LINEAR_GRAPHQL_ENDPOINT, LINEAR_IDENTITY_QUERY, resolveLinearAccount } from '../shared/linear-accounts/src/resolve.js'
+import { LINEAR_GRAPHQL_ENDPOINT, LINEAR_IDENTITY_QUERY, resolveLinearAccount, parseLinearIdentity, checkLinearIdentity } from '../shared/linear-accounts/src/resolve.js'
 import { parseConfig, stringifyConfig, needIo, isMissingFile, envFail } from './configStore.js'
 import { LINEAR_ACCOUNTS_REL_SEGMENTS } from '../shared/config-store/src/linear-accounts.js'
 // 时间参数只有一处真源：config/timeouts.yaml 的 linearProbeMs，由构建期生成的 values.ts 带进来。
@@ -244,7 +244,7 @@ export function createLinearAccountSeam(deps: LinearSeamDeps): AccountSeam {
       const token = String(resolved.token || '')
       const cacheKey = wanted + ':' + token
       if (deps.http && !probeCache.has(cacheKey)) {
-        const probed = await probeThroughChannel(deps.http, wanted, String(resolved.authorization || ''))
+        const probed = await probeThroughChannel(deps.http, wanted, String(resolved.authorization || ''), chosen)
         if (!probed.ok) return { ok: false, status: 'identity_mismatch', message: String(probed.message || 'the identity probe failed').slice(0, 200) }
         probeCache.set(cacheKey, true)
       }
@@ -257,7 +257,7 @@ export function createLinearAccountSeam(deps: LinearSeamDeps): AccountSeam {
 export interface LinearSeamDeps { ctx: any; getPlatform?: () => Promise<any>; http?: any }
 
 /** 经房间同一条 HTTP 通道探一次身份（bucket=probe）：不走全局 fetch，也不额外记账。 */
-async function probeThroughChannel(http: any, alias: string, authorization: string): Promise<{ ok: true } | { ok: false; message: string }> {
+async function probeThroughChannel(http: any, alias: string, authorization: string, account?: any): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
     const response = await http.request({
       method: 'POST',
@@ -271,6 +271,12 @@ async function probeThroughChannel(http: any, alias: string, authorization: stri
     const payload: any = JSON.parse(String(response.body || '{}'))
     if (payload && Array.isArray(payload.errors) && payload.errors.length > 0) return { ok: false, message: 'the identity probe was refused: ' + String(payload.errors[0] && payload.errors[0].message || 'unknown reason').slice(0, 160) }
     if (!payload || !payload.data || !payload.data.viewer) return { ok: false, message: 'the identity probe answered without a viewer (' + alias + ')' }
+    // 只看「有没有 viewer」不够：钉住组织 A 的账如果配了组织 B 的 token，那本票会被当成 A 的票读回来。
+    // 所以按共享解析层同一套判定：先解出身份，再比对账号钉住的组织（与 resolveLinearAccount 内部同源）。
+    const parsed: any = parseLinearIdentity(payload)
+    if (!parsed || parsed.ok !== true) return { ok: false, message: 'the identity probe answered with something that is not an identity (' + alias + ')' }
+    const pinned: any = account ? checkLinearIdentity(account, parsed.identity) : { ok: true }
+    if (pinned && pinned.ok !== true) return { ok: false, message: String(pinned.message || 'the token belongs to another organization than the account pins').slice(0, 180) }
     return { ok: true }
   } catch (e: any) {
     return { ok: false, message: 'the identity probe could not be sent: ' + String((e && e.message) || e).slice(0, 160) }

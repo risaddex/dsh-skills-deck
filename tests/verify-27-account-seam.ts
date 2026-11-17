@@ -82,7 +82,7 @@ async function main(): Promise<void> {
     check(calls.length === 1 && calls[0].headers.Authorization === 'Bearer tok', 'the request carries the resolved Authorization', calls[0] ? calls[0].headers.Authorization : '(none)')
     check(calls[0] && calls[0].url === 'https://api.linear.app/graphql', 'the request goes to the resolved endpoint', calls[0] ? calls[0].url : '(none)')
     const second: any = await backend.get(handle, 'ENG-1', {}, ctx as any)
-    check(second.ok === true && resolutions === 1, 'one backend instance resolves the account once', String(resolutions))
+    check(second.ok === true && resolutions === 2, 'each operation resolves the account for itself, so no workspace reuses another one', String(resolutions))
   }
 
   console.log('S3 a refused resolution keeps the status it was given')

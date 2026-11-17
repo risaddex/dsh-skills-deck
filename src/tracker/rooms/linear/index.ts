@@ -54,7 +54,6 @@ function kindOfStatus(status: string): typeof ERROR_KIND.AUTH | typeof ERROR_KIN
  * `account` 只给测试用：给了就不问声明也不问账号缝，直接以它为准。
  */
 export function createLinearBackend(ctx: BackendContext, account?: LinearAccount): RoomOperations {
-  const cache: { value: Promise<{ ok: true; account: LinearAccount } | { ok: false; error: any }> | null } = { value: null }
   async function resolveOnce(opCtx: OpContext): Promise<{ ok: true; account: LinearAccount } | { ok: false; error: any }> {
     if (account) return { ok: true, account }
     const seam = ctx.accounts
@@ -72,9 +71,15 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
     }
     return { ok: true, account: ready }
   }
+  /**
+   * 每一次操作都按**这一次**的绑定解析。
+   *
+   * 不在实例上缓存：`createRegistry` 一个模块只造一份后端实例，而一份实例会被不同工作区复用
+   * （PR #29 review 指出过：两个工作区会拿第一份的凭据发请求）。探活结果的缓存留在宿主，
+   * 按 (别名, token) 记，那才是跨工作区正确的粒度。
+   */
   async function using(opCtx: OpContext): Promise<{ ok: true; account: LinearAccount } | { ok: false; error: any }> {
-    if (!cache.value) cache.value = resolveOnce(opCtx)
-    return cache.value
+    return resolveOnce(opCtx)
   }
   return {
     id: 'linear',
