@@ -277,10 +277,10 @@ function main(): void {
   if (nextIssue) {
     info('The next version placeholder checklist ticket already exists: #' + nextIssue.number + ' "' + normalizeTitle(nextIssue.title) + '"')
   } else {
-    const placeholderTitle = TITLE_PREFIX + ' ' + PLACEHOLDER_WORD + '（自 v' + versionNumber + ' 之后）'
+    const placeholderTitle = TITLE_PREFIX + ' ' + PLACEHOLDER_WORD + ' (since v' + versionNumber + ')'
     let body = ''
     try {
-      body = fillChecklistTemplate(extractChecklistTemplateBody(), '待定（发布准备时确定并改标题）', versionNumber)
+      body = fillChecklistTemplate(extractChecklistTemplateBody(), 'to be decided (set the version and rename this ticket during release preparation)', versionNumber)
     } catch (error) {
       fail('Failed to read the checklist ticket body template: ' + (error instanceof ReleaseEnvError ? error.message : String(error)))
     }

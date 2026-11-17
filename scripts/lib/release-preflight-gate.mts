@@ -18,6 +18,7 @@ import {
   createNodePorts,
   loadVerificationDeclaration,
   parseCandidateManifest,
+  parseChecklistFormat,
   renderReleaseGateHuman,
   runReleaseGate,
 } from 'dsh-featherhunter-plugin-base/real-machine-verification'
@@ -30,6 +31,7 @@ import type {
   VerificationProfile,
 } from 'dsh-featherhunter-plugin-base/real-machine-verification'
 
+import { CHECKLIST_FORMAT } from './release-checklist-format.mts'
 import { REPO_ROOT, readPackageVersion } from './release-checklist.mts'
 
 /** 一行输出属于哪个流；发布脚本把两条流合并后按标记行判断。 */
@@ -206,12 +208,25 @@ export async function runPreflightGate(options: PreflightGateOptions = {}): Prom
     profile = declaration.value.profile
   }
 
+  // 清单票的格式是本仓声明的英文模板（scripts/lib/release-checklist-format.mts）。不传的话 base 会退回
+  // 它自带的中文模板，本仓的英文清单票就一条也读不出来；而 runReleaseGate 只是把 options.format 原样
+  // 用掉、并不自己校验，声明写错时表现为「状态读不出来」而不是「声明写错了」，所以在递进去之前先校验一次。
+  const parsedFormat = parseChecklistFormat(CHECKLIST_FORMAT)
+  if (!parsedFormat.ok) {
+    return envFail(
+      lines,
+      'The checklist format declared in scripts/lib/release-checklist-format.mts is invalid (' + parsedFormat.error.message + ').',
+      parsedFormat.error.hint,
+    )
+  }
+
   const gate = await runReleaseGate({
     ports,
     candidate,
     releaseCommit,
     releaseVersion: version,
     workRoot: repoRoot,
+    format: parsedFormat.value,
     ...(options.checklistTicket === undefined ? {} : { checklistTicket: options.checklistTicket }),
     ...(options.primaryTicket === undefined ? {} : { primaryTicket: options.primaryTicket }),
     ...(options.auditLines === undefined ? {} : { auditLines: options.auditLines }),
