@@ -19,14 +19,11 @@
  */
 
 import type { LinearResolution } from '../shared/linear-accounts/src/resolve.js'
+import type { AccountSeamResult, AccountSeamStatus } from '../tracker/contract/accounts.js'
 
-/** The account statuses the ADR names for a failed resolution; the same vocabulary the account layer already speaks. */
-export type AccountFailureStatus = 'needs_auth' | 'identity_mismatch' | 'error' | 'unconfigured'
-
-/** What a room receives. Success carries a ready header, never a token. */
-export type AccountSeamResolution =
-  | { ok: true; alias: string; authorization: string; endpoint?: string }
-  | { ok: false; status: AccountFailureStatus; message: string }
+/** The shapes live in the contract since #13 landed them; this module narrows into them. */
+export type AccountFailureStatus = AccountSeamStatus
+export type AccountSeamResolution = AccountSeamResult
 
 /** The failure statuses the seam may report; anything else the resolver might say becomes a plain `error`. */
 const FAILURE_STATUSES: readonly string[] = ['needs_auth', 'identity_mismatch', 'error', 'unconfigured']

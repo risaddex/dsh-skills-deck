@@ -6,7 +6,8 @@
 //   A5  a success with no header is reported as an error instead of handing over an empty header.
 //   A6  endpoint is passed through only when given.
 //   A7  the real resolver, with a stored grant, produces a result that crosses clean.
-//   A8  the file imports nothing from the tracker rooms and no DSH service (it is a pure narrowing).
+//   A8  the file imports nothing from the tracker rooms and no DSH service (it is a pure narrowing);
+//       since #13 landed the contract shapes, the contract's type import is the only other import allowed.
 // Usage: node --import ./scripts/ts-hook.mts tests/verify-19-linear-account-seam.ts
 const path = require('path')
 const fs = require('fs')
@@ -92,7 +93,8 @@ async function main() {
   {
     const text: string = fs.readFileSync(path.join(ROOT, 'src', 'host', 'linearAccountSeam.ts'), 'utf8')
     const imports = text.split('\n').filter((l: string) => /^import /.test(l))
-    check(imports.every((l: string) => /^import type /.test(l) && /shared\/linear-accounts/.test(l)), 'A8 only a type import from the shared resolver', imports.join(' | '))
+    // 只许两条来源：共享解析层的类型，以及契约里那份形状（#13 落地后本地类型改成从契约 import，见 ADR 第 2 节）。
+    check(imports.every((l: string) => /^import type /.test(l) && (/shared\/linear-accounts/.test(l) || /tracker\/contract\/accounts/.test(l))), 'A8 only type imports, from the shared resolver and the contract', imports.join(' | '))
     check(!/tracker\/rooms|ctx\.get\(|fetch\(/.test(text.replace(/\/\*[\s\S]*?\*\//g, '')), 'A8 no room import, no DSH service, no network in the code')
   }
 

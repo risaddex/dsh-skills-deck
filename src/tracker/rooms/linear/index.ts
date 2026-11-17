@@ -1,18 +1,24 @@
 /**
- * src/tracker/rooms/linear/index.ts —— Linear 房的公开面（第一个切片：预检、取票、列票）
+ * src/tracker/rooms/linear/index.ts —— Linear 房的公开面（预检、取票、列票）
  *
- * ── 为什么工厂收两样东西 ─────────────────────────────────────────────────────
- * `createLinearBackend(ctx, account)`：context 是进程级能力（HTTP 通道在这里），account 是
- * 「用哪本账」——它不能从 ctx 里摸，因为凭据解析住在宿主（`src/host/linearAccounts.ts`），
- * 而房间不许 import 宿主。装配点负责解出账号再交给工厂，这也是 deck 设置里账号模式那条线的接口。
+ * ── 账号从哪来（#27 的决定） ─────────────────────────────────────────────────
+ * 三步：①房间读仓库自己的声明（`docs/agents/issue-tracker.md` 的 `# Issue tracker: linear` 一节）
+ * 拿到别名；②把别名交给契约里的账号缝 `ctx.accounts.resolve(alias)`（形状见
+ * `src/tracker/contract/accounts.ts`，实现见 `src/host/linearAccounts.ts`）；③把回来的
+ * `authorization` 当成这一趟的身份发请求。房间不认识 token，也不管它什么时候过期。
  *
- * ── 这个切片还没有的东西（都在票据上记着）───────────────────────────────────
- *   · 模块对象（id / label / matches / budget）：matches 要回答「这个工作区是不是 Linear」，
- *     得先有绑定声明与账号解析的路，属于账号模式那条线；
- *   · 其余操作：写侧、评论、标签、关系、子票、计数、翻页、预算读数；
- *   · 所以本房今天**不注册**进装配点 —— 一个认不出来的后端接进去只会抢别人的判定。
+ * 解析是**懒**的：`create` 时不读盘也不打网络，第一次要用账号时才问一次，然后这一份后端实例
+ * 记住结果 —— 一趟刷新里读十张票不该解析十次。
+ *
+ * ── matches 为什么要认领 ────────────────────────────────────────────────────
+ * 有声明就认领：一个写了 Linear 绑定却还没登录的工作区，应该在选中后收到「去登录」那句话，
+ * 而不是看起来像「这不是 Linear 仓库」。没声明才回 false（那是 GitHub/GitLab 工作区）。
+ *
+ * ── 这个切片还没有的东西 ─────────────────────────────────────────────────────
+ * 其余操作：写侧、评论、标签、关系、子票、计数、翻页、预算读数（都在 #13 的票面上）。
  */
 import type { BackendContext, OpContext } from '../../contract/contexts.js'
+import type { AccountSeamResult } from '../../contract/accounts.js'
 import type { RoomOperations } from '../../contract/operations.js'
 import type { BackendModule } from '../../contract/backend-module.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
@@ -20,51 +26,87 @@ import type { LinearAccount } from './client.js'
 import { getIssue, listIssues } from './read.js'
 import { preflightLinear } from './preflight.js'
 import { failLinear } from './errors.js'
+import { readBinding } from './binding.js'
 
 export type { LinearAccount } from './client.js'
 export { gql } from './client.js'
 export { issueOf, stateOf, issueTypeOf } from './normalize.js'
 export { preflightLinear, readIdentity } from './preflight.js'
-export { getIssue, listIssues, buildIssuesFilter } from './read.js'
+export { getIssue, listIssues, buildIssuesFilter, unsupportedFilters } from './read.js'
+export { parseBinding, readBinding, BINDING_PATH } from './binding.js'
+
+/** 契约的账号缝回包 → 这一层要的那三格；缺 authorization 就当没解出来。 */
+function toAccount(result: AccountSeamResult): LinearAccount | null {
+  if (!result.ok) return null
+  const authorization = String(result.authorization || '')
+  if (!authorization) return null
+  return { alias: String(result.alias || ''), endpoint: String(result.endpoint || 'https://api.linear.app/graphql'), authorization }
+}
+
+/** 账号状态 → 房间的错误档：要重新登录是 auth，其余都按环境问题交出去。 */
+function kindOfStatus(status: string): typeof ERROR_KIND.AUTH | typeof ERROR_KIND.ENV {
+  return status === 'needs_auth' || status === 'identity_mismatch' ? ERROR_KIND.AUTH : ERROR_KIND.ENV
+}
 
 /**
- * 造一个 Linear 后端。今天只交出三条能力，其余由注册表补「我不支持」的桩 ——
- * 契约允许后端实现自己那部分，缺的如实回 unsupported，不假装。
+ * 造一个 Linear 后端。
+ *
+ * `account` 只给测试用：给了就不问声明也不问账号缝，直接以它为准。
  */
-export function createLinearBackend(ctx: BackendContext, account: LinearAccount | null): RoomOperations {
-  /** 没有账号时每一条都按环境失败，并说清缺哪一步 —— 静默回空名单会让「没配」看起来像「没有票」。 */
-  const noAccount = () =>
-    failLinear(ERROR_KIND.ENV, 'the Linear account is not wired yet: no account was resolved for this process (see the Linear backend ticket)')
+export function createLinearBackend(ctx: BackendContext, account?: LinearAccount): RoomOperations {
+  async function resolveOnce(opCtx: OpContext): Promise<{ ok: true; account: LinearAccount } | { ok: false; error: any }> {
+    if (account) return { ok: true, account }
+    const seam = ctx.accounts
+    if (!seam || typeof seam.resolve !== 'function') {
+      return { ok: false, error: failLinear(ERROR_KIND.ENV, 'the room has no account seam wired (ctx.accounts is missing)').error }
+    }
+    const binding = await readBinding(opCtx)
+    if (!binding) return { ok: false, error: failLinear(ERROR_KIND.ENV, 'this workspace has no Linear binding: add a `# Issue tracker: linear` section with an `alias:` line to docs/agents/issue-tracker.md').error }
+    const resolved = await seam.resolve(binding.alias)
+    const ready = toAccount(resolved)
+    if (!ready) {
+      const why = resolved.ok ? 'the resolved Linear account carried no authorization' : String(resolved.message || 'the Linear account could not be resolved')
+      const kind = resolved.ok ? ERROR_KIND.ENV : kindOfStatus(String(resolved.status || ''))
+      return { ok: false, error: failLinear(kind, why).error }
+    }
+    return { ok: true, account: ready }
+  }
+  /**
+   * 每一次操作都按**这一次**的绑定解析。
+   *
+   * 不在实例上缓存：`createRegistry` 一个模块只造一份后端实例，而一份实例会被不同工作区复用
+   * （PR #29 review 指出过：两个工作区会拿第一份的凭据发请求）。探活结果的缓存留在宿主，
+   * 按 (别名, token) 记，那才是跨工作区正确的粒度。
+   */
+  async function using(opCtx: OpContext): Promise<{ ok: true; account: LinearAccount } | { ok: false; error: any }> {
+    return resolveOnce(opCtx)
+  }
   return {
     id: 'linear',
-    preflight: (_handle, opCtx) => (account ? preflightLinear(opCtx || (ctx as never), account) : Promise.resolve(noAccount() as never)),
-    get: (_repo, key, opts, opCtx) => (account ? getIssue(opCtx || (ctx as never), account, key, opts) : Promise.resolve(noAccount() as never)),
-    list: (_repo, filter, opCtx) => (account ? listIssues(opCtx || (ctx as never), account, filter) : Promise.resolve(noAccount() as never)),
+    preflight: async (_handle, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error } as never
+      return preflightLinear(opCtx || (ctx as never), got.account) as never
+    },
+    get: async (_repo, key, opts, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return getIssue(opCtx || (ctx as never), got.account, key, opts)
+    },
+    list: async (_repo, filter, opCtx) => {
+      const got = await using(opCtx || (ctx as never))
+      if (!got.ok) return { ok: false, error: got.error }
+      return listIssues(opCtx || (ctx as never), got.account, filter)
+    },
   }
 }
 
-/**
- * 这一趟用哪本账。
- *
- * 今天恒为 `null`：凭据解析住在宿主（`src/host/linearAccounts.ts` 的 `resolveLinearAccountWithHost`），
- * 房间不许 import 宿主，而 `BackendContext` 里还没有「把账号交给房间」的那一格（账号模式那条线的接口）。
- * 所以本房现在注册在册、认不出任何工作区、被选到时会如实说「账号还没接上」——
- * 这比不注册更诚实：一个不存在的后端，界面上的人只能猜它去哪了。
- */
-function resolveAccount(_ctx: BackendContext): LinearAccount | null {
-  return null
-}
-
-/**
- * 模块对象：注册表启动时读的那一份静态描述。
- *
- * `matches` 恒为 false 是有意的：没有账号解析就连不上 Linear，认领一个工作区只会抢走别人的判定。
- * 等账号模式落地，这里换成「读绑定声明 + 账号可用」的判定，同时把 budget 之外的能力一条条补上。
- */
+/** 模块对象：注册表启动时读的那一份静态描述。 */
 export const linearModule = {
   id: 'linear',
   label: 'Linear',
-  create: (ctx: BackendContext) => createLinearBackend(ctx, resolveAccount(ctx)),
-  matches: async () => false,
+  create: (ctx: BackendContext) => createLinearBackend(ctx),
+  /** 有声明就认领（见文件头）；读不到声明才回 false。 */
+  matches: async (_handle, opCtx) => (await readBinding(opCtx)) !== null,
   budget: { kind: 'requests-only', countsRequests: true, countsPoints: false, independentBuckets: false },
 } satisfies BackendModule
