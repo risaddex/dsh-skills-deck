@@ -12,34 +12,32 @@
 //   - 接线部分读真实源码做静态断言，并把 verify/ticket-face.mts 的真导出交给 base 的
 //     validateTicketFaceAdapter 过一遍（它只查形状，不发起任何 IO）；
 //   - 不启动实例、不改工作树、不写 D 盘。
-import fs from 'node:fs'
-import { spawnSync } from 'node:child_process'
+//
+// 接线检查（K 静态断言、L 子进程）在 tests/lib/release-gate-wiring.ts，由本文件调用并共用同一个断言计数。
+// 它读的路径不再出现在本文件里，门禁归属表的自动推导看不到，所以下面显式声明：这扇门禁守着这几份文件，
+// 改其中任何一份都应当选中它（自动推导的另一半，组合根与格式声明，仍由本文件的 import 推出来）。
+// 门禁归属: scripts/release-preflight.mts
+// 门禁归属: scripts/lib/release-preflight-gate.mts
+// 门禁归属: scripts/lib/release-checklist-format.mts
+// 门禁归属: tests/lib/release-gate-wiring.ts
+// 门禁归属: tests/lib/gate-result.ts
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import {
   createNodePorts,
-  formatAuditLine,
   parseCandidateManifest,
-  validateTicketFaceAdapter,
-  TICKET_FACE_METHODS,
   RELEASE_GATE_CHECK_IDS,
 } from 'dsh-featherhunter-plugin-base/real-machine-verification'
 import { runPreflightGate } from '../scripts/lib/release-preflight-gate.mts'
+import { CHECKLIST_TITLE_PREFIX } from '../scripts/lib/release-checklist-format.mts'
 import ticketFace from '../verify/ticket-face.mts'
 import { printGateResult } from './lib/gate-result.ts'
+import { runWiringChecks } from './lib/release-gate-wiring.ts'
 
 const GATE = 'verify-release-gate'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..')
 const NEWLINE = String.fromCharCode(10)
-
-const RELEASE_PREFLIGHT = join(ROOT, 'scripts', 'release-preflight.mts')
-const RELEASE_PREFLIGHT_GATE = join(ROOT, 'scripts', 'lib', 'release-preflight-gate.mts')
-const TICKET_FACE = join(ROOT, 'verify', 'ticket-face.mts')
-const PROFILE = join(ROOT, 'verify', 'profile.ts')
-const PUBLISH_TOKEN = join(ROOT, 'scripts', 'publish-token.ps1')
-const WIZARD_RELEASE = join(ROOT, 'scripts', 'wizard-release.sh')
-const SCRIPTS_TSCONFIG = join(ROOT, 'scripts', 'tsconfig.json')
 
 const CANDIDATE = 'a'.repeat(40)
 const RELEASE = 'b'.repeat(40)
@@ -98,21 +96,25 @@ function releaseCandidate(
   return parsed.value
 }
 
+// 夹具按本仓声明的英文清单票格式写（scripts/lib/release-checklist-format.mts）：门禁按这份格式
+// 精确匹配标题、总览表与状态词，夹具写中文就只能证明「以前那份能读」，证不了「现在换语言也能读」。
+// 身份行、基线行、差异审计行是另一回事：它们的解析器两种语言都认（base 的 bilingual 部分），
+// 所以夹具里两种写法都出现，证明换了格式之后旧的记录行仍然读得出来。
 function identityLine(batch = 'batch-1', commit = CANDIDATE, sha = TGZ): string {
-  return '- 验证身份：批次 ' + batch + '；候选提交 ' + commit + '；候选包 sha256 ' + sha
+  return '- Verification identity: batch ' + batch + '; candidate commit ' + commit + '; candidate package sha256 ' + sha
 }
 
 function checklistBody(options: { status?: string; audit?: string } = {}): string {
   const lines = [
-    '# 真机验证清单 ' + VERSION,
+    '# Real-machine verification checklist ' + VERSION,
     '',
-    '## 场景总览',
-    '| 场景编号 | 来源票 | 一句话 | 状态 | 备注 |',
+    '## Scenario overview',
+    '| Scenario number | Source ticket | One sentence | Status | Notes |',
     '| --- | --- | --- | --- | --- |',
-    '| 1600-01 | #16 | release gate | ' + (options.status ?? '通过') + ' | |',
+    '| 1600-01 | #16 | release gate | ' + (options.status ?? 'passed') + ' | |',
   ]
   if (options.audit !== undefined) {
-    lines.push('', '## 候选与发布差异审计', options.audit)
+    lines.push('', '## Candidate and release difference audit', options.audit)
   }
   return lines.join(NEWLINE)
 }
@@ -120,24 +122,24 @@ function checklistBody(options: { status?: string; audit?: string } = {}): strin
 function checklistIssue(overrides: { number?: number; state?: 'OPEN' | 'CLOSED' | 'UNKNOWN'; body?: string } = {}): any {
   return {
     number: overrides.number ?? 12,
-    title: '[真机验证] ' + VERSION,
+    title: CHECKLIST_TITLE_PREFIX + ' ' + VERSION,
     state: overrides.state ?? 'CLOSED',
     body: overrides.body ?? checklistBody(),
   }
 }
 
 function batchComment(
-  options: { batch?: string; commit?: string; sha?: string; result?: string; identity?: boolean } = {},
+  options: { batch?: string; commit?: string; sha?: string; result?: string; identity?: boolean; identityLine?: string } = {},
 ): any {
-  const result = options.result ?? '通过'
-  const passed = result === '通过' ? 1 : 0
-  const failedCount = result === '失败' ? 1 : 0
-  const lines = ['批次开始']
+  const result = options.result ?? 'passed'
+  const passed = result === 'passed' ? 1 : 0
+  const failedCount = result === 'failed' ? 1 : 0
+  const lines = ['Batch start:']
   if (options.identity !== false) {
-    lines.push(identityLine(options.batch ?? 'batch-1', options.commit ?? CANDIDATE, options.sha ?? TGZ))
+    lines.push(options.identityLine ?? identityLine(options.batch ?? 'batch-1', options.commit ?? CANDIDATE, options.sha ?? TGZ))
   }
-  lines.push('场景 1600-01：' + result)
-  lines.push('[发布就绪] 通过 ' + String(passed) + ' / 失败 ' + String(failedCount) + ' / 豁免 0')
+  lines.push('Scenario 1600-01: ' + result)
+  lines.push('[Ready to release] passed ' + String(passed) + ' / failed ' + String(failedCount) + ' / exempt 0')
   return { body: lines.join(NEWLINE) }
 }
 
@@ -229,59 +231,6 @@ function hasFinding(report: any, code: string): boolean {
   return (report?.findings ?? []).some((finding: any) => finding.code === code)
 }
 
-function readSource(path: string): string {
-  return fs.readFileSync(path, 'utf8')
-}
-
-// 扫源码树找「谁 import 了某个符号」：只看代码扩展名，跳过 node_modules 与构建产物。
-// 只认 import 语句（含多行 import { ... }），注释里提到符号不算接线。
-function importsSymbol(text: string, symbol: string): boolean {
-  return new RegExp('import\\s*\\{[^}]*\\b' + symbol + '\\b', 's').test(text)
-}
-
-function scanImportsOf(needle: string): string[] {
-  const extensions = new Set(['.ts', '.mts', '.cts', '.tsx', '.js', '.mjs', '.cjs'])
-  const skipDirs = new Set(['node_modules', 'dist', 'coverage', '.git'])
-  const hits: string[] = []
-  const walk = (dir: string): void => {
-    let entries: fs.Dirent[] = []
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true })
-    } catch {
-      return
-    }
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        if (skipDirs.has(entry.name)) continue
-        if (entry.name.startsWith('.scratch')) continue
-        walk(join(dir, entry.name))
-        continue
-      }
-      if (!extensions.has(entry.name.slice(entry.name.lastIndexOf('.')))) continue
-      const path = join(dir, entry.name)
-      let text = ''
-      try {
-        text = fs.readFileSync(path, 'utf8')
-      } catch {
-        continue
-      }
-      if (importsSymbol(text, needle)) hits.push(path)
-    }
-  }
-  for (const root of ['scripts', 'verify', 'tests', 'src']) walk(join(ROOT, root))
-  return hits.sort()
-}
-
-function countOccurrences(text: string, needle: string): number {
-  let count = 0
-  let index = text.indexOf(needle)
-  while (index >= 0) {
-    count++
-    index = text.indexOf(needle, index + needle.length)
-  }
-  return count
-}
-
 async function main(): Promise<void> {
   // ---- A. 主路径：一张完整清单票 + 冻结候选，门禁通过，CLI 标记齐全 ----
   {
@@ -342,11 +291,10 @@ async function main(): Promise<void> {
 
   // ---- F. 票面写了差异审计 → 候选非祖先也能过，并打 PREFLIGHT-CANDIDATE-AUDIT ----
   {
-    const audit = formatAuditLine({
-      candidateCommit: CANDIDATE,
-      releaseCommit: RELEASE,
-      reason: 'release branch merged the candidate after the freeze',
-    })
+    // 手写英文审计行：base 的 formatAuditLine 只会写中文（写侧还没有语言参数），而这里要证明的是
+    // 「英文记录里的差异审计行门禁读得出来」；写侧那条中文行由 base 自己的用例守着。
+    const audit =
+      '- Candidate commit ' + CANDIDATE + ' → release commit ' + RELEASE + ': release branch merged the candidate after the freeze'
     const run = await runGate({
       ticketFace: happyFace({ ancestry: false, issues: [checklistIssue({ body: checklistBody({ audit }) })] }),
     })
@@ -392,6 +340,40 @@ async function main(): Promise<void> {
     check(run.report?.audit?.required === false, 'I4 无需差异审计（要求是空的，不是没证）', show(run.report?.audit))
   }
 
+  // ---- M. 换格式这件事本身要被钉住：旧的中文总览表不再被读，报错点名缺的是英文那一节 ----
+  {
+    const chineseBody = [
+      '# 真机验证清单 ' + VERSION,
+      '',
+      '## 场景总览',
+      '| 场景编号 | 来源票 | 一句话 | 状态 | 备注 |',
+      '| --- | --- | --- | --- | --- |',
+      '| 1600-01 | #16 | release gate | 通过 | |',
+    ].join(NEWLINE)
+    const run = await runGate({ ticketFace: happyFace({ issues: [checklistIssue({ body: chineseBody })] }) })
+    check(
+      run.exitCode === 1,
+      'M1 中文总览表按英文格式读不出来 → 退出码 1（换的是格式，不只是几个常量）',
+      show(run.exitCode),
+    )
+    check(
+      run.err.includes('"## Scenario overview"'),
+      'M2 报错点名缺的是 "## Scenario overview" 这一节，读票的人知道该按新模板补哪一节',
+      run.err.slice(0, 200),
+    )
+  }
+
+  // ---- N. 换格式不等于让已经写好的记录作废：中文身份行仍然认（base 的解析器两种语言都读） ----
+  {
+    const legacy = '- 验证身份：批次 batch-1；候选提交 ' + CANDIDATE + '；候选包 sha256 ' + TGZ
+    const run = await runGate({ ticketFace: happyFace({ comments: [batchComment({ identityLine: legacy })] }) })
+    check(
+      run.exitCode === 0,
+      'N1 中文身份行放在英文记录里 → 仍然通过',
+      show(run.exitCode) + ' / ' + (run.err.split(NEWLINE)[0] ?? ''),
+    )
+  }
+
   // ---- J. 环境类输入错误：都归 exit 2，不冒充票面失败 ----
   {
     const gitRun = await runGate({ releaseCommit: undefined, ports: portsWithCommand(fakeCommand(128, 'fatal: not a git repository')) })
@@ -415,83 +397,8 @@ async function main(): Promise<void> {
     check(noDeclaration.err.includes('PREFLIGHT-BLOCKED'), 'J8 声明缺失归 blocked 且给改法', noDeclaration.err.split(NEWLINE)[0] ?? '')
   }
 
-  // ---- K. 接线静态断言：两条发布路径同一份代码、没留跳过开关 ----
-  {
-    const cliSource = readSource(RELEASE_PREFLIGHT)
-    check(cliSource.includes("from './lib/release-preflight-gate.mts'"), 'K1 薄 CLI 从组合根 import runPreflightGate', '')
-    check(countOccurrences(cliSource, 'runPreflightGate(') === 1, 'K2 薄 CLI 只调一次组合根，没有第二条判定路径', show(countOccurrences(cliSource, 'runPreflightGate(')))
-    check(!importsSymbol(cliSource, 'runReleaseGate'), 'K3 薄 CLI 不直接 import 门禁，规则只在组合根里接', '')
-    check(!cliSource.includes("'--soft'") && !cliSource.includes('"--soft"'), 'K4 薄 CLI 不接 --soft（注释里说明为什么不传不算开关）', '')
-    check(
-      !cliSource.includes('--force') && !cliSource.includes('--no-verify') && !cliSource.includes('skip'),
-      'K5 薄 CLI 没有 force / no-verify / skip 开关',
-      '',
-    )
-    check(cliSource.includes('process.exitCode'), 'K6 用 process.exitCode 收尾（Node 24 Windows 上不截断 stdout）', '')
-    check(!cliSource.includes('process.exit('), 'K7 不直接调 process.exit(', '')
-
-    const gateSource = readSource(RELEASE_PREFLIGHT_GATE)
-    check(countOccurrences(gateSource, 'runReleaseGate(') === 1, 'K8 组合根里 runReleaseGate 只调用一次', show(countOccurrences(gateSource, 'runReleaseGate(')))
-    check(gateSource.includes('renderReleaseGateHuman'), 'K9 组合根用 base 的人类可读报告渲染', '')
-    check(gateSource.includes('PREFLIGHT-CANDIDATE-AUDIT') && gateSource.includes('PREFLIGHT-CANDIDATE-OK'), 'K10 候选标记在组合根里生成', '')
-    check(gateSource.includes('PREFLIGHT-BLOCKED') && gateSource.includes('PREFLIGHT-FAIL') && gateSource.includes('PREFLIGHT-OK') && gateSource.includes('PREFLIGHT-ENV'), 'K11 四类标记齐全', '')
-
-    const importers = scanImportsOf('runReleaseGate')
-    check(
-      JSON.stringify(importers) === JSON.stringify([RELEASE_PREFLIGHT_GATE]),
-      'K12 全仓只有组合根 import runReleaseGate（没有第二处接线，也没有第二份规则）',
-      show(importers.map((path) => path.slice(ROOT.length + 1))),
-    )
-
-    const publishSource = readSource(PUBLISH_TOKEN)
-    check(publishSource.includes('scripts/release-preflight.mts'), 'K13 publish-token.ps1 调发布前检查', '')
-    check(!publishSource.includes('--soft'), 'K14 publish-token.ps1 不再传跳过开关', '')
-    check(publishSource.includes('CHECK-BLOCKED') && publishSource.includes('CHECK-ENV'), 'K15 publish-token.ps1 接了四态（含 blocked / env）', '')
-
-    const wizardSource = readSource(WIZARD_RELEASE)
-    check(wizardSource.includes('scripts/release-preflight.mts'), 'K16 wizard-release.sh 调发布前检查', '')
-    check(!wizardSource.includes('--soft'), 'K17 wizard-release.sh 不再传跳过开关', '')
-    check(wizardSource.includes('PREFLIGHT_CODE') && wizardSource.includes('exit 2'), 'K18 wizard-release.sh 区分 blocked（exit 2）', '')
-
-    const profileSource = readSource(PROFILE)
-    check(profileSource.includes('ticketFace') && profileSource.includes('verify/ticket-face.mts'), 'K19 verify/profile.ts 声明票面适配器', '')
-
-    const ticketFaceSource = readSource(TICKET_FACE)
-    check(ticketFaceSource.includes('merge-base') && ticketFaceSource.includes('"unknown"'), 'K20 gh 适配器的 isAncestor 三态，不拿 false 冒充 unknown', '')
-    check(ticketFaceSource.includes('ReleaseEnvError'), 'K21 环境问题抛 ReleaseEnvError（门禁归 blocked，不冒充票面失败）', '')
-
-    const validated = validateTicketFaceAdapter(ticketFace)
-    check(validated.ok === true, 'K22 verify/ticket-face.mts 的默认导出通过 base 的适配器形状校验', validated.ok ? '' : show(validated))
-    check(ticketFace?.kind === 'github-gh-cli', 'K23 适配器 kind 说明协议来源', show(ticketFace?.kind))
-    check(
-      TICKET_FACE_METHODS.every((method: string) => typeof (ticketFace as any)[method] === 'function'),
-      'K24 四个必需方法都在',
-      show(TICKET_FACE_METHODS.map((method: string) => typeof (ticketFace as any)[method])),
-    )
-
-    const tsconfigSource = readSource(SCRIPTS_TSCONFIG)
-    check(tsconfigSource.includes('lib/release-preflight-gate.mts'), 'K25 组合根登记进 scripts/tsconfig.json', '')
-    check(tsconfigSource.includes('../verify/ticket-face.mts'), 'K26 票面适配器登记进 scripts/tsconfig.json', '')
-  }
-
-  // ---- L. 薄 CLI 的子进程行为（--help 与参数错误，不触发网络） ----
-  {
-    const help = spawnSync(process.execPath, [RELEASE_PREFLIGHT, '--help'], { cwd: ROOT, encoding: 'utf8' })
-    check(help.status === 0, 'L1 --help 退出码 0', String(help.status))
-    check((help.stdout ?? '').includes('用法'), 'L2 --help 打印用法', (help.stdout ?? '').trim().slice(0, 80))
-    check(!(help.stdout ?? '').includes('PREFLIGHT-ENV'), 'L3 --help 不冒充参数错误', '')
-
-    const bogus = spawnSync(process.execPath, [RELEASE_PREFLIGHT, '--bogus'], { cwd: ROOT, encoding: 'utf8' })
-    check(bogus.status === 2, 'L4 不认识的参数 → 退出码 2', String(bogus.status))
-    check((bogus.stderr ?? '').includes('PREFLIGHT-ENV') && (bogus.stderr ?? '').includes('不认识的参数'), 'L5 参数错误走 PREFLIGHT-ENV 并点名参数', (bogus.stderr ?? '').trim().slice(0, 120))
-
-    const soft = spawnSync(process.execPath, [RELEASE_PREFLIGHT, '--version', '1.2.3', '--soft'], { cwd: ROOT, encoding: 'utf8' })
-    check(soft.status === 2 && (soft.stderr ?? '').includes('不认识的参数：--soft'), 'L8 传 --soft 直接被拒（没有跳过开关）', String(soft.status) + ' / ' + (soft.stderr ?? '').trim().slice(0, 80))
-
-    const missingValue = spawnSync(process.execPath, [RELEASE_PREFLIGHT, '--version'], { cwd: ROOT, encoding: 'utf8' })
-    check(missingValue.status === 2, 'L6 --version 缺值 → 退出码 2', String(missingValue.status))
-    check((missingValue.stderr ?? '').includes('PREFLIGHT-ENV'), 'L7 缺值也是环境类错误', (missingValue.stderr ?? '').trim().slice(0, 120))
-  }
+  // ---- K / L. 接线静态断言与薄 CLI 子进程：搬到 tests/lib/release-gate-wiring.ts（体积上限），断言编号与计数不变 ----
+  runWiringChecks({ check, show, root: ROOT, ticketFace })
 
   const record = printGateResult(GATE, assertions, failed)
   console.log('GATE-SUMMARY ' + JSON.stringify(record))

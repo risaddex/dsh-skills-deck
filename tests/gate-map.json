@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-17T11:34:57.038Z",
+  "generatedAt": "2026-11-17T11:50:49.556Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 613,
   "gateCount": 613,
@@ -12770,9 +12770,11 @@
       "step": "node tests/verify-release-gate.ts",
       "file": "tests/verify-release-gate.ts",
       "guards": [
+        "scripts/lib/release-checklist-format.mts",
         "scripts/lib/release-preflight-gate.mts",
         "scripts/release-preflight.mts",
-        "tests/lib/gate-result.ts"
+        "tests/lib/gate-result.ts",
+        "tests/lib/release-gate-wiring.ts"
       ],
       "dirs": [
         "scripts",
@@ -12782,7 +12784,7 @@
       "unattributed": true,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 88,
+      "expectedAssertions": 93,
       "reason": "读到的路径都落在 scripts、tests/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {

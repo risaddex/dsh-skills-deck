@@ -1,7 +1,9 @@
 // scripts/lib/release-checklist.mts —— 版本真机验证清单票的读写小工具，发布前检查与发布后收尾共用。
 //
-// 为什么单独放一个文件：清单票靠标题「[真机验证] <版本号>」识别，前缀、占位票写法、模板位置这三件事
-// 一旦两边各写一份，早晚对不上——一边按「下一版」找、一边按「下个版本」找，发布检查就会误报缺票。
+// 为什么单独放一个文件：清单票靠标题前缀识别，而前缀、占位票写法、模板位置这三件事一旦两边各写一份，
+// 早晚对不上——一边按「Next」找、一边按「下一版」找，发布检查就会误报缺票。前缀与机器可读格式定义在
+// scripts/lib/release-checklist-format.mts，这里只负责「拿它们怎么读票」，并保留 TITLE_PREFIX /
+// PLACEHOLDER_WORD 两个名字给调用方（#17 之后值是英文，中文写法作为兼容继续认）。
 // 规则正文在 docs/agents/real-machine-verification.md，这里只认标题与 gh 的调用方式。
 //
 // 本文件负责读：列清单票、读版本号、取正文模板、读一张票的评论；以及拼标题。所有 gh 调用都走子进程，不改任何东西。
@@ -11,11 +13,38 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { ChecklistCommentInput } from './checklist-consistency.mts'
+import {
+  CHECKLIST_PLACEHOLDER_WORD,
+  CHECKLIST_TITLE_PREFIX,
+  LEGACY_PLACEHOLDER_WORD,
+  LEGACY_TITLE_PREFIX,
+} from './release-checklist-format.mts'
 
-/** 清单票标题前缀。改这里等于改全仓的识别方式，先改规则文档。 */
-export const TITLE_PREFIX = '[真机验证]'
-/** 版本号还没定时占位票用的词：标题写成「[真机验证] 下一版（自 v1.9.0-beta.29 之后）」。 */
-export const PLACEHOLDER_WORD = '下一版'
+/** 清单票标题前缀（标准写法）。改这里等于改全仓的识别方式，先改规则文档。 */
+export const TITLE_PREFIX = CHECKLIST_TITLE_PREFIX
+/** 版本号还没定时占位票用的词：标题写成「[Real-machine verification] Next (since v1.9.0)」。 */
+export const PLACEHOLDER_WORD = CHECKLIST_PLACEHOLDER_WORD
+
+/**
+ * 认标题时接受的前缀与占位词：英文是标准写法，中文是改版前的写法（在途票不改名也能走完发布流程）。
+ * 读侧认两种、写侧只写英文，这条界线与理由写在 release-checklist-format.mts 的注释里。
+ */
+const ACCEPTED_PREFIXES = [CHECKLIST_TITLE_PREFIX, LEGACY_TITLE_PREFIX]
+const ACCEPTED_PLACEHOLDER_WORDS = [CHECKLIST_PLACEHOLDER_WORD, LEGACY_PLACEHOLDER_WORD]
+
+/** 拼正则时把前缀里的方括号当字面量，别让「[Real-machine verification]」被当成字符类。 */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** 标题开头那一段：任一被接受的前缀。 */
+const TITLE_HEAD = '(?:' + ACCEPTED_PREFIXES.map(escapeRegExp).join('|') + ')'
+/** 带版本号的标题：前缀 + 版本号（第一段非空白）。 */
+const EXACT_TITLE_PATTERN = new RegExp('^' + TITLE_HEAD + '\\s*(\\S+)')
+/** 占位票标题：前缀 + 占位词。 */
+const PLACEHOLDER_TITLE_PATTERN = new RegExp(
+  '^' + TITLE_HEAD + '\\s*(?:' + ACCEPTED_PLACEHOLDER_WORDS.map(escapeRegExp).join('|') + ')',
+)
 
 const ISSUE_LIST_LIMIT = '400'
 const TEMPLATE_REL = path.join('docs', 'agents', 'checklist-issue-template.md')
@@ -53,12 +82,12 @@ export function normalizeVersion(version: string): string {
 }
 
 export function isChecklistTitle(title: string): boolean {
-  return normalizeTitle(title).startsWith(TITLE_PREFIX)
+  return ACCEPTED_PREFIXES.some((prefix) => normalizeTitle(title).startsWith(prefix))
 }
 
-/** 从「[真机验证] 1.9.0-beta.31」里取出 1.9.0-beta.31；不是清单票时返回空串。 */
+/** 从「[Real-machine verification] 1.9.0-beta.31」里取出 1.9.0-beta.31；不是清单票时返回空串。 */
 export function checklistVersionOf(title: string): string {
-  const matched = /^\[真机验证\]\s*(\S+)/.exec(normalizeTitle(title))
+  const matched = EXACT_TITLE_PATTERN.exec(normalizeTitle(title))
   return matched ? normalizeVersion(matched[1]) : ''
 }
 
@@ -66,9 +95,9 @@ export function isExactChecklistTitle(title: string, version: string): boolean {
   return isChecklistTitle(title) && checklistVersionOf(title) === normalizeVersion(version)
 }
 
-/** 占位票：「[真机验证] 下一版（自 <上一发布版本> 之后）」。 */
+/** 占位票：「[Real-machine verification] Next (since <上一发布版本>)」，中文写法「[真机验证] 下一版…」同样认。 */
 export function isPlaceholderTitle(title: string): boolean {
-  return new RegExp('^\\[真机验证\\]\\s*' + PLACEHOLDER_WORD).test(normalizeTitle(title))
+  return PLACEHOLDER_TITLE_PATTERN.test(normalizeTitle(title))
 }
 
 /** 跑一次 gh 并回读 stdout；失败时抛 ReleaseEnvError，让调用方用一句话说清是环境问题还是票面问题。 */
@@ -88,41 +117,53 @@ export function ghText(args: string[]): string {
   return String(result.stdout || '')
 }
 
-/** 列出仓里所有带「[真机验证]」标题前缀的票（含已关闭）。gh 的搜索不区分中英文，这里再按标题本地过滤。 */
+/**
+ * 列出仓里所有带清单票标题前缀的票（含已关闭），中英文前缀各查一次再合并。
+ *
+ * 为什么查两次：gh 的搜索按词匹配，一次给不了「A 或 B」。前缀里带方括号，而 GitHub 的搜索会把方括号
+ * 当成分隔符，所以搜索词去掉方括号只留文字，真正的判定仍交给下面的 isChecklistTitle——搜索只负责缩小范围，
+ * 决定「这张票算不算清单票」的永远是前缀本身。按票号去重：两次搜索理论上不交叉，但宁可多查一次也不重复。
+ */
 export function listChecklistIssues(): ChecklistIssue[] {
-  const raw = ghText([
-    'issue',
-    'list',
-    '--state',
-    'all',
-    '--limit',
-    ISSUE_LIST_LIMIT,
-    '--search',
-    'in:title ' + TITLE_PREFIX,
-    '--json',
-    'number,title,state,url,body',
-  ])
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch (error) {
-    throw new ReleaseEnvError('The checklist ticket list returned by gh is not valid JSON: ' + String(error), 2)
-  }
-  if (!Array.isArray(parsed)) {
-    throw new ReleaseEnvError('The checklist ticket list returned by gh is not an array, so the checklist ticket state cannot be determined.', 2)
-  }
   const issues: ChecklistIssue[] = []
-  for (const item of parsed) {
-    const row = item as Record<string, unknown>
-    const title = String(row.title || '')
-    if (!isChecklistTitle(title)) continue
-    issues.push({
-      number: Number(row.number),
-      title,
-      state: String(row.state || ''),
-      url: String(row.url || ''),
-      body: String(row.body || ''),
-    })
+  const seen = new Set<number>()
+  for (const prefix of ACCEPTED_PREFIXES) {
+    const raw = ghText([
+      'issue',
+      'list',
+      '--state',
+      'all',
+      '--limit',
+      ISSUE_LIST_LIMIT,
+      '--search',
+      'in:title ' + prefix.replace(/[[\]]/g, ''),
+      '--json',
+      'number,title,state,url,body',
+    ])
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch (error) {
+      throw new ReleaseEnvError('The checklist ticket list returned by gh is not valid JSON: ' + String(error), 2)
+    }
+    if (!Array.isArray(parsed)) {
+      throw new ReleaseEnvError('The checklist ticket list returned by gh is not an array, so the checklist ticket state cannot be determined.', 2)
+    }
+    for (const item of parsed) {
+      const row = item as Record<string, unknown>
+      const title = String(row.title || '')
+      if (!isChecklistTitle(title)) continue
+      const number = Number(row.number)
+      if (seen.has(number)) continue
+      seen.add(number)
+      issues.push({
+        number,
+        title,
+        state: String(row.state || ''),
+        url: String(row.url || ''),
+        body: String(row.body || ''),
+      })
+    }
   }
   return issues
 }

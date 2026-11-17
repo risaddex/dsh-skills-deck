@@ -27,8 +27,8 @@ importers:
         specifier: ^18.6.0
         version: 18.6.0
       dsh-featherhunter-plugin-base:
-        specifier: 0.1.7
-        version: 0.1.7(react@19.3.1)
+        specifier: https://codeload.github.com/risaddex/dsh-featherhunter-plugin-base/tar.gz/cff1a0221ee9a08b2ac926de81d9f912627f5270
+        version: https://codeload.github.com/risaddex/dsh-featherhunter-plugin-base/tar.gz/cff1a0221ee9a08b2ac926de81d9f912627f5270(react@19.3.1)
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -595,8 +595,9 @@ packages:
     engines: {node: ^22||^24||>=26}
     hasBin: true
 
-  dsh-featherhunter-plugin-base@0.1.7:
-    resolution: {integrity: sha512-1jCq/PshSnwQ5TKCEJKciqYiB9f2wwPJ6J+jKg+PmevSvlesHdv30S79GbIFiTjSYmm9suIhkVrpGEArp+GTbQ==}
+  dsh-featherhunter-plugin-base@https://codeload.github.com/risaddex/dsh-featherhunter-plugin-base/tar.gz/cff1a0221ee9a08b2ac926de81d9f912627f5270:
+    resolution: {gitHosted: true, integrity: sha512-z9QCMWJLxckNhYeNzJT7Vpv7qfhKzfP6qC7JwO8shx4sZckO0qqYTWm17wwoH9iXuAO3vZxXOOcmfGB9/WqvRw==, tarball: https://codeload.github.com/risaddex/dsh-featherhunter-plugin-base/tar.gz/cff1a0221ee9a08b2ac926de81d9f912627f5270}
+    version: 0.2.0
     engines: {node: '>=18'}
     hasBin: true
     peerDependencies:
@@ -1279,7 +1280,7 @@ snapshots:
       typescript: 5.6.3
       watskeburt: 6.0.0
 
-  dsh-featherhunter-plugin-base@0.1.7(react@19.3.1):
+  dsh-featherhunter-plugin-base@https://codeload.github.com/risaddex/dsh-featherhunter-plugin-base/tar.gz/cff1a0221ee9a08b2ac926de81d9f912627f5270(react@19.3.1):
     dependencies:
       react: 19.3.1
 
