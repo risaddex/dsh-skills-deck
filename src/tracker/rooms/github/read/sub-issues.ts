@@ -40,7 +40,7 @@ import { ghClient } from '../transport/client.js'
 import { normalizeIssue } from '../model/normalize.js'
 import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
 import { SUB_ISSUES_QUERY } from '../channels/graphql/queries.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 import { emitReadDegraded } from '../support/read-log.js'
 import { beginRead } from '../routing/read-result.js'
 // #1698：企业版主机上的运行时能力回答（探测服务端版本后回答支持/部分支持/不支持）。
@@ -71,7 +71,7 @@ async function listSubIssuesInner(repo: RepositoryRef, mapKey: unknown, opts: un
     // 形状不对的入参本身就是这一处的原文（这之前还没跑过任何外部命令）；它取出来可能是空串，那是如实交代。
     if (!parsed) {
       emitReadDegraded(ctx, 'subIssues', 'subIssues:repo-ref', Date.now() - t0)
-      return fail(ERROR_KIND.NOTFOUND, `Fetching child tickets: repo.refId is missing or has the wrong shape: ${repoId(repo)}`, repo)
+      return fail(ERROR_KIND.NOTFOUND, `Fetching child tickets: repo.refId is missing or has the wrong shape: ${repoIdentityText(repo)}`, repo)
     }
     const num = Number(String(mapKey == null ? '' : mapKey).trim())
     if (!Number.isFinite(num)) return fail(ERROR_KIND.PARSE, `Fetching child tickets: a GitHub map number must be numeric: ${mapKey}`, mapKey, TRACKER_ERROR_STAGE.INPUT_REFUSED)

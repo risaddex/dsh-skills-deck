@@ -538,6 +538,10 @@ const ALLOWED = {
   //   为什么要有：一次超时之后同一只桶在冷却窗口里不再起进程，日志里要能读出「这条命令是被冷却挡回的」，
   //   而不是又一条普通超时；防的是「失败必退避、不许重复赔满超时」这件事退回去。
   'gh.transport': ['decision', 'bucket', 'reason', 'remainingMs', 'failStreak', 'cmd'],
+  // 2026-11-16（#13 房间第一片）按需 #136 `linear.request`：Linear 房一次 GraphQL 请求的边界 ——
+  // 操作名、桶、结局（八档之一或 ok）、耗时、账号别名。不记请求头、正文、变量与完整地址：
+  // Authorization 就在头里，日志落盘不许带可重放的凭据。
+  'linear.request': ['op', 'bucket', 'outcome', 'ms', 'alias'],
   // 2026-10-21 map 1010 逐票复核（#891/#995/#916/#917）：状态栏黄条出现、消失或换文案时边沿记一行。
   // 2026-10-22（#1363）：黄条「该出没出、该消没消」的判定依据补齐 —— reason 为什么这么判（枚举）、
   //   decideStep 判定落在哪一步、backendId 当时选定的后端、steps 快照里实际有几行、wsHash 与 sidHash

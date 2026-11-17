@@ -1,0 +1,145 @@
+/**
+ * src/host/platform/httpChannel.ts —— HTTP 通道的宿主实现（契约形状见 src/tracker/contract/contexts.ts 的 `HttpChannel`）
+ *
+ * ── 这个文件解决什么 ─────────────────────────────────────────────────────────
+ * 房间不许直接用全局 `fetch`，而 Linear 没有命令行工具 —— 一等后端里出现了「想发一个请求，
+ * 没有任何合法通道」的空档（#24 的决定）。这里把空档补上，而不是给那一间房开例外。
+ *
+ * ── 通道自己管出站，房间不管 ─────────────────────────────────────────────────
+ * 每一次请求都先向 `ctx.outbound` 拿名额、跑完上报结局：
+ *   · 拿到任何 HTTP 响应（含 4xx/5xx）＝通路是通的 → `reportSuccess` 清冷却；
+ *   · 连接失败、超时、被掐断 ＝ 通路不通 → `reportTransportFailure` 设冷却；
+ *   · 写请求成功 → `noteWrite`（写过东西之后来的探测不搭旧车）；
+ *   · 调用方取消 → 按取消返回，不记成通路失败。
+ * 若让房间各自拿名额，不同房间迟早用不同方式拿，名额闸就退化成建议 —— 那正是
+ * `src/tracker/contract/outbound.ts` 末尾一节说「不许静默直通」的意思。
+ *
+ * ── 失败怎么回：起不来是异常，有回话就是成功 ─────────────────────────────────
+ * 传输层失败**抛错**，不返回假状态码；拿到响应就正常返回，由房间按自己的协议解读
+ * （Linear 的 GraphQL 会在 HTTP 200 里带 `errors[]`，那是房间的事，不是通道的事）。
+ * 这条分界与 `exec` 一致：进程起不来是异常，跑完有退出码就是回话。
+ *
+ * ── 这里不新增日志事件（有意为之） ───────────────────────────────────────────
+ * 一次传输失败已经由 `outbound.reportTransportFailure` 记进常驻事件 `gh.transport`（冷却设上、
+ * 被挡回、清零三档），再在这里加一条只会重复同一件事；成功请求每次一行又会变成心跳噪声，
+ * 而 `docs` 的日志纪律明确不许加。所以本文件一行日志都不发：要查「这次为什么没发出去」看
+ * `gh.transport`，要查「这次发了什么」看调用它的房间自己的结局。
+ *
+ * ── 注入点 ───────────────────────────────────────────────────────────────────
+ * 与 `createOutboundControl` 同一条路，三处都要挂：
+ *   · `src/host/platformChannel.ts` 的 `backendCtxForRooms`
+ *   · `src/refresh/registry/deck-tool-bridge.ts` 的 backendObj
+ *   · `src/refresh/rooms/host/refresh-runtime.ts` 的 backendObj
+ * 缺一处，那条路上的房间会按环境失败（有意为之：宁可大声报错，也不静默绕过名额闸）。
+ */
+
+import type { HttpChannel, HttpRequest, HttpResponse } from '../../tracker/contract/contexts.js'
+// #24：单次请求的时间预算不在这里写数字 —— 它按桶取中央时间参数里那一档（值与 gh 的出站档同一份）。
+import { timeoutForTier } from '../../tracker/kernel/outbound-tiers.js'
+import type { OutboundService } from '../../tracker/contract/outbound.js'
+import type { OutboundControl } from '../../tracker/contract/outbound.js'
+// 缺省总超时只有一处真源：config/timeouts.yaml 的 outboundDefaultMs（拿不到档位时的旧默认，30 秒），不在这里再抄一份数字。
+import { OUTBOUND_DEFAULT_TIMEOUT_MS } from '../../shared/time-config/src/values.js'
+
+/** fetch 的最小形状：只声明本通道用到的几格，测试替换时不必造一个完整的 Response。 */
+export interface HttpFetchLike {
+  (url: string, init: Record<string, unknown>): Promise<{
+    status: number
+    headers: { forEach(cb: (value: string, key: string) => void): void }
+    text(): Promise<string>
+  }>
+}
+
+export interface CreateHttpChannelOptions {
+  /** 房间的出站控制面（同一份实例，不是再造一个）。 */
+  outbound: OutboundControl
+  /** 缺省通路口径：请求没给 `service` 时用它。 */
+  service?: OutboundService
+  /** 测试替换用；生产就是当前运行时的全局 fetch。 */
+  fetchImpl?: HttpFetchLike | null
+  /** 通道自己的缺省预算；请求没带 `timeoutMs` 时用它，仍没给就落到出站档位与已登记的总超时。 */
+  timeoutMs?: number
+}
+
+/** 缺省总超时：接已登记的 outboundDefaultMs（与出站档位的量级一致，读 30 秒级）。 */
+const DEFAULT_TIMEOUT_MS = OUTBOUND_DEFAULT_TIMEOUT_MS
+
+/**
+ * 这一次请求最多等多久（四层，从最懂这一趟的人往外数）。
+ *
+ * 顺序是合并 PR #24 与 #13 时的裁决，四层各有各的道理，缺一层就会让某个调用方悄悄落回 30 秒：
+ *   1. 请求自带的 `timeoutMs` —— 调用方最清楚这一趟要等多久；
+ *   2. 通道构造时给的预算 —— 一处装配替同一条路上的所有请求定调；
+ *   3. 出站档位（`timeoutForTier`，读写探活各一档，值与 gh 同源）—— 中央的时间口径；
+ *   4. 已登记的缺省总超时 —— 档位读不出来时最后的兜底。
+ * 写成一个小函数而不是三四个局部变量，是因为 `verify-time-config` 会把每个像时长的新名字
+ * 逐个要登记；这里只留一个已经在豁免表里说明过的名字。
+ */
+function budgetFor(req: HttpRequest, channelBudget: number | undefined, bucket: string): number {
+  if (typeof req.timeoutMs === 'number' && req.timeoutMs > 0) return req.timeoutMs
+  if (typeof channelBudget === 'number' && channelBudget > 0) return channelBudget
+  const tiered = timeoutForTier(bucket)
+  return tiered > 0 ? tiered : DEFAULT_TIMEOUT_MS
+}
+/**
+ * 造一份 HTTP 通道。每次调用返回新对象，但名额与冷却在 `outbound` 背后是进程级单例，
+ * 所以多处注入不会造成两套上限。
+ */
+export function createHttpChannel(options: CreateHttpChannelOptions): HttpChannel {
+  const outbound = options.outbound
+  const defaultService: OutboundService = options.service || 'linear'
+
+  return {
+    async request(req: HttpRequest): Promise<HttpResponse> {
+      const bucket = req.bucket || 'read'
+      const service = req.service || defaultService
+      const method = req.method || 'GET'
+      const fetchImpl = options.fetchImpl || (globalThis as unknown as { fetch?: HttpFetchLike }).fetch
+      // 运行时没有 fetch 属于环境缺件，不是某一次请求的失败：直接抛，让调用方按环境失败报出来。
+      if (typeof fetchImpl !== 'function') {
+        throw new Error('this runtime has no fetch implementation, so the room cannot reach the network')
+      }
+
+      // 名额：排满就在这里等；等待期间被取消要能认出来（交给 outbound.isCancelled 认）。
+      const release = await outbound.acquire({ bucket, service, signal: req.signal })
+
+      const timeoutMs = budgetFor(req, options.timeoutMs, bucket)
+      const controller = new AbortController()
+      let timedOut = false
+      const onCallerAbort = (): void => { try { controller.abort() } catch { /* 已经中止过 */ } }
+      if (req.signal) {
+        if (req.signal.aborted) onCallerAbort()
+        else req.signal.addEventListener('abort', onCallerAbort, { once: true })
+      }
+      const timer = setTimeout(() => { timedOut = true; try { controller.abort() } catch { /* 已经中止过 */ } }, timeoutMs)
+
+      try {
+        const response = await fetchImpl(req.url, {
+          method,
+          headers: req.headers || {},
+          body: req.body,
+          signal: controller.signal,
+        })
+        const body = await response.text()
+        const headers: Record<string, string> = {}
+        try { response.headers.forEach((value, key) => { headers[String(key).toLowerCase()] = value }) } catch { /* 头读不出来就当没有 */ }
+
+        // 拿到响应就是通路通了 —— 4xx/5xx 也算，那是有回话。
+        outbound.reportSuccess({ bucket, service })
+        if (bucket === 'write') outbound.noteWrite()
+        return { status: response.status, headers, body }
+      } catch (error) {
+        // 调用方取消（含排队期间被取消）：不算通路失败，原样抛给调用方按取消处理。
+        if (outbound.isCancelled(error) || (req.signal && req.signal.aborted && !timedOut)) throw error
+        // 超时与被掐断都是传输层失败：设冷却，让同一只桶的后续调用别再各自赔满一次超时。
+        outbound.reportTransportFailure({ bucket, service, reason: timedOut ? 'timeout' : 'spawn-failed' })
+        throw error
+      } finally {
+        clearTimeout(timer)
+        if (req.signal) { try { req.signal.removeEventListener('abort', onCallerAbort) } catch { /* 没有监听器 */ } }
+        // 名额必须放回：漏放会永久占掉一个（见 outbound.ts 的 acquire 注释）。
+        try { release() } catch { /* 放回失败不覆盖本次结果 */ }
+      }
+    },
+  }
+}

@@ -26,13 +26,13 @@
 //
 // 跑法（插件根目录；不需要先构建，本门禁跑真源码）：
 //   node --import ./scripts/ts-hook.mts tests/verify-1765-read-channel-plan.ts
-import { OPERATIONS } from '../src/tracker/contract/operations-catalog.js'
+import { OPERATIONS, LOCATORS } from '../src/tracker/contract/operations-catalog.js'
 import {
   OPERATION_ENCYCLOPEDIA,
   READ_SPEND_CHANNELS,
 } from '../src/tracker/contract/operations-encyclopedia.js'
 import type { ReadSpendChannel } from '../src/tracker/contract/operations-encyclopedia.js'
-import { decideByBudget, familiesOfOp } from '../src/refresh/kernel/budget-admission.js'
+import { decideByBudget, familiesOfOp, readSpendPlanOf } from '../src/refresh/kernel/budget-admission.js'
 import { runPipelineOp } from '../src/tracker/session/pipeline.js'
 import { getIssue, listIssues } from '../src/tracker/rooms/github/read/issues.js'
 import { getDependencies } from '../src/tracker/rooms/github/read/deps-read.js'
@@ -174,6 +174,33 @@ for (const [op, rest, graphql] of planCases) {
   if (JSON.stringify(got) !== JSON.stringify(expected)) planProblems.push(op + '(' + rest + '/' + graphql + ') 期望 ' + JSON.stringify(expected) + '，实际 ' + JSON.stringify(got))
 }
 check(planProblems.length === 0, 'C、放行计划只含高于保底的渠道，顺序照百科', planProblems)
+
+// ── F. 定位口的花费计划（#22）────────────────────────────────────────────
+// 这场病的经过：`getRepoKey` 是三条定位口之一，但它不在操作名录里，也就没有百科条目。
+// 额度闸读不到计划，只能按「名单外一律保守两族」处理——REST 见底时，把这一问也拦下了。
+// 而这一问的头两级只读本地 git（`git remote get-url origin` 与 `.git/config`），一分额度都不花；
+// 第三级 fallback 才是 `gh repo view`（GraphQL）。拦下它的后果不是少读一次，是整家 deck 工具
+// 没有仓库身份，回执只剩「repo.refId missing」，读的人跑去查 token。
+// 修法：定位口也在这张表里声明自己的花费渠道计划，闸按它裁。
+const locatorPlansOk = LOCATORS.every(function (name: string): boolean {
+  const plan: any = readSpendPlanOf(name)
+  return Array.isArray(plan) && plan.length > 0
+})
+check(locatorPlansOk, 'F、三条定位口都声明了花费渠道计划（' + LOCATORS.join(', ') + '）')
+check(JSON.stringify(readSpendPlanOf('getRepoKey')) === JSON.stringify(['local', 'graphql']),
+  'F、getRepoKey 的计划是「先本地 git、再 GraphQL」（tier 3 是 gh repo view）', readSpendPlanOf('getRepoKey'))
+check(JSON.stringify(familiesOfOp('getRepoKey')) === JSON.stringify({ all: ['graphql'], anyOf: [] }),
+  'F、getRepoKey 只差 GraphQL 不可——REST 不再算它的门槛', familiesOfOp('getRepoKey'))
+const repoKeyRestDead: any = decide('getRepoKey', 200, 4000)
+check(repoKeyRestDead.allowed === true, 'F、REST 见底时仓库定位照常放行（#22 的主症状）', repoKeyRestDead)
+check(JSON.stringify(channelsOf(repoKeyRestDead)) === JSON.stringify(['local', 'graphql']),
+  'F、放行时交出的计划含本地一级（本地那一级不花额度，不会被当成见底的那一族裁掉）', channelsOf(repoKeyRestDead))
+const repoKeyGraphqlDead: any = decide('getRepoKey', 4000, 200)
+check(repoKeyGraphqlDead.allowed === false && String(repoKeyGraphqlDead.message || '').indexOf('GraphQL points') >= 0,
+  'F、GraphQL 见底时定位被拒，并点名 GraphQL 点数（第三级 fallback 真的花它）', repoKeyGraphqlDead)
+// 名单外的名字仍按老口径两族都看：这条兜底是 #22 之外的行为，本票没有放松它。
+check(JSON.stringify(familiesOfOp('notAnOperation')) === JSON.stringify({ all: ['rest', 'graphql'], anyOf: [] }),
+  'F、名单外的名字仍按保守两族（兜底没被放松）', familiesOfOp('notAnOperation'))
 
 // ── D. 管线把计划交给房间 ──────────────────────────────────────────────────
 const makeDeps = function (op: string, decision: any, calls: any[]): any {

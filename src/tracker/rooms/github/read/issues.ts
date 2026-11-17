@@ -66,9 +66,9 @@ import { GITHUB_REST_READ_TIMEOUT_MS } from '../../../../shared/time-config/src/
 
 // 仓库坐标解析（#1687）：同一份 parseRepo / repoId 原在 issues.ts、labels.ts、graph.ts 各有一份，
 // 现在抽到 model/issue-key.ts 供读写两侧共用；这里再导出一次，保持本文件对外的旧导出面。
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoId, repoIdentityText } from '../model/issue-key.js'
 import type { ParsedRepo } from '../model/issue-key.js'
-export { parseRepo, repoId }
+export { parseRepo, repoId, repoIdentityText }
 
 // list 的返回形状跑到了契约里（#1304）：房间多交代的 `truncated` / `fallback` / `fallbackReason`
 // 是从房间流向调用方的合同，不只是本文件内部的事；契约那份带完整字段说明，这里只留别名。
@@ -134,7 +134,7 @@ export async function listIssues(repo: RepositoryRef, filter: ListFilter | undef
     const parsed = parseRepo(repo)
     if (!parsed) {
       emitReadDegraded(ctx, 'list', 'list:repo-ref', Date.now() - tList)
-      return fail(ERROR_KIND.NOTFOUND, `list: repo.refId missing or malformed: ${repoId(repo)}`, repo)
+      return fail(ERROR_KIND.NOTFOUND, `list: repo.refId missing or malformed: ${repoIdentityText(repo)}`, repo)
     }
     const c = ghClient(ctx)
     const t0 = Date.now()
@@ -352,7 +352,7 @@ export async function getIssue(repo: RepositoryRef, key: string, opts: GetOpts |
     const parsed = parseRepo(repo)
     if (!parsed) {
       emitReadDegraded(ctx, 'get', 'get:repo-ref', Date.now() - tGet)
-      return fail(ERROR_KIND.NOTFOUND, `get: repo.refId missing: ${repoId(repo)}`, repo)
+      return fail(ERROR_KIND.NOTFOUND, `get: repo.refId missing: ${repoIdentityText(repo)}`, repo)
     }
     const k = String(key || '').trim()
     if (!k) return fail(ERROR_KIND.PARSE, 'get: key required (string)', key, TRACKER_ERROR_STAGE.INPUT_REFUSED)

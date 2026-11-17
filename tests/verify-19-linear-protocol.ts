@@ -18,6 +18,8 @@ const check = (ok: boolean, msg: string, detail?: unknown): void => {
   if (!ok) failed = true
 }
 
+const WINDOW = 5 * 60 * 1000
+
 async function main() {
   console.log('Linear sign-in protocol gate (#19)')
   const p = await import(pathToFileURL(path.join(ROOT, 'src', 'shared', 'linear-signin', 'src', 'protocol.js')).href)
@@ -85,10 +87,10 @@ async function main() {
 
   {
     const now = 1000000
-    check(p.needsRenewal({ expiresAt: now + 60000 }, now) === true, 'P8 inside the window renews')
-    check(p.needsRenewal({ expiresAt: now + 3600000 }, now) === false, 'P8 outside the window does not')
-    check(p.needsRenewal({ expiresAt: now - 1 }, now) === true, 'P8 already expired renews')
-    check(p.needsRenewal({ expiresAt: 0 }, now) === false && p.needsRenewal(null, now) === false, 'P8 no expiry is never renewed on the clock')
+    check(p.needsRenewal({ expiresAt: now + 60000 }, now, WINDOW) === true, 'P8 inside the window renews')
+    check(p.needsRenewal({ expiresAt: now + 3600000 }, now, WINDOW) === false, 'P8 outside the window does not')
+    check(p.needsRenewal({ expiresAt: now - 1 }, now, WINDOW) === true, 'P8 already expired renews')
+    check(p.needsRenewal({ expiresAt: 0 }, now, WINDOW) === false && p.needsRenewal(null, now, WINDOW) === false, 'P8 no expiry is never renewed on the clock')
   }
 
   {

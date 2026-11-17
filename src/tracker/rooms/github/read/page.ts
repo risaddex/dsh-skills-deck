@@ -39,7 +39,7 @@ import { fail } from '../../../kernel/preflight.js'
 import { ghClient } from '../transport/client.js'
 import { normalizeIssue } from '../model/normalize.js'
 import { ghFailureMessage, ghVerdictOf } from '../support/errors.js'
-import { parseRepo, repoId } from '../model/issue-key.js'
+import { parseRepo, repoIdentityText } from '../model/issue-key.js'
 import { labelsOf } from '../model/issue-filter.js'
 import { LIST_PAGE_QUERY, LIST_PAGE_QUERY_WITH_LABELS } from '../channels/graphql/queries.js'
 // 读结果的来源与按字段组完整度（#1685）：起点在这里收，组装统一走 routing。
@@ -145,7 +145,7 @@ export async function listIssuesPage(repo: RepositoryRef, filter: ListFilter | u
     // 形状不对的入参本身就是这一处的原文（这之前还没跑过任何外部命令）；它取出来可能是空串，那是如实交代。
     if (!parsed) {
       emitReadDegraded(ctx, 'listPage', 'listPage:repo-ref', Date.now() - t0)
-      return fail(ERROR_KIND.NOTFOUND, `listPage: repo.refId missing or malformed: ${repoId(repo)}`, repo)
+      return fail(ERROR_KIND.NOTFOUND, `listPage: repo.refId missing or malformed: ${repoIdentityText(repo)}`, repo)
     }
     // 这一页按契约要的条数与进程里学到的远端上限取小（#1418：学到的上限会在下面「一次要多了」时记下来）。
     const baseLim = Math.min(limitOf(opts), REMOTE_PAGE_LIMIT)

@@ -1901,7 +1901,28 @@ const devCode: string = devCodeRaw
     if (missing.length > 0) {
       throw new Error('发布清单点名的文件不在盘上：\n  - ' + missing.join('\n  - ') + '\n（检查 package/package.json 的 exports 与构建的复制步骤是否对得上）')
     }
-    console.log(`[build] 发布清单校验通过：exports 与 main 点名的文件都在 package/ 里（${Object.keys(pkgJson.exports || {}).length} 条 exports）`)
+    // 根清单的桥（#22 装机现场）：装机装的是仓库根这一份包，宿主按根清单的 main/exports 找入口，
+    // 而可跑的代码住在 package/ 下。根清单不带这条桥时，宿主会去根目录找 lib/index.js、deck/...，
+    // 装得上、编译得过，却在激活那一步 ENOENT——2026-11-16 真机就是这么失败的，而且报错只说找不到文件。
+    // 所以这条桥也当场校验：少了它、或它指的文件不在盘上，构建直接失败。
+    const rootJson: any = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'))
+    const bridgeMissing: string[] = []
+    const checkBridge = (label: string, target: any): void => {
+      if (typeof target !== 'string' || !target.startsWith('./')) return
+      if (!existsSync(resolve(ROOT, target))) bridgeMissing.push(`${label} → ${target}`)
+    }
+    for (const [key, val] of Object.entries(rootJson.exports || {})) {
+      if (typeof val === 'string') checkBridge(`exports["${key}"]`, val)
+      else if (val && typeof val === 'object') for (const [cond, target] of Object.entries(val)) checkBridge(`exports["${key}"].${cond}`, target)
+    }
+    checkBridge('main', rootJson.main)
+    if (typeof rootJson.main !== 'string' || !rootJson.exports) {
+      throw new Error('根清单缺 main/exports：装机后宿主找不到入口（入口在 package/ 下，见上一条注释）')
+    }
+    if (bridgeMissing.length > 0) {
+      throw new Error('根清单的 main/exports 指的文件不在盘上：\n  - ' + bridgeMissing.join('\n  - ') + '\n（它们应当指向 package/ 下的产物）')
+    }
+    console.log(`[build] 发布清单校验通过：exports 与 main 点名的文件都在 package/ 里（${Object.keys(pkgJson.exports || {}).length} 条 exports），根清单的桥也对得上（${Object.keys(rootJson.exports || {}).length} 条 exports）`)
   } catch (e) {
     throw new Error(`[build] 发布清单校验失败：${((e as Error) && (e as Error).message || e)}`)
   }

@@ -322,7 +322,7 @@ export interface DecidePureInput {
  * 名单里没有的房间排在这三个之后（保持它们自己的相对次序）。这条顺序由
  * tests/verify-detection-evidence.ts 钉住，改这里必须同时改那条门禁。
  */
-export const MULTI_CLAIM_ORDER: readonly string[] = ['github', 'markdown', 'gitlab'];
+export const MULTI_CLAIM_ORDER: readonly string[] = ['github', 'markdown', 'gitlab', 'linear'];
 
 /* ══════════════════════════════════════════════════════════════════════════════
  * 三、小工具

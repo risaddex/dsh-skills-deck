@@ -44,7 +44,12 @@ export type OutboundBucket = 'read' | 'write' | 'probe'
  * 一起挡掉，反之亦然。房间与宿主通道在拿名额、上报结局时把这条路名带上；缺省按 github 处理
  * （现有绝大多数出站是 gh）。
  */
-export type OutboundService = 'github' | 'gitlab' | 'git'
+/**
+ * 'linear' 是 2026-11-16 加的第三条（#24 的决定）：Linear 没有命令行工具，房间要发 HTTP，
+ * 而那条路必须和 gh / glab 走同一套名额与冷却 —— 它是一等后端，出站不该是后门。
+ * 通路名与房间名分开：将来若另一家也只走 HTTP，加的是新的通路名，不是复用 'linear'。
+ */
+export type OutboundService = 'github' | 'gitlab' | 'git' | 'linear'
 
 /**
  * 出站控制面（宿主实现，房间只读形状）。
