@@ -901,6 +901,12 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 对着步骤 4 的提交跑它，25 条里 9 条红（GitHub 与 Markdown 那些本来就满足）。
   // 单跑实测 25 条。
   'verify-45-list-row-opens-by-key': 25,
+  // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
+  // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
+  // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；
+  // 真详情处理器（详情成功、评论成功、没有身份时回到面板上那句话）= 3，共 11。其中两条「对照」重现了面板上的原错误。
+  // 单跑实测 11 条。
+  'verify-45-linear-repo-identity': 11,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。

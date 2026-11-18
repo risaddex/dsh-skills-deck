@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T02:32:28.369Z",
+  "generatedAt": "2026-11-18T02:41:19.468Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 626,
-  "gateCount": 626,
-  "attributedGates": 567,
+  "chainLength": 627,
+  "gateCount": 627,
+  "attributedGates": 568,
   "unattributedGates": 59,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 148,
+  "completionRecordedGates": 149,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 992,
@@ -7936,6 +7936,23 @@
       "buildOutputOnly": false,
       "completionRecord": true,
       "expectedAssertions": 23,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-45-linear-repo-identity.ts",
+      "file": "tests/verify-45-linear-repo-identity.ts",
+      "guards": [
+        "src/tracker/registry/views.ts",
+        "src/tracker/rooms/linear/index.ts"
+      ],
+      "dirs": [
+        "src/tracker/registry",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 11,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
     },
     {
@@ -16431,6 +16448,7 @@
       "node tests/verify-1790-status-conflict.ts",
       "node tests/verify-1790-status-surface.ts",
       "node tests/verify-20-room-list-sync.ts",
+      "node tests/verify-45-linear-repo-identity.ts",
       "node tests/verify-507-pr-offline.ts",
       "node tests/verify-656-subworkspace-acceptance.ts",
       "node tests/verify-669-choice-precedence.ts",
@@ -16658,7 +16676,8 @@
       "node tests/verify-13-linear-write.ts",
       "node tests/verify-14-linear-account-read.ts",
       "node tests/verify-27-account-seam.ts",
-      "node tests/verify-33-linear-create.ts"
+      "node tests/verify-33-linear-create.ts",
+      "node tests/verify-45-linear-repo-identity.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-tools-matrix.ts",
