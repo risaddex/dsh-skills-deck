@@ -1002,6 +1002,14 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
   // Measured by running it: 22 of 22 pass now.
   'verify-45-linear-issue-page': 22,
+  // 2026-11-19 #48: the Linear room had no listLabels, so the registry answered its "does not implement op listLabels" stub and every label badge of the
+  // panel drew in the fallback colour. This gate runs the real room, reached through the registry, over a fake HTTP channel that counts requests:
+  // a two-page workspace in the contract shape with the cursor, the read bucket, the account header and no global fetch (15) + a list that cannot be
+  // read in full fails as a whole (9: failing second page, no cursor, never-ending connection with its page cap, reply without the connection, nodes
+  // that are not a list, entry without a name, GraphQL error inside an HTTP 200, no channel) + no team in the binding sends nothing (1) + an empty
+  // workspace is a success after one request (1) + the checker catches a truncated list and the stub answer (2) = 28. Against the source before the
+  // fix 25 of the 28 fail (the three that pass are the fetch trap and the two checker probes). Measured by running it: 28 of 28 pass now.
+  'verify-48-linear-list-labels': 28,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。
