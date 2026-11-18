@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T19:45:06.334Z",
+  "generatedAt": "2026-11-18T21:19:11.894Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 644,
-  "gateCount": 644,
-  "attributedGates": 581,
+  "chainLength": 649,
+  "gateCount": 649,
+  "attributedGates": 586,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 165,
+  "completionRecordedGates": 170,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 993,
+  "graphFileCount": 996,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -8272,6 +8272,40 @@
       "reason": "读到的路径都落在 tests/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
+      "step": "node tests/verify-48-linear-list-labels.ts",
+      "file": "tests/verify-48-linear-list-labels.ts",
+      "guards": [
+        "src/tracker/rooms/linear/index.ts",
+        "src/tracker/rooms/linear/label-list.ts"
+      ],
+      "dirs": [
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 28,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-49-linear-label-filter.ts",
+      "file": "tests/verify-49-linear-label-filter.ts",
+      "guards": [
+        "src/tracker/rooms/linear/account-read.ts",
+        "src/tracker/rooms/linear/index.ts",
+        "src/tracker/rooms/linear/paging.ts",
+        "src/tracker/rooms/linear/read.ts"
+      ],
+      "dirs": [
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 84,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
+    },
+    {
       "step": "node tests/verify-497-slash.ts",
       "file": "tests/verify-497-slash.ts",
       "guards": [
@@ -8293,6 +8327,46 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 5 条"
+    },
+    {
+      "step": "node tests/verify-50-linear-list-sub-issues-callers.ts",
+      "file": "tests/verify-50-linear-list-sub-issues-callers.ts",
+      "guards": [
+        "src/host/mapTickets.ts",
+        "src/host/tracker/snapshotWorkingSet.ts",
+        "src/tracker/rooms/linear/sub-issues.ts",
+        "src/tracker/session/linear-sub-issues-via-session.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "src/host/tracker",
+        "src/tracker/rooms/linear",
+        "src/tracker/session"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 22,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
+    },
+    {
+      "step": "node tests/verify-50-linear-list-sub-issues.ts",
+      "file": "tests/verify-50-linear-list-sub-issues.ts",
+      "guards": [
+        "src/tracker/contract/pagination.ts",
+        "src/tracker/rooms/linear/index.ts",
+        "src/tracker/rooms/linear/queries.ts",
+        "src/tracker/rooms/linear/sub-issues.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 48,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
       "step": "node tests/verify-504-github-pr.ts",
@@ -8454,6 +8528,26 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；静态 import 说明符 2 条；源码里的路径字面量 6 条"
+    },
+    {
+      "step": "node tests/verify-62-linear-text-key-grouping.ts",
+      "file": "tests/verify-62-linear-text-key-grouping.ts",
+      "guards": [
+        "src/host/mapTickets.ts",
+        "src/host/ticketGrouping.ts",
+        "src/host/tracker/snapshotAssemble.ts",
+        "src/tracker/kernel/grouping.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "src/host/tracker",
+        "src/tracker/kernel"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 23,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
       "step": "node tests/verify-626-type-chip.ts",
@@ -16018,7 +16112,9 @@
       "node tests/verify-3-workspace-switch.ts",
       "node tests/verify-45-linear-issue-page.ts",
       "node tests/verify-497-slash.ts",
+      "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-596-rpc-carrier.ts",
+      "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-656-subworkspace-acceptance.ts",
       "node tests/verify-666-subws-mark-root.ts",
       "node tests/verify-683-choice-store.ts",
@@ -16118,7 +16214,9 @@
       "node tests/verify-1887-counts-from-library.ts",
       "node tests/verify-344-chain-auto-refresh.ts",
       "node tests/verify-45-linear-blockers-list.ts",
+      "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-507-pr-offline.ts",
+      "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-907-chain-titles.ts",
       "node tests/verify-934-935-invariants.ts",
@@ -16685,6 +16783,7 @@
       "node tests/verify-24-http-channel.ts",
       "node tests/verify-27-account-seam.ts",
       "node tests/verify-33-linear-create.ts",
+      "node tests/verify-50-linear-list-sub-issues.ts",
       "node tests/verify-895-github-memo.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
@@ -16742,6 +16841,7 @@
       "node tests/verify-1533-git-remote-claim.ts",
       "node tests/verify-1555-gitlab-claim-declaration.ts",
       "node tests/verify-544-standalone-blocked.ts",
+      "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
       "node tests/verify-error-normalize-log.ts",
@@ -17006,7 +17106,11 @@
       "node tests/verify-45-linear-blockers-list.ts",
       "node tests/verify-45-linear-blockers-read.ts",
       "node tests/verify-45-linear-comments-read.ts",
-      "node tests/verify-45-linear-repo-identity.ts"
+      "node tests/verify-45-linear-repo-identity.ts",
+      "node tests/verify-48-linear-list-labels.ts",
+      "node tests/verify-49-linear-label-filter.ts",
+      "node tests/verify-50-linear-list-sub-issues-callers.ts",
+      "node tests/verify-50-linear-list-sub-issues.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-patch-receipt-slim.ts",
@@ -17110,6 +17214,7 @@
       "node tests/verify-1584-repo-ref-for-cwd.ts",
       "node tests/verify-1765-read-channel-plan.ts",
       "node tests/verify-1885-review-seams.ts",
+      "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-refresh-adr.ts",
       "node tests/verify-tracker-session.ts"
     ],
@@ -17475,9 +17580,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1016,
+    "fileCount": 1019,
     "dirCount": 106,
-    "coveredFileCount": 1016,
+    "coveredFileCount": 1019,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -18381,6 +18486,7 @@
       "src/tracker/rooms/linear/client.ts",
       "src/tracker/rooms/linear/errors.ts",
       "src/tracker/rooms/linear/index.ts",
+      "src/tracker/rooms/linear/label-list.ts",
       "src/tracker/rooms/linear/labels.ts",
       "src/tracker/rooms/linear/normalize.ts",
       "src/tracker/rooms/linear/paging.ts",
@@ -18388,6 +18494,7 @@
       "src/tracker/rooms/linear/queries.ts",
       "src/tracker/rooms/linear/read.ts",
       "src/tracker/rooms/linear/relations.ts",
+      "src/tracker/rooms/linear/sub-issues.ts",
       "src/tracker/rooms/linear/write.ts",
       "src/tracker/rooms/markdown/budget.ts",
       "src/tracker/rooms/markdown/capability-register.ts",
@@ -18443,6 +18550,7 @@
       "src/tracker/session/budget-reading.ts",
       "src/tracker/session/budget.ts",
       "src/tracker/session/interceptors.ts",
+      "src/tracker/session/linear-sub-issues-via-session.ts",
       "src/tracker/session/open-tracker.ts",
       "src/tracker/session/pipeline.ts",
       "src/tracker/session/repo-ref-note.ts",

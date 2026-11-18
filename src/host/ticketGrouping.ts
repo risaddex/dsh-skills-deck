@@ -26,12 +26,12 @@ export interface TicketGroups {
   claimed: number
   blocked: number
   levels: any[]
-  levelOf: Record<number, number>
+  levelOf: Record<string | number, number>
 }
 
-/** 分层结果的形状：每张票的层号，以及每层的计数。 */
+/** 分层结果的形状：每张票的层号（键是票号，没有票号的行用文字键），以及每层的计数（`numbers` 同理是票号或文字键）。 */
 export interface TicketLevels {
-  byNumber: Record<number, number>
+  byNumber: Record<string | number, number>
   levels: any[]
 }
 
@@ -54,6 +54,9 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
     /**
      * 这张票是不是被 blocker 挡住（#1768）。逻辑与 src/tracker/body-parse.ts 的 blockerBlocks 逐条相同：
      * 阻塞者在本批 → 只有 OPEN 挡；不在本批 → 明确 CLOSED 才放行，OPEN / 未知 / 没有引用旁表都按挡着收口。
+     * 另：`blockedBy` 缺席（不是数组）= 阻塞者不知道（后端没给全，例如 Linear 一行的关系多过一页），下面两处 isBlocked 按挡着收口
+     * （CODING_STANDARDS「Keep unknown relationships unknown」）；数组（含空数组 = 确认没人挡）才逐个问 blockerBlocks。
+     * 与 src/tracker/kernel/grouping.ts 同一口径，改一处必须同步改另一处。
      */
     function blockerBlocks(ticket: any, blocker: any, byNum: any): boolean {
       const key = refKeyOf(blocker)
@@ -73,28 +76,32 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
     }
     // H2 #446 留守：computeLevels/groupTickets 留入口（H4 三处同步分组；file3 经显式参数复用同一份）。
     function computeLevels(tickets: any): TicketLevels {
+      // 票的身份：有票号就用票号（数字房间一字不变），没有票号的行（Linear 的 ENG-101，键里解析不出数字）退回文字键。
+      // 为什么不能只认 t.number：文字键的行没有票号，所有这类行会挤进同一个 undefined 格，本批内的阻塞者查不到、层级全是 0（PR #62 评审）。
+      // 这句判断在本文件与 src/tracker/kernel/grouping.ts 的 computeLevels / groupTickets 里各写一份，口径必须同步。
+      const idOf = function (t: any): any { return t.number !== undefined && t.number !== null ? t.number : refKeyOf(t.key) }
       // 票号到票的索引：键走 refKeyOf（'01'、1、' 1 ' 同一格），值是外部给的票对象，本文件不校验它们的形状。
       const byNum: any = {}
-      tickets.forEach(function (t: any) { byNum[refKeyOf(t.number)] = t })
+      tickets.forEach(function (t: any) { byNum[refKeyOf(idOf(t))] = t })
       const memo: any = {}
       const levelOf = function (t: any): number {
-        if (memo[t.number] !== undefined) return memo[t.number]
+        if (memo[idOf(t)] !== undefined) return memo[idOf(t)]
         // 深度只由本批内的阻塞关系决定；图外引用按叶子算（不改变分层，只影响 frontier 的判定）。
         const blockers: any[] = (t.blockedBy || []).map(function (b: any) { return byNum[refKeyOf(b)] }).filter(Boolean)
-        if (!blockers.length) { memo[t.number] = 0; return 0 }
+        if (!blockers.length) { memo[idOf(t)] = 0; return 0 }
         let maxL: number = -1
         blockers.forEach(function (b: any) { const l: number = levelOf(b); if (l > maxL) maxL = l })
-        memo[t.number] = maxL + 1
-        return memo[t.number]
+        memo[idOf(t)] = maxL + 1
+        return memo[idOf(t)]
       }
       const byNumber: any = {}
-      tickets.forEach(function (t: any) { byNumber[t.number] = levelOf(t) })
+      tickets.forEach(function (t: any) { byNumber[idOf(t)] = levelOf(t) })
       const levels: any[] = []
       tickets.forEach(function (t: any) {
-        const lv: number = byNumber[t.number]
+        const lv: number = byNumber[idOf(t)]
         let layer: any = levels[lv]
         if (!layer) { layer = { level: lv, numbers: [], open: 0, closed: 0, total: 0, frontier: 0, claimed: 0, blocked: 0 }; levels[lv] = layer }
-        layer.numbers.push(t.number)
+        layer.numbers.push(idOf(t))
         layer.total++
         if (t.state === 'CLOSED') layer.closed++
         else layer.open++
@@ -102,8 +109,8 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
       // 层内状态细分（frontier/claimed/blocked 归层）：判定走 blockerBlocks，与 src/tracker/kernel/grouping.ts
       // 同一口径（tracker 那份由 src/tracker/body-parse.ts 转出名字）。
       levels.forEach(function (layer: any) {
-        const openT: any[] = tickets.filter(function (t: any) { return byNumber[t.number] === layer.level && t.state === 'OPEN' })
-        const isBlocked = function (t: any): boolean { return t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
+        const openT: any[] = tickets.filter(function (t: any) { return byNumber[idOf(t)] === layer.level && t.state === 'OPEN' })
+        const isBlocked = function (t: any): boolean { return !Array.isArray(t.blockedBy) || t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
         layer.frontier = openT.filter(function (t: any) { return !t.claimedBy && !isBlocked(t) }).length
         layer.claimed = openT.filter(function (t: any) { return t.claimedBy }).length
         layer.blocked = openT.filter(function (t: any) { return !t.claimedBy && isBlocked(t) }).length
@@ -114,11 +121,12 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
     }
 
     function groupTickets(tickets: any): TicketGroups {
+      // 票号缺席的行（Linear 的 ENG-101）按文字键进索引，与 computeLevels 里的 idOf 同一条规则，改一处必须同步改另一处。
       const byNum: any = {}
-      tickets.forEach(function (t: any) { byNum[refKeyOf(t.number)] = t })
+      tickets.forEach(function (t: any) { byNum[refKeyOf(t.number !== undefined && t.number !== null ? t.number : t.key)] = t })
       // #1768：跨容器引用按引用态收口（明确 CLOSED 才算关掉），不再默认「不在本批就不挡」。
       // 认领与阻塞互斥：认领掉的票进 claimed，不再进 frontier / blocked（body-parse 同一写法）。
-      const isBlocked = function (t: any): boolean { return t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
+      const isBlocked = function (t: any): boolean { return !Array.isArray(t.blockedBy) || t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
       const open: any[] = tickets.filter(function (t: any) { return t.state === 'OPEN' })
       const closed: any[] = tickets.filter(function (t: any) { return t.state === 'CLOSED' })
       const frontier: any[] = open.filter(function (t: any) { return !t.claimedBy && !isBlocked(t) })

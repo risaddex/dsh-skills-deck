@@ -15,7 +15,8 @@
  * 而不是看起来像「这不是 Linear 仓库」。没声明才回 false（那是 GitHub/GitLab 工作区）。
  *
  * ── 这个切片还没有的东西 ─────────────────────────────────────────────────────
- * 其余操作：写侧、评论、标签、关系、子票、计数、翻页、预算读数（都在 #13 的票面上）。
+ * 其余操作：写侧、评论、标签、关系、计数、翻页、预算读数（都在 #13 的票面上）。
+ * 子票（listSubIssues）自 #50 起有了真实现，见 sub-issues.ts。
  */
 import type { BackendContext, OpContext, RepoHandle } from '../../contract/contexts.js'
 import type { RepositoryRef } from '../../contract/entities.js'
@@ -28,9 +29,11 @@ import { getIssue, listIssues } from './read.js'
 import { listAccountIssues, getAccountIssue, listConfiguredAccounts } from './account-read.js'
 import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 import { setLabelsOfIssue } from './labels.js'
+import { listLabelsOfTeam } from './label-list.js'
 import { setAssigneesOfIssue } from './assignees.js'
 import { setBlockedByOfIssue } from './relations.js'
 import { countsOf, listPageOf, readBudgetOf } from './paging.js'
+import { listSubIssuesOf } from './sub-issues.js'
 import { preflightLinear } from './preflight.js'
 import { failLinear } from './errors.js'
 import { readBinding } from './binding.js'
@@ -42,9 +45,11 @@ export { preflightLinear, readIdentity } from './preflight.js'
 export { getIssue, listIssues, buildIssuesFilter, unsupportedFilters } from './read.js'
 export { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 export { setLabelsOfIssue } from './labels.js'
+export { listLabelsOfTeam } from './label-list.js'
 export { setAssigneesOfIssue } from './assignees.js'
 export { setBlockedByOfIssue } from './relations.js'
 export { countsOf, listPageOf, readBudgetOf } from './paging.js'
+export { listSubIssuesOf } from './sub-issues.js'
 export { parseBinding, readBinding, BINDING_PATH } from './binding.js'
 
 /** 契约的账号缝回包 → 这一层要的那三格；缺 authorization 就当没解出来。 */
@@ -127,6 +132,13 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       return listPageOf(opCtx || (ctx as never), got.account, filter, opts)
     },
     readBudget: async (opCtx) => readBudgetOf(opCtx || (ctx as never)),
+    // 一张票的子票（#50）：键是文本（ENG-12 或 UUID），原样交下去；翻页、上限与「不全」的交代都在 sub-issues.ts。
+    listSubIssues: async (_repo, mapKey, _opts, opCtx) => {
+      const requestCtx = opCtx || (ctx as never)
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error }
+      return listSubIssuesOf(requestCtx, got.account, mapKey)
+    },
     comment: async (_repo, key, body, opCtx) => {
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
@@ -180,6 +192,14 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
       return setParentOfIssue(opCtx || (ctx as never), got.account, key, parentKey, opts)
+    },
+    listLabels: async (_repo, opCtx) => {
+      const requestCtx = opCtx || (ctx as never)
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error }
+      // 团队 key 来自绑定：「团队的标签」是哪个团队，只有声明说了算（见 label-list.ts 的头注释）。
+      const binding = await readBinding(requestCtx)
+      return listLabelsOfTeam(requestCtx, got.account, binding ? binding.team : '')
     },
     reopen: async (_repo, key, opCtx) => {
       const got = await using(opCtx || (ctx as never))

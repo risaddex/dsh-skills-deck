@@ -72,6 +72,9 @@ const EXPECTED = {
     listPageSize: 50,
     countMaxPages: 40,
     accountListMaxPages: 5,
+    subIssuesPageSize: 50,
+    subIssuesMax: 1000,
+    subIssuesMaxPages: 40,
   },
   markdown: {
     limitDefault: 50,

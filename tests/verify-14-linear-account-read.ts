@@ -256,5 +256,8 @@ for (const malformed of [{ ...node(), labels: { nodes: [null] } }, { ...node(), 
   const result = await listAccountIssues(f.ctx, { labels: ['bug'] })
   assert.equal(result.ok, true)
   if (result.ok) assert.equal(result.data.length, 1)
+  // #49 taught the single-workspace reads to push labels into Linear's filter; the account-wide read stays a local,
+  // case-insensitive filter, so no label condition may appear in what it sends (the 'Bug' row above is kept by that local filter).
+  assert.equal(f.calls.filter(call => call.query.includes('query LinearIssues')).every(call => !JSON.stringify(call.variables.filter).includes('"labels"')), true)
 }
 console.log('verify-14-linear-account-read: all assertions passed')

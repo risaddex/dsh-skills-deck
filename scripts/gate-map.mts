@@ -1016,6 +1016,34 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
   // Measured by running it: 22 of 22 pass now.
   'verify-45-linear-issue-page': 22,
+  // 2026-11-18 #50: the Linear room had no listSubIssues (the registry stub answered "unsupported"). Two gates, split only for file size, over
+  // one fake Relay-style channel (tests/lib/linear-sub-issues-fake.ts). Room gate = the request (A: 15) + a multi-page walk (B: 8) + blockers
+  // (B2: 3) + the 1000 cap, the page bound and the boundary (C: 10) + a list read in part is never complete (D: 7) + failure classes (D2: 5) = 48.
+  // Callers gate = the real snapshot working set and the real map phone, other rooms untouched (E: 11) + the log (F: 6) + unknown blockers stay unknown through the phone and both copies of the grouping (G: 5) = 22. Against the
+  // source before the change 60 of the 65 fail (and 3 of the 5 of G fail before the PR #60 fix: frontier 2, blocked 1); 70 of 70 pass now, and 9 fail when the capped flag is removed from the room.
+  'verify-50-linear-list-sub-issues': 48,
+  'verify-50-linear-list-sub-issues-callers': 22,
+  // PR #62 review: Linear rows have a text key and no number, and both copies of the grouping indexed by `number`, so two children (ENG-102 blocked by ENG-101)
+  // came out as one level of two `undefined` entries. This gate runs the real `wf.mapTickets` phone over the fake Linear channel and both copies of the grouping:
+  // the open blocker (A: 7) + the closed blocker (B: 8) + the snapshot path (C: 2) + numeric rooms unchanged (D: 6) = 23.
+  // Against the source before the change 12 of the 23 fail (the level, levelOf and frontier assertions of A, B and C); 23 of 23 pass now.
+  'verify-62-linear-text-key-grouping': 23,
+  // issue #49: the Linear room refused every non-empty `labels` filter, so the panel's closed-map page of a Linear workspace
+  // (`listPage(ref, { state: 'closed', labels: ['wayfinder:map'] })`) was always an error. This gate runs the real room over a fake
+  // channel and asserts on the outgoing GraphQL variables: listPage page + count walk (9), cursor path (5), counts (5), list (4),
+  // one shared builder (5), several labels as AND plus spelling and blanks (8), what stays refused with 0 requests (5 filter shapes
+  // x with and without labels x 4 assertions + 3 table checks = 43), state and since untouched (5) = 84. Measured by running it:
+  // against the source before the fix 37 of the 84 fail (every one that needs the label to be expressed or no longer blamed);
+  // 84 of 84 pass now.
+  'verify-49-linear-label-filter': 84,
+  // 2026-11-19 #48: the Linear room had no listLabels, so the registry answered its "does not implement op listLabels" stub and every label badge of the
+  // panel drew in the fallback colour. This gate runs the real room, reached through the registry, over a fake HTTP channel that counts requests:
+  // a two-page workspace in the contract shape with the cursor, the read bucket, the account header and no global fetch (15) + a list that cannot be
+  // read in full fails as a whole (9: failing second page, no cursor, never-ending connection with its page cap, reply without the connection, nodes
+  // that are not a list, entry without a name, GraphQL error inside an HTTP 200, no channel) + no team in the binding sends nothing (1) + an empty
+  // workspace is a success after one request (1) + the checker catches a truncated list and the stub answer (2) = 28. Against the source before the
+  // fix 25 of the 28 fail (the three that pass are the fetch trap and the two checker probes). Measured by running it: 28 of 28 pass now.
+  'verify-48-linear-list-labels': 28,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。
