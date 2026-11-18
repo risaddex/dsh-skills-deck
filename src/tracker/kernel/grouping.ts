@@ -25,8 +25,10 @@
  * 缺一格、或者某个格不是期望的类型，都由这里的运行时判断兜住（`t.state === 'CLOSED'` 这类比较）。
  */
 export interface GroupingTicket {
-  /** 票号。分层与分组都拿它当键（拼进对象键时会被 JS 转成字符串）。 */
-  number: number
+  /** 票号。分层与分组都拿它当键（拼进对象键时会被 JS 转成字符串）。文字键的行（Linear 的 ENG-101）没有票号，这一格缺席，改用 `key` 当键。 */
+  number?: number | null
+  /** 文字键。只在没有票号时当身份用（见 computeLevels 里的 idOf）；有票号的行不读它。 */
+  key?: string | null
   /** 状态。只有大写 `'CLOSED'` 算已关闭，其余（含缺席、别的写法）都算未关闭 —— 与老口径一致。 */
   state?: string
   /** 认领人。有值（非空串、非 null）算已认领；缺席或空串算「没人认领」。 */
@@ -64,8 +66,8 @@ export interface BlockingRef {
 export interface TicketLevel {
   /** 深度：没有阻塞者的票是 0，其余是「直接阻塞者深度的最大值 + 1」。 */
   level: number
-  /** 这一层的票号。 */
-  numbers: number[]
+  /** 这一层的票号；没有票号的行（Linear 的 ENG-101）放它的文字键。 */
+  numbers: (number | string)[]
   /** 这一层的全部票数。 */
   total: number
   /** 这一层里未关闭的张数。 */
@@ -152,28 +154,32 @@ function blockerBlocks(ticket: GroupingTicket, blocker: number | string, byNum: 
 export function computeLevels(tickets: readonly GroupingTicket[]): LevelsResult {
   // 票号表：每张票都在里面，所以下面查不到只可能是「阻塞者不在本批票里」。
   // 键走 refKeyOf：'01'、1、' 1 ' 必须落在同一格，否则跨容器比对会认错人。
+  // 票的身份：有票号就用票号（数字房间一字不变），没有票号的行（Linear 的 ENG-101，键里解析不出数字）退回文字键。
+  // 为什么不能只认 t.number：文字键的行没有票号，所有这类行会挤进同一个 undefined 格，本批内的阻塞者查不到、层级全是 0（PR #62 评审）。
+  // 这句判断在本文件与 src/host/ticketGrouping.ts 的 computeLevels / groupTickets 里各写一份，口径必须同步。
+  const idOf = (t: GroupingTicket): number | string => (t.number !== undefined && t.number !== null ? t.number : refKeyOf(t.key))
   const byNum: Record<string, GroupingTicket> = {}
-  tickets.forEach((t) => { byNum[refKeyOf(t.number)] = t })
+  tickets.forEach((t) => { byNum[refKeyOf(idOf(t))] = t })
   const memo: Record<string, number> = {}
   const levelOf = (t: GroupingTicket): number => {
-    if (memo[t.number] !== undefined) return memo[t.number]
+    if (memo[idOf(t)] !== undefined) return memo[idOf(t)]
     // 深度只由本批内的阻塞关系决定；图外的引用按叶子算（不改变分层，只影响 frontier 的判定）。
     const blockers = (t.blockedBy || []).map((b) => byNum[refKeyOf(b)]).filter(Boolean)
-    if (!blockers.length) { memo[t.number] = 0; return 0 }
+    if (!blockers.length) { memo[idOf(t)] = 0; return 0 }
     let maxL = -1
     blockers.forEach((b) => { const l = levelOf(b); if (l > maxL) maxL = l })
-    memo[t.number] = maxL + 1
-    return memo[t.number]
+    memo[idOf(t)] = maxL + 1
+    return memo[idOf(t)]
   }
   const byNumber: Record<string, number> = {}
-  tickets.forEach((t) => { byNumber[t.number] = levelOf(t) })
+  tickets.forEach((t) => { byNumber[idOf(t)] = levelOf(t) })
   // 先按深度就位（下标即深度，中间没票的位置留空洞），最后再压掉空洞。
   const levels: (TicketLevel | undefined)[] = []
   tickets.forEach((t) => {
-    const lv = byNumber[t.number]
+    const lv = byNumber[idOf(t)]
     let layer = levels[lv]
     if (!layer) { layer = { level: lv, numbers: [], open: 0, closed: 0, total: 0, frontier: 0, claimed: 0, blocked: 0 }; levels[lv] = layer }
-    layer.numbers.push(t.number)
+    layer.numbers.push(idOf(t))
     layer.total++
     if (t.state === 'CLOSED') layer.closed++
     else layer.open++
@@ -183,7 +189,7 @@ export function computeLevels(tickets: readonly GroupingTicket[]): LevelsResult 
   levels.forEach((layer) => {
     // 稀疏数组的空洞不会被 forEach 访问，这一句只是让编译器知道 layer 一定在。
     if (!layer) return
-    const openT = tickets.filter((t) => byNumber[t.number] === layer.level && t.state === 'OPEN')
+    const openT = tickets.filter((t) => byNumber[idOf(t)] === layer.level && t.state === 'OPEN')
     layer.frontier = openT.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))).length
     layer.claimed = openT.filter((t) => t.claimedBy).length
     layer.blocked = openT.filter((t) => !t.claimedBy && (!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))).length
@@ -222,8 +228,9 @@ export interface TicketGroups {
  * tests/verify-map-first-frame.ts 有交叉核对，改一处必须同步改另一处。
  */
 export function groupTickets(tickets: readonly GroupingTicket[]): TicketGroups {
+  // 票号缺席的行（Linear 的 ENG-101）按文字键进索引，与 computeLevels 里的 idOf 同一条规则，改一处必须同步改另一处。
   const byNum: Record<string, GroupingTicket> = {}
-  tickets.forEach((t) => { byNum[refKeyOf(t.number)] = t })
+  tickets.forEach((t) => { byNum[refKeyOf(t.number !== undefined && t.number !== null ? t.number : t.key)] = t })
   const open = tickets.filter((t) => t.state === 'OPEN')
   const closed = tickets.filter((t) => t.state === 'CLOSED')
   const frontier = open.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum))))

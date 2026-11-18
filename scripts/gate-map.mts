@@ -1028,6 +1028,11 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // assembleSnapshot and carryOverMapTickets, and both copies of the grouping: the whole path (A: 7) + both groupings, 2 assertions each (B: 4) + the other
   // entrances of the normaliser, numeric keys, non-array values and the merge (C: 6) = 17. Measured by running it: 11 of 17 fail on the source before the change.
   'verify-61-snapshot-unknown-blockers': 17,
+  // PR #62 review: Linear rows have a text key and no number, and both copies of the grouping indexed by `number`, so two children (ENG-102 blocked by ENG-101)
+  // came out as one level of two `undefined` entries. This gate runs the real `wf.mapTickets` phone over the fake Linear channel and both copies of the grouping:
+  // the open blocker (A: 7) + the closed blocker (B: 8) + the snapshot path (C: 2) + numeric rooms unchanged (D: 6) = 23.
+  // Against the source before the change 12 of the 23 fail (the level, levelOf and frontier assertions of A, B and C); 23 of 23 pass now.
+  'verify-62-linear-text-key-grouping': 23,
   // issue #49: the Linear room refused every non-empty `labels` filter, so the panel's closed-map page of a Linear workspace
   // (`listPage(ref, { state: 'closed', labels: ['wayfinder:map'] })`) was always an error. This gate runs the real room over a fake
   // channel and asserts on the outgoing GraphQL variables: listPage page + count walk (9), cursor path (5), counts (5), list (4),
