@@ -79,6 +79,8 @@ const bodies = (list: any[] | undefined): string => (list || []).map((c: any) =>
   check(csOf(few).length === 7 && few.data.commentCount === 7, 'C: fewer comments than asked returns them all, with the exact total')
   const big: any = await getIssue(channel(newestFirst(200), true).ctx, ACCOUNT, 'OMB-890', { comments: { first: 50 } } as any)
   check(csOf(big).length === 50 && big.ok && big.data.commentCount === undefined && big.data.comments !== undefined, 'C: when Linear says there are more than it sent, the total is NOT claimed (commentCount absent)')
+  check(big.ok && big.data.commentsHasMore === true, 'C: when Linear says there are more than it sent, the ticket says so without a total (commentsHasMore true)')
+  check(p50.ok && p50.data.commentsHasMore !== true && few.ok && few.data.commentsHasMore !== true, 'C: when the batch is everything, commentsHasMore is not set')
   const none: any = await getIssue(channel([]).ctx, ACCOUNT, 'OMB-890', { comments: { first: 50 } } as any)
   check(none.ok && Array.isArray(none.data.comments) && csOf(none).length === 0 && none.data.commentCount === 0, 'C: a ticket with no comments says so: an empty array and a total of 0')
 }
@@ -122,6 +124,18 @@ function hostFor(total: number, hasNextPage = false): any {
   check(p3.ok && p3.pageInfo.hasNextPage === false, 'F: and the last page says there is no next page')
   const empty: any = await hostFor(0).handleIssueDetail({ number: 'OMB-890', cwd: CWD })
   check(empty.ok === true && !!empty.issue && !!empty.issue.comments && empty.issue.comments.nodes.length === 0 && empty.issue.comments.totalCount === 0, 'F: a ticket without comments shows an honest zero')
+}
+
+// F2) more than 200 comments: the total is unknown, but the page must still offer the next page (review finding on PR #47)
+{
+  const d: any = await hostFor(200, true).handleIssueDetail({ number: 'OMB-890', cwd: CWD })
+  const conn = d && d.issue && d.issue.comments
+  check(d.ok === true && !!conn && conn.nodes.length === 50, 'F2: with more than 200 comments the detail still shows the first 50')
+  check(!!conn && conn.pageInfo.hasNextPage === true, 'F2: and it offers the next page, although the total is unknown (got ' + String(conn && conn.pageInfo && conn.pageInfo.hasNextPage) + ')')
+  check(!!conn && conn.totalCount === 50, 'F2: it does not claim a total it does not know: the count stays at what was returned (got ' + String(conn && conn.totalCount) + ')')
+  const p4: any = await hostFor(200, true).handleIssueComments({ number: 'OMB-890', cwd: CWD, after: 150 })
+  check(p4.ok === true && p4.nodes.length === 50 && p4.nodes[0].body === 'body 151' && p4.nodes[49].body === 'body 200', 'F2: loading more reaches comment 200, the cap (no comment already fetched stays out of reach)')
+  check(p4.ok && p4.pageInfo.hasNextPage === false, 'F2: at the cap it stops offering more')
 }
 
 // G) the receipt of a comment on a backend that has no local library is not reported as a loss

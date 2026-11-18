@@ -90,7 +90,9 @@ export async function getIssue(
   const all = nodes.slice().sort(function (a, b) { return String(a.createdAt || '').localeCompare(String(b.createdAt || '')) })
   issue.comments = all.slice(0, wanted).map(commentOf)
   // 总数只在「这一批就是全部」时才报：Linear 说还有更多（超过取满的 200 条）就不报，面板不会把一个下限当成总数。
-  if (!(node.comments && node.comments.pageInfo && node.comments.pageInfo.hasNextPage === true)) issue.commentCount = all.length
+  // 「还有更多」这个事实照实传下去（commentsHasMore），不传数字：宿主据此在总数未知时仍给出「加载更多」，又不会把下限当总数。
+  if (node.comments && node.comments.pageInfo && node.comments.pageInfo.hasNextPage === true) issue.commentsHasMore = true
+  else issue.commentCount = all.length
   return { ok: true, data: issue }
 }
 

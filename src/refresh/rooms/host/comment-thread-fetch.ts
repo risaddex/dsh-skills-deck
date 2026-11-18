@@ -350,7 +350,9 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
         comments: {
           nodes: comments,
           pageInfo: {
-            hasNextPage: (knownTotal != null ? comments.length < knownTotal : false) && comments.length < COMMENTS_MAX,
+            // 总数未知时默认不声称还有下一页；房间明说「比这一批还有更多」（commentsHasMore，Linear 超过 200 条时）才例外：
+            //   否则已取到的评论里，超出首屏那一页的部分就没有「加载更多」入口。
+            hasNextPage: (knownTotal != null ? comments.length < knownTotal : iss.commentsHasMore === true) && comments.length < COMMENTS_MAX,
             endCursor: String(comments.length),
           },
           // 总数放在连接层（GraphQL 连接的 totalCount 位）：界面说「评论 (20) · 共 56 条」、

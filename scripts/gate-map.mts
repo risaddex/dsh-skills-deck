@@ -936,7 +936,10 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 能确定总数时带上 commentCount。本门禁跑真房间读（假 HTTP 通道）再叠真宿主处理器：查询形状 5 + 映射与顺序 7 + 取几条与总数 6 + 没要评论时不动 6 +
   // 失败仍是失败 2 + 宿主详情与「加载更多」8 + 评论回执 6 = 40。对着改动前的源码跑，40 条里 22 条红。
   // 回执那一组钉住：库不认这个后端（Linear）时回 stored:true（没有可丢的东西，面板不再弹黄条），库不可用、降级、提交失败仍是 stored:false。单跑实测 40 条。
-  'verify-45-linear-comments-read': 40,
+  // （追加）PR #47 的评审指出：超过 200 条评论时房间不报总数，宿主就把详情的 hasNextPage 说成 false，已取到的 150 条够不着。
+  //   房间现在照实传「还有更多」（Issue.commentsHasMore，只传事实不传数字），宿主在总数未知时据此给出下一页；多 7 条：房间 2 + 宿主 5 = 47。
+  //   对着修复前的源码跑，47 条里 2 条红（commentsHasMore 与 hasNextPage），其余 5 条本来就满足。
+  'verify-45-linear-comments-read': 47,
   // 2026-11-18 #45：com um workspace Linear o painel ficava com o chip "Failed" ao lado de Refresh, e o log tinha um wf.probe com errorKind env
   // a cada 5 segundos. O probe montava um contexto de operação só com exec (feito para as salas que rodam comandos) e o passava a tracker.list;
   // a sala Linear só fala HTTP e usa o contexto que recebe, então respondia "the room has no HTTP channel wired (ctx.http is missing)".
