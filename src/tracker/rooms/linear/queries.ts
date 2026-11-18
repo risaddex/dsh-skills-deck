@@ -33,6 +33,30 @@ export const ISSUE_QUERY = `query LinearIssue($id: String!) {
 }
 ${ISSUE_CORE}`
 
+/**
+ * 一次要这么多条评论：评论连接的页大小上限，也是宿主面板能看到的最多条数（宿主 COMMENTS_MAX 也是 200）。
+ * 为什么永远取满而不是只取宿主要的那 50 条：Linear 的评论连接没有升序参数，回来的是最新的在前，
+ * 「最旧的 N 条」只能从整批里挑；宿主每次都从 0 要到「已加载 + 50」再切掉已加载的，需要的正是最旧的 N 条。
+ * 一次请求取满，也比每点一次「加载更多」就多发一次便宜。
+ */
+export const COMMENTS_FETCH_CAP = 200
+
+/**
+ * 单票带评论：与 ISSUE_QUERY 同一份票面字段，再加评论连接。评论节点只问 commentCreate 回包里已经在用的那几格
+ * （id、body、createdAt、updatedAt、user 的 name 与 displayName），不多问没核对过的字段（见 normalize.ts 的 LinearCommentNode）。
+ * pageInfo.hasNextPage 说明有没有比这一批更多的评论，房间据此决定能不能报评论总数。
+ */
+export const ISSUE_WITH_COMMENTS_QUERY = `query LinearIssueWithComments($id: String!, $first: Int!) {
+  issue(id: $id) {
+    ...LinearIssueCore
+    comments(first: $first) {
+      nodes { id body createdAt updatedAt user { name displayName } }
+      pageInfo { hasNextPage }
+    }
+  }
+}
+${ISSUE_CORE}`
+
 /** 团队键 → 团队 id 与状态表；写侧关票/重开要用状态表，读侧先拿它做归属。 */
 export const TEAM_QUERY = `query LinearTeam($key: String!) {
   teams(filter: { key: { eq: $key } }, first: 1) {

@@ -931,6 +931,12 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 三族行（GitHub、Markdown、Linear）× 7 个阻塞场景，断言三族的状态与指向结构一致，Linear 的 noText 是 #OMB-n、cardId 非空且唯一、
   // facts.number 仍为 null，数字行的字符串逐字钉住。对着改动前的源码跑，71 条里 18 条红，全是 Linear 形态。单跑实测 71 条。
   'verify-45-map-facts-by-key': 71,
+  // 2026-11-18 #45：Linear 票点开后评论区一直是「评论 (0)」：房间只会写评论、从不读（read.ts 写着读路径没实现），宿主于是把空数组装成「没有评论」。
+  // 宿主每次从 0 要到「已加载 + 50」再切掉已加载的，并靠 commentCount 判总数与有没有下一页，所以房间必须交回「最旧的 N 条、按时间升序」（Linear 回的是最新在前），
+  // 能确定总数时带上 commentCount。本门禁跑真房间读（假 HTTP 通道）再叠真宿主处理器：查询形状 5 + 映射与顺序 7 + 取几条与总数 6 + 没要评论时不动 6 +
+  // 失败仍是失败 2 + 宿主详情与「加载更多」8 + 评论回执 6 = 40。对着改动前的源码跑，40 条里 22 条红。
+  // 回执那一组钉住：库不认这个后端（Linear）时回 stored:true（没有可丢的东西，面板不再弹黄条），库不可用、降级、提交失败仍是 stored:false。单跑实测 40 条。
+  'verify-45-linear-comments-read': 40,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；

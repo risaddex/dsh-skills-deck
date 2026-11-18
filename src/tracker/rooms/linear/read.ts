@@ -13,8 +13,8 @@ import type { OpContext } from '../../contract/contexts.js'
 import { gql, type LinearAccount } from './client.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { linearError } from './errors.js'
-import { CLOSED_STATE_TYPES, issueOf, type LinearIssueNode } from './normalize.js'
-import { ISSUE_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
+import { CLOSED_STATE_TYPES, commentOf, issueOf, type LinearCommentNode, type LinearIssueNode } from './normalize.js'
+import { COMMENTS_FETCH_CAP, ISSUE_QUERY, ISSUE_WITH_COMMENTS_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
 
 
 /**
@@ -70,16 +70,28 @@ export async function getIssue(
 ): Promise<IssueDetailResult> {
   const trimmed = String(key || '').trim()
   if (!trimmed) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'no ticket key was given') }
-  const result = await gql<{ issue: LinearIssueNode | null }>(ctx, account, {
-    query: ISSUE_QUERY,
-    variables: { id: trimmed },
+  // 契约的 opts.comments.first 是「要几条」；没要（缺省、0、不是正数）就不问评论，票上也不挂 comments 字段：
+  // 缺字段是「没读」，空数组才是「读了、没有」，面板据此分得清「评论加载中」与「没有评论」。
+  const wanted = opts && opts.comments && typeof opts.comments.first === 'number' ? Math.floor(opts.comments.first) : 0
+  const withComments = wanted > 0
+  const result = await gql<{ issue: (LinearIssueNode & { comments?: { nodes?: LinearCommentNode[] | null; pageInfo?: { hasNextPage?: boolean } | null } | null }) | null }>(ctx, account, {
+    query: withComments ? ISSUE_WITH_COMMENTS_QUERY : ISSUE_QUERY,
+    variables: withComments ? { id: trimmed, first: COMMENTS_FETCH_CAP } : { id: trimmed },
     bucket: 'read',
   })
   if (!result.ok) return { ok: false, error: result.error }
   const node = result.data.issue
   if (!node) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'Linear has no ticket ' + trimmed) }
-  // 评论要单独一条连接去读；opts.comments 这一格等评论读路径实现时再兑现，现在如实不挂 commentCount。
-  return { ok: true, data: issueOf(node) }
+  const issue = issueOf(node)
+  if (!withComments) return { ok: true, data: issue }
+  // Linear 回的是最新的在前；宿主要的是「最旧的 N 条、按时间升序」（它每次从 0 取到 N 再切掉已加载的），与 linear.app 的显示也一致。
+  // 时间是 ISO 字符串，同一时区下按字符串比就是按时间比；同一时刻的两条保持 Linear 给的相对顺序（Array.sort 稳定）。
+  const nodes = (node.comments && Array.isArray(node.comments.nodes) ? node.comments.nodes : []).filter(function (c) { return !!c })
+  const all = nodes.slice().sort(function (a, b) { return String(a.createdAt || '').localeCompare(String(b.createdAt || '')) })
+  issue.comments = all.slice(0, wanted).map(commentOf)
+  // 总数只在「这一批就是全部」时才报：Linear 说还有更多（超过取满的 200 条）就不报，面板不会把一个下限当成总数。
+  if (!(node.comments && node.comments.pageInfo && node.comments.pageInfo.hasNextPage === true)) issue.commentCount = all.length
+  return { ok: true, data: issue }
 }
 
 /** 列一页票。这一版只翻一页：翻页要游标，等 listPage 落地时统一做，别在这里各写一套。 */

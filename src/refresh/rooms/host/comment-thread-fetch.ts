@@ -498,7 +498,10 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
         // #1866：写回执先提交进库，界面上那一条才有地方来。提交结果如实交回：stored 为假时
         // 客户端说「发出去了但没存上」，不把两种结局混成一句「成功」。
         const receipt: { stored: boolean, reason: string } = await storeCommentReceipt(cwd, opened, repoRef, n, r.data, String(body))
-        return Object.assign({}, r, { stored: receipt.stored, storedReason: receipt.reason })
+        // #45：库不认这个后端（unsupported-backend，Linear 就是）时没有「存」这回事，也就没有丢失可言：回 stored:true，
+        //   面板不再弹「已发出但没存进本地库」的黄条；原因照旧带回去，日志仍能看出这一趟没有写库。
+        //   库不可用、已降级、提交失败仍是 stored:false，那才是真的没存上。
+        return Object.assign({}, r, { stored: receipt.stored || receipt.reason === 'unsupported-backend', storedReason: receipt.reason })
       }
       return r
     } catch (e: any) { return { ok: false, error: { kind: 'network', message: errText(e) } } }
