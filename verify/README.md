@@ -51,6 +51,12 @@ $env:DSH_HOME = $batch
 复制要包含 `node_modules`；实例能否启动取决于这份依赖。如果复制后的 profile 起不来，改为只复制
 `package.json`、`cordis.yml`、`cordis.patch.yml` 等配置文件，再在批次 home 里重新安装依赖。
 
+实例起不来时先排环境这一层：用哪一份 DSH 起实例（`DSH_EXE` 与 `DSH_CLI_JS` 两个都设）、
+`dsh-verify freeze` 的 `npm pack` 撞上不可写的缓存怎么办（`npm_config_cache`）、批次工作根为什么不要放在
+git 工作树里。这三件都不在本文件，写在
+[`docs/agents/real-machine-verification.md`](../docs/agents/real-machine-verification.md) 第 2 节的小节
+「When an instance will not start: the DSH pointer, the npm cache, and where the batch keeps its files」。
+
 ## 依赖：钉 npm 上的精确版本
 
 根 `package.json` 的 `devDependencies` 钉的是 npm 上发布的**精确版本**（当前 `"dsh-featherhunter-plugin-base": "0.1.7"`），
