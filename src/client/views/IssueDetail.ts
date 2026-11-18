@@ -80,11 +80,13 @@ export const IssueDetail = function (props: any): any {
       const issueEffort = (deckIssue && deckIssue.number !== null) ? deckIssue.effortId : ((navTop0 && navTop0.kind === 'issue') ? ((navTop0.effortId !== undefined && navTop0.effortId !== null) ? String(navTop0.effortId) : '') : (st.activeEffortId ? String(st.activeEffortId) : ''))
       const repoStrLocal = repoStr(st)
       const colorOf = (typeof buildColorOf === 'function') ? buildColorOf(st) : {}
-      // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-      if (issueNumber === undefined || issueNumber === null || issueNumber === '' || Number.isNaN(Number(issueNumber))) return null
+      // #45：打开的票按后端给的文本键认（42、01、ENG-12），不再读成数字：ENG-12 读成数字是 NaN，整页会被当成「没有票」。键 = 去空白后非空的文本，或有限的数字；
+      //   行的键先看 key 再看 number，全数字的键按数字比（1 与 01 是同一张，本地 Markdown 补零）。本地容器的编号 0（key 00）仍是合法坐标。
+      const keyText = (typeof issueNumber === 'number' ? (Number.isFinite(issueNumber) ? String(issueNumber) : '') : (typeof issueNumber === 'string' ? issueNumber.trim() : '')), isKey = function (x: any) { const a = String(x.key != null && String(x.key).trim() !== '' ? x.key : x.number).trim(); return a !== '' && a !== 'undefined' && (a === keyText || (/^\d+$/.test(a) && /^\d+$/.test(keyText) && Number(a) === Number(keyText))) }
+      if (keyText === '') return null
       // 触发拉取（缓存命中则同步回 real，不多发请求；force 重试由按钮控制）
       React.useEffect(function () {
-        if (issueNumber === undefined || issueNumber === null || issueNumber === '' || Number.isNaN(Number(issueNumber))) return
+        if (keyText === '') return
         // #1885 评审修复：视图只喊命令；取数、缓存与失败态仍由接线层与视图模型负责。
         if (typeof deckViewCommand === 'function') deckViewCommand(st, 'loadIssueDetail', { number: issueNumber, effortId: issueEffort })
       }, [issueNumber, issueEffort, st.cwd])
@@ -102,7 +104,7 @@ export const IssueDetail = function (props: any): any {
       const proj = deckIssue || detailViewFor(st, issueNumber, issueEffort)
       const detail = proj.issue
       const issues = (st.snapshot && Array.isArray(st.snapshot.issues)) ? st.snapshot.issues : []
-      const snapIssue = issues.find(function (x: any) { return x.number === issueNumber && effortOf(x) === issueEffort }) || issues.find(function (x: any) { return x.number === issueNumber })
+      const snapIssue = issues.find(function (x: any) { return isKey(x) && effortOf(x) === issueEffort }) || issues.find(isKey)
       // #693 取数口径：快照那一行只当**轻量预览**用（标题、状态、标签、指派人、被阻塞、
       //   是不是拉取请求这些），**正文与评论一律以详情自己那次取数为准**。
       //   理由：快照那一行可能是不带正文、也不带评论的薄片段（阶段 2 的历史行就是这样），
@@ -129,7 +131,7 @@ export const IssueDetail = function (props: any): any {
         const maps = (st.snapshot && st.snapshot.maps) || []
         for (let mi = 0; mi < maps.length; mi++) {
           const m = maps[mi]
-          const hits = (m.tickets || []).some(function (t: any) { return t.number === issueNumber && effortOf(t) === issueEffort })
+          const hits = (m.tickets || []).some(function (t: any) { return isKey(t) && effortOf(t) === issueEffort })
           if (hits) return m
         }
         return null

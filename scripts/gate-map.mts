@@ -887,6 +887,12 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // undefined：它们到不了那一行）= 3 + 145 − 2 = 146。往 INPUTS 里加一个普通输入，这里加 5；加 null 或 undefined 只加 3。
   // 单跑实测 146 条。
   'verify-45-text-key-rule': 146,
+  // 2026-11-17 #45：详情页按「文本键」认出打开的那张票。步骤 1 让导航栈存文本键（"42"、"01"、"ENG-12"），页面却还用 === 去比
+  // 行的数字 number，于是 GitHub 与 Markdown 的行与父地图丝带认不出来、Linear 整页不画；链路全绿是因为没有门禁带着文本键把页面真渲染一遍。
+  // 本门禁真渲染 IssueDetail：4 种后端形态 × 3 条（页面画了、快照行找到了、父地图丝带画了）= 12，外加 ENG-12 与 OPS-12 不混、
+  // 5 种「不是键」不画 = 6，共 18。对着已发布的分支跑它，18 条里 11 条红（其余 7 条老代码本来就满足）。
+  // 单跑实测 18 条。
+  'verify-45-detail-page-by-key': 18,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T01:40:23.230Z",
+  "generatedAt": "2026-11-18T01:57:57.944Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 624,
-  "gateCount": 624,
-  "attributedGates": 565,
+  "chainLength": 625,
+  "gateCount": 625,
+  "attributedGates": 566,
   "unattributedGates": 59,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 146,
+  "completionRecordedGates": 147,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 992,
@@ -7922,6 +7922,23 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 1 条"
     },
     {
+      "step": "node tests/verify-45-detail-page-by-key.ts",
+      "file": "tests/verify-45-detail-page-by-key.ts",
+      "guards": [
+        "src/client/views/IssueDetail.ts",
+        "src/client/views/shared/detailProjection.ts"
+      ],
+      "dirs": [
+        "src/client/views",
+        "src/client/views/shared"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 18,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
       "step": "node tests/verify-45-text-key-rule.ts",
       "file": "tests/verify-45-text-key-rule.ts",
       "guards": [
@@ -15270,6 +15287,7 @@
       "node tests/verify-1897-pr-page-vm.ts",
       "node tests/verify-1922-retire-eviction.ts",
       "node tests/verify-1933-network-fallback.ts",
+      "node tests/verify-45-detail-page-by-key.ts",
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-599-merged-pr.ts",
       "node tests/verify-626-type-chip.ts",
@@ -15380,6 +15398,7 @@
       "node tests/verify-1932-multi-window.ts",
       "node tests/verify-1933-network-fallback.ts",
       "node tests/verify-1935-receipt-resync.ts",
+      "node tests/verify-45-detail-page-by-key.ts",
       "node tests/verify-599-merged-pr.ts",
       "node tests/verify-626-type-chip.ts",
       "node tests/verify-693-detail-fallback-honesty.ts",
