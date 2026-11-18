@@ -35,7 +35,7 @@ export     const TicketRow = React.memo(({ st, g, t, indent, colorOf }: any) => 
       const tNav = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(t) : t.number)
       // 与 compute 同口径：图内看行状态；图外只在 blockedByRefs 明确 CLOSED 时放行，没读到状态按挡着收口（#1768）。
       const openBlocker = function (b: any) {
-        const bt = g.m.tickets.find(function (x: any) { return String(x.number) === String(b) })
+        const bt = g.m.tickets.find(function (x: any) { return String((typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number)) === String(b) })
         if (bt) return bt.state === 'OPEN'
         const refs: any[] = Array.isArray(t.blockedByRefs) ? t.blockedByRefs : []
         const ref = refs.find(function (x: any) { return String(x && x.key) === String(b) })

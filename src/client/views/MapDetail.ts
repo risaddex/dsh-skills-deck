@@ -136,7 +136,9 @@ export     const MapDetail = ({ st, g, drill }: any) => {
       // 迷雾：fog 票（Not yet specified）+ 被阻塞且其阻塞者 open 的票（半雾）；D7 视觉遮蔽
       const isFog = function (t: any) {
         if (t.state !== 'OPEN') return false
-        const blk = (t.blockedBy || []).map(function (b: any) { return tickets.find(function (x: any) { return x.number === b }) }).filter(Boolean)
+        // #45：blockedBy 里数字键的票是 number，文本键的票（Linear 的 OMB-1）是文本 key，按行的导航键对上。
+        //   这个函数会被门禁按文本单独截出来求值，所以键的取法写在函数里面，不引用外面的 navOf；数字行与改动前一字不差。
+        const blk = (t.blockedBy || []).map(function (b: any) { return tickets.find(function (x: any) { return (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number) === b }) }).filter(Boolean)
         return blk.some(function (b: any) { return b.state === 'OPEN' })
       }
       const fogTitles = fogList.map(function (f: any) { return String(f).trim() })
@@ -148,7 +150,11 @@ export     const MapDetail = ({ st, g, drill }: any) => {
             if (t.state === 'OPEN') return isFog(t) || isFogTitle(t) ? 1 : 0
             return 2
           }
-          return rank(a) - rank(b) || a.number - b.number
+          // #45：两个键都是数字时照旧相减；有一个是文本（Linear）就按文本做自然序比较，OMB-2 排在 OMB-10 前面，缺键也不出 NaN。
+          const ka: any = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(a) : a.number)
+          const kb: any = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(b) : b.number)
+          if (typeof ka === 'number' && typeof kb === 'number') return rank(a) - rank(b) || ka - kb
+          return rank(a) - rank(b) || String(ka == null ? '' : ka).localeCompare(String(kb == null ? '' : kb), undefined, { numeric: true })
         })
       })
       // 迷雾点击去雾状态（st 上按 map 存）

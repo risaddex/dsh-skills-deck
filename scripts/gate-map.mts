@@ -921,6 +921,16 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   'verify-45-detail-issue-rows-by-key': 48,
   'verify-45-detail-map-page-by-key': 26,
   'verify-45-detail-capsule-by-key': 15,
+  // 2026-11-18 #45：地图详情页（V1）里三处还在比数字：雾（isFog 用 x.number === b 找阻塞者）、卡片排序（a.number - b.number，Linear 得 NaN）
+  // 与票行的 openBlocker（String(x.number)）。Linear 的阻塞者因此认不出来、排序乱。本门禁真渲染 MapDetail 与 TicketRow，5 种行形态：
+  // 阻塞者开着时有雾、已关闭时没有、OMB-2 排在 OMB-10 之前、反序输入顺序一致、页面里没有 NaN，数字页的结果当硬值钉住。
+  // 对着改动前的源码跑，59 条里 18 条红，全是 Linear 形态；数字形态原样通过。单跑实测 59 条。
+  'verify-45-map-order-by-key': 59,
+  // 2026-11-18 #45：V2 地图页（Dock 实际用的那一页）的模型整条以数字为键：Linear 的 key 解析不出数字，整行被两个索引循环跳过，
+  // 卡片没有 #OMB-12 标签、没有 cardId，也不参与「被挡 / 挡着」。本门禁跑真函数（ticketFactsContextOf、ticketCardFactsOf、看板排序与计数），
+  // 三族行（GitHub、Markdown、Linear）× 7 个阻塞场景，断言三族的状态与指向结构一致，Linear 的 noText 是 #OMB-n、cardId 非空且唯一、
+  // facts.number 仍为 null，数字行的字符串逐字钉住。对着改动前的源码跑，71 条里 18 条红，全是 Linear 形态。单跑实测 71 条。
+  'verify-45-map-facts-by-key': 71,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；
