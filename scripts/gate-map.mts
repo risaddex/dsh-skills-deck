@@ -1023,6 +1023,11 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // source before the change 60 of the 65 fail (and 3 of the 5 of G fail before the PR #60 fix: frontier 2, blocked 1); 70 of 70 pass now, and 9 fail when the capped flag is removed from the room.
   'verify-50-linear-list-sub-issues': 48,
   'verify-50-linear-list-sub-issues-callers': 22,
+  // 2026-11-18 #61: the snapshot normaliser (normalizeTicket in snapshotAssemble.ts) turned a missing blockedBy into [] ("confirmed nobody blocks it"),
+  // so a Linear child with eleven open blockers was counted as ready. One gate over the real Linear room (fake channel), the real working set, the real
+  // assembleSnapshot and carryOverMapTickets, and both copies of the grouping: the whole path (A: 7) + both groupings, 2 assertions each (B: 4) + the other
+  // entrances of the normaliser, numeric keys, non-array values and the merge (C: 6) = 17. Measured by running it: 11 of 17 fail on the source before the change.
+  'verify-61-snapshot-unknown-blockers': 17,
   // PR #62 review: Linear rows have a text key and no number, and both copies of the grouping indexed by `number`, so two children (ENG-102 blocked by ENG-101)
   // came out as one level of two `undefined` entries. This gate runs the real `wf.mapTickets` phone over the fake Linear channel and both copies of the grouping:
   // the open blocker (A: 7) + the closed blocker (B: 8) + the snapshot path (C: 2) + numeric rooms unchanged (D: 6) = 23.
