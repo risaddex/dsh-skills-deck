@@ -40,3 +40,96 @@ export function pushAndNotify(run: GitRunner, tag: string): void {
   run('git', ['push', '--atomic', 'origin', 'refs/heads/dist:refs/heads/dist', 'refs/tags/' + tag + ':refs/tags/' + tag])
   notifyPublishedTag(run, tag)
 }
+
+/** 发布前检查交给发布脚本的那一部分结论：退出码与要打印的行。只取这两样，安全库因此不必 import 门禁组合根。 */
+export interface ReleaseGateOutcome {
+  readonly exitCode: number
+  readonly lines: readonly ReleaseGateLine[]
+}
+
+/** 门禁的一行输出属于哪个流；发布前检查已经按这个字段分好，这里只照原样转发。 */
+export interface ReleaseGateLine {
+  readonly stream: 'out' | 'err'
+  readonly text: string
+}
+
+/**
+ * 门禁没放行时抛出的错误。
+ *
+ * 为什么带上 kind 与 exitCode：另外两条发布路径（publish-token.ps1 与 wizard-release.sh）都按退出码
+ * 四态分流（1=票面或候选要人改，2=环境或适配器缺失、无法判定，未知码按环境失败），发布脚本要能照原码
+ * 结束、也要让人一眼看出该去改票还是该去修 gh 登录。把两者压成一个「失败」会让「gh 没登录」冒充
+ * 「清单票没关闭」。
+ */
+export class ReleaseGateRefusedError extends Error {
+  /** ticket-face＝票面或候选要人改（门禁 exit 1）；undecidable＝环境或适配器缺失、无法判定（exit 2 及未知码）。 */
+  readonly kind: 'ticket-face' | 'undecidable'
+  /** 门禁自己的退出码，原样保留下来给外层脚本分流。 */
+  readonly exitCode: number
+
+  constructor(kind: 'ticket-face' | 'undecidable', exitCode: number, message: string) {
+    super(message)
+    this.name = 'ReleaseGateRefusedError'
+    this.kind = kind
+    this.exitCode = exitCode
+  }
+}
+
+/** 判定所需的两个输入，没有第三个：这次是不是真要推送，以及把门禁的话往哪里写。 */
+export interface ReleaseGateOptions {
+  /** true 表示这次要建引用、打标签、发 dispatch；false 表示演练，门禁的结论只提示。 */
+  readonly push: boolean
+  /** 输出接缝：缺省按 stream 分到 stdout/stderr；测试传入收集器，于是不必读控制台。 */
+  readonly emit?: (line: ReleaseGateLine) => void
+}
+
+/**
+ * 按发布前检查的结论决定这次发布往下走、只提示，还是停手。
+ *
+ * 判定只有一条规则，四个状态各自落在哪里是有讲究的：
+ *   - 退出码 0（通过）：继续。门禁的 OK / 候选标记行照打，日志里才有「这一版的门禁结论是什么」。
+ *   - 退出码 1（票面或候选要人改）：推送中止，抛 ticket-face 错误。
+ *   - 退出码 2（环境或适配器缺失，无法判定）：推送中止，抛 undecidable 错误。
+ *   - 其它退出码：按环境失败处理（与 RELEASE-RUNBOOK 的四态分支同口径），同样中止。
+ *   演练（push=false）时非 0 一律只警告：演练的价值是把结论摆出来，不是替人拍板；这与
+ *   publish-token.ps1 -DryRun、wizard-release.sh --dry-run 的既有口径一致。
+ *
+ * 为什么不在这里重写规则、也不另外打一份摘要：门禁自己的每条 finding 都带 code、message 与「改法」，
+ * 复制一份摘要只会在两处说法不一致时让人猜哪一份是真的；这里只做「转发 + 判定」。
+ */
+export function requireReleaseGate(outcome: ReleaseGateOutcome, options: ReleaseGateOptions): 'pass' | 'warn' {
+  const emit = options.emit ?? ((line: ReleaseGateLine): void => {
+    if (line.stream === 'err') console.error(line.text)
+    else console.log(line.text)
+  })
+  for (const line of outcome.lines) emit(line)
+
+  const code = outcome.exitCode
+  if (code === 0) return 'pass'
+
+  const kind = code === 1 ? 'ticket-face' : 'undecidable'
+  // 0/1/2 之外是「谁也没约定的码」：runbook 把它算作环境失败，所以归 undecidable，但消息要说清它不是 2。
+  const unknown = code !== 1 && code !== 2
+
+  if (!options.push) {
+    emit({
+      stream: 'err',
+      text:
+        'RELEASE-GATE-SOFT dry-run: the release gate did not pass (exit ' + String(code) + ')' +
+        (unknown ? ', which is not one of the 0/1/2 exit codes and therefore counts as an environment failure' : '') +
+        '. A --push would be refused here; this dry run only warns.',
+    })
+    return 'warn'
+  }
+
+  const detail = kind === 'ticket-face'
+    ? 'the checklist ticket or the candidate manifest has to change; this is a ticket-face finding, not an environment problem'
+    : 'the environment or the ticket-face adapter is missing, so the verdict is undecidable' +
+      (unknown ? ' (exit ' + String(code) + ' is not one of 0/1/2, which counts as an environment failure)' : '')
+  throw new ReleaseGateRefusedError(
+    kind,
+    code,
+    'Release gate did not pass (exit ' + String(code) + '): ' + detail +
+      '. No ref, tag, push or dispatch was created; change what the findings above ask for and run --dry-run again.',
+  )
+}
