@@ -141,7 +141,7 @@ export function createMapTickets(deps?: any): any {
         if (ref && typeof ref === 'object' && ref.key != null) return String(ref.key)
         return ref
       })
-    } else t.blockedBy = []
+    } else delete t.blockedBy // 没带这一格 = 阻塞者不知道，不是「确认没有」：不补 []（CODING_STANDARDS「Keep unknown relationships unknown」）；分组按挡着收口
     if (t.claimedBy == null) {
       const owners = t.assignees
       t.claimedBy = (Array.isArray(owners) && owners.length) ? ((owners[0] && owners[0].login) || '') : ''

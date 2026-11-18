@@ -5,6 +5,8 @@
 //      report a capped list as incomplete. The phone builds a context with only `exec`, which the Linear room cannot use (no HTTP channel,
 //      the defect #45 fixed for the probe and the paging phone), so for Linear it must read through the read session; every other room
 //      keeps the direct call, and a room that has no such operation still gets the same "unsupported" stub answer;
+//   G. unknown blockers stay unknown (PR #60 review): a child with 11 open inverse relations (a page of 10) comes back from the room
+//      WITHOUT blockedBy; the phone must not turn that into [] ("confirmed: nobody blocks it") and the grouping must not count it as ready;
 //   F. the log: a capped read leaves one `read.degraded` line with op `subIssues`, a failing page leaves one with `subIssues:page-fail`,
 //      and no line carries the credential or the ticket key.
 // 门禁归属: src/host/mapTickets.ts
@@ -17,7 +19,9 @@ import { wrapTracker } from '../src/tracker/registry/shape.ts'
 import { assembleWorkingSet } from '../src/host/tracker/snapshotWorkingSet.ts'
 import { createMapTickets } from '../src/host/mapTickets.ts'
 import { createSessionLifecycle } from '../src/host/sessionLifecycle.ts'
-import { ACCOUNT, REPO, PARENT, MAX, kids, fake, trackerOf, list, show } from './lib/linear-sub-issues-fake.ts'
+import { createTicketGrouping } from '../src/host/ticketGrouping.ts'
+import { groupTickets as kernelGroupTickets } from '../src/tracker/kernel/grouping.ts'
+import { ACCOUNT, REPO, PARENT, MAX, child, kids, fake, trackerOf, list, show } from './lib/linear-sub-issues-fake.ts'
 
 let assertions = 0
 let failed = 0
@@ -71,6 +75,33 @@ const check = (ok: boolean, msg: string): void => { assertions += 1; if (!ok) fa
   const bare: any = wrapTracker({ id: 'bare', label: 'Bare', create: () => ({}), matches: async () => false, budget: { kind: 'unknown', countsRequests: false, countsPoints: false, independentBuckets: false } } as any, { id: 'bare' } as any, {})
   const stub: any = await bare.listSubIssues(REPO, PARENT, {}, {})
   check(stub.ok === false && stub.error.kind === 'unsupported', 'E: a room without the operation still gets the registry stub "unsupported": the stub path itself is unchanged')
+}
+
+// G) unknown blockers stay unknown, through the real phone and the real grouping (both copies of it)
+{
+  const open = (ident: string, title: string): any => ({ type: 'blocks', issue: { identifier: ident, title, state: { type: 'unstarted' } } })
+  const eleven = Array.from({ length: 11 }, (_, i) => Object.assign({ id: 'x' + i }, open('ENG-' + (300 + i), 'Blocker ' + i)))
+  // 101: known empty (an empty relation list was read). 102: 11 open relations, more than the page of 10, so the room leaves blockedBy out.
+  // 103: one open blocker, ENG-101.
+  const pool = [child(1, { rels: [] }), child(2, { rels: eleven }), child(3, { rels: [Object.assign({ id: 'r1' }, open('ENG-101', 'Child 1'))] })]
+  const f = fake({ children: { [PARENT]: pool } })
+  const grouping = createTicketGrouping()
+  const life2: any = createSessionLifecycle({})
+  const phone: any = createMapTickets({
+    canonicalKey: async (c: any) => c || '/ws/fake', selectEarly: async () => ({ backendId: 'linear' }), isComposerSelection: life2.isComposerSelection,
+    getTrackerRegistry: async () => ({ get: () => trackerOf(f), describe: () => REPO }),
+    getPlatform: async () => ({}), ctx: { get: () => undefined }, DEFAULT_CWD: '/ws/fake', logCtx: null,
+    groupTickets: grouping.groupTickets, getMapBody: async () => null, detectionExec: () => {},
+    openSession: async () => ({ ok: true, backendId: 'linear', call: async (fn: any) => fn(trackerOf(f), Object.assign({}, f.ctx)) }),
+  })
+  const got: any = await phone.handleMapTickets({ cwd: '/ws/fake', key: PARENT })
+  const row = (k: string): any => (got.ok ? got.items : []).find((r: any) => r.key === k)
+  check(got.ok === true && got.items.length === 3, 'G: the phone answers the three children (got ' + (got.ok ? got.items.length : show(got.error)) + ')')
+  check(!!row('ENG-102') && row('ENG-102').blockedBy === undefined, 'G: the child with 11 open relations keeps blockedBy ABSENT through row preparation: unknown is not "nobody blocks it" (got ' + show(row('ENG-102') && row('ENG-102').blockedBy) + ')')
+  check(!!row('ENG-101') && Array.isArray(row('ENG-101').blockedBy) && row('ENG-101').blockedBy.length === 0, 'G: a child whose empty relation list was read keeps its confirmed [] (got ' + show(row('ENG-101') && row('ENG-101').blockedBy) + ')')
+  check(got.ok === true && got.stats.frontier === 1 && got.stats.blocked === 2, 'G: the real grouping counts one ready child (ENG-101) and two blocked: the unknown one is treated as blocked, the conservative bucket the grouping already has for unknown blockers (got ' + show(got.ok && { f: got.stats.frontier, b: got.stats.blocked }) + ')')
+  const kernel: any = got.ok ? kernelGroupTickets(got.items) : null
+  check(!!kernel && kernel.frontier === 1 && kernel.blocked === 2, 'G: the other copy of the grouping (tracker kernel) gives the same answer for the same rows, as the two must (got ' + show(kernel && { f: kernel.frontier, b: kernel.blocked }) + ')')
 }
 
 // F) the log
