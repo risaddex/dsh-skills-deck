@@ -259,10 +259,17 @@ function normalizeTicket(row: any): any {
   const out = Object.assign({}, row)
   const number = Number(rowKeyOf(row))
   if (Number.isFinite(number)) out.number = number
-  const blockers = Array.isArray(row && row.blockedBy) ? row.blockedBy : []
-  out.blockedBy = blockers.map(refNumberOf).filter((v: any) => v !== null)
-  // #1768：编号语义不动，引用态另放一格（跨容器判定与卡片标题都靠它）。
-  out.blockedByRefs = blockedByRefsOf(row, blockers)
+  if (Array.isArray(row && row.blockedBy)) {
+    const blockers = row.blockedBy
+    out.blockedBy = blockers.map(refNumberOf).filter((v: any) => v !== null)
+    // #1768：编号语义不动，引用态另放一格（跨容器判定与卡片标题都靠它）。
+    out.blockedByRefs = blockedByRefsOf(row, blockers)
+  } else {
+    // #61：没带这一格（或不是数组）= 阻塞者不知道，不是「确认没有」：后端没给全时（例如 Linear 一行的关系多过一页）就是这样，
+    //   补成 [] 会让分组把它算成可接。所以这里一律删掉，分组与界面读到非数组就按挡着收口（CODING_STANDARDS「Keep unknown relationships unknown」，
+    //   与 src/host/mapTickets.ts 的 prepareRow 同一口径）；真读到的 [] 走上面那一支，仍是 []。引用态旁表不替它补，原行带什么留什么。
+    delete out.blockedBy
+  }
   if (!Array.isArray(out.blocks)) out.blocks = []
   const claimed = claimedByOf(row)
   if (claimed) out.claimedBy = claimed
