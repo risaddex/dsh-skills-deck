@@ -34,7 +34,7 @@ export interface GroupingTicket {
   /**
    * 直接阻塞我的票号。声明成**必填**，因为本文件两处读它的口径本来就不一样，而且两处都逐字保留了老写法：
    *   · `computeLevels` 查阻塞者表时写的是 `(t.blockedBy || [])`——缺了这一格就按「没有阻塞者」；
-   *   · 层内统计与 `groupTickets` 写的是裸 `t.blockedBy.some(...)`——缺了这一格会当场抛。
+   *   · 层内统计与 `groupTickets` 在读它之前先认是不是数组——缺了这一格（不是数组）按「阻塞者不知道」算挡着，不再当场抛（#50 评审，见 blockerBlocks 下面那段说明）。
    * 类型按更严的那一处收（必填）：真数据里要么这一格是数组，要么根本没有这张票。
    * 想把两处统一成「缺了就按空数组」，那是另一件事，别在类型迁移里顺手改（见本文件尾部说明）。
    */
@@ -119,6 +119,10 @@ function refKeyOf(value: unknown): string {
  *
  * 找不到旁表时按挡着算，是有意的：老快照、别的取数来路没有这一格，但它们给的都是编号，
  * 「编号在、人不在本批」本身就是「还可能在挡着」的证据，不能当成可接。
+ *
+ * 同一条逻辑往前一步：整张票的 `blockedBy` 缺席（不是数组）= 阻塞者不知道（后端没给全，例如 Linear 一行的关系多过一页），
+ * 层内统计与 groupTickets 在问到 blockerBlocks 之前就按挡着收口（CODING_STANDARDS「Keep unknown relationships unknown」）；
+ * 数组（含空数组 = 确认没人挡）才逐个问它。与 src/host/ticketGrouping.ts 同一口径，改一处必须同步改另一处。
  */
 function blockerBlocks(ticket: GroupingTicket, blocker: number | string, byNum: Record<string, GroupingTicket>): boolean {
   const key = refKeyOf(blocker)
@@ -180,9 +184,9 @@ export function computeLevels(tickets: readonly GroupingTicket[]): LevelsResult 
     // 稀疏数组的空洞不会被 forEach 访问，这一句只是让编译器知道 layer 一定在。
     if (!layer) return
     const openT = tickets.filter((t) => byNumber[t.number] === layer.level && t.state === 'OPEN')
-    layer.frontier = openT.filter((t) => !t.claimedBy && !t.blockedBy.some((b) => blockerBlocks(t, b, byNum))).length
+    layer.frontier = openT.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))).length
     layer.claimed = openT.filter((t) => t.claimedBy).length
-    layer.blocked = openT.filter((t) => !t.claimedBy && t.blockedBy.some((b) => blockerBlocks(t, b, byNum))).length
+    layer.blocked = openT.filter((t) => !t.claimedBy && (!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))).length
   })
   // 剔除空洞（levels 数组可能因跳级出现 undefined）
   const compact = levels.filter((layer): layer is TicketLevel => Boolean(layer))
@@ -222,9 +226,9 @@ export function groupTickets(tickets: readonly GroupingTicket[]): TicketGroups {
   tickets.forEach((t) => { byNum[refKeyOf(t.number)] = t })
   const open = tickets.filter((t) => t.state === 'OPEN')
   const closed = tickets.filter((t) => t.state === 'CLOSED')
-  const frontier = open.filter((t) => !t.claimedBy && !t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))
+  const frontier = open.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum))))
   const claimed = open.filter((t) => t.claimedBy)
-  const blocked = open.filter((t) => !t.claimedBy && t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))
+  const blocked = open.filter((t) => !t.claimedBy && (!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum))))
   // v1.4（T1 #442）：附 DAG 分层（client 渲染漏斗分层用）
   const lv = computeLevels(tickets)
   return {

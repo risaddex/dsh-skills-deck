@@ -1002,6 +1002,13 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
   // Measured by running it: 22 of 22 pass now.
   'verify-45-linear-issue-page': 22,
+  // 2026-11-18 #50: the Linear room had no listSubIssues (the registry stub answered "unsupported"). Two gates, split only for file size, over
+  // one fake Relay-style channel (tests/lib/linear-sub-issues-fake.ts). Room gate = the request (A: 15) + a multi-page walk (B: 8) + blockers
+  // (B2: 3) + the 1000 cap, the page bound and the boundary (C: 10) + a list read in part is never complete (D: 7) + failure classes (D2: 5) = 48.
+  // Callers gate = the real snapshot working set and the real map phone, other rooms untouched (E: 11) + the log (F: 6) + unknown blockers stay unknown through the phone and both copies of the grouping (G: 5) = 22. Against the
+  // source before the change 60 of the 65 fail (and 3 of the 5 of G fail before the PR #60 fix: frontier 2, blocked 1); 70 of 70 pass now, and 9 fail when the capped flag is removed from the room.
+  'verify-50-linear-list-sub-issues': 48,
+  'verify-50-linear-list-sub-issues-callers': 22,
   // issue #49: the Linear room refused every non-empty `labels` filter, so the panel's closed-map page of a Linear workspace
   // (`listPage(ref, { state: 'closed', labels: ['wayfinder:map'] })`) was always an error. This gate runs the real room over a fake
   // channel and asserts on the outgoing GraphQL variables: listPage page + count walk (9), cursor path (5), counts (5), list (4),

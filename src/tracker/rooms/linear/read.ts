@@ -107,8 +107,9 @@ export function buildIssuesFilter(filter: ListFilter | undefined): Record<string
  *  · 有连接但被页大小截断（pageInfo.hasNextPage）：同样不写。残缺的名单被当成完整的名单读，会对一张其实被挡着的票说「可以接」，
  *    比不知道更糟；不知道至少诚实。单票读取满 250，所以只有关系多到 250 条以上的票才会走到这里。
  * 只认 blocks 类型、标题与状态按读到的真值给，这些规则住在 relations.ts 的 incomingBlocks 与 refOf（写侧共用同一份，不再抄第二份）。
+ * 导出是为了 sub-issues.ts（#50）：按父票取子票读的是同一种带阻塞者的票节点，三种结局的判法只许有这一份。
  */
-function withBlockers(issue: Issue, node: { inverseRelations?: RelationConnection | null }): Issue {
+export function withBlockers(issue: Issue, node: { inverseRelations?: RelationConnection | null }): Issue {
   const conn = node.inverseRelations
   if (!conn) return issue
   if (conn.pageInfo && conn.pageInfo.hasNextPage === true) return issue

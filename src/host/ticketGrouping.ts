@@ -54,6 +54,9 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
     /**
      * 这张票是不是被 blocker 挡住（#1768）。逻辑与 src/tracker/body-parse.ts 的 blockerBlocks 逐条相同：
      * 阻塞者在本批 → 只有 OPEN 挡；不在本批 → 明确 CLOSED 才放行，OPEN / 未知 / 没有引用旁表都按挡着收口。
+     * 另：`blockedBy` 缺席（不是数组）= 阻塞者不知道（后端没给全，例如 Linear 一行的关系多过一页），下面两处 isBlocked 按挡着收口
+     * （CODING_STANDARDS「Keep unknown relationships unknown」）；数组（含空数组 = 确认没人挡）才逐个问 blockerBlocks。
+     * 与 src/tracker/kernel/grouping.ts 同一口径，改一处必须同步改另一处。
      */
     function blockerBlocks(ticket: any, blocker: any, byNum: any): boolean {
       const key = refKeyOf(blocker)
@@ -103,7 +106,7 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
       // 同一口径（tracker 那份由 src/tracker/body-parse.ts 转出名字）。
       levels.forEach(function (layer: any) {
         const openT: any[] = tickets.filter(function (t: any) { return byNumber[t.number] === layer.level && t.state === 'OPEN' })
-        const isBlocked = function (t: any): boolean { return t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
+        const isBlocked = function (t: any): boolean { return !Array.isArray(t.blockedBy) || t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
         layer.frontier = openT.filter(function (t: any) { return !t.claimedBy && !isBlocked(t) }).length
         layer.claimed = openT.filter(function (t: any) { return t.claimedBy }).length
         layer.blocked = openT.filter(function (t: any) { return !t.claimedBy && isBlocked(t) }).length
@@ -118,7 +121,7 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
       tickets.forEach(function (t: any) { byNum[refKeyOf(t.number)] = t })
       // #1768：跨容器引用按引用态收口（明确 CLOSED 才算关掉），不再默认「不在本批就不挡」。
       // 认领与阻塞互斥：认领掉的票进 claimed，不再进 frontier / blocked（body-parse 同一写法）。
-      const isBlocked = function (t: any): boolean { return t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
+      const isBlocked = function (t: any): boolean { return !Array.isArray(t.blockedBy) || t.blockedBy.some(function (b: any) { return blockerBlocks(t, b, byNum) }) }
       const open: any[] = tickets.filter(function (t: any) { return t.state === 'OPEN' })
       const closed: any[] = tickets.filter(function (t: any) { return t.state === 'CLOSED' })
       const frontier: any[] = open.filter(function (t: any) { return !t.claimedBy && !isBlocked(t) })

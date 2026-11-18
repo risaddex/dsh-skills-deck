@@ -105,13 +105,48 @@ ${ISSUE_CORE}`
 export const LIST_BLOCKERS_PER_TICKET = 10
 
 /**
- * 带阻塞者的一页票：地图的子票来自快照读的这一份列表（Linear 房没有按需取子票的读），所以卡片要靠它才知道谁被挡着。
+ * 带阻塞者的一页票：快照里地图的子票先来自这一份列表，所以卡片要靠它才知道谁被挡着（#50 起另有按父票取子票的
+ * listSubIssues，见 SUB_ISSUES_QUERY，它同样带阻塞者；这一份仍是子票不在这一页里时快照唯一的来源）。
  * 与 ISSUES_QUERY 分开写，是为了不动多账号收件箱（account-read.ts）还在用的那一份：那一条不需要关系，也不该多付这份复杂度。
  */
 export const ISSUES_WITH_BLOCKERS_QUERY = `query LinearIssuesWithBlockers($first: Int!, $after: String, $filter: IssueFilter) {
   issues(first: $first, after: $after, orderBy: updatedAt, filter: $filter) {
     nodes { ...LinearIssueCore ${blockersSelection(LIST_BLOCKERS_PER_TICKET)} }
     pageInfo { hasNextPage endCursor }
+  }
+}
+${ISSUE_CORE}`
+
+/**
+ * 子票这一读的排序键，写在代码里、有名字（与评论读的 COMMENTS_FETCH_CAP 那一段同一个做法）：创建时间。
+ * 为什么不是更新时间：翻页期间子票被改动时，按更新时间排会让一张票在页与页之间挪位置，翻页就漏掉它；创建时间写下来就不动，
+ * 与 listPage 为同一件事选创建时间是同一个理由（paging.ts 的头注释，契约 `PageResult` 的头注释）。
+ * Linear 的 `orderBy: createdAt` 只有一个方向，没有第二档可配：新造的在前（paging.ts 同样这么记；这一条来自本仓库已有的读法，
+ * 不是 Linear 文档逐字写明的，真账号上的核对见 #50 的「没证明的事」）。所以 SUB_ISSUES_ORDER 写成 `newest-first`：
+ * 读到 1000 张硬上限而截断时，丢下的是最老的那些子票，capped 把这一点如实告诉调用方。
+ * 两个值必须一起改：SUB_ISSUES_ORDER_BY 是发给 Linear 的枚举字面量，SUB_ISSUES_ORDER 是给人和门禁读的方向名。
+ */
+export const SUB_ISSUES_ORDER_BY = 'createdAt'
+export const SUB_ISSUES_ORDER = 'newest-first'
+
+/**
+ * 一张票的子票，翻页取：`issue(id: ...)` 的 `children` 连接（研究笔记 §6：直接的子票，不展开整棵树）。
+ *
+ * `id` 既收 UUID 也收 `ENG-12` 这种标识符（与 ISSUE_QUERY 同一个入参），所以父票的键原样当文本交给 Linear，不转成数字。
+ * `first` 与 `after` 都是变量：页大小来自共享分页表里 linear 一组的 subIssuesPageSize，游标是 Linear 上一页给的 endCursor，原样回传。
+ * 每个子票带与列表一样的票面字段（含 `parent { identifier }`，所以归一后的 parentKey 就是这张父票）和阻塞者，
+ * 阻塞者一页取 LIST_BLOCKERS_PER_TICKET 条且 `first` 写出来：一页 50 张子票按公布的复杂度算法约 5000 多点，
+ * 一页 100 张就超过单次查询的 10000 点上限而整条被拒（门禁量这一条）。
+ * 不问 totalCount：Linear 的连接没有这一格，向 schema 索取它没有的字段整条查询会被拒（paging.ts 头注释）。
+ * 已归档的子票 Linear 默认不返回（`includeArchived` 缺省为假），这里不改它。
+ */
+export const SUB_ISSUES_QUERY = `query LinearSubIssues($id: String!, $first: Int!, $after: String) {
+  issue(id: $id) {
+    identifier
+    children(first: $first, after: $after, orderBy: ${SUB_ISSUES_ORDER_BY}) {
+      nodes { ...LinearIssueCore ${blockersSelection(LIST_BLOCKERS_PER_TICKET)} }
+      pageInfo { hasNextPage endCursor }
+    }
   }
 }
 ${ISSUE_CORE}`
