@@ -473,10 +473,9 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     const cwd: any = await normCwd(_rawCommentCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
     if (textKeyOf(n) === '') return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
-    // #45：评论是写操作，文本键（ENG-12）的写路径还没有人在真实的 Linear 上试过，所以先明说「不支持」而不是把
-    // `String(Number(n))` 得到的字符串 "NaN" 当成票号发给后端。维护者在一张可丢弃的 Linear 票上试过之后再放开。
-    // 全数字的键（GitHub 的 42、本地 Markdown 的 01）照旧走下面的老路，一个字不变。
-    if (numberOfKey(textKeyOf(n)) === null) return { ok: false, error: { kind: 'unsupported', message: 'commenting on the ticket ' + textKeyOf(n) + ' from the panel is not available yet: its key is not a number, and the write path for a text key has not been tried on a real ticket' } }
+    // #45：文本键（Linear 的 OMB-900）原样交给会话，不读成数字（读成数字是 NaN，上一版因此先拒绝过）。
+    // 全数字的键（GitHub 的 42、本地 Markdown 的 01）照旧发 String(Number(n))，一个字不变（01 → '1'）。
+    const commentKey: string = numberOfKey(textKeyOf(n)) === null ? textKeyOf(n) : String(Number(n))
     if (typeof body !== 'string' || !body.trim()) return { ok: false, error: { kind: 'parse', message: 'the comment body is empty' } }
     try {
       // #1445：写入只经写会话。上一版在这里自己选后端、拼 opCtx、补 refId、直调房间 comment，
@@ -491,7 +490,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       if (args && args.effortId !== undefined && args.effortId !== null) repoRef.effortId = String(args.effortId)
       const r: any = await opened.call(function (session: any, opCtx: any) {
         if (!session || typeof session.comment !== 'function') return { ok: false, error: { kind: 'unsupported', message: "backend '" + opened.backendId + "' does not implement comment" } }
-        return session.comment(repoRef, String(Number(n)), String(body), opCtx)
+        return session.comment(repoRef, commentKey, String(body), opCtx)
       })
       if (r && r.ok) {
         // 写操作成功 → 失效面板快照缓存（#213 同语义；右侧列表增量由 client 静默重取快照经差异产出）

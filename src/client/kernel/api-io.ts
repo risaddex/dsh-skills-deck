@@ -372,9 +372,9 @@
     // 推进序列由视图编排 —— 成功后清空输入、fetchIssueDetail(force) 击穿详情缓存重取、probeNow 静默快照刷新，
     // 全程无乐观插入（新评论必须来自服务端重取的证据）。
     export const submitIssueComment = function (st: any, n: any, body: any, opts: any) {
-      // 本地容器的编号是 0（key 00），是合法坐标：缺席与空串先归一成 NaN，再拦非数字与负数，不拦 0。
-      const num = Number((n === undefined || n === null || String(n).trim() === '') ? NaN : n)
-      if (isNaN(num) || num < 0) return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
+      // #45：同详情的键规则（见 fetchIssueDetail）：全数字当编号（42→42、01→1，0 合法），文本键（OMB-900）原样搬运；空、NaN、负数、对象拒绝。
+      const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : (typeof n === 'string' ? n.trim() : ''), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
+      if (!keyText || keyText[0] === '-') return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
       const text = String(body == null ? '' : body)
       if (!text.trim()) return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'comment body required', raw: '' } })
       if (typeof host === 'undefined' || typeof host.call !== 'function') {

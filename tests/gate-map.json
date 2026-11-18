@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T02:41:19.468Z",
+  "generatedAt": "2026-11-18T13:03:40.722Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 627,
-  "gateCount": 627,
-  "attributedGates": 568,
+  "chainLength": 628,
+  "gateCount": 628,
+  "attributedGates": 569,
   "unattributedGates": 59,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 149,
+  "completionRecordedGates": 150,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 992,
@@ -7922,6 +7922,23 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 1 条"
     },
     {
+      "step": "node tests/verify-45-comment-text-key.ts",
+      "file": "tests/verify-45-comment-text-key.ts",
+      "guards": [
+        "src/client/kernel/api-io.ts",
+        "src/refresh/rooms/host/comment-thread-fetch.ts"
+      ],
+      "dirs": [
+        "src/client/kernel",
+        "src/refresh/rooms/host"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 45,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
       "step": "node tests/verify-45-detail-page-by-key.ts",
       "file": "tests/verify-45-detail-page-by-key.ts",
       "guards": [
@@ -7985,7 +8002,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 146,
+      "expectedAssertions": 175,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 3 条）"
     },
     {
@@ -15153,6 +15170,7 @@
       "node tests/verify-1897-pr-page-vm.ts",
       "node tests/verify-1923-closed-container.ts",
       "node tests/verify-423-title-clamp.ts",
+      "node tests/verify-45-comment-text-key.ts",
       "node tests/verify-45-text-key-rule.ts",
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-599-merged-pr.ts",
@@ -16063,6 +16081,7 @@
       "node tests/verify-1933-network-fallback.ts",
       "node tests/verify-1935-receipt-resync.ts",
       "node tests/verify-3-workspace-switch.ts",
+      "node tests/verify-45-comment-text-key.ts",
       "node tests/verify-45-text-key-rule.ts",
       "node tests/verify-504-github-pr.ts",
       "node tests/verify-507-pr-offline.ts",

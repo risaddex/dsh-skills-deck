@@ -2,8 +2,8 @@
 //
 // Why this gate exists: Linear's keys are text (ENG-12), not numbers, so the panel carries the key as the backend gave it.
 // The rule that turns "whatever a caller passed" into a key is written in several places that cannot import each other:
-// the host handlers (comment-thread-fetch.ts), the client fetches (api-io.ts, three inline copies, because that file is at
-// its line ceiling) and the navigation stack (store-prefs.ts). Nothing else forces them to agree, and one of them already
+// the host handlers (comment-thread-fetch.ts), the client fetches and the comment submit (api-io.ts, four inline copies,
+// because that file is at its line ceiling) and the navigation stack (store-prefs.ts). Nothing else forces them to agree, and one of them already
 // drifted once (String(n).trim() in the cache clear gave "[object Object]" for an object).
 //
 // The reference below is the rule as the maintainer decided it. Each copy is read from the real source file at run time,
@@ -75,7 +75,7 @@ const client = clientKeyExprs()
 
 check(nav !== '', 'store-prefs: navKeyOf was found in the source')
 check(host !== '', 'comment-thread-fetch: textKeyOf was found in the source')
-check(client.length === 3, 'api-io: the rule is written inline exactly three times (detail, cache clear, comments)', 'found ' + client.length + ': ' + client.map((c) => c.where).join(', '))
+check(client.length === 4, 'api-io: the rule is written inline exactly four times (detail, cache clear, comments, comment submit)', 'found ' + client.length + ': ' + client.map((c) => c.where).join(', '))
 
 for (const n of INPUTS) {
   const want = reference(n)
