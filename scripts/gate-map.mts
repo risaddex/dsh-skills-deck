@@ -939,7 +939,11 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // （追加）PR #47 的评审指出：超过 200 条评论时房间不报总数，宿主就把详情的 hasNextPage 说成 false，已取到的 150 条够不着。
   //   房间现在照实传「还有更多」（Issue.commentsHasMore，只传事实不传数字），宿主在总数未知时据此给出下一页；多 7 条：房间 2 + 宿主 5 = 47。
   //   对着修复前的源码跑，47 条里 2 条红（commentsHasMore 与 hasNextPage），其余 5 条本来就满足。
-  'verify-45-linear-comments-read': 47,
+  // （追加 2）PR #47 第二条评审：超过 200 条时房间取的是最新的 200 条（first: 200，Linear 最新在前），再排序取前缀，于是首屏从第 3 条而不是第 1 条开始，
+  //   窗口还随新评论移动，宿主按偏移翻页时会漏掉一条。房间改问 last: 200（最旧的 200 条，新评论落在另一头，窗口不动）。
+  //   假通道也改成忠实的 Relay 形状（last 返回末尾 k 条并报 hasPreviousPage，first 返回开头 k 条）。多 5 条：查询形状 +1、250 条的首屏 +1、
+  //   翻页稳定（202 条首屏、来一条后第二页、再来七条后第三页）+3，共 52。对着修复前的源码跑，52 条里 8 条红（含修复前的 F2「加载更多够到第 200 条」），其余本来就满足。
+  'verify-45-linear-comments-read': 52,
   // 2026-11-18 #45：com um workspace Linear o painel ficava com o chip "Failed" ao lado de Refresh, e o log tinha um wf.probe com errorKind env
   // a cada 5 segundos. O probe montava um contexto de operação só com exec (feito para as salas que rodam comandos) e o passava a tracker.list;
   // a sala Linear só fala HTTP e usa o contexto que recebe, então respondia "the room has no HTTP channel wired (ctx.http is missing)".

@@ -4,7 +4,8 @@
 // never read them (read.ts said the read path was not implemented), so the host built an empty connection and the page presented "no
 // comments" as a fact. The host asks `get(repo, key, { comments: { first: N } })` from zero with N growing by 50 and slices off what the
 // page already holds, and it uses `commentCount` to know the total and whether another page exists. So the room has to return the OLDEST N
-// comments, oldest first (Linear sends the newest first), and the total when it knows it.
+// comments, oldest first (Linear sends the newest first), and the total when it knows it. With more than 200 the room asks for `last: 200`, the
+// OLDEST 200 of a newest-first list: new comments land at the other end, so the window the host pages through does not move (PR #47 review).
 // This gate runs the real room read over a fake HTTP channel, then the real host handlers on top of it.
 // 门禁归属: src/tracker/rooms/linear/read.ts
 // 门禁归属: src/tracker/rooms/linear/queries.ts
@@ -29,9 +30,26 @@ const commentNode = (i: number): any => ({ id: 'c' + i, body: 'body ' + i, creat
 /** n comments, NEWEST FIRST, the order Linear answers in. */
 const newestFirst = (n: number): any[] => Array.from({ length: n }, (_, k) => commentNode(n - k))
 
-function channel(comments: any[] | null, hasNextPage = false, issue: any = ISSUE_NODE): { ctx: any, calls: any[] } {
+/**
+ * A fake Linear channel. `comments` is the WHOLE connection, newest first (null = the query did not ask for comments). It answers like a
+ * Relay connection: `last: k` returns the k items at the END of the list (the oldest k) and says hasPreviousPage when more come before them;
+ * `first: k` returns the k at the start (the newest k) and says hasNextPage. Whatever argument the room's query uses decides what it gets.
+ */
+function channel(comments: any[] | null, _unused = false, issue: any = ISSUE_NODE): { ctx: any, calls: any[] } {
   const calls: any[] = []
-  const ctx = { http: { request: async (req: any) => { calls.push(req); const node = issue === null ? null : (comments === null ? issue : Object.assign({}, issue, { comments: { nodes: comments, pageInfo: { hasNextPage } } })); return { status: 200, headers: {}, body: JSON.stringify({ data: { issue: node } }) } } } }
+  const ctx = { http: { request: async (req: any) => {
+    calls.push(req)
+    const vars = JSON.parse(req.body).variables || {}
+    let node: any = issue
+    if (issue !== null && comments !== null) {
+      const total = comments.length
+      const conn = typeof vars.last === 'number'
+        ? { nodes: comments.slice(Math.max(0, total - vars.last)), pageInfo: { hasPreviousPage: total > vars.last, hasNextPage: false } }
+        : { nodes: comments.slice(0, typeof vars.first === 'number' ? vars.first : 50), pageInfo: { hasNextPage: total > (typeof vars.first === 'number' ? vars.first : 50), hasPreviousPage: false } }
+      node = Object.assign({}, issue, { comments: conn })
+    }
+    return { status: 200, headers: {}, body: JSON.stringify({ data: { issue: node } }) }
+  } } }
   return { ctx, calls }
 }
 const sentOf = (calls: any[]): any => (calls[0] ? JSON.parse(calls[0].body) : null)
@@ -44,9 +62,10 @@ const bodies = (list: any[] | undefined): string => (list || []).map((c: any) =>
   await getIssue(ch.ctx, ACCOUNT, 'OMB-890', { comments: { first: 50 } } as any)
   const sent = sentOf(ch.calls)
   check(ch.calls.length === 1, 'A: one request carries the ticket and its comments')
-  check(!!sent && /comments\s*\(\s*first:\s*\$first/.test(sent.query), 'A: the query asks for the comments connection with a first argument')
+  check(!!sent && /comments\s*\(\s*last:\s*\$last/.test(sent.query), 'A: the query asks for the comments connection with a last argument: on a newest-first list that is the OLDEST comments, a window that new comments do not shift')
   check(!!sent && sent.variables.id === 'OMB-890', 'A: the key goes as Linear expects')
-  check(!!sent && sent.variables.first === 200, 'A: it always fetches the cap (200), never just the 50 the host wants: the oldest N can only be picked from the whole set (got ' + String(sent && sent.variables.first) + ')')
+  check(!!sent && sent.variables.last === 200 && sent.variables.first === undefined, 'A: it always asks for the cap (200), never just the 50 the host wants: the host slices off what it already holds (got last ' + String(sent && sent.variables.last) + ')')
+  check(!!sent && /hasPreviousPage/.test(sent.query), 'A: it asks whether there are more comments than the window (hasPreviousPage)')
   check(!!sent && /\bidentifier\b/.test(sent.query), 'A: the ticket fields still come in the same request')
 }
 
@@ -77,7 +96,8 @@ const bodies = (list: any[] | undefined): string => (list || []).map((c: any) =>
   check(csOf(p100).length === 100 && csOf(p100)[99].id === 'c100', 'C: first 100 are c1 to c100')
   const few: any = await getIssue(channel(newestFirst(7)).ctx, ACCOUNT, 'OMB-890', { comments: { first: 50 } } as any)
   check(csOf(few).length === 7 && few.data.commentCount === 7, 'C: fewer comments than asked returns them all, with the exact total')
-  const big: any = await getIssue(channel(newestFirst(200), true).ctx, ACCOUNT, 'OMB-890', { comments: { first: 50 } } as any)
+  const big: any = await getIssue(channel(newestFirst(250)).ctx, ACCOUNT, 'OMB-890', { comments: { first: 50 } } as any)
+  check(csOf(big).length === 50 && csOf(big)[0].id === 'c1' && csOf(big)[49].id === 'c50', 'C: with 250 comments the first 50 are still the oldest of the ticket, c1 to c50 (a window of the newest 200 would start at c51)')
   check(csOf(big).length === 50 && big.ok && big.data.commentCount === undefined && big.data.comments !== undefined, 'C: when Linear says there are more than it sent, the total is NOT claimed (commentCount absent)')
   check(big.ok && big.data.commentsHasMore === true, 'C: when Linear says there are more than it sent, the ticket says so without a total (commentsHasMore true)')
   check(p50.ok && p50.data.commentsHasMore !== true && few.ok && few.data.commentsHasMore !== true, 'C: when the batch is everything, commentsHasMore is not set')
@@ -106,8 +126,9 @@ const bodies = (list: any[] | undefined): string => (list || []).map((c: any) =>
 }
 
 // F) the real host handlers over the real room read
-function hostFor(total: number, hasNextPage = false): any {
-  const opened = { ok: true, backendId: 'linear', budget: {}, canWrite: false, repoRef: { backend: 'linear', refId: CWD, name: 'repo', url: '' }, call: async (fn: any) => fn({ get: async (_repo: any, key: string, opts: any) => getIssue(channel(newestFirst(total), hasNextPage).ctx, ACCOUNT, key, opts) }, { cwd: CWD, caller: 'refresh' }) }
+function hostFor(totalOrRef: number | { n: number }): any {
+  const ref = typeof totalOrRef === 'number' ? { n: totalOrRef } : totalOrRef
+  const opened = { ok: true, backendId: 'linear', budget: {}, canWrite: false, repoRef: { backend: 'linear', refId: CWD, name: 'repo', url: '' }, call: async (fn: any) => fn({ get: async (_repo: any, key: string, opts: any) => getIssue(channel(newestFirst(ref.n)).ctx, ACCOUNT, key, opts) }, { cwd: CWD, caller: 'refresh' }) }
   return createCommentThreads({ openSession: async () => opened, normCwd: async (x: any) => x, selectEarly: async () => { throw new Error('unused') }, isComposerSelection: () => false, getTrackerRegistry: async () => ({}), getPlatform: async () => ({}), ctx: {}, timer: {}, DEFAULT_CWD: '', errText: (e: any) => String((e && e.message) || e), isRateLimitError: () => false, getRepoKey: async () => null, execProc: async () => { throw new Error('unused') }, fetchIssueDetail: async () => { throw new Error('unused') }, fetchIssueIndex: async () => { throw new Error('unused') }, issueIndexFromSnapshot: () => ({}), setCache: () => {}, logCtx: { fire: () => {} } } as any)
 }
 {
@@ -128,14 +149,29 @@ function hostFor(total: number, hasNextPage = false): any {
 
 // F2) more than 200 comments: the total is unknown, but the page must still offer the next page (review finding on PR #47)
 {
-  const d: any = await hostFor(200, true).handleIssueDetail({ number: 'OMB-890', cwd: CWD })
+  const d: any = await hostFor(250).handleIssueDetail({ number: 'OMB-890', cwd: CWD })
   const conn = d && d.issue && d.issue.comments
   check(d.ok === true && !!conn && conn.nodes.length === 50, 'F2: with more than 200 comments the detail still shows the first 50')
   check(!!conn && conn.pageInfo.hasNextPage === true, 'F2: and it offers the next page, although the total is unknown (got ' + String(conn && conn.pageInfo && conn.pageInfo.hasNextPage) + ')')
   check(!!conn && conn.totalCount === 50, 'F2: it does not claim a total it does not know: the count stays at what was returned (got ' + String(conn && conn.totalCount) + ')')
-  const p4: any = await hostFor(200, true).handleIssueComments({ number: 'OMB-890', cwd: CWD, after: 150 })
+  const p4: any = await hostFor(250).handleIssueComments({ number: 'OMB-890', cwd: CWD, after: 150 })
   check(p4.ok === true && p4.nodes.length === 50 && p4.nodes[0].body === 'body 151' && p4.nodes[49].body === 'body 200', 'F2: loading more reaches comment 200, the cap (no comment already fetched stays out of reach)')
   check(p4.ok && p4.pageInfo.hasNextPage === false, 'F2: at the cap it stops offering more')
+}
+
+// F3) review finding on PR #47: a comment arriving between two pages must not shift the pages (the window is the OLDEST 200, not a moving newest one)
+{
+  const ref = { n: 202 }
+  const host = hostFor(ref)
+  const d: any = await host.handleIssueDetail({ number: 'OMB-890', cwd: CWD })
+  const first = d && d.issue && d.issue.comments && d.issue.comments.nodes
+  check(!!first && bodies(first) === Array.from({ length: 50 }, (_, k) => k + 1).join(','), 'F3: with 202 comments the first page is comments 1 to 50 (got ' + bodies(first).slice(0, 24) + '...)')
+  ref.n = 203
+  const p2: any = await host.handleIssueComments({ number: 'OMB-890', cwd: CWD, after: 50 })
+  check(p2.ok === true && bodies(p2.nodes) === Array.from({ length: 50 }, (_, k) => k + 51).join(','), 'F3: a comment arrives, and the next page is still exactly 51 to 100, none skipped (got ' + bodies(p2.nodes).slice(0, 24) + '...)')
+  ref.n = 210
+  const p3: any = await host.handleIssueComments({ number: 'OMB-890', cwd: CWD, after: 100 })
+  check(p3.ok === true && bodies(p3.nodes) === Array.from({ length: 50 }, (_, k) => k + 101).join(','), 'F3: seven more arrive, and the following page is still 101 to 150')
 }
 
 // G) the receipt of a comment on a backend that has no local library is not reported as a loss

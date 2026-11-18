@@ -74,9 +74,9 @@ export async function getIssue(
   // 缺字段是「没读」，空数组才是「读了、没有」，面板据此分得清「评论加载中」与「没有评论」。
   const wanted = opts && opts.comments && typeof opts.comments.first === 'number' ? Math.floor(opts.comments.first) : 0
   const withComments = wanted > 0
-  const result = await gql<{ issue: (LinearIssueNode & { comments?: { nodes?: LinearCommentNode[] | null; pageInfo?: { hasNextPage?: boolean } | null } | null }) | null }>(ctx, account, {
+  const result = await gql<{ issue: (LinearIssueNode & { comments?: { nodes?: LinearCommentNode[] | null; pageInfo?: { hasPreviousPage?: boolean } | null } | null }) | null }>(ctx, account, {
     query: withComments ? ISSUE_WITH_COMMENTS_QUERY : ISSUE_QUERY,
-    variables: withComments ? { id: trimmed, first: COMMENTS_FETCH_CAP } : { id: trimmed },
+    variables: withComments ? { id: trimmed, last: COMMENTS_FETCH_CAP } : { id: trimmed },
     bucket: 'read',
   })
   if (!result.ok) return { ok: false, error: result.error }
@@ -89,9 +89,10 @@ export async function getIssue(
   const nodes = (node.comments && Array.isArray(node.comments.nodes) ? node.comments.nodes : []).filter(function (c) { return !!c })
   const all = nodes.slice().sort(function (a, b) { return String(a.createdAt || '').localeCompare(String(b.createdAt || '')) })
   issue.comments = all.slice(0, wanted).map(commentOf)
-  // 总数只在「这一批就是全部」时才报：Linear 说还有更多（超过取满的 200 条）就不报，面板不会把一个下限当成总数。
+  // 总数只在「这一批就是全部」时才报：Linear 说窗口之前还有评论（超过取满的 200 条）就不报，面板不会把一个下限当成总数。
   // 「还有更多」这个事实照实传下去（commentsHasMore），不传数字：宿主据此在总数未知时仍给出「加载更多」，又不会把下限当总数。
-  if (node.comments && node.comments.pageInfo && node.comments.pageInfo.hasNextPage === true) issue.commentsHasMore = true
+  // 窗口是最旧的 200 条（见 queries.ts 的 COMMENTS_FETCH_CAP），所以这一批的内容不随新评论变化，宿主按偏移翻页是稳的。
+  if (node.comments && node.comments.pageInfo && node.comments.pageInfo.hasPreviousPage === true) issue.commentsHasMore = true
   else issue.commentCount = all.length
   return { ok: true, data: issue }
 }

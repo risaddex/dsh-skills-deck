@@ -35,23 +35,28 @@ ${ISSUE_CORE}`
 
 /**
  * 一次要这么多条评论：评论连接的页大小上限，也是宿主面板能看到的最多条数（宿主 COMMENTS_MAX 也是 200）。
- * 为什么永远取满而不是只取宿主要的那 50 条：Linear 的评论连接没有升序参数，回来的是最新的在前，
- * 「最旧的 N 条」只能从整批里挑；宿主每次都从 0 要到「已加载 + 50」再切掉已加载的，需要的正是最旧的 N 条。
+ * 为什么永远取满而不是只取宿主要的那 50 条：宿主每次都从 0 要到「已加载 + 50」再切掉已加载的，需要的正是最旧的 N 条；
  * 一次请求取满，也比每点一次「加载更多」就多发一次便宜。
+ * 为什么用 last 而不是 first（PR #47 评审）：Linear 的评论连接默认按创建时间、最新的在前（Orca 的集成同样这么读），
+ * first: 200 取到的是最新的 200 条，超过 200 条的票就会少掉最旧的那些，而且这个窗口会随新评论移动，
+ * 宿主按偏移翻页时会漏掉一条。last: 200 取列表末尾的 200 条，也就是最旧的 200 条：新评论落在另一头，窗口不动，翻页稳定。
+ * 评论不超过 200 条时两种写法拿到的是同一批，所以这只改变超过 200 条的票。
+ * 没有核对过的一点：「默认最新在前」来自 Orca 的注释，不是 Linear 文档（文档只说默认按 createdAt 排序，没写方向）；
+ * 若方向其实相反，只有超过 200 条评论的票会拿到最新的 200 条，与改前行为相同。
  */
 export const COMMENTS_FETCH_CAP = 200
 
 /**
  * 单票带评论：与 ISSUE_QUERY 同一份票面字段，再加评论连接。评论节点只问 commentCreate 回包里已经在用的那几格
  * （id、body、createdAt、updatedAt、user 的 name 与 displayName），不多问没核对过的字段（见 normalize.ts 的 LinearCommentNode）。
- * pageInfo.hasNextPage 说明有没有比这一批更多的评论，房间据此决定能不能报评论总数。
+ * pageInfo.hasPreviousPage 说明窗口之前还有没有评论（用 last 取时「更多」就在这一头），房间据此决定能不能报评论总数。
  */
-export const ISSUE_WITH_COMMENTS_QUERY = `query LinearIssueWithComments($id: String!, $first: Int!) {
+export const ISSUE_WITH_COMMENTS_QUERY = `query LinearIssueWithComments($id: String!, $last: Int!) {
   issue(id: $id) {
     ...LinearIssueCore
-    comments(first: $first) {
+    comments(last: $last) {
       nodes { id body createdAt updatedAt user { name displayName } }
-      pageInfo { hasNextPage }
+      pageInfo { hasPreviousPage }
     }
   }
 }
