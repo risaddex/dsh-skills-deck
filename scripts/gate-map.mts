@@ -960,6 +960,15 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // gh:remote continua com a barra neutra (1), GitLab e Markdown com a lista própria (2), backend desconhecido não empresta a do GitHub (1) = 11.
   // Contra o código anterior 4 das 11 falham.
   'verify-45-linear-banner': 11,
+  // 2026-11-18 #45：mapa Linear com todos os cards "Ready" e "Blocked 0" apesar de bloqueios ligados; o deck gravava bloqueios e não conseguia lê-los de volta.
+  // A sala só lia inverseRelations dentro do caminho de escrita (setBlockedBy); nenhuma leitura pedia o campo, então um ticket lido do Linear nunca trazia
+  // blockedBy. Passo 1 (detalhe): a leitura de um ticket pede inverseRelations(first: 250) com pageInfo.hasNextPage, só relações do tipo blocks contam,
+  // o estado é o que o Linear diz (sem estado = sem estado, nunca "open"), sem bloqueadores é lista vazia, e uma lista cortada pelo limite NÃO é devolvida
+  // (uma lista parcial lida como completa diria "pode pegar" de um ticket bloqueado). Roda a sala real sobre um canal falso que honra o first da consulta.
+  // 6 (consultas: 3 checagens × 2) + 6 (o que conta como bloqueador) + 6 (vazio 2, não pedido 1, 250 exato 1, 260 cortado 2) + 2 (junto com comentários) +
+  // 4 (detalhe do painel pelo host real) + 5 (complexidade: 3 exemplos da documentação do Linear + 2 consultas) = 29.
+  // Contra o código anterior 19 das 29 falham (os 10 que passam são os controles). Medido: detalhe 943 e detalhe com 200 comentários 1464 de 10000 pontos.
+  'verify-45-linear-blockers-read': 29,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；

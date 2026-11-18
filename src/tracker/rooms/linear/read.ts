@@ -15,6 +15,7 @@ import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { linearError } from './errors.js'
 import { CLOSED_STATE_TYPES, commentOf, issueOf, type LinearCommentNode, type LinearIssueNode } from './normalize.js'
 import { COMMENTS_FETCH_CAP, ISSUE_QUERY, ISSUE_WITH_COMMENTS_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
+import { incomingBlocks, refOf, type RelationConnection } from './relations.js'
 
 
 /**
@@ -61,6 +62,22 @@ export function buildIssuesFilter(filter: ListFilter | undefined): Record<string
   return Object.keys(conditions).length > 0 ? conditions : undefined
 }
 
+/**
+ * 把「谁阻塞我」挂到契约的票上（#45）。三种结局要分清：
+ *  · 回包里没有关系连接（这次没问，或旧回包）：不写 blockedBy，是「不知道」，不是「没有阻塞者」；
+ *  · 有连接且这一页就是全部：写 blockedBy，没有阻塞者时是空数组（知道是空）；
+ *  · 有连接但被页大小截断（pageInfo.hasNextPage）：同样不写。残缺的名单被当成完整的名单读，会对一张其实被挡着的票说「可以接」，
+ *    比不知道更糟；不知道至少诚实。单票读取满 250，所以只有关系多到 250 条以上的票才会走到这里。
+ * 只认 blocks 类型、标题与状态按读到的真值给，这些规则住在 relations.ts 的 incomingBlocks 与 refOf（写侧共用同一份，不再抄第二份）。
+ */
+function withBlockers(issue: Issue, node: { inverseRelations?: RelationConnection | null }): Issue {
+  const conn = node.inverseRelations
+  if (!conn) return issue
+  if (conn.pageInfo && conn.pageInfo.hasNextPage === true) return issue
+  issue.blockedBy = incomingBlocks(node).map(refOf)
+  return issue
+}
+
 /** 取一张票。key 既可以是 UUID，也可以是 ENG-123 这种标识符（Linear 两者都收）。 */
 export async function getIssue(
   ctx: OpContext,
@@ -74,7 +91,7 @@ export async function getIssue(
   // 缺字段是「没读」，空数组才是「读了、没有」，面板据此分得清「评论加载中」与「没有评论」。
   const wanted = opts && opts.comments && typeof opts.comments.first === 'number' ? Math.floor(opts.comments.first) : 0
   const withComments = wanted > 0
-  const result = await gql<{ issue: (LinearIssueNode & { comments?: { nodes?: LinearCommentNode[] | null; pageInfo?: { hasPreviousPage?: boolean } | null } | null }) | null }>(ctx, account, {
+  const result = await gql<{ issue: (LinearIssueNode & { inverseRelations?: RelationConnection | null; comments?: { nodes?: LinearCommentNode[] | null; pageInfo?: { hasPreviousPage?: boolean } | null } | null }) | null }>(ctx, account, {
     query: withComments ? ISSUE_WITH_COMMENTS_QUERY : ISSUE_QUERY,
     variables: withComments ? { id: trimmed, last: COMMENTS_FETCH_CAP } : { id: trimmed },
     bucket: 'read',
@@ -82,7 +99,7 @@ export async function getIssue(
   if (!result.ok) return { ok: false, error: result.error }
   const node = result.data.issue
   if (!node) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'Linear has no ticket ' + trimmed) }
-  const issue = issueOf(node)
+  const issue = withBlockers(issueOf(node), node)
   if (!withComments) return { ok: true, data: issue }
   // Linear 回的是最新的在前；宿主要的是「最旧的 N 条、按时间升序」（它每次从 0 取到 N 再切掉已加载的），与 linear.app 的显示也一致。
   // 时间是 ISO 字符串，同一时区下按字符串比就是按时间比；同一时刻的两条保持 Linear 给的相对顺序（Array.sort 稳定）。

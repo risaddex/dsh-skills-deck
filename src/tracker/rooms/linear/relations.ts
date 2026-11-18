@@ -59,7 +59,7 @@ interface LinearRelationNode {
 }
 
 /** 关系的连接形状：本文件只要一页节点和「还有没有下一页」。 */
-interface RelationConnection {
+export interface RelationConnection {
   pageInfo?: { hasNextPage?: boolean } | null
   nodes?: LinearRelationNode[] | null
 }
@@ -70,7 +70,7 @@ interface GraphNode extends LinearIssueNode {
 }
 
 /** 一条「谁阻塞我」的边：关系 id 用来删，票号与标题用来比较、也用来交回契约。 */
-interface IncomingBlock {
+export interface IncomingBlock {
   relationId: string
   key: string
   title: string
@@ -109,7 +109,7 @@ function normalizeBlockers(blockedBy: string[] | undefined): string[] {
  * 关系 id 缺失的条目跳过（schema 里 IssueRelation.id 非空，走到这一格说明回包不完整）：宁可多建一条同样的边
  * （Linear 会复用完全一样的边），也不拿一个假 id 去删。
  */
-function incomingBlocks(node: GraphNode): IncomingBlock[] {
+export function incomingBlocks(node: { inverseRelations?: RelationConnection | null }): IncomingBlock[] {
   const conn = node.inverseRelations
   const nodes = conn && Array.isArray(conn.nodes) ? conn.nodes : []
   const out: IncomingBlock[] = []
@@ -127,7 +127,7 @@ function incomingBlocks(node: GraphNode): IncomingBlock[] {
 }
 
 /** 一条边 → 契约的 IssueRef（标题与状态按读到的真值给，缺的格省略而不是编一个）。 */
-function refOf(block: IncomingBlock): IssueRef {
+export function refOf(block: IncomingBlock): IssueRef {
   return { key: block.key, title: block.title, ...(block.state ? { state: block.state } : {}) }
 }
 

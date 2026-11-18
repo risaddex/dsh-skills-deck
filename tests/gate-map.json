@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T15:59:08.759Z",
+  "generatedAt": "2026-11-18T16:09:50.027Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 640,
-  "gateCount": 640,
-  "attributedGates": 578,
+  "chainLength": 641,
+  "gateCount": 641,
+  "attributedGates": 579,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 161,
+  "completionRecordedGates": 162,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 993,
@@ -8068,6 +8068,25 @@
       "completionRecord": true,
       "expectedAssertions": 11,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
+    },
+    {
+      "step": "node tests/verify-45-linear-blockers-read.ts",
+      "file": "tests/verify-45-linear-blockers-read.ts",
+      "guards": [
+        "src/refresh/rooms/host/comment-thread-fetch.ts",
+        "src/tracker/rooms/linear/queries.ts",
+        "src/tracker/rooms/linear/read.ts",
+        "src/tracker/rooms/linear/relations.ts"
+      ],
+      "dirs": [
+        "src/refresh/rooms/host",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 29,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
       "step": "node tests/verify-45-linear-comments-read.ts",
@@ -16309,6 +16328,7 @@
       "node tests/verify-1935-receipt-resync.ts",
       "node tests/verify-3-workspace-switch.ts",
       "node tests/verify-45-comment-text-key.ts",
+      "node tests/verify-45-linear-blockers-read.ts",
       "node tests/verify-45-linear-comments-read.ts",
       "node tests/verify-45-linear-probe.ts",
       "node tests/verify-45-text-key-rule.ts",
@@ -16926,6 +16946,7 @@
       "node tests/verify-14-linear-account-read.ts",
       "node tests/verify-27-account-seam.ts",
       "node tests/verify-33-linear-create.ts",
+      "node tests/verify-45-linear-blockers-read.ts",
       "node tests/verify-45-linear-comments-read.ts",
       "node tests/verify-45-linear-repo-identity.ts"
     ],

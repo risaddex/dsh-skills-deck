@@ -27,9 +27,23 @@ export const IDENTITY_QUERY = `query LinearIdentity {
   viewer { id name displayName email organization { id name urlKey } }
 }`
 
-/** 单票：`id` 既收 UUID 也收 ENG-123 这种标识符（schema 的 Mutation/Query 都这么收）。 */
+/** 一页最多要几张：schema 的连接参数上限是 250，默认 50。 */
+export const MAX_PAGE = 250
+
+/**
+ * 「谁阻塞我」的选择集：这张票的 inverseRelations（Linear 只有 blocks 一种阻塞关系，方向见 relations.ts 的头注释），
+ * 每条只取关系 id 与类型、另一端票的标识符、标题与状态类型，再加 pageInfo.hasNextPage 说明这一页有没有被截断。
+ * `first` 必须写出来，不能靠默认：连接默认取 50 条，而 Linear 按「每个连接乘以它的 first（缺省 50）」算复杂度，单次查询超过 10000 点整条被拒
+ * （https://linear.app/developers/rate-limiting 的 Understanding query complexity，2026-11-18 核对；tests/lib/linear-complexity.ts 按这条规则估算，
+ * 门禁用它卡住每条查询的上限）。写在一个函数里，是为了单票读（取满 250）与列表读（每票取少量）用同一份字段，只有页大小不同。
+ */
+export function blockersSelection(first: number): string {
+  return 'inverseRelations(first: ' + first + ') { pageInfo { hasNextPage } nodes { id type issue { identifier title state { type } } } }'
+}
+
+/** 单票：`id` 既收 UUID 也收 ENG-123 这种标识符（schema 的 Mutation/Query 都这么收）。带阻塞者，取满一页（250），因为这是一张票。 */
 export const ISSUE_QUERY = `query LinearIssue($id: String!) {
-  issue(id: $id) { ...LinearIssueCore }
+  issue(id: $id) { ...LinearIssueCore ${blockersSelection(MAX_PAGE)} }
 }
 ${ISSUE_CORE}`
 
@@ -54,6 +68,7 @@ export const COMMENTS_FETCH_CAP = 200
 export const ISSUE_WITH_COMMENTS_QUERY = `query LinearIssueWithComments($id: String!, $last: Int!) {
   issue(id: $id) {
     ...LinearIssueCore
+    ${blockersSelection(MAX_PAGE)}
     comments(last: $last) {
       nodes { id body createdAt updatedAt user { name displayName } }
       pageInfo { hasPreviousPage }
@@ -77,6 +92,3 @@ export const ISSUES_QUERY = `query LinearIssues($first: Int!, $after: String, $f
   }
 }
 ${ISSUE_CORE}`
-
-/** 一页最多要几张：schema 的连接参数上限是 250，默认 50。 */
-export const MAX_PAGE = 250
