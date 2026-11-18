@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T14:32:52.463Z",
+  "generatedAt": "2026-11-18T14:40:00.335Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 637,
-  "gateCount": 637,
-  "attributedGates": 575,
+  "chainLength": 638,
+  "gateCount": 638,
+  "attributedGates": 576,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 159,
+  "completionRecordedGates": 160,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 992,
@@ -8040,6 +8040,21 @@
       "completionRecord": true,
       "expectedAssertions": 40,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
+    },
+    {
+      "step": "node tests/verify-45-linear-probe.ts",
+      "file": "tests/verify-45-linear-probe.ts",
+      "guards": [
+        "src/refresh/rooms/host/probe-handler.ts"
+      ],
+      "dirs": [
+        "src/refresh/rooms/host"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 14,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
     },
     {
       "step": "node tests/verify-45-linear-repo-identity.ts",
@@ -16243,6 +16258,7 @@
       "node tests/verify-3-workspace-switch.ts",
       "node tests/verify-45-comment-text-key.ts",
       "node tests/verify-45-linear-comments-read.ts",
+      "node tests/verify-45-linear-probe.ts",
       "node tests/verify-45-text-key-rule.ts",
       "node tests/verify-504-github-pr.ts",
       "node tests/verify-507-pr-offline.ts",

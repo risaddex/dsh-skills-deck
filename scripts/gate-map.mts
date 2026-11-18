@@ -937,6 +937,14 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 失败仍是失败 2 + 宿主详情与「加载更多」8 + 评论回执 6 = 40。对着改动前的源码跑，40 条里 22 条红。
   // 回执那一组钉住：库不认这个后端（Linear）时回 stored:true（没有可丢的东西，面板不再弹黄条），库不可用、降级、提交失败仍是 stored:false。单跑实测 40 条。
   'verify-45-linear-comments-read': 40,
+  // 2026-11-18 #45：com um workspace Linear o painel ficava com o chip "Failed" ao lado de Refresh, e o log tinha um wf.probe com errorKind env
+  // a cada 5 segundos. O probe montava um contexto de operação só com exec (feito para as salas que rodam comandos) e o passava a tracker.list;
+  // a sala Linear só fala HTTP e usa o contexto que recebe, então respondia "the room has no HTTP channel wired (ctx.http is missing)".
+  // O snapshot nunca falhou porque passa pela sessão de leitura, que traz o canal e a conta. Agora o probe de um backend HTTP lista pela sessão;
+  // GitLab e Markdown ficam no caminho de antes (gates antigos o fixam). Corre a sala Linear real sobre um canal falso:
+  // o controle sem sessão reproduz a mensagem do log (1) + sucesso pela sessão (5) + falhas com o tipo certo (3) + GitLab e Markdown intactos (2 × 2) = 14.
+  // Contra o código anterior 9 das 14 falham. Medido em execução: 14 de 14 passam agora.
+  'verify-45-linear-probe': 14,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；
