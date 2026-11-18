@@ -142,7 +142,30 @@ export function createIssuePage(deps: IssuePageDeps): any {
       isEnabled: backendLogEnabled,
     }
     const filter: any = { state: a.state || undefined, labels: a.labels && a.labels.length ? a.labels : undefined }
-    const r: any = await tracker.listPage(repoRef, filter, { cursor: a.cursor || '', limit: a.limit }, opCtx)
+    const pageOpts: any = { cursor: a.cursor || '', limit: a.limit }
+    // #45：Linear 只走 HTTP（房间从递进来的上下文里取 `ctx.http`，见 rooms/linear/client.js 的 channelOf）。
+    //   上面那份 opCtx 只有 exec（它是给「跑命令」的房用的），递给 Linear 房必然回
+    //   「the room has no HTTP channel wired (ctx.http is missing)」—— 界面于是显示「Could not load more
+    //   history」，而 quota.op 记的是 requests: 0（一条请求都没发出去）。快照那条链从没犯这个错，因为它
+    //   走只读会话，会话的上下文带着 HTTP 通道与账号。所以这一格照 probe（refresh/rooms/host/probe-handler.js
+    //   里 #45 修过的那一支）的做法走同一个会话。
+    //   什么约定不能改：GitLab 与本地 Markdown 保持在上面那条命令路上（旧门禁按它钉住，它们的记账与
+    //   会话政策不一样）；以后多一家只走 HTTP 的房，这一格与 probe 那一格要一起改。
+    let r: any
+    if (String(backendId) === 'linear') {
+      if (typeof openSession !== 'function') {
+        return { ok: false, error: { kind: 'env', message: 'The host did not connect the read session outlet (internally called openSession), so this page was not read: a Linear workspace is read only through that session, which carries the HTTP channel and the account. Report this exact message to the plugin maintainer.' } }
+      }
+      const opened: any = await openSession(cwd)
+      if (!opened || opened.ok !== true || typeof opened.call !== 'function') {
+        return { ok: false, error: { kind: 'env', message: 'The read session for this workspace could not be opened (internally called openSession; reason: ' + String((opened && (opened.reason || opened.detail)) || 'open-failed') + '), so this page was not read.' } }
+      }
+      // 会话的 call 给的上下文（cwd、平台、文件、日志、出站控制面、http）才是这家的房要的那一份；
+      // 上面那份 opCtx 只用于命令路。
+      r = await opened.call(function (session: any, c: any): any { return session.listPage(repoRef, filter, pageOpts, c) })
+    } else {
+      r = await tracker.listPage(repoRef, filter, pageOpts, opCtx)
+    }
     if (!r || !r.ok) return { ok: false, error: (r && r.error) || { kind: 'network', message: 'listPage returned no response' } }
     const d: any = r.data || {}
     const items: any = Array.isArray(d.items) ? d.items.map(clientRowOf) : []

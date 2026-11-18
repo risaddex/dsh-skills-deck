@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T16:14:59.653Z",
+  "generatedAt": "2026-11-18T17:30:21.292Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 642,
-  "gateCount": 642,
-  "attributedGates": 580,
+  "chainLength": 643,
+  "gateCount": 643,
+  "attributedGates": 581,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 163,
+  "completionRecordedGates": 164,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 993,
@@ -8128,6 +8128,21 @@
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
+      "step": "node tests/verify-45-linear-issue-page.ts",
+      "file": "tests/verify-45-linear-issue-page.ts",
+      "guards": [
+        "src/host/issuePage.ts"
+      ],
+      "dirs": [
+        "src/host"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 22,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
+    },
+    {
       "step": "node tests/verify-45-linear-probe.ts",
       "file": "tests/verify-45-linear-probe.ts",
       "guards": [
@@ -15982,6 +15997,7 @@
       "node tests/verify-1903-history-entries.ts",
       "node tests/verify-1923-closed-container.ts",
       "node tests/verify-3-workspace-switch.ts",
+      "node tests/verify-45-linear-issue-page.ts",
       "node tests/verify-497-slash.ts",
       "node tests/verify-596-rpc-carrier.ts",
       "node tests/verify-656-subworkspace-acceptance.ts",

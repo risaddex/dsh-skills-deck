@@ -992,6 +992,16 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 对着改动前的源码跑它，45 条里 14 条红：13 条是文本键本身，1 条是 Infinity（旧客户端把它当有限数发出去，现在与详情同规则被拒）。
   // 单跑实测 45 条。
   'verify-45-comment-text-key': 45,
+  // 2026-11-18 #45: with a Linear workspace the Closed tab of the list showed "Could not load more history; try again shortly" and
+  // "0 loaded / 0 total", and the host log had wf.issuesPage failing in 4 to 41 ms with quota.op listPage recording requests: 0, so no
+  // request ever left. The same defect the probe had: src/host/issuePage.ts built its own operation context (only exec, made for rooms
+  // that run commands) and handed it to tracker.listPage, and the linear room speaks HTTP only. This gate runs the real host phone with
+  // the real linear room over a fake channel: the control against the old context (4: comes back ok, the session is opened for the
+  // workspace paged, both requests carry the account header, both ask the read bucket) + the rows and the total (6) + the cursor going
+  // out and coming back (4) + no session outlet wired (2) + GitLab and Markdown untouched (2 x 3) = 22. Against the source before the
+  // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
+  // Measured by running it: 22 of 22 pass now.
+  'verify-45-linear-issue-page': 22,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。
