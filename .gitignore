@@ -131,3 +131,6 @@ _research/
 
 # scripts/probe.mts grava aqui o código de sondagem e apaga ao terminar; sobra só se o processo for morto à força.
 /.probe-*.mts
+
+# macOS Finder metadata, at any depth (root, src/, package/ ...). Never source, never committed.
+.DS_Store
