@@ -152,7 +152,10 @@ async function listOne(ctx: OpContext, ready: Ready, filter: AccountListFilter):
   }
   const project = await projectOf(ctx, ready)
   if (!project.ok) return project
-  const conditions: Record<string, unknown>[] = [buildIssuesFilter(filter) || {}]
+  // 标签在本函数里仍然是拿到节点之后、按小写精确比的本地筛选（见下面的循环），不下推给 Linear：
+  // 跨账号读一直是这个口径，改成下推会改变发出去的查询与翻页预算的花法（#49 只改单工作区的列表、计数与按页取票）。
+  // 所以这里把 labels 明确置空再交给共享的拼法，免得它把标签条件也拼进来、同一批标签被筛两遍。
+  const conditions: Record<string, unknown>[] = [buildIssuesFilter({ ...filter, labels: undefined }) || {}]
   if (project.data) conditions.push({ project: { id: { eq: project.data } } })
   const teams = teamsOf(ready)
   if (ready.binding.alias === ready.entry.alias && ready.binding.team && ready.entry.teams.length && !teams.length) return failLinear(ERROR_KIND.CONFLICT, 'the bound Linear team is outside the configured account teams')

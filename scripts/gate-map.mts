@@ -1002,6 +1002,14 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
   // Measured by running it: 22 of 22 pass now.
   'verify-45-linear-issue-page': 22,
+  // issue #49: the Linear room refused every non-empty `labels` filter, so the panel's closed-map page of a Linear workspace
+  // (`listPage(ref, { state: 'closed', labels: ['wayfinder:map'] })`) was always an error. This gate runs the real room over a fake
+  // channel and asserts on the outgoing GraphQL variables: listPage page + count walk (9), cursor path (5), counts (5), list (4),
+  // one shared builder (5), several labels as AND plus spelling and blanks (8), what stays refused with 0 requests (5 filter shapes
+  // x with and without labels x 4 assertions + 3 table checks = 43), state and since untouched (5) = 84. Measured by running it:
+  // against the source before the fix 37 of the 84 fail (every one that needs the label to be expressed or no longer blamed);
+  // 84 of 84 pass now.
+  'verify-49-linear-label-filter': 84,
   // 2026-11-19 #48: the Linear room had no listLabels, so the registry answered its "does not implement op listLabels" stub and every label badge of the
   // panel drew in the fallback colour. This gate runs the real room, reached through the registry, over a fake HTTP channel that counts requests:
   // a two-page workspace in the contract shape with the cursor, the read bucket, the account header and no global fetch (15) + a list that cannot be

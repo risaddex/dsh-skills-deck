@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T20:01:34.473Z",
+  "generatedAt": "2026-11-18T20:40:15.635Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 644,
-  "gateCount": 644,
-  "attributedGates": 582,
+  "chainLength": 645,
+  "gateCount": 645,
+  "attributedGates": 583,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 165,
+  "completionRecordedGates": 166,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 994,
@@ -8286,6 +8286,24 @@
       "completionRecord": true,
       "expectedAssertions": 28,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-49-linear-label-filter.ts",
+      "file": "tests/verify-49-linear-label-filter.ts",
+      "guards": [
+        "src/tracker/rooms/linear/account-read.ts",
+        "src/tracker/rooms/linear/index.ts",
+        "src/tracker/rooms/linear/paging.ts",
+        "src/tracker/rooms/linear/read.ts"
+      ],
+      "dirs": [
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 84,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
       "step": "node tests/verify-497-slash.ts",
@@ -17004,7 +17022,8 @@
       "node tests/verify-45-linear-blockers-read.ts",
       "node tests/verify-45-linear-comments-read.ts",
       "node tests/verify-45-linear-repo-identity.ts",
-      "node tests/verify-48-linear-list-labels.ts"
+      "node tests/verify-48-linear-list-labels.ts",
+      "node tests/verify-49-linear-label-filter.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-patch-receipt-slim.ts",
