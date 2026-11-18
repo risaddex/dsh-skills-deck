@@ -14,7 +14,7 @@ import { gql, type LinearAccount } from './client.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { linearError } from './errors.js'
 import { CLOSED_STATE_TYPES, commentOf, issueOf, type LinearCommentNode, type LinearIssueNode } from './normalize.js'
-import { COMMENTS_FETCH_CAP, ISSUE_QUERY, ISSUE_WITH_COMMENTS_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
+import { COMMENTS_FETCH_CAP, ISSUE_QUERY, ISSUE_WITH_COMMENTS_QUERY, ISSUES_WITH_BLOCKERS_QUERY, MAX_PAGE } from './queries.js'
 import { incomingBlocks, refOf, type RelationConnection } from './relations.js'
 
 
@@ -134,15 +134,16 @@ export async function listIssues(
 
   const first = PAGE_SIZE
   const result = await gql<{
-    issues: { nodes?: LinearIssueNode[]; pageInfo?: { hasNextPage?: boolean } }
+    issues: { nodes?: (LinearIssueNode & { inverseRelations?: RelationConnection | null })[]; pageInfo?: { hasNextPage?: boolean } }
   }>(ctx, account, {
-    query: ISSUES_QUERY,
+    query: ISSUES_WITH_BLOCKERS_QUERY,
     variables: { first, filter: buildIssuesFilter(filter) ?? null },
     bucket: 'read',
   })
   if (!result.ok) return { ok: false, error: result.error }
   const nodes = result.data.issues?.nodes || []
-  const issues: Issue[] = nodes.map((node) => issueOf(node))
+  // 每一行带它自己的阻塞者（页大小见 queries.ts 的 LIST_BLOCKERS_PER_TICKET）；关系比这一页还多的行不带 blockedBy，见 withBlockers。
+  const issues: Issue[] = nodes.map((node) => withBlockers(issueOf(node), node))
   const truncated = result.data.issues?.pageInfo?.hasNextPage === true
   return truncated ? { ok: true, data: issues, truncated } : { ok: true, data: issues }
 }

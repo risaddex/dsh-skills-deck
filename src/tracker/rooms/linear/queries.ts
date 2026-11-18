@@ -92,3 +92,26 @@ export const ISSUES_QUERY = `query LinearIssues($first: Int!, $after: String, $f
   }
 }
 ${ISSUE_CORE}`
+
+/**
+ * 列表每一行最多带几条「谁阻塞我」。故意取小：Linear 把嵌套连接按它的 first 乘进复杂度，单次查询超过 10000 点整条被拒，
+ * 那等于面板整张列表空白。按 Linear 公布的算法（属性 0.1、对象 1、连接乘 first，缺省 50；tests/lib/linear-complexity.ts 实现，
+ * 并用文档里的三个例子校准）量出来，一页 50 张：不带关系 3327 点；每行取 10 条 5132 点；每行取 25 条 7757 点；每行取 30 条 8632 点；
+ * 取 50 条（或者不写 first，缺省也是 50）12132 点，会被整条拒绝。所以是 10，留出一半的余量，而且门禁会量。
+ * 这些是按公布的算法估的，不是 Linear 回的 X-Complexity 响应头：真账号上看一次那个头，才是最后的证据。
+ * 一行的关系超过这个数（有下一页）就不返回 blockedBy：残缺的名单被当成完整的名单读，会对一张其实被挡着的票说「可以接」。
+ * 那一张票的详情里有完整的一页（250 条），所以只是地图上的卡片暂时按「不知道」处理。
+ */
+export const LIST_BLOCKERS_PER_TICKET = 10
+
+/**
+ * 带阻塞者的一页票：地图的子票来自快照读的这一份列表（Linear 房没有按需取子票的读），所以卡片要靠它才知道谁被挡着。
+ * 与 ISSUES_QUERY 分开写，是为了不动多账号收件箱（account-read.ts）还在用的那一份：那一条不需要关系，也不该多付这份复杂度。
+ */
+export const ISSUES_WITH_BLOCKERS_QUERY = `query LinearIssuesWithBlockers($first: Int!, $after: String, $filter: IssueFilter) {
+  issues(first: $first, after: $after, orderBy: updatedAt, filter: $filter) {
+    nodes { ...LinearIssueCore ${blockersSelection(LIST_BLOCKERS_PER_TICKET)} }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+${ISSUE_CORE}`

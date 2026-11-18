@@ -969,6 +969,15 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 4 (detalhe do painel pelo host real) + 5 (complexidade: 3 exemplos da documentação do Linear + 2 consultas) = 29.
   // Contra o código anterior 19 das 29 falham (os 10 que passam são os controles). Medido: detalhe 943 e detalhe com 200 comentários 1464 de 10000 pontos.
   'verify-45-linear-blockers-read': 29,
+  // Passo 2 (lista do mapa): os filhos de um mapa Linear vêm da lista que o snapshot pede (list com state open; a sala não tem leitura de filhos sob
+  // demanda), e essas linhas não tinham blockedBy: todo card ficava Ready e o contador dizia Blocked 0. A lista agora pede as relações de cada linha,
+  // mas o Linear rejeita a consulta inteira acima de 10000 pontos e cobra a conexão aninhada pelo seu first (50 se não escrito): com 50 por linha
+  // a página de 50 custaria 12132 e a lista do painel ficaria em branco. Por isso a página de relações por linha é 10 (5132 pontos, medido pela regra
+  // publicada), e uma linha com mais relações que isso volta SEM blockedBy (nunca uma lista parcial lida como completa). ISSUES_QUERY, da caixa de
+  // entrada de várias contas, não muda. 5 (consulta) + 4 (orçamento de complexidade, com a prova de que 50 e o padrão estourariam) + 5 (cada linha com
+  // seus bloqueadores) + 4 (linha cortada, 10 exato) + 2 (a página em si) + 5 (do snapshot do host ao modelo do mapa: ready, blocked, blocked, ready e
+  // contadores Ready 2 / Blocked 2, o que o mantenedor viu como Ready 4 / Blocked 0) = 25. Contra o código anterior 16 das 25 falham.
+  'verify-45-linear-blockers-list': 25,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；
