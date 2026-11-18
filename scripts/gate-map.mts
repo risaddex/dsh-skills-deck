@@ -891,8 +891,10 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 行的数字 number，于是 GitHub 与 Markdown 的行与父地图丝带认不出来、Linear 整页不画；链路全绿是因为没有门禁带着文本键把页面真渲染一遍。
   // 本门禁真渲染 IssueDetail：4 种后端形态 × 3 条（页面画了、快照行找到了、父地图丝带画了）= 12，外加 ENG-12 与 OPS-12 不混、
   // 5 种「不是键」不画 = 6，共 18。对着已发布的分支跑它，18 条里 11 条红（其余 7 条老代码本来就满足）。
-  // 单跑实测 18 条。
-  'verify-45-detail-page-by-key': 18,
+  // 后来在同一扇门禁里加了 detailFromRow 的 5 种行形态（GitHub、Markdown、Markdown 容器、Linear 无 number、Linear number 为空），
+  // 数字键的 number 一个字不变，Linear 不再写成 NaN：18 + 5 = 23。
+  // 单跑实测 23 条。
+  'verify-45-detail-page-by-key': 23,
   // 2026-11-17 #45：列表行把「文本键」交给进详情、复制链接、打开链接。步骤 1 到 4 只修了导航栈的读方，喂栈的调用方仍交 x.number，
   // Linear 行没有数字 number，点整行没有任何反应（列表能画，因为角标读的是 key）。本门禁真渲染 listIssueRow 并调用用户点的三样：
   // 6 种行形态 × 4 条（行有点击处理、点行交对编号、复制写对地址、链接按钮写对日志与地址）= 24，外加 Linear 地图点行进地图详情 1 条 = 25。

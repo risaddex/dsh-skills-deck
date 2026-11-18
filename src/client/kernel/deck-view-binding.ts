@@ -236,7 +236,7 @@ function deckDetailFromStore(scope: DeckViewScope, st: any, openIssue: any, read
   let seenAt: number = 0
   try {
     const n = openIssue ? openIssue.number : null
-    const seen = (n !== null && n !== undefined && typeof scope.idOfParts === 'function' && s.detailSeenAt) ? s.detailSeenAt[scope.idOfParts(openIssue.effort || '', Number(n))] : 0
+    const seen = (n !== null && n !== undefined && typeof scope.idOfParts === 'function' && s.detailSeenAt) ? s.detailSeenAt[scope.idOfParts(openIssue.effort || '', /^\d+$/.test(String(n).trim()) ? Number(String(n).trim()) : String(n).trim())] : 0
     seenAt = (typeof seen === 'number' && isFinite(seen)) ? seen : 0
   } catch (e) {}
   return {

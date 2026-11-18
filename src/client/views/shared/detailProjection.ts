@@ -138,7 +138,9 @@ export function detailFromRow(row: any): any {
   const commentsKnown: boolean = comments.length > 0 || commentCount === 0
   const sub: any = row && row.subIssueCounts
   const out: any = {
-    number: Number(row.number),
+    // #45：键全是数字时仍交数字（GitHub 42、Markdown 01 → 1，与旧写法同值）；Linear 的 OMB-903 交文本，不再写成 NaN。
+    number: /^\d+$/.test(detailRowKey(row)) ? Number(detailRowKey(row)) : (detailRowKey(row) !== '' ? detailRowKey(row) : Number(row.number)),
+    key: detailRowKey(row) !== '' ? detailRowKey(row) : undefined,
     effortId: row.effortId === undefined || row.effortId === null ? '' : String(row.effortId),
     title: row.title || '',
     state: row.state === 'CLOSED' ? 'CLOSED' : 'OPEN',

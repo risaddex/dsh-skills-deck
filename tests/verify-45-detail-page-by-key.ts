@@ -82,5 +82,16 @@ for (const bad of [null, undefined, '', '  ', NaN]) {
   const st: any = { cwd: 'D:\\ws', activeIssue: bad, activeEffortId: '', issueMode: 'idle', snapshot: { issues: [], maps: [] } }
   check(render(st) === '', 'nothing is drawn when the open ticket is ' + (typeof bad === 'number' && Number.isNaN(bad) ? 'NaN' : JSON.stringify(bad)))
 }
+// The detail built from a snapshot row keeps what it kept for numeric keys and no longer writes NaN for a text key
+for (const c of [
+  { name: 'GitHub 42', row: { number: 42, key: '42', title: 'x' }, number: 42, key: '42' },
+  { name: 'Markdown 01', row: { number: 1, key: '01', title: 'x' }, number: 1, key: '01' },
+  { name: 'Markdown container 00', row: { number: 0, key: '00', title: 'x' }, number: 0, key: '00' },
+  { name: 'Linear OMB-903', row: { key: 'OMB-903', title: 'x' }, number: 'OMB-903', key: 'OMB-903' },
+  { name: 'Linear OMB-903 with a null number', row: { number: null, key: 'OMB-903', title: 'x' }, number: 'OMB-903', key: 'OMB-903' },
+]) {
+  const d: any = proj.detailFromRow(c.row)
+  check(d.number === c.number && d.key === c.key, c.name + ': detailFromRow gives number ' + JSON.stringify(c.number) + ' and key ' + JSON.stringify(c.key) + ' (got ' + JSON.stringify(d.number) + ', ' + JSON.stringify(d.key) + ')')
+}
 printGateResult('verify-45-detail-page-by-key', assertions, failed)
 if (failed) process.exit(1)
