@@ -27,17 +27,18 @@ const PAGE_SIZE = Math.min(50, MAX_PAGE)
 /**
  * 这一版翻不动的筛选格（返回字段名）；空数组表示整份条件都翻成了 Linear 的 filter。
  *
- * 为什么要单独列出来：契约的 ListFilter 有七格，这一版只翻得动「状态」和「更新时间窗口」。
+ * 为什么要单独列出来：契约的 ListFilter 有七格，这一版翻得动「状态」「标签」和「更新时间窗口」。
  * 翻不动的格子如果照旧发一个不带它的查询，回来的名单就是**没筛过**的，而调用方会当成
  * 「按我说的筛过了」—— 错的名单比失败更贵（PR #26 review 的 P2）。所以翻不动就整体报
  * unsupported，让调用方看见「这一版还不支持这个条件」，而不是拿到一堆不相关的票。
+ *
+ * 标签（#49）已经从这张表里拿掉：它由 `buildIssuesFilter` 翻成 Linear 自己的 `labels` 条件，
+ * 列表、计数与按页取票走同一个拼法，所以不会再出现「发了查询但标签筛没生效」。
  */
 export function unsupportedFilters(filter: ListFilter | undefined): string[] {
   if (!filter) return []
   const out: string[] = []
   if (filter.type) out.push('type')
-  // 空数组与省略同义（#1183：都是不过滤），所以只有非空才算要求了标签。
-  if (Array.isArray(filter.labels) && filter.labels.length > 0) out.push('labels')
   // null 在契约里是「只要根票」，不是「不过滤」—— 这一版两种都还拼不出来。
   if (filter.parentKey !== undefined) out.push('parentKey')
   if (Array.isArray(filter.keys) && filter.keys.length > 0) out.push('keys')
@@ -47,9 +48,43 @@ export function unsupportedFilters(filter: ListFilter | undefined): string[] {
 }
 
 /**
+ * 契约的 `labels` 归一成「要带的标签名」：去掉首尾空白、丢掉空名、按大小写不敏感去重，保持原顺序
+ * （同一个名字写两种大小写不会变成两条条件，发出去的是第一次出现的写法）。
+ * 空数组、省略、全是空名，都归一成空名单，也就是「不筛标签」（契约：空数组与省略相同，#1183）。
+ */
+function labelNamesOf(filter: ListFilter): string[] {
+  if (!Array.isArray(filter.labels)) return []
+  const seen = new Set<string>()
+  const names: string[] = []
+  for (const raw of filter.labels) {
+    const name = String(raw === undefined || raw === null ? '' : raw).trim()
+    const folded = name.toLowerCase()
+    if (!name || seen.has(folded)) continue
+    seen.add(folded)
+    names.push(name)
+  }
+  return names
+}
+
+/**
+ * 把标签名单翻成 Linear 的 `IssueFilter.labels` 条件。
+ *
+ * 多个标签是「必须同时带上」（契约的 `ListFilter.labels` 写明的口径，GitLab 房也是把标签交给远端按 AND 筛）：
+ * 所以多个标签写成 `labels.and` 下的多条 `some`，每条 `some` 各自命中一个标签。Linear 的 schema 明说
+ * 「Different some branches can be satisfied by different labels」。**不能**写成一条 `some.name.in`：
+ * `in` 是「命中任何一个」，会把只带其中一个标签的票也算进来，名单就比调用方要的宽。
+ * 名字用 `eqIgnoreCase` 比，与本房账号读（`account-read.ts`，按小写比）一致，不让大小写写法决定一张票进不进名单。
+ */
+function labelsCondition(names: string[]): Record<string, unknown> {
+  const some = (name: string) => ({ some: { name: { eqIgnoreCase: name } } })
+  return names.length === 1 ? some(names[0]) : { and: names.map(some) }
+}
+
+/**
  * 把契约的 ListFilter 拼成 Linear 的 IssueFilter。
  *
- * 只拼翻得动的两格（状态、更新时间窗口）；其余格子由 unsupportedFilters 先挡掉，
+ * 拼三格：状态、标签、更新时间窗口。列表、计数、按页取票都从这一个函数拿条件，
+ * 所以一次计数与它所描述的那一页永远指同一批票；其余格子由 unsupportedFilters 先挡掉，
  * 所以走到这里的条件一定是能表达的，不会出现「发了查询但筛没生效」。
  */
 export function buildIssuesFilter(filter: ListFilter | undefined): Record<string, unknown> | undefined {
@@ -59,6 +94,9 @@ export function buildIssuesFilter(filter: ListFilter | undefined): Record<string
   if (filter.state === 'closed') conditions.state = { type: { in: CLOSED_STATE_TYPES } }
   // 增量窗口：只要「更新时间不早于这个时刻」的票；服务端能筛就别每拍全量翻。
   if (filter.since) conditions.updatedAt = { gte: String(filter.since) }
+  // 标签只在归一后非空时才带上：远端对空条件的反应各版本不一（契约同一句）。
+  const names = labelNamesOf(filter)
+  if (names.length > 0) conditions.labels = labelsCondition(names)
   return Object.keys(conditions).length > 0 ? conditions : undefined
 }
 

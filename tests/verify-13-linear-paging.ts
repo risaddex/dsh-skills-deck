@@ -213,10 +213,12 @@ async function main(): Promise<void> {
     check(whole.ok === false && whole.error.kind === 'parse', 'and the failure is the count one, passed through', whole.ok ? 'ok' : whole.error.kind)
 
     const refusedFilter = ctxAnswering([{ payload: page([], false, null) }])
-    const listLabels = await listPageOf(refusedFilter.ctx, ACCOUNT, { labels: ['bug'] }, undefined, undefined)
-    check(listLabels.ok === false && listLabels.error.kind === 'unsupported', 'a filter this room cannot express is refused by listPage', listLabels.ok ? 'ok' : listLabels.error.kind)
-    const countLabels = await countsOf(refusedFilter.ctx, ACCOUNT, { labels: ['bug'] })
-    check(countLabels.ok === false && countLabels.error.kind === 'unsupported', 'and by counts, with the same table', countLabels.ok ? 'ok' : countLabels.error.kind)
+    // Labels used to be the example here; since #49 they are expressible (tests/verify-49-linear-label-filter.ts pins that),
+    // so the example of "a filter this room cannot express" is now the batch-by-keys cell, which is still refused.
+    const listKeys = await listPageOf(refusedFilter.ctx, ACCOUNT, { keys: ['ENG-1'] }, undefined, undefined)
+    check(listKeys.ok === false && listKeys.error.kind === 'unsupported', 'a filter this room cannot express is refused by listPage', listKeys.ok ? 'ok' : listKeys.error.kind)
+    const countKeys = await countsOf(refusedFilter.ctx, ACCOUNT, { keys: ['ENG-1'] })
+    check(countKeys.ok === false && countKeys.error.kind === 'unsupported', 'and by counts, with the same table', countKeys.ok ? 'ok' : countKeys.error.kind)
     check(refusedFilter.calls.length === 0, 'and nothing is sent for either', String(refusedFilter.calls.length))
 
     const stale = ctxAnswering([{ errors: [{ message: 'Invalid input: the cursor is malformed' }] }])
