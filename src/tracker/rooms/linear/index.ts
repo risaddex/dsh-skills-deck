@@ -28,6 +28,7 @@ import { getIssue, listIssues } from './read.js'
 import { listAccountIssues, getAccountIssue, listConfiguredAccounts } from './account-read.js'
 import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 import { setLabelsOfIssue } from './labels.js'
+import { listLabelsOfTeam } from './label-list.js'
 import { setAssigneesOfIssue } from './assignees.js'
 import { setBlockedByOfIssue } from './relations.js'
 import { countsOf, listPageOf, readBudgetOf } from './paging.js'
@@ -42,6 +43,7 @@ export { preflightLinear, readIdentity } from './preflight.js'
 export { getIssue, listIssues, buildIssuesFilter, unsupportedFilters } from './read.js'
 export { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from './write.js'
 export { setLabelsOfIssue } from './labels.js'
+export { listLabelsOfTeam } from './label-list.js'
 export { setAssigneesOfIssue } from './assignees.js'
 export { setBlockedByOfIssue } from './relations.js'
 export { countsOf, listPageOf, readBudgetOf } from './paging.js'
@@ -180,6 +182,14 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       const got = await using(opCtx || (ctx as never))
       if (!got.ok) return { ok: false, error: got.error }
       return setParentOfIssue(opCtx || (ctx as never), got.account, key, parentKey, opts)
+    },
+    listLabels: async (_repo, opCtx) => {
+      const requestCtx = opCtx || (ctx as never)
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error }
+      // 团队 key 来自绑定：「团队的标签」是哪个团队，只有声明说了算（见 label-list.ts 的头注释）。
+      const binding = await readBinding(requestCtx)
+      return listLabelsOfTeam(requestCtx, got.account, binding ? binding.team : '')
     },
     reopen: async (_repo, key, opCtx) => {
       const got = await using(opCtx || (ctx as never))
