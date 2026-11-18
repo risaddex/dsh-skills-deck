@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T21:00:17.156Z",
+  "generatedAt": "2026-11-18T21:19:11.894Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 648,
-  "gateCount": 648,
-  "attributedGates": 585,
+  "chainLength": 649,
+  "gateCount": 649,
+  "attributedGates": 586,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 169,
+  "completionRecordedGates": 170,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 996,
@@ -8530,6 +8530,26 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；静态 import 说明符 2 条；源码里的路径字面量 6 条"
     },
     {
+      "step": "node tests/verify-62-linear-text-key-grouping.ts",
+      "file": "tests/verify-62-linear-text-key-grouping.ts",
+      "guards": [
+        "src/host/mapTickets.ts",
+        "src/host/ticketGrouping.ts",
+        "src/host/tracker/snapshotAssemble.ts",
+        "src/tracker/kernel/grouping.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "src/host/tracker",
+        "src/tracker/kernel"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 23,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
+    },
+    {
       "step": "node tests/verify-626-type-chip.ts",
       "file": "tests/verify-626-type-chip.ts",
       "guards": [
@@ -16094,6 +16114,7 @@
       "node tests/verify-497-slash.ts",
       "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-596-rpc-carrier.ts",
+      "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-656-subworkspace-acceptance.ts",
       "node tests/verify-666-subws-mark-root.ts",
       "node tests/verify-683-choice-store.ts",
@@ -16195,6 +16216,7 @@
       "node tests/verify-45-linear-blockers-list.ts",
       "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-507-pr-offline.ts",
+      "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-907-chain-titles.ts",
       "node tests/verify-934-935-invariants.ts",
@@ -16819,6 +16841,7 @@
       "node tests/verify-1533-git-remote-claim.ts",
       "node tests/verify-1555-gitlab-claim-declaration.ts",
       "node tests/verify-544-standalone-blocked.ts",
+      "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
       "node tests/verify-error-normalize-log.ts",
