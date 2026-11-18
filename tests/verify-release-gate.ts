@@ -25,11 +25,12 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import {
   createNodePorts,
+  judgeChecklistConsistency,
   parseCandidateManifest,
   RELEASE_GATE_CHECK_IDS,
 } from 'dsh-featherhunter-plugin-base/real-machine-verification'
 import { runPreflightGate } from '../scripts/lib/release-preflight-gate.mts'
-import { CHECKLIST_TITLE_PREFIX } from '../scripts/lib/release-checklist-format.mts'
+import { CHECKLIST_FORMAT, CHECKLIST_TITLE_PREFIX } from '../scripts/lib/release-checklist-format.mts'
 import ticketFace from '../verify/ticket-face.mts'
 import { printGateResult } from './lib/gate-result.ts'
 import { runWiringChecks } from './lib/release-gate-wiring.ts'
@@ -372,6 +373,45 @@ async function main(): Promise<void> {
       'N1 中文身份行放在英文记录里 → 仍然通过',
       show(run.exitCode) + ' / ' + (run.err.split(NEWLINE)[0] ?? ''),
     )
+  }
+
+  // ---- P. 结论行里带着完整日历日期时，不能凭空多读出一个场景编号 ----
+  // 2026-11-18 收口时踩的就是这个：`- Scenario 41-01: passed —— 2026-11-17 那个失败……` 里，日期尾巴
+  // `11-17` 也是「字母数字-两位数字」，被当成第二个编号，同一行的结论于是记到了一个故意 void 的行上，
+  // 通过数比实际多一条、收口行对不上，发布被卡住、改了两条评论才回到绿。这里用最小夹具直接问
+  // judgeChecklistConsistency：门禁读结论、算通过/失败/豁免的就是这一个函数，不必再搭一份票面。
+  {
+    const idFlags = CHECKLIST_FORMAT.scenarioIdPattern.flags.replace(/[gy]/gu, '') + 'g'
+    const idsOf = (text: string): string[] =>
+      [...text.matchAll(new RegExp(CHECKLIST_FORMAT.scenarioIdPattern.source, idFlags))].map((match) => match[0])
+    // 这一行是 2026-11-18 那张票上真实写过的形状：编号、结果词、日期写在同一行里。
+    const dateInConclusion = '- Scenario 41-01: passed — the detail that failed on 2026-11-17 now draws'
+    const dateOnly = 'the checker read 2026-11-18 as a date'
+    check(show(idsOf(dateInConclusion)) === show(['41-01']), 'P1 结论行里的 2026-11-17 不是编号，这一行只产出 41-01', show(idsOf(dateInConclusion)))
+    check(
+      idsOf(dateOnly).length === 0 && show(idsOf('Scenario 11-17: void')) === show(['11-17']),
+      'P2 只有日期的句子一个编号都没有，而独立的 11-17 仍然是编号（它本身是真编号，不是日期的一部分）',
+      show([idsOf(dateOnly), idsOf('Scenario 11-17: void')]),
+    )
+    const body = [
+      '# Real-machine verification checklist ' + VERSION,
+      '',
+      '## Scenario overview',
+      '| Scenario number | Source ticket | One sentence | Status | Notes |',
+      '| --- | --- | --- | --- | --- |',
+      '| 41-01 | #41 | release gate wiring | passed | |',
+      '| 11-17 | #11 | closing counts | void | |',
+    ].join(NEWLINE)
+    const claim = '[Ready to release] passed 1 / failed 0 / exempt 0'
+    const comment = { body: [identityLine(), dateInConclusion, 'Scenario 11-17: void', dateOnly, claim].join(NEWLINE) }
+    const consistency = judgeChecklistConsistency({ body, comments: [comment], format: CHECKLIST_FORMAT })
+    check(
+      consistency.ok === true && consistency.findings.length === 0,
+      'P3 带日期的结论行不产生幻影结论：一致性报告零 finding',
+      show(consistency.findings.map((item: any) => item.message)),
+    )
+    const counts = consistency.publishCounts
+    check(counts.passed === 1 && counts.failed === 0 && counts.exempted === 0, 'P4 通过/失败/豁免计数停在真实数字上（幻影结论把通过数抬到 2）', show(counts))
   }
 
   // ---- J. 环境类输入错误：都归 exit 2，不冒充票面失败 ----
