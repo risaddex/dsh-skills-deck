@@ -39,7 +39,7 @@ declare function mkRowAction(...args: any[]): any;
 declare function openInNewSession(...args: any[]): any;
 declare function promptTextFor(...args: any[]): any;
 declare function renderTemplate(...args: any[]): any;
-declare function setActiveIssue(...args: any[]): any;
+declare function setActiveIssue(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 declare function setActiveMap(...args: any[]): any;
 declare function showPop(...args: any[]): any;
 declare function truthWriteWindowOpen(...args: any[]): any;
@@ -140,12 +140,10 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
       //   背景：#1511 起编号已经写成「#目录/01」，这枚徽标里写的目录名与同一行编号里的目录名重复，
       //   一行里同一段文字出现两次。改回 true 即恢复显示（三处同名开关：ListTabRow、IssueDetail、MapDetailHead）。
       const SHOW_EFFORT_BADGE = false
-      // #45：这一行交给「进详情、复制链接、打开链接」的编号。key 是纯数字的行（GitHub、GitLab、本地 Markdown）照旧交 number，
-      //   所以它们的行为一个字不变；key 不是纯数字的行（Linear 的 OMB-903）交文本 key。
-      //   不能直接交 x.number：宿主只在 key 解析得出数字时才写 number，Linear 行里它是空，导航栈拒收空值，点整行就没有任何反应；
-      //   瘦身行还可能带一个凑出来的 0（snapshotAssemble 的 parseInt(key) || 0），所以对文本 key 不能先看 number。
-      //   本函数只住在这一个闭包里，不新增全局名字（构建把视图拼进同一个闭包，同名会静默覆盖）。
-      const navKey = function (r: any) { const k = r.key != null ? String(r.key).trim() : ''; if (k !== '' && !/^\d+$/.test(k)) return r.key; return r.number != null ? r.number : r.key }
+      // #45：这一行交给「进详情、复制链接、打开链接」的编号，规则只住在 link.ts 的 rowNavKeyOf 一处（理由见那里）：
+      //   key 是纯数字的行照旧交 number，key 不是纯数字的行（Linear 的 OMB-903）交文本 key。
+      //   单文件求值的门禁里没有这个全局名字，所以先问 typeof，问不到退回 x.number（改动前的行为）。
+      const navKey = function (r: any) { return (typeof rowNavKeyOf === 'function') ? rowNavKeyOf(r) : r.number }
       const has = function (x: any, nm: any) { return (x.labels || []).some(function (l: any) { return l.name === nm }) }
       // #949 瞬间底座：行内可点小药丸（+N 更多、被阻塞跳转）也要能被键盘走到。
       //   #956 评审修正：本地那份键盘处理退役，改调共享层的 chipKeyDown（同图收敛只留一处）；

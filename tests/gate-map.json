@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T13:03:40.722Z",
+  "generatedAt": "2026-11-18T13:52:51.788Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 628,
-  "gateCount": 628,
-  "attributedGates": 569,
-  "unattributedGates": 59,
+  "chainLength": 634,
+  "gateCount": 634,
+  "attributedGates": 573,
+  "unattributedGates": 61,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 150,
+  "completionRecordedGates": 156,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 992,
@@ -7939,6 +7939,56 @@
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
     },
     {
+      "step": "node tests/verify-45-detail-capsule-by-key.ts",
+      "file": "tests/verify-45-detail-capsule-by-key.ts",
+      "guards": [
+        "src/client/statusbar/SessionChainCapsule.ts",
+        "src/client/views/shared/workRouteTable.ts"
+      ],
+      "dirs": [
+        "src/client/statusbar",
+        "src/client/views/shared"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 15,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-45-detail-issue-rows-by-key.ts",
+      "file": "tests/verify-45-detail-issue-rows-by-key.ts",
+      "guards": [
+        "src/client/views/IssueDetail.ts",
+        "src/client/views/subIssueRouting.ts"
+      ],
+      "dirs": [
+        "src/client/views"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 48,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-45-detail-map-page-by-key.ts",
+      "file": "tests/verify-45-detail-map-page-by-key.ts",
+      "guards": [
+        "src/client/views/mapDetailV2/view/MapDetailV2Page.ts",
+        "src/client/views/mapDetailV2/wiring/pageActionHandlers.ts"
+      ],
+      "dirs": [
+        "src/client/views/mapDetailV2/view",
+        "src/client/views/mapDetailV2/wiring"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 26,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
       "step": "node tests/verify-45-detail-page-by-key.ts",
       "file": "tests/verify-45-detail-page-by-key.ts",
       "guards": [
@@ -7953,6 +8003,23 @@
       "buildOutputOnly": false,
       "completionRecord": true,
       "expectedAssertions": 23,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
+      "step": "node tests/verify-45-detail-routes-by-key.ts",
+      "file": "tests/verify-45-detail-routes-by-key.ts",
+      "guards": [
+        "src/client/kernel/row-actions.ts",
+        "src/client/views/subIssueRouting.ts"
+      ],
+      "dirs": [
+        "src/client/kernel",
+        "src/client/views"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 39,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
     },
     {
@@ -7984,8 +8051,24 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 25,
+      "expectedAssertions": 36,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
+    },
+    {
+      "step": "node tests/verify-45-map-cards-by-key.ts",
+      "file": "tests/verify-45-map-cards-by-key.ts",
+      "guards": [
+        "tests/lib/gate-result.ts",
+        "tests/lib/verify-45-map-cards-env.ts"
+      ],
+      "dirs": [
+        "tests/lib"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 279,
+      "reason": "读到的路径都落在 tests/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
       "step": "node tests/verify-45-text-key-rule.ts",
@@ -8004,6 +8087,22 @@
       "completionRecord": true,
       "expectedAssertions": 175,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 3 条）"
+    },
+    {
+      "step": "node tests/verify-45-ticket-row-by-key.ts",
+      "file": "tests/verify-45-ticket-row-by-key.ts",
+      "guards": [
+        "tests/lib/gate-result.ts",
+        "tests/lib/verify-45-map-cards-env.ts"
+      ],
+      "dirs": [
+        "tests/lib"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 86,
+      "reason": "读到的路径都落在 tests/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
       "step": "node tests/verify-497-slash.ts",
@@ -15171,6 +15270,7 @@
       "node tests/verify-1923-closed-container.ts",
       "node tests/verify-423-title-clamp.ts",
       "node tests/verify-45-comment-text-key.ts",
+      "node tests/verify-45-detail-routes-by-key.ts",
       "node tests/verify-45-text-key-rule.ts",
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-599-merged-pr.ts",
@@ -15278,6 +15378,7 @@
       "node tests/verify-1732-chain-menu-resize.ts",
       "node tests/verify-1879-suggest-deck-gate.ts",
       "node tests/verify-1894-view-model.ts",
+      "node tests/verify-45-detail-capsule-by-key.ts",
       "node tests/verify-655-setup-layout.ts",
       "node tests/verify-663-gh-install-inject.ts",
       "node tests/verify-665-fresh-workspace-chain.ts",
@@ -15337,7 +15438,9 @@
       "node tests/verify-1897-pr-page-vm.ts",
       "node tests/verify-1922-retire-eviction.ts",
       "node tests/verify-1933-network-fallback.ts",
+      "node tests/verify-45-detail-issue-rows-by-key.ts",
       "node tests/verify-45-detail-page-by-key.ts",
+      "node tests/verify-45-detail-routes-by-key.ts",
       "node tests/verify-45-list-row-opens-by-key.ts",
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-599-merged-pr.ts",
@@ -15397,7 +15500,11 @@
     "src/client/views/mapDetailV2/view": [
       "node tests/verify-1895-map-detail-vm.ts",
       "node tests/verify-1923-closed-container.ts",
+      "node tests/verify-45-detail-map-page-by-key.ts",
       "node tests/verify-map-first-frame-freshness.ts"
+    ],
+    "src/client/views/mapDetailV2/wiring": [
+      "node tests/verify-45-detail-map-page-by-key.ts"
     ],
     "src/client/views/pixel": [
       "node tests/verify-1522-skill-md-refs.ts",
@@ -15449,6 +15556,7 @@
       "node tests/verify-1932-multi-window.ts",
       "node tests/verify-1933-network-fallback.ts",
       "node tests/verify-1935-receipt-resync.ts",
+      "node tests/verify-45-detail-capsule-by-key.ts",
       "node tests/verify-45-detail-page-by-key.ts",
       "node tests/verify-599-merged-pr.ts",
       "node tests/verify-626-type-chip.ts",
@@ -17025,6 +17133,8 @@
       "node tests/verify-1886-schema-migration.ts",
       "node tests/verify-423-title-clamp-browser.ts",
       "node tests/verify-423-title-clamp.ts",
+      "node tests/verify-45-map-cards-by-key.ts",
+      "node tests/verify-45-ticket-row-by-key.ts",
       "node tests/verify-530-pr-tab.ts",
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-599-merged-pr.ts",
@@ -17165,7 +17275,7 @@
     "coveredFileCount": 1015,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
-    "dedicatedDirCount": 82,
+    "dedicatedDirCount": 83,
     "guardedFiles": [
       "src/client/floating/Pop.ts",
       "src/client/floating/SkillFloatList.ts",
@@ -18306,6 +18416,7 @@
       "src/client/views/mapDetailV2",
       "src/client/views/mapDetailV2/model/tickets",
       "src/client/views/mapDetailV2/view",
+      "src/client/views/mapDetailV2/wiring",
       "src/client/views/pixel",
       "src/client/views/primitives",
       "src/client/views/shared",
@@ -18402,10 +18513,6 @@
       },
       {
         "path": "src/client/views/mapDetailV2/view/skin",
-        "fileCount": 1
-      },
-      {
-        "path": "src/client/views/mapDetailV2/wiring",
         "fileCount": 1
       },
       {

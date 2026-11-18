@@ -7,7 +7,7 @@
  * T2 数据通路：fetchIssueDetail(n)（GraphQL+REST 双通道，host 侧 wf.issueDetail），60s 缓存命中即用，loading/real/err 三态。
  * 本文件由 .js 转来（转时只加类型标注与环境声明，行为一字不动）。
  */
-declare function peekNav(...args: any[]): any;
+declare function peekNav(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 declare function repoStr(...args: any[]): any;
 declare function buildColorOf(...args: any[]): any;
 // #1885 评审修复：进入详情页 / 重试的取数也走视图模型命令（与「加载更多」同一套），
@@ -82,7 +82,7 @@ export const IssueDetail = function (props: any): any {
       const colorOf = (typeof buildColorOf === 'function') ? buildColorOf(st) : {}
       // #45：打开的票按后端给的文本键认（42、01、ENG-12），不再读成数字：ENG-12 读成数字是 NaN，整页会被当成「没有票」。键 = 去空白后非空的文本，或有限的数字；
       //   行的键先看 key 再看 number，全数字的键按数字比（1 与 01 是同一张，本地 Markdown 补零）。本地容器的编号 0（key 00）仍是合法坐标。
-      const keyText = (typeof issueNumber === 'number' ? (Number.isFinite(issueNumber) ? String(issueNumber) : '') : (typeof issueNumber === 'string' ? issueNumber.trim() : '')), isKey = function (x: any) { const a = String(x.key != null && String(x.key).trim() !== '' ? x.key : x.number).trim(); return a !== '' && a !== 'undefined' && (a === keyText || (/^\d+$/.test(a) && /^\d+$/.test(keyText) && Number(a) === Number(keyText))) }
+      const keyText = (typeof issueNumber === 'number' ? (Number.isFinite(issueNumber) ? String(issueNumber) : '') : (typeof issueNumber === 'string' ? issueNumber.trim() : '')), isKey = function (x: any) { const a = String(x.key != null && String(x.key).trim() !== '' ? x.key : x.number).trim(); return a !== '' && a !== 'undefined' && (a === keyText || (/^\d+$/.test(a) && /^\d+$/.test(keyText) && Number(a) === Number(keyText))) }, navK = function (x: any) { return (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number) } // #45: the parent map ribbon, sub-issue rows and blocked-by rows take their key from rowNavKeyOf (a Linear row has no numeric number: x.number drew #undefined and could not be opened)
       if (keyText === '') return null
       // 触发拉取（缓存命中则同步回 real，不多发请求；force 重试由按钮控制）
       React.useEffect(function () {
@@ -445,7 +445,7 @@ export const IssueDetail = function (props: any): any {
           Ic({ n: 'map', size: 11, color: (typeof CONTAINER_ACCENT === 'object' && CONTAINER_ACCENT) ? CONTAINER_ACCENT.map : '' }),
           h('span', { style: { color: 'var(--dsw-alias-label-secondary,#a1a1aa)' } }, 'Part of'),
           // T4 #554：所属地图链接压栈进下一层（保留返回路径，不断掉上一级）。
-          h('a', { href: '#', className: 'dsws-hov', 'data-press': 'row', 'data-log': 'issue.parent.' + parentMap.number, onClick: function (e: any) { e.preventDefault(); pushNav(st, 'map', parentMap.number, effortOf(parentMap)) }, style: { color: (typeof CONTAINER_ACCENT === 'object' && CONTAINER_ACCENT) ? CONTAINER_ACCENT.map : '', textDecoration: 'underline', fontWeight: 600, display: 'inline-block', borderRadius: 3 } }, '#' + parentMap.number + ' ' + parentMap.title),
+          h('a', { href: '#', className: 'dsws-hov', 'data-press': 'row', 'data-log': 'issue.parent.' + navK(parentMap), onClick: function (e: any) { e.preventDefault(); pushNav(st, 'map', navK(parentMap), effortOf(parentMap)) }, style: { color: (typeof CONTAINER_ACCENT === 'object' && CONTAINER_ACCENT) ? CONTAINER_ACCENT.map : '', textDecoration: 'underline', fontWeight: 600, display: 'inline-block', borderRadius: 3 } }, '#' + navK(parentMap) + ' ' + parentMap.title),
         ]) : null,
         // body
         h('div', { style: { padding: '8px 0', borderTop: '1px solid var(--dsw-alias-border-l1,#2a2d35)', borderBottom: '1px solid var(--dsw-alias-border-l1,#2a2d35)' } }, [
@@ -458,9 +458,9 @@ export const IssueDetail = function (props: any): any {
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } }, subNodes.map(function (s: any) {
             const sc = s.state === 'CLOSED' ? '#3fb950' : '#8b8b95'
             // T4 整改 #554：子票走 views/subIssueRouting.ts 的 enterSubDetail 分流（有标签按标签，无标签按快照找图）。
-            return h('div', { key: idOfParts((s.effortId!==undefined&&s.effortId!==null)?s.effortId:issueEffort, s.number), className: 'dsws-aggrow', tabIndex: 0, role: 'button', 'aria-label': '#' + s.number + ' ' + (s.title || ''), 'data-press': 'row', 'data-log': 'issue.sub.' + s.number, onClick: function () { enterSubDetail(st, s, issueEffort) }, onKeyDown: function (e: any) { if (!e || e.target !== e.currentTarget) return; const k = e && e.key; if (k === 'Enter' || k === ' ') { try { if (e.preventDefault) e.preventDefault() } catch (_) {} try { if (e.currentTarget) e.currentTarget.click() } catch (_) {} } }, style: { cursor: 'pointer', padding: '6px 8px' } }, [
+            return h('div', { key: idOfParts((s.effortId!==undefined&&s.effortId!==null)?s.effortId:issueEffort, navK(s)), className: 'dsws-aggrow', tabIndex: 0, role: 'button', 'aria-label': '#' + navK(s) + ' ' + (s.title || ''), 'data-press': 'row', 'data-log': 'issue.sub.' + navK(s), onClick: function () { enterSubDetail(st, s, issueEffort) }, onKeyDown: function (e: any) { if (!e || e.target !== e.currentTarget) return; const k = e && e.key; if (k === 'Enter' || k === ' ') { try { if (e.preventDefault) e.preventDefault() } catch (_) {} try { if (e.currentTarget) e.currentTarget.click() } catch (_) {} } }, style: { cursor: 'pointer', padding: '6px 8px' } }, [
               h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } }, [
-                h('span', { className: 'dsws-idnum', style: { color: sc, borderColor: sc, fontSize: 11 } }, '#' + s.number),
+                h('span', { className: 'dsws-idnum', style: { color: sc, borderColor: sc, fontSize: 11 } }, '#' + navK(s)),
                 h(Tip, { className: 'dsws-tip', content: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } }, [h('div', { style: { fontSize: 10, color: '#8b8b95', lineHeight: '14px' } }, tr('tip.header.fullTitle')), h('div', { style: { fontSize: 11, color: '#e6edf3', lineHeight: '16px', wordBreak: 'break-word', whiteSpace: 'normal' } }, s.title)]) }, h('span', { className: 'dsws-tt-wrap', style: { flex: 1, fontSize: 12 } }, s.title)),
                 h('span', { className: 'dsws-chip', style: { fontSize: 10, background: s.state === 'CLOSED' ? 'rgba(63,185,80,.12)' : 'rgba(139,148,158,.12)', color: sc, border: '1px solid ' + sc } }, s.state === 'CLOSED' ? 'Closed' : 'Open'),
               ])
@@ -472,13 +472,13 @@ export const IssueDetail = function (props: any): any {
           h('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--dsw-alias-label-secondary,#a1a1aa)', marginBottom: 6 } }, tr('detail.blockedPrefix') + blockedNodes.length),
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } }, blockedNodes.map(function (b: any) {
             // T4 整改 #554：阻塞票同样走 enterSubDetail 分流（无标签时按快照找图）。
-            return h('div', { key: idOfParts((b.effortId!==undefined&&b.effortId!==null)?b.effortId:issueEffort, b.number), className: 'dsws-aggrow', tabIndex: 0, role: 'button', 'aria-label': '#' + b.number + ' ' + (b.title || ''), 'data-press': 'row', 'data-log': 'issue.blocked.' + b.number, onClick: function () { enterSubDetail(st, b, issueEffort) }, onKeyDown: function (e: any) { if (!e || e.target !== e.currentTarget) return; const k = e && e.key; if (k === 'Enter' || k === ' ') { try { if (e.preventDefault) e.preventDefault() } catch (_) {} try { if (e.currentTarget) e.currentTarget.click() } catch (_) {} } }, style: { cursor: 'pointer', padding: '6px 8px' } }, [
+            return h('div', { key: idOfParts((b.effortId!==undefined&&b.effortId!==null)?b.effortId:issueEffort, navK(b)), className: 'dsws-aggrow', tabIndex: 0, role: 'button', 'aria-label': '#' + navK(b) + ' ' + (b.title || ''), 'data-press': 'row', 'data-log': 'issue.blocked.' + navK(b), onClick: function () { enterSubDetail(st, b, issueEffort) }, onKeyDown: function (e: any) { if (!e || e.target !== e.currentTarget) return; const k = e && e.key; if (k === 'Enter' || k === ' ') { try { if (e.preventDefault) e.preventDefault() } catch (_) {} try { if (e.currentTarget) e.currentTarget.click() } catch (_) {} } }, style: { cursor: 'pointer', padding: '6px 8px' } }, [
               h('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } }, [
                 // #1286：被阻塞统一红 #f87171（与地图详情页、列表行同一个红；这个红在本仓原本专指
                 //   错误与失败，这里被重载为「被阻塞」——读代码时别当成同一个语义）
                 Ic({ n: 'lock', size: 10, color: '#f87171' }),
-                h('span', { className: 'dsws-idnum', style: { color: '#f87171', borderColor: '#f87171', fontSize: 11 } }, '#' + b.number),
-                h(Tip, { className: 'dsws-tip', content: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } }, [h('div', { style: { fontSize: 10, color: '#8b8b95', lineHeight: '14px' } }, tr('tip.header.fullTitle')), h('div', { style: { fontSize: 11, color: '#e6edf3', lineHeight: '16px', wordBreak: 'break-word', whiteSpace: 'normal' } }, b.title || ('#' + b.number))]) }, h('span', { style: { flex: 1, fontSize: 12 } }, b.title || ('#' + b.number))),
+                h('span', { className: 'dsws-idnum', style: { color: '#f87171', borderColor: '#f87171', fontSize: 11 } }, '#' + navK(b)),
+                h(Tip, { className: 'dsws-tip', content: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } }, [h('div', { style: { fontSize: 10, color: '#8b8b95', lineHeight: '14px' } }, tr('tip.header.fullTitle')), h('div', { style: { fontSize: 11, color: '#e6edf3', lineHeight: '16px', wordBreak: 'break-word', whiteSpace: 'normal' } }, b.title || ('#' + navK(b)))]) }, h('span', { style: { flex: 1, fontSize: 12 } }, b.title || ('#' + navK(b)))),
               ])
             ])
           })),

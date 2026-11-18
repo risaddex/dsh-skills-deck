@@ -49,6 +49,9 @@ G.labelClicks = {}; G.listPrefs = {}; G.saveLabelClicks = () => {}; G.saveListPr
 const label = await import('../src/client/kernel/ticket-label.ts')
 G.ticketLabelOf = label.ticketLabelOf; G.ticketLabelNodesOf = label.ticketLabelNodesOf; G.TICKET_LABEL_MAX_WIDTH = label.TICKET_LABEL_MAX_WIDTH
 G.ticketBadgeOf = (await import('../src/client/views/shared/ticketBadge.ts')).ticketBadgeOf
+// The row reads the shared rule from link.ts (rowNavKeyOf); a file loaded alone has no such name, so the gate wires the real one.
+const prefs: any = await import('../src/client/kernel/link.ts')
+G.rowNavKeyOf = prefs.rowNavKeyOf
 const rowMod: any = await import('../src/client/views/ListTabRow.ts')
 
 // What the row hands over is recorded, then compared. The copy button writes the clipboard text it was given.
@@ -104,5 +107,22 @@ for (const s of SHAPES) {
   check(calls.map.length === 1 && calls.map[0] === 'OMB-100' && calls.issue.length === 0, 'Linear map OMB-100: clicking the row opens the map detail with "OMB-100" (it handed over ' + JSON.stringify(calls.map[0]) + ')')
 }
 console.error = realConsoleError
+// The shared rule itself (link.ts rowNavKeyOf), on the shapes every caller depends on
+for (const c of [
+  { name: 'GitHub row', r: { number: 42, key: '42' }, want: 42 },
+  { name: 'Markdown row 01', r: { number: 1, key: '01' }, want: 1 },
+  { name: 'Markdown container 00', r: { number: 0, key: '00' }, want: 0 },
+  { name: 'number only', r: { number: 7 }, want: 7 },
+  { name: 'key only, digits', r: { key: '7' }, want: '7' },
+  { name: 'Linear without number', r: { key: 'OMB-903' }, want: 'OMB-903' },
+  { name: 'Linear with number null', r: { number: null, key: 'OMB-903' }, want: 'OMB-903' },
+  { name: 'Linear with the made-up number 0 of a thin row', r: { number: 0, key: 'OMB-903' }, want: 'OMB-903' },
+  { name: 'blocked node carrying the text key in number', r: { number: 'OMB-12', title: 't' }, want: 'OMB-12' },
+  { name: 'empty row', r: {}, want: undefined },
+]) {
+  const got = prefs.rowNavKeyOf(c.r)
+  check(got === c.want, 'rowNavKeyOf: ' + c.name + ' gives ' + JSON.stringify(c.want) + ' (got ' + JSON.stringify(got) + ')')
+}
+check(prefs.rowNavKeyOf(null) === undefined && prefs.rowNavKeyOf(undefined) === undefined, 'rowNavKeyOf: a missing row gives undefined and does not throw')
 printGateResult('verify-45-list-row-opens-by-key', assertions, failed)
 if (failed) process.exit(1)

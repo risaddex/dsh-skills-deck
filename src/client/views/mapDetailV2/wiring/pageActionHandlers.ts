@@ -23,6 +23,7 @@ declare function rowActionText(...args: any[]): any
 declare function openInNewSession(...args: any[]): any
 declare function copyText(...args: any[]): any
 declare function issueUrlFor(...args: any[]): any
+declare function rowNavKeyOf(...args: any[]): any
 // #1557：打开方式由后端声明（openIssue），本文件不再自己按地址前缀分流。
 declare function openTrackerTarget(...args: any[]): any
 declare function effortOf(...args: any[]): any
@@ -86,10 +87,24 @@ function actionAllowed(facts: TicketCardFacts): boolean {
   return !facts || !facts.actionGate || facts.actionGate.clickable !== false
 }
 
+/**
+ * #45: the key a card hands to the copy-link, open-link and prompt seams. facts.number is the number the model layer parsed
+ * from the row's number or key; a Linear row has a text key (OMB-903) that does not parse, so facts.number is null (a thin
+ * row can even carry a made-up 0) and the link came out empty. When the row's key is non-numeric text, the text key from
+ * rowNavKeyOf is used; numeric rows, and a file loaded alone without rowNavKeyOf, still hand over facts.number as before.
+ */
+function cardNavKeyOf(facts: TicketCardFacts, row: MapTicketRow | null): any {
+  if (row && typeof rowNavKeyOf === 'function') {
+    const k = rowNavKeyOf(row)
+    if (facts.number == null || (typeof k === 'string' && k.trim() !== '' && !/^\d+$/.test(k.trim()))) return k
+  }
+  return facts.number
+}
+
 /** 这条票在本机的链接或网页地址；取不到时返回空串。 */
 function urlOf(st: any, facts: TicketCardFacts, row: MapTicketRow | null): string {
   try {
-    return String(issueUrlFor(st, facts.number, row ? effortOf(row) : undefined) || '')
+    return String(issueUrlFor(st, cardNavKeyOf(facts, row), row ? effortOf(row) : undefined) || '')
   } catch (e) {
     return ''
   }
@@ -124,14 +139,14 @@ export function pageActionHandlersOf(st: any, rows: MapTicketRow[]): TicketCardH
       const row = sourceRowOf(facts, index)
       const url = urlOf(st, facts, row)
       if (!url) return
-      try { copyText(st, url, tr('toast.copiedLink', { n: facts.number == null ? '' : facts.number })) } catch (e) {}
+      try { copyText(st, url, tr('toast.copiedLink', { n: cardNavKeyOf(facts, row) == null ? '' : cardNavKeyOf(facts, row) })) } catch (e) {}
     },
     /** 打开：打开方式由后端声明（openIssue），不再按地址前缀分流（#1557）。 */
     onOpen: function (facts: TicketCardFacts): void {
       const row = sourceRowOf(facts, index)
       const url = urlOf(st, facts, row)
       if (!url) return
-      try { openTrackerTarget(st, facts.number, (typeof host !== 'undefined' ? host : null), row ? effortOf(row) : undefined, 'issue') } catch (e) {}
+      try { openTrackerTarget(st, cardNavKeyOf(facts, row), (typeof host !== 'undefined' ? host : null), row ? effortOf(row) : undefined, 'issue') } catch (e) {}
     },
     /**
      * 整卡点按：进这张票的详情页。

@@ -25,7 +25,7 @@ declare function Ic(...args: any[]): any;
 declare function effortOf(...args: any[]): any;
 declare const Tip: any;
 declare const fetchMapTickets: any;
-declare const issueUrlFor: any;
+declare const issueUrlFor: any; declare function rowNavKeyOf(...args: any[]): any;
 // #1557：打开方式由后端声明（openContainer），视图不再自己按地址前缀分流。
 declare function openModeFor(...args: any[]): any;
 declare function openTrackerTarget(...args: any[]): any;
@@ -53,13 +53,16 @@ export const MapDetailHead = ({ st, m, mt, multiEffort, kind }: any) => {
   const closedN = (stats && typeof stats.closed === 'number') ? stats.closed : 0
   const unsupported = (mode === 'err' && mt && mt.error && String(mt.error.kind) === 'unsupported')
   const failed = (mode === 'err' && !unsupported)
-  const url = (typeof issueUrlFor === 'function') ? issueUrlFor(st, m.number, effortOf(m)) : ''
+  // #45：地图交给「打开链接」的编号。key 不是纯数字的行（Linear 的 OMB-903）交文本 key，其余照旧交 number；
+  //   规则真源是 kernel/link.ts 的 rowNavKeyOf，单文件求值时没有它就退回改动前的 m.number。
+  const mNav = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(m) : m.number)
+  const url = (typeof issueUrlFor === 'function') ? issueUrlFor(st, mNav, effortOf(m)) : ''
   const mapKey = (m.key != null) ? m.key : m.number
   const retry = function (e: any) { if (e && e.stopPropagation) e.stopPropagation(); if (typeof fetchMapTickets === 'function') fetchMapTickets(st, mapKey, { force: true, effortId: effortOf(m) }) }
   const openWeb = function (e: any) {
     if (e && e.stopPropagation) e.stopPropagation()
     // #1557：容器打开方式由后端声明（openContainer），这里只执行，不再按地址前缀分流。
-    try { openTrackerTarget(st, m.number, (typeof host !== 'undefined' ? host : null), effortOf(m), 'container') } catch (err) {}
+    try { openTrackerTarget(st, mNav, (typeof host !== 'undefined' ? host : null), effortOf(m), 'container') } catch (err) {}
   }
   // #1286：这一页是哪种容器 —— 探索地图还是规格（实施地图）。身份判定与计数句的词表键
   //   取 container-view.ts 那一份（列表页同一份），别处不再各判一次。
@@ -93,7 +96,7 @@ export const MapDetailHead = ({ st, m, mt, multiEffort, kind }: any) => {
       h('span', { style: { minWidth: 0 } }, line),
       // 本次界面反馈需求：取数失败时这两个按钮是用户唯一的出路，各自带按压态、悬停反馈与点击日志。
       failed ? h('button', { className: 'dsws-btn ghost dsws-hov', 'data-press': 'button', 'data-log': 'map.head.retry', onClick: retry, style: ghostBtn }, tr('map.subCountRetry')) : null,
-      (failed && url) ? h('button', { className: 'dsws-btn ghost dsws-hov', 'data-press': 'button', 'data-log': 'map.head.open', onClick: openWeb, style: ghostBtn }, tr('list.openInTrackerTitle', { n: m.number })) : null,
+      (failed && url) ? h('button', { className: 'dsws-btn ghost dsws-hov', 'data-press': 'button', 'data-log': 'map.head.open', onClick: openWeb, style: ghostBtn }, tr('list.openInTrackerTitle', { n: mNav })) : null,
     ]) : null,
   ])
 }

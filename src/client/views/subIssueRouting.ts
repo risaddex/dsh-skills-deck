@@ -8,7 +8,7 @@
  * 反例：不要把导航栈本身或补丁取数写进来，那两件事仍归 IssueDetail 与 store 分片。
  */
 declare function findMapByIdentity(...args: any[]): any;
-declare function pushNav(...args: any[]): any;
+declare function pushNav(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 
 // 节点的标签可能是字符串数组、{nodes:[]} 枚举形态或缺省，这里统一读成数组。
 export const subLabelsOf = function (x: any): any {
@@ -36,15 +36,20 @@ export const subHasMapTag = function (x: any): any {
 // 节点自带标签时按标签判：有地图标签且快照里找得到这张地图才进地图详情，否则回落工单详情；
 // 节点没有标签（阻塞票节点只有编号标题状态）时按快照本地找图：找得到进地图详情，
 // 找不到回落普通工单详情（有字可看，不静默回列表）。只定种类与编号，取数与评论不动。
+// #45: the key handed to the navigation comes from rowNavKeyOf. A Linear node has only a text key (OMB-903) and no numeric
+//   number, so reading x.number returned on the first line and the click did nothing. A blocked-by node carries its text key
+//   in number and the helper returns that as it is. Numeric nodes (GitHub 42, Markdown 01) still give their number, byte for
+//   byte as before; when the helper is not in scope (a file loaded alone by a gate) the code falls back to x.number.
 export const enterSubDetail = function (st: any, x: any, issueEffort: any): void {
-  if (!x || x.number == null) return
+  const nk: any = x ? (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number) : undefined
+  if (!x || nk == null) return
   // effort 维度：子票/阻塞票的 effort 取节点自带字段，没有就跟当前票同 effort（同 effort 内的引用）
   const eid = (x.effortId !== undefined && x.effortId !== null) ? String(x.effortId) : issueEffort
   if (subHasRoutingInfo(x)) {
-    if (subHasMapTag(x) && findMapByIdentity(st.snapshot && st.snapshot.maps, x.number, eid)) pushNav(st, 'map', x.number, eid)
-    else pushNav(st, 'issue', x.number, eid)
+    if (subHasMapTag(x) && findMapByIdentity(st.snapshot && st.snapshot.maps, nk, eid)) pushNav(st, 'map', nk, eid)
+    else pushNav(st, 'issue', nk, eid)
   } else {
-    if (findMapByIdentity(st.snapshot && st.snapshot.maps, x.number, eid)) pushNav(st, 'map', x.number, eid)
-    else pushNav(st, 'issue', x.number, eid)
+    if (findMapByIdentity(st.snapshot && st.snapshot.maps, nk, eid)) pushNav(st, 'map', nk, eid)
+    else pushNav(st, 'issue', nk, eid)
   }
 }

@@ -901,7 +901,26 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 6 种行形态 × 4 条（行有点击处理、点行交对编号、复制写对地址、链接按钮写对日志与地址）= 24，外加 Linear 地图点行进地图详情 1 条 = 25。
   // 对着步骤 4 的提交跑它，25 条里 9 条红（GitHub 与 Markdown 那些本来就满足）。
   // 单跑实测 25 条。
-  'verify-45-list-row-opens-by-key': 25,
+  // （追加）同一扇门禁后来也钉住共享规则 store-prefs 的 rowNavKeyOf：10 种行形态 + 缺行 1 条 = 11，所以 25 + 11 = 36。
+  'verify-45-list-row-opens-by-key': 36,
+  // 2026-11-18 #45：地图详情页的卡片、票行与顶栏动作（MapDetail、TicketRow、MapDetailHead、MapDetailTop、DetailActionBar）
+  // 也把 row.number 交给导航、复制链接、打开链接与提示词，Linear 行没有数字 number，点了没有反应、链接为空、显示成 #undefined。
+  // 本门禁真渲染这些组件，7 种行形态，点用户点的东西。对着改动前的源码跑，365 条里 128 条红，全是 Linear 形态；数字形态原样通过。
+  // 单跑实测 365 条。
+  // （拆分）提交前的体积钩子拒绝单个超过 20 KB 的新文件，这扇门禁与 detail-routes 一族按小节拆开，断言一条不少：
+  //   map-cards 365 = 地图详情页与规格三态 279 + 票行 86（verify-45-ticket-row-by-key）。
+  'verify-45-map-cards-by-key': 279,
+  'verify-45-ticket-row-by-key': 86,
+  // 2026-11-18 #45：详情页里的子票与阻塞票分流（enterSubDetail）、父地图丝带、row-actions、地图详情 V2 的动作与面包屑、
+  // 状态栏会话链胶囊（它只认纯数字的键，Linear 的条目整条被丢掉）与工作路线的 nav.n。本门禁跑真代码，6 种形态加胶囊与路线。
+  // 对着改动前的源码跑，128 条里 52 条红，全是 Linear 形态；GitHub、Markdown 与容器 00 的条目原样通过。
+  // 单跑实测 128 条。
+  // （拆分）同上，按小节拆成四扇，合计仍是 128：enterSubDetail 与 row-actions 39、IssueDetail 的丝带与子票阻塞票行 48、
+  //   地图详情 V2 的动作与面包屑 26、工作路线与会话链胶囊 15。
+  'verify-45-detail-routes-by-key': 39,
+  'verify-45-detail-issue-rows-by-key': 48,
+  'verify-45-detail-map-page-by-key': 26,
+  'verify-45-detail-capsule-by-key': 15,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；

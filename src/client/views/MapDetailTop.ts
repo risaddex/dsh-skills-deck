@@ -30,7 +30,7 @@ declare function promptTextFor(...args: any[]): any;
 declare function startText(...args: any[]): any;
 declare function useIssueDetailFold(...args: any[]): any;
 declare const Tip: any;
-declare const issueUrlFor: any;
+declare const issueUrlFor: any; declare function rowNavKeyOf(...args: any[]): any;
 // #1557：打开方式由后端声明（openContainer），视图不再自己按地址前缀分流。
 declare function openModeFor(...args: any[]): any;
 declare function openTrackerTarget(...args: any[]): any;
@@ -50,8 +50,15 @@ export const MapDetailTop = ({ st, m, navCrumb, effStats, goBack, kind, tri: tri
   const cx = React.useContext(DswsCtx)
   const h = cx ? cx.h : React.createElement
   const mEffort = (function () { try { return effortOf(m) } catch (e) { return '' } })()
+  // #45：这张容器交给「复制、打开链接、提示语、拼提示词」的编号。key 不是纯数字的行（Linear 的 OMB-903）交文本 key，
+  //   其余行照旧交 number（行为一字不变）；规则真源是 kernel/link.ts 的 rowNavKeyOf，
+  //   单文件求值的门禁里没有这个全局名字，所以先问 typeof，问不到时退回改动前的 m.number。
+  const mNav = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(m) : m.number)
+  // 提示词构建函数（containerPromptText、startText）在内核里自己读行上的 number；文本 key 的行要把 number 换成 mNav 再交给它们。
+  //   number 本来就等于 mNav 的行（GitHub、Markdown）原样交 m，对象都不换。
+  const mPrompt = (mNav === m.number) ? m : Object.assign({}, m, { number: mNav })
   // #763 顶栏折叠机（与 IssueDetail.ts 同一台；读顶栏 DOM 上的 data-detail-* 标记逐字收字）
-  const topBarRef = useIssueDetailFold(st, m.number, mEffort)
+  const topBarRef = useIssueDetailFold(st, mNav, mEffort)
   // #1286：这顶栏服务两类容器（探索地图 / 规格）。三态配置（底色/文字/图标）由调用方按同一份
   //   container-view.ts 的判定算好传进来；没传（本文件被单独求值时）就地按同口径算一遍。
   const cKind = kind || 'map'
@@ -82,15 +89,15 @@ export const MapDetailTop = ({ st, m, navCrumb, effStats, goBack, kind, tri: tri
   const chipText = tr(chipLabelKey)
   const copyUrl = function (e: any) {
     if (e && e.stopPropagation) e.stopPropagation()
-    try { copyText(st, issueUrlFor(st, m.number, mEffort), tr('toast.copiedLink', { n: m.number })) } catch (err) {}
+    try { copyText(st, issueUrlFor(st, mNav, mEffort), tr('toast.copiedLink', { n: mNav })) } catch (err) {}
   }
-  const openUrl = (typeof issueUrlFor === 'function') ? (function () { try { return issueUrlFor(st, m.number, mEffort) } catch (err) { return '' } })() : ''
+  const openUrl = (typeof issueUrlFor === 'function') ? (function () { try { return issueUrlFor(st, mNav, mEffort) } catch (err) { return '' } })() : ''
   // #1557：地图 / 规格这类容器的打开方式由后端声明（openContainer）：远程后端开网页，
   //   本地 Markdown 开 map.md / spec.md 所在目录；视图只决定画链接还是按钮，不再自己判地址前缀。
   const openIsUrl = openModeFor(st, 'container', openUrl) === 'url'
   const openTracker = function (e: any) {
     if (e && e.stopPropagation) e.stopPropagation()
-    try { openTrackerTarget(st, m.number, (typeof host !== 'undefined' ? host : null), mEffort, 'container') } catch (err) {}
+    try { openTrackerTarget(st, mNav, (typeof host !== 'undefined' ? host : null), mEffort, 'container') } catch (err) {}
   }
   // 主动作：探索地图是 检查 / 执行 / 完成，规格是 拆票 / 执行 / 完成。文字、底色、图标与
   //   点下去注入的提示词都取同一份三态配置（container-view.ts），所以按钮上写什么与点下去注入什么
@@ -99,7 +106,7 @@ export const MapDetailTop = ({ st, m, navCrumb, effStats, goBack, kind, tri: tri
     if (typeof containerPromptText === 'function') {
       try {
         // 统计用 effStats（按需取回的那一份），让收尾提示词里的数字与头部计数行一致。
-        return containerPromptText(st, Object.assign({}, m, { stats: effStats || m.stats }), cKind, cState, openUrl)
+        return containerPromptText(st, Object.assign({}, mPrompt, { stats: effStats || m.stats }), cKind, cState, openUrl)
       } catch (e) { /* 落回老口径 */ }
     }
     if (cState === 'empty') {
@@ -107,19 +114,19 @@ export const MapDetailTop = ({ st, m, navCrumb, effStats, goBack, kind, tri: tri
       //   container-view.ts 不在时才会走到（例如门禁单独求值本文件），口径要与它保持一致。
       if (cKind === 'spec') return '/to-tickets ' + openUrl
       let t2 = ''
-      try { t2 = inspectPrompt(st, m.number, m.title, mEffort) } catch (e) {
+      try { t2 = inspectPrompt(st, mNav, m.title, mEffort) } catch (e) {
         try {
-          t2 = promptTextFor(st, 'mapInspect', { n: (m.number === undefined || m.number === null ? '' : String(m.number)), ['title']: String(m.title || ''), url: openUrl })
+          t2 = promptTextFor(st, 'mapInspect', { n: (mNav === undefined || mNav === null ? '' : String(mNav)), ['title']: String(m.title || ''), url: openUrl })
           if (t2) t2 = '/wayfinder ' + openUrl + '\n\n' + t2
-        } catch (_) { t2 = startText(st, m) }
+        } catch (_) { t2 = startText(st, mPrompt) }
       }
       return t2
     }
-    if (cState === 'done') return completePrompt(st, m.number, m.title, (effStats ? effStats.total : 0), (effStats ? effStats.closed : 0), mEffort)
+    if (cState === 'done') return completePrompt(st, mNav, m.title, (effStats ? effStats.total : 0), (effStats ? effStats.closed : 0), mEffort)
     // 规格未完成：注入 /implement-spec 链接；通用「执行这张票」模板的正文首行是 /wayfinder，
     //   用在规格上不对（设计文档 §3.4）。探索地图的推进式提示词照旧。
     if (cKind === 'spec') return '/implement-spec ' + openUrl
-    return startText(st, m)
+    return startText(st, mPrompt)
   }
   const primaryBtn = h(Tip, { content: tr(tri.titleKey) }, h('button', { className: 'dsws-btn primary', 'data-press': 'button', 'data-log': 'map.top.exec', onClick: function () {
     inject(st, promptText())
@@ -147,8 +154,8 @@ export const MapDetailTop = ({ st, m, navCrumb, effStats, goBack, kind, tri: tri
       ])),
       h(Tip, { content: tr('tip.copyLink') }, h('button', { className: 'dsws-btn ghost', 'data-press': 'icon', 'data-log': 'map.top.copy', onClick: copyUrl, style: { display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, Ic({ n: 'clipboard', size: 13 }))),
       openIsUrl
-        ? h(Tip, { content: tr('tip.openInTracker', { n: m.number }) }, h('a', { className: 'dsws-btn ghost', href: openUrl, target: '_blank', rel: 'noreferrer', 'data-press': 'icon', 'data-log': 'map.top.link', onClick: function (e: any) { e.stopPropagation() }, style: { display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' }, 'aria-label': tr('tip.openInTracker', { n: m.number }) }, Ic({ n: 'link', size: 13 })))
-        : h(Tip, { content: tr('tip.openInTracker', { n: m.number }) }, h('button', { className: 'dsws-btn ghost', onClick: openTracker, 'data-press': 'icon', 'data-log': 'map.top.link', style: { display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' }, 'aria-label': tr('tip.openInTracker', { n: m.number }) }, Ic({ n: 'link', size: 13 }))),
+        ? h(Tip, { content: tr('tip.openInTracker', { n: mNav }) }, h('a', { className: 'dsws-btn ghost', href: openUrl, target: '_blank', rel: 'noreferrer', 'data-press': 'icon', 'data-log': 'map.top.link', onClick: function (e: any) { e.stopPropagation() }, style: { display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' }, 'aria-label': tr('tip.openInTracker', { n: mNav }) }, Ic({ n: 'link', size: 13 })))
+        : h(Tip, { content: tr('tip.openInTracker', { n: mNav }) }, h('button', { className: 'dsws-btn ghost', onClick: openTracker, 'data-press': 'icon', 'data-log': 'map.top.link', style: { display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' }, 'aria-label': tr('tip.openInTracker', { n: mNav }) }, Ic({ n: 'link', size: 13 }))),
     ]),
   ])
 }

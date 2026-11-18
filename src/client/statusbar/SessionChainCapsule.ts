@@ -41,7 +41,7 @@ declare function containerKindOf(...args: any[]): any; declare function findMapB
 declare function Ic(props?: any): any;
 declare function openPanel(...args: any[]): any;
 declare function placeStatusOverlay(...args: any[]): any;
-declare function pushNav(...args: any[]): any;
+declare function pushNav(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 declare function scheduleStatusClose(...args: any[]): any;
 declare function workRouteActionKeyOf(...args: any[]): any;
 declare function workRouteTableClock(...args: any[]): any;
@@ -68,7 +68,7 @@ const capsuleAtMsOf = function (v: any) { if (typeof v !== 'string' || v === '')
  * 就互相找不到，00 行认不出容器、点开也没去向）。普通票不受影响（'5' 与 '05' 本来就是同一张票）。 */
 const capsuleTicketKeyOf = function (v: any, pad?: any) {
   const t = v === null || v === undefined ? '' : String(v).trim()
-  return !/^\d{1,10}$/.test(t) ? '' : (pad ? t.padStart(2, '0') : t)
+  return !/^(\d{1,10}|[A-Za-z][A-Za-z0-9_]{0,31}-\d{1,10})$/.test(t) ? '' : (pad && /^\d+$/.test(t) ? t.padStart(2, '0') : t) // #45: a Linear key such as OMB-903 is also a ticket key; only the all-digit form is zero-padded
 }
 
 
@@ -97,7 +97,7 @@ const capsuleTitlesOf = function (st: any) {
   if (!snap) return { byId: byId, byNumber: byNumber }
   const put = function (x: any) {
     if (!x || typeof x !== 'object') return
-    const n = capsuleTicketKeyOf(x.number, true)
+    const n = capsuleTicketKeyOf(typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number, true) // #45: a Linear row has no number, its key is the text key
     if (!n) return
     const eff = (x.effortId === null || x.effortId === undefined) ? '' : String(x.effortId)
     const id = eff + '\0' + n
@@ -168,9 +168,9 @@ const capsuleRowOf = function (titles: any, e: any) {
 const capsuleOpenTicket = function (st: any, entry: any) {
   if (!st || !entry) return
   // 票号按字串认：非法钥匙兜成 'x'（转数字得 NaN，直接拦下）；容器 00 转成 0，走下面的种类放行。
-  const n = Number(capsuleTicketKeyOf(entry.ticketKey) || 'x')
+  const kt = capsuleTicketKeyOf(entry.ticketKey), n: any = (kt !== '' && !/^\d+$/.test(kt)) ? kt : Number(kt || 'x') // #45: a text key (OMB-903) goes to the navigation as text, a digit key is still read as a number
   // 普通票没有 00 号：0 只放行给容器（地图 / 规格），普通票仍按老样子要求大于 0。
-  if (!isFinite(n) || (n === 0 && entry.containerKind !== 'map' && entry.containerKind !== 'spec')) return
+  if ((typeof n === 'number' && !isFinite(n)) || (n === 0 && entry.containerKind !== 'map' && entry.containerKind !== 'spec')) return
   try { st.tab = 'list' } catch (e) { /* 状态写不进去也不影响这一跳 */ }
   const eid = (entry.effortId === null || entry.effortId === undefined) ? '' : String(entry.effortId)
   let map = null
