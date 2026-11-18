@@ -2,15 +2,16 @@
  * src/tracker/rooms/linear/normalize.ts —— Linear 的节点 → 契约的 Issue
  *
  * 契约要求「完整形状」：核心字段永远在，缺的用 ''/null 补；能力字段能实现就给值（空数组是
- * EMPTY），不能实现就整个省略（MISSING）。本房今天能给的：标签、指派人、父票。
- * 给不了的（评论、里程碑、自定义字段、评审）先省略，等对应操作实现时再补。
+ * EMPTY），不能实现就整个省略（MISSING）。本房今天能给的：标签、指派人、父票，以及（调用方要了评论时）评论，
+ * 评论的读取在 read.ts 的 getIssue，这里只提供节点 → Comment 的翻译（commentOf）。
+ * 给不了的（里程碑、自定义字段、评审）先省略，等对应操作实现时再补。
  *
  * 三个翻译点值得记住，它们都在研究笔记里有出处：
  *   · 状态只有 open/closed 两态，Linear 的七个 type 里 completed / canceled / duplicate 算关；
  *   · 地图靠 wayfinder:map 标签认、规格靠正文文件头的 DSH-ISSUE-KIND: spec 标记认（与另外三房同一口径）；
  *   · 票的稳定身份是 uuid，显示用 identifier；契约的 key 用 identifier，因为它与另外两房同形。
  */
-import type { Issue, Label } from '../../contract/entities.js'
+import type { Comment, Issue, Label } from '../../contract/entities.js'
 import type { IssueType, State } from '../../contract/identity.js'
 import { normalizeColor } from '../../../shared/label-color/src/colors.js'
 import { markerKindInHeader } from '../../../shared/issue-file/src/marker.js'
@@ -72,6 +73,32 @@ export function labelsOf(node: LinearIssueNode): Label[] {
     out.push({ name, color: normalizeColor(item?.color) ?? '' })
   }
   return out
+}
+
+/**
+ * Linear 的评论节点形状：只声明读写两侧共用的那几格（commentCreate 的回包与票上的 comments 连接都带它们）。
+ * 不声明 editedAt 之类没核对过的字段：多问一个 schema 里不存在的字段，整条详情查询都会失败。
+ */
+export interface LinearCommentNode {
+  id?: string
+  body?: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
+  user?: { name?: string | null; displayName?: string | null } | null
+}
+
+/** 一条评论节点 → 契约的 Comment。作者给不出就写空串，不编一个名字；读侧（票的评论）与写侧（刚发的那条）共用这一份。 */
+export function commentOf(node: LinearCommentNode | null | undefined): Comment {
+  const user = node && node.user ? node.user : null
+  const login = String((user && (user.name || user.displayName)) || '')
+  return {
+    ...(node && node.id ? { id: String(node.id) } : {}),
+    author: { login, ...(user && user.displayName ? { name: String(user.displayName) } : {}) },
+    authorAssociation: '',
+    body: String((node && node.body) || ''),
+    createdAt: String((node && node.createdAt) || ''),
+    updatedAt: String((node && node.updatedAt) || (node && node.createdAt) || ''),
+  }
 }
 
 /** 一个节点 → 一张票。核心字段一个不少，缺的按契约补。 */

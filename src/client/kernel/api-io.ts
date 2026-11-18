@@ -234,8 +234,10 @@
     //   {ok, error:{kind, message, raw}}，kind 收八档（见上面 dswsNormalizeError）
     export const fetchIssueDetail = function (st: any, n: any, opts: any) {
       // 本地容器的编号是 0（key 00），是合法坐标：缺席与空串先归一成 NaN，再拦非数字与负数，不拦 0。
-      const num = Number((n === undefined || n === null || String(n).trim() === '') ? NaN : n)
-      if (isNaN(num) || num < 0) return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
+      // #45：键是后端给的文本（42、01、ENG-12），不替后端读成数字。全是数字的键仍当编号（老路零变化）；空、NaN、负数、对象仍拒绝；
+      //   其余文本键原样搬运。同一条规则在评论、清缓存里各用一次，api-io 有行数上限，所以这里不另起函数。
+      const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : (typeof n === 'string' ? n.trim() : ''), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
+      if (!keyText || keyText[0] === '-') return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
       // #1694：失败不再清空 st.issueDetail —— 上次取到的内容继续画，只标失败（时间由投影从详情缓存取）。
       const failDetail = function (err: any) { st.issueMode = 'err'; st.issueError = err; emit(st); return { ok: false, error: err } }
       const force = !!(opts && opts.force)
@@ -263,7 +265,9 @@
         if (!res) return failDetail({ kind: 'network', message: tr('err.snapshotEmpty'), raw: '' })
         if (res.ok) {
           const issue = res.issue || res.value && res.value.issue || res.value
-          if (!issue || typeof issue.number !== 'number') return failDetail({ kind: 'parse', message: 'issue missing', raw: '' })
+          // #45：回包要么带数字 number（GitHub、Markdown 的老形状），要么带文本 key（Linear 的 ENG-12，没有 number）。
+          //   NaN 的类型也是 number，所以数字这一支要排掉 NaN，免得一张永远对不上行的票被存下来。
+          if (!issue || !((typeof issue.number === 'number' && !isNaN(issue.number)) || (typeof issue.key === 'string' && issue.key.trim() !== ''))) return failDetail({ kind: 'parse', message: 'issue missing', raw: '' })
           // #1695：snapshot 模式只记「这次取回的时刻」，不再写旧详情缓存；legacy 路径照旧写 issueCache。
           if (snapMode) { if (!st.detailSeenAt) st.detailSeenAt = {}; st.detailSeenAt[cacheKey] = Date.now() }
           else { if (!st.issueCache) st.issueCache = {}; st.issueCache[cacheKey] = { ts: Date.now(), data: issue } }
@@ -283,7 +287,7 @@
     }
     export const clearIssueDetailCache = function (st: any, n: any, effortId: any) {
       if (n != null) {
-        const num = Number(n)
+        const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : (typeof n === 'string' ? n.trim() : ''), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
         if (st.issueCache) {
           // 带 effort 就精确删；不带就把该编号在所有 effort 下的缓存都删（旧调用方零改动）
           if (effortId !== undefined && effortId !== null) delete st.issueCache[idOfParts(String(effortId), num)]
@@ -291,7 +295,7 @@
           else Object.keys(st.issueCache).forEach(function (k) {
             const ent = st.issueCache[k]
             const dn = ent && ent.data && ent.data.number != null ? Number(ent.data.number) : null
-            if (k === String(num) || dn === num) delete st.issueCache[k]
+            if (k === String(num) || dn === num || (ent && ent.data && ent.data.key != null && String(ent.data.key) === keyText)) delete st.issueCache[k]
           })
         }
       } else if (st.issueCache) st.issueCache = {}
@@ -301,8 +305,9 @@
     // 契约：st.issueDetail.comments.nodes 首 50，st.issueCommentsMoreLoading 布尔，st.issueCommentsFailCount 计数，st.issueCommentsHasMore 布尔（pageInfo.hasNextPage）
     export const fetchIssueComments = function (st: any, n: any, after: any, opts: any) {
       // 本地容器的编号是 0（key 00），是合法坐标：缺席与空串先归一成 NaN，再拦非数字与负数，不拦 0。
-      const num = Number((n === undefined || n === null || String(n).trim() === '') ? NaN : n)
-      if (isNaN(num) || num < 0) return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
+      // #45：同详情（规则见上）。
+      const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : (typeof n === 'string' ? n.trim() : ''), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
+      if (keyText === '' || keyText.charAt(0) === '-') return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
       // 客户端本地的前置态（上一页还在路上，别重复发）：不是后端失败，所以没有原文。
       // 'throttle' 是客户端自己的「忙」标记，不是契约八档里的取值——调用方只看 ok，没有人认这个值；
       // 留在这里是为了与旧回包形状一致（#1111 只收口「按 message 猜档位」，不重做这条本地态）。
@@ -367,9 +372,9 @@
     // 推进序列由视图编排 —— 成功后清空输入、fetchIssueDetail(force) 击穿详情缓存重取、probeNow 静默快照刷新，
     // 全程无乐观插入（新评论必须来自服务端重取的证据）。
     export const submitIssueComment = function (st: any, n: any, body: any, opts: any) {
-      // 本地容器的编号是 0（key 00），是合法坐标：缺席与空串先归一成 NaN，再拦非数字与负数，不拦 0。
-      const num = Number((n === undefined || n === null || String(n).trim() === '') ? NaN : n)
-      if (isNaN(num) || num < 0) return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
+      // #45：同详情的键规则（见 fetchIssueDetail）：全数字当编号（42→42、01→1，0 合法），文本键（OMB-900）原样搬运；空、NaN、负数、对象拒绝。
+      const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : (typeof n === 'string' ? n.trim() : ''), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
+      if (!keyText || keyText[0] === '-') return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'invalid number', raw: '' } })
       const text = String(body == null ? '' : body)
       if (!text.trim()) return Promise.resolve({ ok: false, error: { kind: 'parse', message: 'comment body required', raw: '' } })
       if (typeof host === 'undefined' || typeof host.call !== 'function') {

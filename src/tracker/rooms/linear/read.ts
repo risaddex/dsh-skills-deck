@@ -13,8 +13,9 @@ import type { OpContext } from '../../contract/contexts.js'
 import { gql, type LinearAccount } from './client.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { linearError } from './errors.js'
-import { CLOSED_STATE_TYPES, issueOf, type LinearIssueNode } from './normalize.js'
-import { ISSUE_QUERY, ISSUES_QUERY, MAX_PAGE } from './queries.js'
+import { CLOSED_STATE_TYPES, commentOf, issueOf, type LinearCommentNode, type LinearIssueNode } from './normalize.js'
+import { COMMENTS_FETCH_CAP, ISSUE_QUERY, ISSUE_WITH_COMMENTS_QUERY, ISSUES_WITH_BLOCKERS_QUERY, MAX_PAGE } from './queries.js'
+import { incomingBlocks, refOf, type RelationConnection } from './relations.js'
 
 
 /**
@@ -61,6 +62,22 @@ export function buildIssuesFilter(filter: ListFilter | undefined): Record<string
   return Object.keys(conditions).length > 0 ? conditions : undefined
 }
 
+/**
+ * 把「谁阻塞我」挂到契约的票上（#45）。三种结局要分清：
+ *  · 回包里没有关系连接（这次没问，或旧回包）：不写 blockedBy，是「不知道」，不是「没有阻塞者」；
+ *  · 有连接且这一页就是全部：写 blockedBy，没有阻塞者时是空数组（知道是空）；
+ *  · 有连接但被页大小截断（pageInfo.hasNextPage）：同样不写。残缺的名单被当成完整的名单读，会对一张其实被挡着的票说「可以接」，
+ *    比不知道更糟；不知道至少诚实。单票读取满 250，所以只有关系多到 250 条以上的票才会走到这里。
+ * 只认 blocks 类型、标题与状态按读到的真值给，这些规则住在 relations.ts 的 incomingBlocks 与 refOf（写侧共用同一份，不再抄第二份）。
+ */
+function withBlockers(issue: Issue, node: { inverseRelations?: RelationConnection | null }): Issue {
+  const conn = node.inverseRelations
+  if (!conn) return issue
+  if (conn.pageInfo && conn.pageInfo.hasNextPage === true) return issue
+  issue.blockedBy = incomingBlocks(node).map(refOf)
+  return issue
+}
+
 /** 取一张票。key 既可以是 UUID，也可以是 ENG-123 这种标识符（Linear 两者都收）。 */
 export async function getIssue(
   ctx: OpContext,
@@ -70,16 +87,31 @@ export async function getIssue(
 ): Promise<IssueDetailResult> {
   const trimmed = String(key || '').trim()
   if (!trimmed) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'no ticket key was given') }
-  const result = await gql<{ issue: LinearIssueNode | null }>(ctx, account, {
-    query: ISSUE_QUERY,
-    variables: { id: trimmed },
+  // 契约的 opts.comments.first 是「要几条」；没要（缺省、0、不是正数）就不问评论，票上也不挂 comments 字段：
+  // 缺字段是「没读」，空数组才是「读了、没有」，面板据此分得清「评论加载中」与「没有评论」。
+  const wanted = opts && opts.comments && typeof opts.comments.first === 'number' ? Math.floor(opts.comments.first) : 0
+  const withComments = wanted > 0
+  const result = await gql<{ issue: (LinearIssueNode & { inverseRelations?: RelationConnection | null; comments?: { nodes?: LinearCommentNode[] | null; pageInfo?: { hasPreviousPage?: boolean } | null } | null }) | null }>(ctx, account, {
+    query: withComments ? ISSUE_WITH_COMMENTS_QUERY : ISSUE_QUERY,
+    variables: withComments ? { id: trimmed, last: COMMENTS_FETCH_CAP } : { id: trimmed },
     bucket: 'read',
   })
   if (!result.ok) return { ok: false, error: result.error }
   const node = result.data.issue
   if (!node) return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'Linear has no ticket ' + trimmed) }
-  // 评论要单独一条连接去读；opts.comments 这一格等评论读路径实现时再兑现，现在如实不挂 commentCount。
-  return { ok: true, data: issueOf(node) }
+  const issue = withBlockers(issueOf(node), node)
+  if (!withComments) return { ok: true, data: issue }
+  // Linear 回的是最新的在前；宿主要的是「最旧的 N 条、按时间升序」（它每次从 0 取到 N 再切掉已加载的），与 linear.app 的显示也一致。
+  // 时间是 ISO 字符串，同一时区下按字符串比就是按时间比；同一时刻的两条保持 Linear 给的相对顺序（Array.sort 稳定）。
+  const nodes = (node.comments && Array.isArray(node.comments.nodes) ? node.comments.nodes : []).filter(function (c) { return !!c })
+  const all = nodes.slice().sort(function (a, b) { return String(a.createdAt || '').localeCompare(String(b.createdAt || '')) })
+  issue.comments = all.slice(0, wanted).map(commentOf)
+  // 总数只在「这一批就是全部」时才报：Linear 说窗口之前还有评论（超过取满的 200 条）就不报，面板不会把一个下限当成总数。
+  // 「还有更多」这个事实照实传下去（commentsHasMore），不传数字：宿主据此在总数未知时仍给出「加载更多」，又不会把下限当总数。
+  // 窗口是最旧的 200 条（见 queries.ts 的 COMMENTS_FETCH_CAP），所以这一批的内容不随新评论变化，宿主按偏移翻页是稳的。
+  if (node.comments && node.comments.pageInfo && node.comments.pageInfo.hasPreviousPage === true) issue.commentsHasMore = true
+  else issue.commentCount = all.length
+  return { ok: true, data: issue }
 }
 
 /** 列一页票。这一版只翻一页：翻页要游标，等 listPage 落地时统一做，别在这里各写一套。 */
@@ -102,15 +134,16 @@ export async function listIssues(
 
   const first = PAGE_SIZE
   const result = await gql<{
-    issues: { nodes?: LinearIssueNode[]; pageInfo?: { hasNextPage?: boolean } }
+    issues: { nodes?: (LinearIssueNode & { inverseRelations?: RelationConnection | null })[]; pageInfo?: { hasNextPage?: boolean } }
   }>(ctx, account, {
-    query: ISSUES_QUERY,
+    query: ISSUES_WITH_BLOCKERS_QUERY,
     variables: { first, filter: buildIssuesFilter(filter) ?? null },
     bucket: 'read',
   })
   if (!result.ok) return { ok: false, error: result.error }
   const nodes = result.data.issues?.nodes || []
-  const issues: Issue[] = nodes.map((node) => issueOf(node))
+  // 每一行带它自己的阻塞者（页大小见 queries.ts 的 LIST_BLOCKERS_PER_TICKET）；关系比这一页还多的行不带 blockedBy，见 withBlockers。
+  const issues: Issue[] = nodes.map((node) => withBlockers(issueOf(node), node))
   const truncated = result.data.issues?.pageInfo?.hasNextPage === true
   return truncated ? { ok: true, data: issues, truncated } : { ok: true, data: issues }
 }

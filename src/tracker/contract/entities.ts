@@ -243,6 +243,12 @@ export interface Issue {
   comments?: Comment[]
   /** 评论总数（后端能给就给，拿不到就省略；调用方不许拿 comments.length 当总数）。 */
   commentCount?: number
+  /**
+   * 后端说「比这一批 comments 还有更多」时写 true，只在没有 commentCount（总数不确定）时才有用；其余情况省略。
+   * 为什么要有它：总数未知时宿主按「不声称还有下一页」处理，超过一批的评论就没有「加载更多」入口（Linear 一次最多取 200 条，
+   * 超过时只知道还有更多、不知道总数）。它只传「还有」这一个事实，不传数字，所以不会冒充总数。
+   */
+  commentsHasMore?: boolean
   /** 是不是拉取请求：能判断就写 true/false，判断不了就省略这个字段。 */
   isPullRequest?: boolean
   /** 合并时间，还没合并是 `null`；没有拉取请求能力的后端省略。 */

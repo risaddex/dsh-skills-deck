@@ -10,7 +10,7 @@
  */
 declare function findMapByIdentity(...args: any[]): any;
 declare function effortOf(...args: any[]): any;
-declare function issueUrlFor(...args: any[]): any;
+declare function issueUrlFor(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 declare function renderTemplate(...args: any[]): any;
 declare function startText(...args: any[]): any;
 declare function promptText(...args: any[]): any;
@@ -32,7 +32,7 @@ declare const CONTAINER_ACCENT: any;
   *   避免出现第二份判据。认不出（不是容器、快照里没有、或这些函数不在作用域）就返回空，交回标签阶梯。 */
 const containerActionOf = function (st: any, x: any): any {
   try {
-    const num: any = (x && (x.number != null ? x.number : x.key))
+    const num: any = (x && (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : (x.number != null ? x.number : x.key))) // #45: a Linear row has no number (or a made-up 0), so the key comes from rowNavKeyOf (the text key wins)
     const maps: any = (st && st.snapshot && st.snapshot.maps)
     if (num == null || !Array.isArray(maps)) return null
     if (typeof findMapByIdentity !== 'function' || typeof containerKindOf !== 'function' || typeof containerStateOf !== 'function') return null
@@ -82,9 +82,9 @@ export const actionColorOf = function (x: any, colorOf: any): any {
 // #361：行级动作注入文本的单一真源（诊断/接手/补充/修复/讨论/研究/原型/执行）—— 新会话打开与行内动作共用
 export const rowActionText = function (st: any, x: any): any {
   let url: string = ''
-  try { url = issueUrlFor(st, x.number, effortOf(x)) } catch(e) { url = '' }
+  try { url = issueUrlFor(st, (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number), effortOf(x)) } catch(e) { url = '' }
   if (!url) {
-    const fallbackKey: any = (x && (x.number != null ? x.number : x.key != null ? x.key : ''))
+    const fallbackKey: any = (x && (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : (x.number != null ? x.number : x.key != null ? x.key : ''))) ?? ''
     if (fallbackKey !== '') url = '#' + String(fallbackKey)
   }
   // #1286 收口：规格与地图自己不是实施票。行级动作（列表行按钮、新会话、票详情顶栏）先认出容器，
@@ -121,7 +121,7 @@ export const rowActionText = function (st: any, x: any): any {
 // v19：共享 —— 行级动作（列表与 map 详情共用）：按一处分类八选一（诊断/接手/补充/修复/讨论/研究/原型/执行），预填输入框；
 // 按钮主体色 = 对应 label 的 GitHub 配置色（字色按对比度在深白两色里择优，见 isLightHex）；接手跟 ready-for-human、补充跟 needs-info（#785），取不到时兜底探索紫
 export const mkRowAction = function (st: any, x: any, narrow: any, colorOf: any): any {
-  const url: any = issueUrlFor(st, x.number, effortOf(x))
+  const url: any = issueUrlFor(st, (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number), effortOf(x))
   const kind: any = rowActionKind(x)
   const isLight: any = isLightHex
   const btnColor = function (nm: any, fb: any): any { const c: any = colorOf[nm]; return c ? '#' + c : fb }
@@ -146,7 +146,7 @@ export const mkRowAction = function (st: any, x: any, narrow: any, colorOf: any)
       // 本次界面反馈需求：这一族「行级主动作」在列表与详情卡里共用，按下反馈沿按钮自身，
       //   点击日志只带票号（视图由日志前后文区分），不把列表/详情两套名字塞进这个共享函数。
       'data-press': 'button',
-      'data-log': 'issue.action.' + x.number,
+      'data-log': 'issue.action.' + (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number),
       onClick: function (e: any): void { e.stopPropagation(); inject(st, text) },
       style: { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', background: colorHex, borderColor: 'transparent', color: light ? '#140a1e' : '#ffffff' },
     }, [Ic({ n: icon, size: icon === 'prototype' ? 12 : 10 }), narrow ? null : h('span', null, label)]))

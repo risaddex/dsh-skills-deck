@@ -18,7 +18,7 @@ import type { UpdatePatch, CreateInput, SetOpts, LabelInput } from '../../contra
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
-import { issueOf, type LinearIssueNode } from './normalize.js'
+import { commentOf, issueOf, type LinearIssueNode } from './normalize.js'
 import { ISSUE_CORE } from './queries.js'
 import { resolveLabelIds, wantedLabelsOf } from './labels.js'
 import { lookupByAnchor, withAnchor } from './anchor.js'
@@ -31,20 +31,6 @@ const ISSUE_FIELDS = '...LinearIssueCore'
 const COMMENT_CREATE = 'mutation DeckCommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id body createdAt updatedAt url user { name displayName } } } }'
 const ISSUE_UPDATE = 'mutation DeckIssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { ' + ISSUE_FIELDS + ' } } } ' + ISSUE_CORE
 const ISSUE_STATES = 'query DeckIssueStates($id: String!) { issue(id: $id) { team { key states { nodes { id name type position } } } } }'
-
-/** 一条评论节点 → 契约的 Comment。作者给不出就写空串，不编一个名字。 */
-function commentOf(node: any): Comment {
-  const user = node && node.user ? node.user : null
-  const login = String((user && (user.name || user.displayName)) || '')
-  return {
-    ...(node && node.id ? { id: String(node.id) } : {}),
-    author: { login, ...(user && user.displayName ? { name: String(user.displayName) } : {}) },
-    authorAssociation: '',
-    body: String((node && node.body) || ''),
-    createdAt: String((node && node.createdAt) || ''),
-    updatedAt: String((node && node.updatedAt) || (node && node.createdAt) || ''),
-  }
-}
 
 /** 发一条评论。成功回的是**新建的那条评论**，不是整张票。 */
 export async function commentOnIssue(ctx: OpContext, account: LinearAccount, key: string, body: string): Promise<OpResult<Comment>> {

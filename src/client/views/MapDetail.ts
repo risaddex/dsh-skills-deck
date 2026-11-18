@@ -14,7 +14,7 @@ declare function idOf(...args: any[]): any;
 declare function effortOf(...args: any[]): any;
 declare function effortNamesOf(...args: any[]): any;
 declare function findMapByIdentity(...args: any[]): any;
-declare function pushNav(...args: any[]): any;
+declare function pushNav(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 declare function popNav(...args: any[]): any;
 declare function buildColorOf(...args: any[]): any;
 declare function mkRowAction(...args: any[]): any;
@@ -63,6 +63,10 @@ export     const MapDetail = ({ st, g, drill }: any) => {
       const cx = React.useContext(DswsCtx)
       const h = cx ? cx.h : React.createElement
       const m = g.m
+      // #45：一行（地图本身或子票）交给导航、复制、打开链接与「#编号」展示的编号。key 不是纯数字的行（Linear 的 OMB-903）
+      //   交文本 key，其余行照旧交 number（行为一字不变）；规则真源是 kernel/link.ts 的 rowNavKeyOf。
+      //   单文件求值的门禁里没有这个全局名字，所以先问 typeof，问不到时退回改动前的 r.number。
+      const navOf = function (r: any) { return (typeof rowNavKeyOf === 'function') ? rowNavKeyOf(r) : r.number }
       // effort 维度：地图的身份是 (effortId, key)，不是裸编号；本 effort 内的子票编号才唯一。
       const mId = idOf(m)
       const multiEffort = effortNamesOf(st).length > 1
@@ -132,7 +136,9 @@ export     const MapDetail = ({ st, g, drill }: any) => {
       // 迷雾：fog 票（Not yet specified）+ 被阻塞且其阻塞者 open 的票（半雾）；D7 视觉遮蔽
       const isFog = function (t: any) {
         if (t.state !== 'OPEN') return false
-        const blk = (t.blockedBy || []).map(function (b: any) { return tickets.find(function (x: any) { return x.number === b }) }).filter(Boolean)
+        // #45：blockedBy 里数字键的票是 number，文本键的票（Linear 的 OMB-1）是文本 key，按行的导航键对上。
+        //   这个函数会被门禁按文本单独截出来求值，所以键的取法写在函数里面，不引用外面的 navOf；数字行与改动前一字不差。
+        const blk = (t.blockedBy || []).map(function (b: any) { return tickets.find(function (x: any) { return (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(x) : x.number) === b }) }).filter(Boolean)
         return blk.some(function (b: any) { return b.state === 'OPEN' })
       }
       const fogTitles = fogList.map(function (f: any) { return String(f).trim() })
@@ -144,7 +150,11 @@ export     const MapDetail = ({ st, g, drill }: any) => {
             if (t.state === 'OPEN') return isFog(t) || isFogTitle(t) ? 1 : 0
             return 2
           }
-          return rank(a) - rank(b) || a.number - b.number
+          // #45：两个键都是数字时照旧相减；有一个是文本（Linear）就按文本做自然序比较，OMB-2 排在 OMB-10 前面，缺键也不出 NaN。
+          const ka: any = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(a) : a.number)
+          const kb: any = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(b) : b.number)
+          if (typeof ka === 'number' && typeof kb === 'number') return rank(a) - rank(b) || ka - kb
+          return rank(a) - rank(b) || String(ka == null ? '' : ka).localeCompare(String(kb == null ? '' : kb), undefined, { numeric: true })
         })
       })
       // 迷雾点击去雾状态（st 上按 map 存）
@@ -191,19 +201,21 @@ export     const MapDetail = ({ st, g, drill }: any) => {
         try { return !!(st.reveal && st.reveal[mId] && st.reveal[mId][idOf(t)]) } catch (e) { return false }
       }
       const enterDetail = function (t: any) {
+        // #45：这个函数会被门禁按文本单独截出来求值，所以键的取法写在函数里面，不引用外面的 navOf。
+        const nk: any = (typeof rowNavKeyOf === 'function') ? rowNavKeyOf(t) : t.number
         // #1286 收口：规格与探索地图都进容器详情。原来只认 wayfinder:map 标签，挂在探索地图下的
         //   规格子票会被当成普通票进票详情，而票详情按标签会把规格当实施票（注入 /implement），
         //   与规格自己的按钮口径（拆票 / 执行→/implement-spec / 完成）相反。
         const asContainer = (function (): any {
           try {
             if (typeof containerKindOf !== 'function' || typeof findMapByIdentity !== 'function') return null
-            const c: any = findMapByIdentity(st.snapshot && st.snapshot.maps, t.number, effortOf(t))
+            const c: any = findMapByIdentity(st.snapshot && st.snapshot.maps, nk, effortOf(t))
             return (c && containerKindOf(c)) ? c : null
           } catch (e) { return null }
         })()
-        if (asContainer) pushNav(st, 'map', t.number, effortOf(t))
-        else if (hasMapTag(t) && findMapByIdentity(st.snapshot && st.snapshot.maps, t.number, effortOf(t))) pushNav(st, 'map', t.number, effortOf(t))
-        else pushNav(st, 'issue', t.number, effortOf(t))
+        if (asContainer) pushNav(st, 'map', nk, effortOf(t))
+        else if (hasMapTag(t) && findMapByIdentity(st.snapshot && st.snapshot.maps, nk, effortOf(t))) pushNav(st, 'map', nk, effortOf(t))
+        else pushNav(st, 'issue', nk, effortOf(t))
       }
       const onNodeClick = function (t: any) {
         if ((isFog(t) || isFogTitle(t)) && !isRevealed(t)) { toggleReveal(t); return }
@@ -226,7 +238,7 @@ export     const MapDetail = ({ st, g, drill }: any) => {
             if (ok === true) { try { setTimeout(function () { if (st.copyFlash && st.copyFlash.key === key && st.copyFlash.kind === 'ok') { st.copyFlash = null; try { emit(st) } catch (eR) {} } }, COPY_FLASH_MS) } catch (eT) {} }
           }
           try {
-            const r = copyText(st, issueUrlFor(st, x.number, effortOf(x)), tr('toast.copiedLink', { n: x.number }))
+            const r = copyText(st, issueUrlFor(st, navOf(x), effortOf(x)), tr('toast.copiedLink', { n: navOf(x) }))
             if (r && typeof r.then === 'function') r.then(done, function () { done(false) })
             else done(!!r)
           } catch (eC) { done(false) }
@@ -236,10 +248,10 @@ export     const MapDetail = ({ st, g, drill }: any) => {
         // 补齐「新会话」按钮（与列表页 issueRow 一致）：primary 色随 actionColorOf，浅色自动深字，marginLeft 4 与 mkRowAction 成组
         const acts = h('div', { className: 'acts' }, (t.state === 'OPEN' && !blocked) ? [
           mkRowAction(st, t, false, colorOf),
-          h(Tip, { content: tr('tip.newSession', { n: t.number }) }, h('button', { className: 'dsws-btn primary', 'data-press': 'button', 'data-log': 'map.card.newsession.' + (t.key != null ? t.key : t.number), onClick: function (e: any) { e.stopPropagation(); openInNewSession(st, t) }, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', marginLeft: 4, background: actionColorOf(t, colorOf), borderColor: 'transparent', color: isLightHex(actionColorOf(t, colorOf)) ? '#140a1e' : '#ffffff' } }, [Ic({ n: 'external-link', size: 10 }), h('span', null, tr('list.newSessionLabel'))])),
+          h(Tip, { content: tr('tip.newSession', { n: navOf(t) }) }, h('button', { className: 'dsws-btn primary', 'data-press': 'button', 'data-log': 'map.card.newsession.' + (t.key != null ? t.key : t.number), onClick: function (e: any) { e.stopPropagation(); openInNewSession(st, t) }, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', marginLeft: 4, background: actionColorOf(t, colorOf), borderColor: 'transparent', color: isLightHex(actionColorOf(t, colorOf)) ? '#140a1e' : '#ffffff' } }, [Ic({ n: 'external-link', size: 10 }), h('span', null, tr('list.newSessionLabel'))])),
           // #1237：补上复制链接按钮（与列表页 ListTabRow.js:130 同一样式与同反馈；图标取 11，与本行外链按钮对齐）
           h(Tip, { content: tr('tip.copyLink') }, h('button', { className: 'dsws-btn ghost' + (copyRes === 'ok' ? ' dsws-fb-okflash dsws-fb-success-ring dsws-fb-pop' : '') + (copyRes === 'fail' ? ' dsws-fb-errflash dsws-fb-shake' : ''), 'data-press': 'icon', 'data-log': 'map.card.copy.' + (t.key != null ? t.key : t.number), onClick: function (e: any) { e.stopPropagation(); copyUrl(t) }, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, copyRes === 'ok' ? Ic({ n: 'check', size: 11 }) : (copyRes === 'fail' ? Ic({ n: 'x', size: 11 }) : Ic({ n: 'clipboard', size: 11 })))),
-          (function(){ const _eff=effortOf(t); const _u=issueUrlFor(st, t.number, _eff); const _kind=(typeof containerKindOf==='function'&&containerKindOf(t))?'container':'issue'; const _isUrl=openModeFor(st,_kind,_u)==='url'; const _open=function(e: any){ e.stopPropagation(); openTrackerTarget(st, t.number, (typeof host!=='undefined'?host:null), _eff, _kind) }; const _tip=tr('list.openInTrackerTitle', { n: t.number }); const _log='map.card.link.' + (t.key != null ? t.key : t.number); const _sty={ textDecoration:'none', display:'inline-flex', alignItems:'center', padding:'2px 4px' }; return _isUrl ? h(Tip, {content:_tip}, h('a', { className:'dsws-btn ghost', href:_u, target:'_blank', rel:'noreferrer', 'data-press':'icon', 'data-log':_log, onClick:function(e: any){e.stopPropagation()}, style:_sty, 'aria-label':_tip }, Ic({n:'link',size:11}))) : h(Tip, {content:_tip}, h('button', { className:'dsws-btn ghost', onClick:_open, 'data-press':'icon', 'data-log':_log, style:_sty, 'aria-label':_tip }, Ic({n:'link',size:11}))); })(),
+          (function(){ const _eff=effortOf(t); const _u=issueUrlFor(st, navOf(t), _eff); const _kind=(typeof containerKindOf==='function'&&containerKindOf(t))?'container':'issue'; const _isUrl=openModeFor(st,_kind,_u)==='url'; const _open=function(e: any){ e.stopPropagation(); openTrackerTarget(st, navOf(t), (typeof host!=='undefined'?host:null), _eff, _kind) }; const _tip=tr('list.openInTrackerTitle', { n: navOf(t) }); const _log='map.card.link.' + (t.key != null ? t.key : t.number); const _sty={ textDecoration:'none', display:'inline-flex', alignItems:'center', padding:'2px 4px' }; return _isUrl ? h(Tip, {content:_tip}, h('a', { className:'dsws-btn ghost', href:_u, target:'_blank', rel:'noreferrer', 'data-press':'icon', 'data-log':_log, onClick:function(e: any){e.stopPropagation()}, style:_sty, 'aria-label':_tip }, Ic({n:'link',size:11}))) : h(Tip, {content:_tip}, h('button', { className:'dsws-btn ghost', onClick:_open, 'data-press':'icon', 'data-log':_log, style:_sty, 'aria-label':_tip }, Ic({n:'link',size:11}))); })(),
         ] : [])
         // v1.4 修复：图标名必须用 Ic 支持的（search/hammer/chat/gear），原 mag/bolt/wrench 不存在 → 节点图标空白
         // #626：末位兜底改成中性灰点 —— 原来兜到 gear，与任务票的齿轮撞脸，普通票看不出自己是普通票
@@ -312,9 +324,9 @@ export     const MapDetail = ({ st, g, drill }: any) => {
         if (arr && arr.length >= 2) {
           const parent = arr[arr.length - 2]
           const head = arr.length > 2 ? '… / ' : ''
-          return head + '#' + parent.n + ' / #' + m.number
+          return head + '#' + parent.n + ' / #' + ((typeof rowNavKeyOf === 'function') ? rowNavKeyOf(m) : m.number)
         }
-        return tr('panel.tabList') + ' / #' + m.number
+        return tr('panel.tabList') + ' / #' + ((typeof rowNavKeyOf === 'function') ? rowNavKeyOf(m) : m.number)
       })()
       // T4 #554：顶部返回只弹一层（上一级是地图就回到上一级地图，是工单就回到该工单，
       // 栈空才回列表）。直接调弹栈，不经过按种类守卫的旧入口，混合栈也只退一级。

@@ -128,6 +128,28 @@ function numberKeyOf(raw: unknown): string {
   return digits ? String(Number(digits[1])) : trimmed
 }
 
+/**
+ * 一行在本图索引里的文字身份：数字票是 String(票号)，文字键的票（Linear 的 OMB-12）是规范化后的行 key，都没有时是空串。
+ *
+ * 为什么要这一个函数：索引与卡片 id 原来全以 ticketNumberOf 的数字为键，Linear 的 key 解析不出数字，
+ * 于是整行被跳过——卡片没有 #OMB-12 标签、没有 cardId，也不参与「被挡 / 挡着」。现在所有索引都改用这个文字身份，
+ * 数字行拿到的字符串与过去逐字相同（key '01' 给 '1'，容器 00 给 '0'），所以 GitHub 与 Markdown 的行为不变。
+ * 不能写成 `row.number || row.key`：那会丢掉合法的容器票号 0。TicketCardFacts.number 仍保持「Linear 为 null」的含义，
+ * 这个函数只管索引键，不改那一格。
+ */
+export function ticketIdentityOf(row: MapTicketRow): string {
+  const number = ticketNumberOf(row)
+  if (number !== null) return String(number)
+  return row ? numberKeyOf(row.key) : ''
+}
+
+/** 两个文字身份的先后：全是数字时按数值比（与过去 parseInt 比较一致），含文字时按数字感知的排序（OMB-2 在 OMB-10 之前）。 */
+const IDENTITY_COLLATOR = new Intl.Collator('en', { numeric: true })
+function identityCompare(left: string, right: string): number {
+  if (/^\d+$/.test(left) && /^\d+$/.test(right)) return Number(left) - Number(right)
+  return IDENTITY_COLLATOR.compare(left, right)
+}
+
 /** 认领人：先看 claimedBy，没有再取 assignees 的第一个登录名。两边都没有就是没人在办。 */
 function claimedPersonOf(row: MapTicketRow): string {
   const claimed = row ? (row.claimedBy as unknown) : null
@@ -307,9 +329,8 @@ export function ticketFactsContextOf(rows: MapTicketRow[], env: TicketFactsEnv):
   const firstBlockedByBlocker: Record<string, string> = {}
 
   for (const row of rows) {
-    const number = ticketNumberOf(row)
-    if (number === null) continue
-    const key = String(number)
+    const key = ticketIdentityOf(row)
+    if (!key) continue
     openByNumber[key] = !rowClosedOf(row)
     rowStates[key] = rowStateOf(row)
     titleByNumber[key] = text(row.title)
@@ -335,21 +356,20 @@ export function ticketFactsContextOf(rows: MapTicketRow[], env: TicketFactsEnv):
   }
 
   for (const row of rows) {
-    const number = ticketNumberOf(row)
-    if (number === null) continue
+    const blockedKey = ticketIdentityOf(row)
+    if (!blockedKey) continue
     if (ticketCardStatusOf(row, openByNumber, blockerStates) !== 'blocked') continue
     // 只记「主阻塞者」挡住的那张：被挡卡画的是主阻塞者，挡路卡也得指回同一张，
     // 否则同一对票会两边说法不一致（A 说挡住 B，B 却说自己被 D 挡住）。
     const primary = primaryBlockerNumberOf(row, openByNumber, blockerStates)
     if (!primary) continue
-    const blockedKey = String(number)
     const previous = firstBlockedByBlocker[primary]
     if (previous === undefined) {
       firstBlockedByBlocker[primary] = blockedKey
       continue
     }
-    // 同一张挡路卡挡住好几张时，红条只指一张：取编号最小的那张，顺序稳定、可复现。
-    if (parseInt(blockedKey, 10) < parseInt(previous, 10)) firstBlockedByBlocker[primary] = blockedKey
+    // 同一张挡路卡挡住好几张时，红条只指一张：取编号最小的那张（文字键按数字感知排序），顺序稳定、可复现。
+    if (identityCompare(blockedKey, previous) < 0) firstBlockedByBlocker[primary] = blockedKey
   }
 
   return {
@@ -379,7 +399,7 @@ function primaryBlockerNumberOf(
   let best = ''
   for (const blockerNo of blockerNumbersOf(row)) {
     if (!blockerBlocksPage(blockerNo, openByNumber, blockerStates)) continue
-    if (!best || parseInt(blockerNo, 10) < parseInt(best, 10)) best = blockerNo
+    if (!best || identityCompare(blockerNo, best) < 0) best = blockerNo
   }
   return best
 }
@@ -460,7 +480,7 @@ function refOf(numberKey: string, ctx: TicketFactsContext): CardTicketRef {
  */
 export function ticketCardFactsOf(row: MapTicketRow, ctx: TicketFactsContext): TicketCardFacts {
   const number = ticketNumberOf(row)
-  const numberKey = number === null ? '' : String(number)
+  const numberKey = ticketIdentityOf(row)
   // 行自己的 key 优先：它是同屏唯一性的第一道保险（脏数据里撞号时靠它区分两张行）。
   const rowKey = text(row.key) || numberKey
   const status = ticketCardStatusOf(row, ctx.openByNumber, ctx.blockerStates)

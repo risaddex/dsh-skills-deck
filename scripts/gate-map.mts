@@ -881,6 +881,127 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 且合并落了标记就排上清除；子票高亮的键用界面查的那把尺子（工作单元 + 编号），不写裸编号。
   // 单跑实测 29 条。
   'verify-1926-flash-scope': 29,
+  // 2026-11-17 #45：票的键（42、01、ENG-12）怎么变成「键」这条规则写在三处互相引不到的地方（宿主读路径、客户端取详情与评论、
+  // 导航栈），本门禁把三处的源码文本当场读出来、各自求值，与同一份参照在 29 个输入上逐个比；缺一处读不到也判红。
+  // 条数 = 3 条「找得到」 + 29 个输入 × 6 份拷贝（导航栈 1、宿主 1、客户端内联 4 处：详情、清缓存、评论分页、提交评论）− 2（清缓存那处不比 null 与
+  // undefined：它们到不了那一行）= 3 + 174 − 2 = 175。往 INPUTS 里加一个普通输入，这里加 6；加 null 或 undefined 只加 4。
+  // 客户端内联从 3 处变 4 处，是因为提交评论（submitIssueComment）也改用同一条规则，面板才能给 OMB-900 这样的文本键发评论（原来 146 条）。
+  // 单跑实测 175 条。
+  'verify-45-text-key-rule': 175,
+  // 2026-11-17 #45：详情页按「文本键」认出打开的那张票。步骤 1 让导航栈存文本键（"42"、"01"、"ENG-12"），页面却还用 === 去比
+  // 行的数字 number，于是 GitHub 与 Markdown 的行与父地图丝带认不出来、Linear 整页不画；链路全绿是因为没有门禁带着文本键把页面真渲染一遍。
+  // 本门禁真渲染 IssueDetail：4 种后端形态 × 3 条（页面画了、快照行找到了、父地图丝带画了）= 12，外加 ENG-12 与 OPS-12 不混、
+  // 5 种「不是键」不画 = 6，共 18。对着已发布的分支跑它，18 条里 11 条红（其余 7 条老代码本来就满足）。
+  // 后来在同一扇门禁里加了 detailFromRow 的 5 种行形态（GitHub、Markdown、Markdown 容器、Linear 无 number、Linear number 为空），
+  // 数字键的 number 一个字不变，Linear 不再写成 NaN：18 + 5 = 23。
+  // 单跑实测 23 条。
+  'verify-45-detail-page-by-key': 23,
+  // 2026-11-17 #45：列表行把「文本键」交给进详情、复制链接、打开链接。步骤 1 到 4 只修了导航栈的读方，喂栈的调用方仍交 x.number，
+  // Linear 行没有数字 number，点整行没有任何反应（列表能画，因为角标读的是 key）。本门禁真渲染 listIssueRow 并调用用户点的三样：
+  // 6 种行形态 × 4 条（行有点击处理、点行交对编号、复制写对地址、链接按钮写对日志与地址）= 24，外加 Linear 地图点行进地图详情 1 条 = 25。
+  // 对着步骤 4 的提交跑它，25 条里 9 条红（GitHub 与 Markdown 那些本来就满足）。
+  // 单跑实测 25 条。
+  // （追加）同一扇门禁后来也钉住共享规则 store-prefs 的 rowNavKeyOf：10 种行形态 + 缺行 1 条 = 11，所以 25 + 11 = 36。
+  'verify-45-list-row-opens-by-key': 36,
+  // 2026-11-18 #45：地图详情页的卡片、票行与顶栏动作（MapDetail、TicketRow、MapDetailHead、MapDetailTop、DetailActionBar）
+  // 也把 row.number 交给导航、复制链接、打开链接与提示词，Linear 行没有数字 number，点了没有反应、链接为空、显示成 #undefined。
+  // 本门禁真渲染这些组件，7 种行形态，点用户点的东西。对着改动前的源码跑，365 条里 128 条红，全是 Linear 形态；数字形态原样通过。
+  // 单跑实测 365 条。
+  // （拆分）提交前的体积钩子拒绝单个超过 20 KB 的新文件，这扇门禁与 detail-routes 一族按小节拆开，断言一条不少：
+  //   map-cards 365 = 地图详情页与规格三态 279 + 票行 86（verify-45-ticket-row-by-key）。
+  'verify-45-map-cards-by-key': 279,
+  'verify-45-ticket-row-by-key': 86,
+  // 2026-11-18 #45：详情页里的子票与阻塞票分流（enterSubDetail）、父地图丝带、row-actions、地图详情 V2 的动作与面包屑、
+  // 状态栏会话链胶囊（它只认纯数字的键，Linear 的条目整条被丢掉）与工作路线的 nav.n。本门禁跑真代码，6 种形态加胶囊与路线。
+  // 对着改动前的源码跑，128 条里 52 条红，全是 Linear 形态；GitHub、Markdown 与容器 00 的条目原样通过。
+  // 单跑实测 128 条。
+  // （拆分）同上，按小节拆成四扇，合计仍是 128：enterSubDetail 与 row-actions 39、IssueDetail 的丝带与子票阻塞票行 48、
+  //   地图详情 V2 的动作与面包屑 26、工作路线与会话链胶囊 15。
+  'verify-45-detail-routes-by-key': 39,
+  'verify-45-detail-issue-rows-by-key': 48,
+  'verify-45-detail-map-page-by-key': 26,
+  'verify-45-detail-capsule-by-key': 15,
+  // 2026-11-18 #45：地图详情页（V1）里三处还在比数字：雾（isFog 用 x.number === b 找阻塞者）、卡片排序（a.number - b.number，Linear 得 NaN）
+  // 与票行的 openBlocker（String(x.number)）。Linear 的阻塞者因此认不出来、排序乱。本门禁真渲染 MapDetail 与 TicketRow，5 种行形态：
+  // 阻塞者开着时有雾、已关闭时没有、OMB-2 排在 OMB-10 之前、反序输入顺序一致、页面里没有 NaN，数字页的结果当硬值钉住。
+  // 对着改动前的源码跑，59 条里 18 条红，全是 Linear 形态；数字形态原样通过。单跑实测 59 条。
+  'verify-45-map-order-by-key': 59,
+  // 2026-11-18 #45：V2 地图页（Dock 实际用的那一页）的模型整条以数字为键：Linear 的 key 解析不出数字，整行被两个索引循环跳过，
+  // 卡片没有 #OMB-12 标签、没有 cardId，也不参与「被挡 / 挡着」。本门禁跑真函数（ticketFactsContextOf、ticketCardFactsOf、看板排序与计数），
+  // 三族行（GitHub、Markdown、Linear）× 7 个阻塞场景，断言三族的状态与指向结构一致，Linear 的 noText 是 #OMB-n、cardId 非空且唯一、
+  // facts.number 仍为 null，数字行的字符串逐字钉住。对着改动前的源码跑，71 条里 18 条红，全是 Linear 形态。单跑实测 71 条。
+  'verify-45-map-facts-by-key': 71,
+  // 2026-11-18 #45：Linear 票点开后评论区一直是「评论 (0)」：房间只会写评论、从不读（read.ts 写着读路径没实现），宿主于是把空数组装成「没有评论」。
+  // 宿主每次从 0 要到「已加载 + 50」再切掉已加载的，并靠 commentCount 判总数与有没有下一页，所以房间必须交回「最旧的 N 条、按时间升序」（Linear 回的是最新在前），
+  // 能确定总数时带上 commentCount。本门禁跑真房间读（假 HTTP 通道）再叠真宿主处理器：查询形状 5 + 映射与顺序 7 + 取几条与总数 6 + 没要评论时不动 6 +
+  // 失败仍是失败 2 + 宿主详情与「加载更多」8 + 评论回执 6 = 40。对着改动前的源码跑，40 条里 22 条红。
+  // 回执那一组钉住：库不认这个后端（Linear）时回 stored:true（没有可丢的东西，面板不再弹黄条），库不可用、降级、提交失败仍是 stored:false。单跑实测 40 条。
+  // （追加）PR #47 的评审指出：超过 200 条评论时房间不报总数，宿主就把详情的 hasNextPage 说成 false，已取到的 150 条够不着。
+  //   房间现在照实传「还有更多」（Issue.commentsHasMore，只传事实不传数字），宿主在总数未知时据此给出下一页；多 7 条：房间 2 + 宿主 5 = 47。
+  //   对着修复前的源码跑，47 条里 2 条红（commentsHasMore 与 hasNextPage），其余 5 条本来就满足。
+  // （追加 2）PR #47 第二条评审：超过 200 条时房间取的是最新的 200 条（first: 200，Linear 最新在前），再排序取前缀，于是首屏从第 3 条而不是第 1 条开始，
+  //   窗口还随新评论移动，宿主按偏移翻页时会漏掉一条。房间改问 last: 200（最旧的 200 条，新评论落在另一头，窗口不动）。
+  //   假通道也改成忠实的 Relay 形状（last 返回末尾 k 条并报 hasPreviousPage，first 返回开头 k 条）。多 5 条：查询形状 +1、250 条的首屏 +1、
+  //   翻页稳定（202 条首屏、来一条后第二页、再来七条后第三页）+3，共 52。对着修复前的源码跑，52 条里 8 条红（含修复前的 F2「加载更多够到第 200 条」），其余本来就满足。
+  'verify-45-linear-comments-read': 52,
+  // 2026-11-18 #45：com um workspace Linear o painel ficava com o chip "Failed" ao lado de Refresh, e o log tinha um wf.probe com errorKind env
+  // a cada 5 segundos. O probe montava um contexto de operação só com exec (feito para as salas que rodam comandos) e o passava a tracker.list;
+  // a sala Linear só fala HTTP e usa o contexto que recebe, então respondia "the room has no HTTP channel wired (ctx.http is missing)".
+  // O snapshot nunca falhou porque passa pela sessão de leitura, que traz o canal e a conta. Agora o probe de um backend HTTP lista pela sessão;
+  // GitLab e Markdown ficam no caminho de antes (gates antigos o fixam). Corre a sala Linear real sobre um canal falso:
+  // o controle sem sessão reproduz a mensagem do log (1) + sucesso pela sessão (5) + falhas com o tipo certo (3) + GitLab e Markdown intactos (2 × 2) = 14.
+  // Contra o código anterior 9 das 14 falham. Medido em execução: 14 de 14 passam agora.
+  'verify-45-linear-probe': 14,
+  // 2026-11-18 #45：com um workspace Linear a barra de status mostrava "Environment status unavailable — re-check" e ela nunca saía. A lista do guia de
+  // primeira execução (GUIDE_STEPS) só nomeia github, markdown e gitlab; para linear a lista é vazia e o código caía no fallback "ainda não escolheu backend"
+  // usando a lista do GitHub, onde há um passo que bloqueia a inicialização (gh:remote), que o snapshot do Linear nunca contém. A leitura concluía que o snapshot
+  // estava incompleto e mostrava a barra neutra para sempre (log: reason missing-blocks-setup, decideStep gh:remote, backendId linear). O fallback agora vale só
+  // quando nenhum backend foi escolhido. O gate roda a decisão real: o defeito (3) + sem linhas ainda (1) + controles: sem backend e id vazio (2), GitHub que perde
+  // gh:remote continua com a barra neutra (1), GitLab e Markdown com a lista própria (2), backend desconhecido não empresta a do GitHub (1) = 11.
+  // Contra o código anterior 4 das 11 falham.
+  'verify-45-linear-banner': 11,
+  // 2026-11-18 #45：mapa Linear com todos os cards "Ready" e "Blocked 0" apesar de bloqueios ligados; o deck gravava bloqueios e não conseguia lê-los de volta.
+  // A sala só lia inverseRelations dentro do caminho de escrita (setBlockedBy); nenhuma leitura pedia o campo, então um ticket lido do Linear nunca trazia
+  // blockedBy. Passo 1 (detalhe): a leitura de um ticket pede inverseRelations(first: 250) com pageInfo.hasNextPage, só relações do tipo blocks contam,
+  // o estado é o que o Linear diz (sem estado = sem estado, nunca "open"), sem bloqueadores é lista vazia, e uma lista cortada pelo limite NÃO é devolvida
+  // (uma lista parcial lida como completa diria "pode pegar" de um ticket bloqueado). Roda a sala real sobre um canal falso que honra o first da consulta.
+  // 6 (consultas: 3 checagens × 2) + 6 (o que conta como bloqueador) + 6 (vazio 2, não pedido 1, 250 exato 1, 260 cortado 2) + 2 (junto com comentários) +
+  // 4 (detalhe do painel pelo host real) + 5 (complexidade: 3 exemplos da documentação do Linear + 2 consultas) = 29.
+  // Contra o código anterior 19 das 29 falham (os 10 que passam são os controles). Medido: detalhe 943 e detalhe com 200 comentários 1464 de 10000 pontos.
+  'verify-45-linear-blockers-read': 29,
+  // Passo 2 (lista do mapa): os filhos de um mapa Linear vêm da lista que o snapshot pede (list com state open; a sala não tem leitura de filhos sob
+  // demanda), e essas linhas não tinham blockedBy: todo card ficava Ready e o contador dizia Blocked 0. A lista agora pede as relações de cada linha,
+  // mas o Linear rejeita a consulta inteira acima de 10000 pontos e cobra a conexão aninhada pelo seu first (50 se não escrito): com 50 por linha
+  // a página de 50 custaria 12132 e a lista do painel ficaria em branco. Por isso a página de relações por linha é 10 (5132 pontos, medido pela regra
+  // publicada), e uma linha com mais relações que isso volta SEM blockedBy (nunca uma lista parcial lida como completa). ISSUES_QUERY, da caixa de
+  // entrada de várias contas, não muda. 5 (consulta) + 4 (orçamento de complexidade, com a prova de que 50 e o padrão estourariam) + 5 (cada linha com
+  // seus bloqueadores) + 4 (linha cortada, 10 exato) + 2 (a página em si) + 5 (do snapshot do host ao modelo do mapa: ready, blocked, blocked, ready e
+  // contadores Ready 2 / Blocked 2, o que o mantenedor viu como Ready 4 / Blocked 0) = 25. Contra o código anterior 16 das 25 falham.
+  'verify-45-linear-blockers-list': 25,
+  // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
+  // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
+  // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；
+  // 真详情处理器（详情成功、评论成功、没有身份时回到面板上那句话）= 3，共 11。其中两条「对照」重现了面板上的原错误。
+  // 单跑实测 11 条。
+  'verify-45-linear-repo-identity': 11,
+  // 2026-11-18 #45：面板在 Linear 票（键是文本，如 OMB-900）上发评论，评论框说「Comment failed, please retry (invalid number)」。
+  // 两处在发出任何请求之前就拒绝了文本键：客户端 submitIssueComment 把键读成数字、NaN 就拒；宿主 handleCommentIssue 对非全数字的键
+  // 故意回 unsupported（当时没人在真实的 Linear 上试过）。本门禁跑真代码：宿主这边用会记录参数的假写会话（文本键原样到 session.comment、
+  // 回执只按文本键存、GitHub 42 与 "42" 仍发 "42"、Markdown "01" 仍发 "1"、0 仍合法、空/空白/缺席/NaN/对象键与空正文仍拒）= 5 + 5 + 5 + 3 + 1 = 19；
+  // 客户端这边用会记录 host.call 的假宿主（文本键作文本交给 wf.commentIssue 并记「刚写过」、6 种数字写法各 2 条、9 种非键各 1 条、空正文 1 条）= 4 + 12 + 9 + 1 = 26，共 45。
+  // 对着改动前的源码跑它，45 条里 14 条红：13 条是文本键本身，1 条是 Infinity（旧客户端把它当有限数发出去，现在与详情同规则被拒）。
+  // 单跑实测 45 条。
+  'verify-45-comment-text-key': 45,
+  // 2026-11-18 #45: with a Linear workspace the Closed tab of the list showed "Could not load more history; try again shortly" and
+  // "0 loaded / 0 total", and the host log had wf.issuesPage failing in 4 to 41 ms with quota.op listPage recording requests: 0, so no
+  // request ever left. The same defect the probe had: src/host/issuePage.ts built its own operation context (only exec, made for rooms
+  // that run commands) and handed it to tracker.listPage, and the linear room speaks HTTP only. This gate runs the real host phone with
+  // the real linear room over a fake channel: the control against the old context (4: comes back ok, the session is opened for the
+  // workspace paged, both requests carry the account header, both ask the read bucket) + the rows and the total (6) + the cursor going
+  // out and coming back (4) + no session outlet wired (2) + GitLab and Markdown untouched (2 x 3) = 22. Against the source before the
+  // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
+  // Measured by running it: 22 of 22 pass now.
+  'verify-45-linear-issue-page': 22,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。

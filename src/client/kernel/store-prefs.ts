@@ -85,12 +85,21 @@ export const ensureNoRepoCard = function (st: any): any {
 // activeEffortId 是同一个栈顶的 effort 镜像。
 // 只读栈本身（同步镜像用，不带镜像兜底，否则弹空栈时会把旧镜像写回去）
 export const navEffortOf = function (t: any): string { return (t && t.effortId !== undefined && t.effortId !== null) ? String(t.effortId) : '' }
+// #45：导航栈的坐标 n 一律是文本键，不再是数字。GitHub 的 `42`、本地 Markdown 的 `01`、Linear 的 `ENG-12`
+// 都是后端给的文本键，面板只原样搬运它，不替后端把它读成数字（`ENG-12` 读成数字是 NaN，点一张 Linear 票
+// 就会被当成「非法输入」悄悄丢掉）。合法键只有两种：去掉首尾空白后非空的文本，或有限的数字（转成文本）。
+// NaN、null、undefined、空串与对象都不是键，返回空串，由调用方当作非法输入。
+export const navKeyOf = function (n: any): string {
+  if (typeof n === 'number') return Number.isFinite(n) ? String(n) : ''
+  if (typeof n === 'string') return n.trim()
+  return ''
+}
 export const peekStackNav = function (st: any): any {
   try {
     const s: any = st && st.navStack
     if (Array.isArray(s) && s.length) {
       const t: any = s[s.length - 1]
-      if (t && (t.kind === 'map' || t.kind === 'issue') && typeof t.n === 'number' && !isNaN(t.n)) return t
+      if (t && (t.kind === 'map' || t.kind === 'issue') && navKeyOf(t.n) !== '') return t
     }
   } catch (e) {}
   return null
@@ -101,8 +110,8 @@ export const peekNav = function (st: any): any {
   // 没有栈的旧状态：从镜像回推栈顶，保证读方不崩
   try {
     const eff: string = (st && st.activeEffortId !== undefined && st.activeEffortId !== null) ? String(st.activeEffortId) : ''
-    if (st && st.activeMap !== null && st.activeMap !== undefined) { const v: number = Number(st.activeMap); if (!isNaN(v)) return { kind: 'map', n: v, effortId: eff } }
-    if (st && st.activeIssue !== null && st.activeIssue !== undefined) { const v2: number = Number(st.activeIssue); if (!isNaN(v2)) return { kind: 'issue', n: v2, effortId: eff } }
+    if (st && st.activeMap !== null && st.activeMap !== undefined) { const v: string = navKeyOf(st.activeMap); if (v !== '') return { kind: 'map', n: v, effortId: eff } }
+    if (st && st.activeIssue !== null && st.activeIssue !== undefined) { const v2: string = navKeyOf(st.activeIssue); if (v2 !== '') return { kind: 'issue', n: v2, effortId: eff } }
   } catch (e2) {}
   return null
 }
@@ -117,8 +126,8 @@ export const pushNav = function (st: any, kind: any, n: any, effortId: any): any
   if (!st) return null
   if (!Array.isArray(st.navStack)) st.navStack = []
   seedNavFromMirror(st)
-  const v: any = (n == null) ? null : Number(n)
-  if ((kind !== 'map' && kind !== 'issue') || v == null || isNaN(v)) return peekNav(st)
+  const v: string = navKeyOf(n)
+  if ((kind !== 'map' && kind !== 'issue') || v === '') return peekNav(st)
   const eff: string = (effortId === undefined || effortId === null) ? '' : String(effortId)
   const top: any = peekNav(st)
   // 同一详情重复进入不重复压栈（防双击把两个一样的压进栈）；同号不同 effort 是两条坐标，照压

@@ -60,15 +60,36 @@ export function hhmmOf(ms: any): string {
   return hh + ':' + mm
 }
 
-/** 在快照的 issues 里找这张票的行：优先 (effort, 编号) 全等，单 effort 后端按编号兜底。 */
+// #45：票的键是后端给的文本（42、01、ENG-12），不替后端读成数字。以前这里用 Number(row.number) === Number(n) 比，
+// Linear 的行没有 number、键也不是数字，两边都是 NaN，NaN === NaN 为假，于是「打开的那张票」永远认不出自己的行与刚取回的详情。
+// 规则：两边各取「键」（行先看 key，没有再看 number），全是数字的键按数字比（7、'7'、'07' 是同一张，本地 Markdown 补零），
+// 其余按文本全等；空键不是键，不与任何东西相等（旧写法里 Number(null) 与 Number('') 都是 0，会把容器行 00 认成「没指定」）。
+function detailKeyText(v: any): string {
+  return typeof v === 'number' ? (Number.isFinite(v) ? String(v) : '') : (typeof v === 'string' ? v.trim() : '')
+}
+function detailRowKey(row: any): string {
+  const k: string = detailKeyText(row && row.key)
+  return k !== '' ? k : detailKeyText(row && row.number)
+}
+// 详情缓存与「上次取到的时刻」按 (effort, 键) 入档；写的一头（api-io）把全数字的键存成数字、其余原样存文本，读的一头必须用同一个写法。
+function detailCacheSlot(eff: string, n: any): string {
+  const k: string = detailKeyText(n)
+  return idOfParts(eff, /^\d+$/.test(k) ? Number(k) : k)
+}
+export function sameDetailKey(a: any, b: any): boolean {
+  const x: string = detailKeyText(a)
+  const y: string = detailKeyText(b)
+  return x !== '' && (x === y || (/^\d+$/.test(x) && /^\d+$/.test(y) && Number(x) === Number(y)))
+}
+
+/** 在快照的 issues 里找这张票的行：优先 (effort, 键) 全等，单 effort 后端按键兜底。 */
 export function snapshotRowFor(st: any, n: any, effortId?: any): any {
   const issues: any[] = st && st.snapshot && Array.isArray(st.snapshot.issues) ? st.snapshot.issues : []
-  const num: number = Number(n)
   const eff: string = effortId === undefined || effortId === null ? '' : String(effortId)
   let byNumber: any = null
   for (let i = 0; i < issues.length; i += 1) {
     const row: any = issues[i]
-    if (!row || Number(row.number) !== num) continue
+    if (!row || !sameDetailKey(detailRowKey(row), n)) continue
     if (byNumber === null) byNumber = row
     const rowEff: string = row.effortId === undefined || row.effortId === null ? '' : String(row.effortId)
     if (rowEff === eff) return row
@@ -117,7 +138,9 @@ export function detailFromRow(row: any): any {
   const commentsKnown: boolean = comments.length > 0 || commentCount === 0
   const sub: any = row && row.subIssueCounts
   const out: any = {
-    number: Number(row.number),
+    // #45：键全是数字时仍交数字（GitHub 42、Markdown 01 → 1，与旧写法同值）；Linear 的 OMB-903 交文本，不再写成 NaN。
+    number: /^\d+$/.test(detailRowKey(row)) ? Number(detailRowKey(row)) : (detailRowKey(row) !== '' ? detailRowKey(row) : Number(row.number)),
+    key: detailRowKey(row) !== '' ? detailRowKey(row) : undefined,
     effortId: row.effortId === undefined || row.effortId === null ? '' : String(row.effortId),
     title: row.title || '',
     state: row.state === 'CLOSED' ? 'CLOSED' : 'OPEN',
@@ -217,7 +240,7 @@ export function detailViewFor(st: any, n: any, effortId?: any): any {
   // 失败（err）与取数中（loading）仍走下面的快照投影：那正是「先画上次内容」要起作用的时刻。
   const liveNow: any = st && st.issueDetail
   const liveNowEff: string = liveNow && liveNow.effortId !== undefined && liveNow.effortId !== null ? String(liveNow.effortId) : ''
-  const liveNowMatches: boolean = !!liveNow && Number(liveNow.number) === Number(n) && liveNowEff === eff
+  const liveNowMatches: boolean = !!liveNow && sameDetailKey(detailRowKey(liveNow), n) && liveNowEff === eff
   if (liveNowMatches && st.issueMode === 'real') {
     // #1864：从本地快照库读回来的详情（fromSnapshot）算「上次已知」：要标出时刻，
     // 并让评论区按「还没取过」处理——评论是 #1865 才落库的，不能把「没进库」说成「只读」。
@@ -238,7 +261,7 @@ export function detailViewFor(st: any, n: any, effortId?: any): any {
     if (rowHasDetail(row)) {
       // 上次数据时刻：先取合并组戳记；本会话刚取回、宿主还没合并回来时用 detailSeenAt 补新。
       let at: number = lastKnownDetailAtMs(st)
-      const seen: any = st && st.detailSeenAt && st.detailSeenAt[idOfParts(eff, Number(n))]
+      const seen: any = st && st.detailSeenAt && st.detailSeenAt[detailCacheSlot(eff, n)]
       if (typeof seen === 'number' && seen > at) at = seen
       const rowDetail: any = detailFromRow(row)
       // 列表行的关系边来自列表读结果，不在 snapshotGroups 里；这一条路照旧不画「关系不知道」那句。
@@ -247,13 +270,13 @@ export function detailViewFor(st: any, n: any, effortId?: any): any {
   }
   const live: any = st && st.issueDetail
   const liveEff: string = live && live.effortId !== undefined && live.effortId !== null ? String(live.effortId) : ''
-  const liveMatches: boolean = !!live && Number(live.number) === Number(n) && liveEff === eff
+  const liveMatches: boolean = !!live && sameDetailKey(detailRowKey(live), n) && liveEff === eff
   if (liveMatches) {
     // 失败后详情没有被清空（#1694）：这时也要标「上次数据是什么时候的」，别让人以为是最新的。
     // 时刻取 detailSeenAt（#1695 起的新记录），旧状态退回详情缓存那条记录的 ts，取不到就不标。
     const keptAfterFail: boolean = st.issueMode === 'err'
-    const seen: any = st && st.detailSeenAt && st.detailSeenAt[idOfParts(eff, Number(n))]
-    const entry: any = st.issueCache && st.issueCache[idOfParts(eff, Number(n))]
+    const seen: any = st && st.detailSeenAt && st.detailSeenAt[detailCacheSlot(eff, n)]
+    const entry: any = st.issueCache && st.issueCache[detailCacheSlot(eff, n)]
     const at: number = keptAfterFail ? (typeof seen === 'number' && seen > 0 ? seen : (entry && typeof entry.ts === 'number' ? entry.ts : 0)) : 0
     return withSlots({ issue: live, source: 'live', lastKnownAtMs: at, noticeKey: '', notice: keptAfterFail && at > 0 ? tr('detail.lastKnownData', { time: hhmmOf(at) }) : '' }, live, st.issueMode)
   }

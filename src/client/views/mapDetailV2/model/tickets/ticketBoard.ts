@@ -29,6 +29,12 @@ import type { TicketBoard, TicketBoardCounts, TicketCardFacts, TicketCardStatus 
  */
 const STATUS_RANK: Record<TicketCardStatus, number> = { doing: 0, ready: 1, blocked: 2, closed: 3 }
 
+/**
+ * 文字键的排序器：数字感知，OMB-2 排在 OMB-10 之前。这一份只服务排序；叶子之间不能互相 import，
+ * 所以不与 ticketCardFacts.ts 里索引用的那一份共用（两处口径相同：Intl.Collator 的 numeric 模式）。
+ */
+const BOARD_KEY_COLLATOR = new Intl.Collator('en', { numeric: true })
+
 /** 编号缺失的票排在最后（不猜它在哪）：编号是唯一可靠的排序键。 */
 function numberOrLast(facts: TicketCardFacts): number {
   return facts.number === null ? Number.MAX_SAFE_INTEGER : facts.number
@@ -53,7 +59,14 @@ function blockerNumberOrLast(facts: TicketCardFacts): number {
 function compareWithinSection(left: TicketCardFacts, right: TicketCardFacts): number {
   const byNumber = numberOrLast(left) - numberOrLast(right)
   if (byNumber !== 0) return byNumber
-  if (left.rowKey !== right.rowKey) return left.rowKey < right.rowKey ? -1 : 1
+  if (left.rowKey !== right.rowKey) {
+    // 两张都没有数字编号（Linear 的 OMB-2、OMB-10）时按数字感知的排序，让 OMB-2 排在 OMB-10 前；
+    // 有数字编号的撞号脏行仍走原来的逐字比较，数字行的顺序不变。
+    if (left.number === null && right.number === null) {
+      const byKey = BOARD_KEY_COLLATOR.compare(left.rowKey, right.rowKey)
+      if (byKey !== 0) return byKey
+    } else return left.rowKey < right.rowKey ? -1 : 1
+  }
   if (left.title !== right.title) return left.title < right.title ? -1 : 1
   return 0
 }
@@ -65,6 +78,11 @@ function compareForOpenPlacement(left: TicketCardFacts, right: TicketCardFacts):
   if (left.status === 'blocked' && right.status === 'blocked') {
     const byBlocker = blockerNumberOrLast(left) - blockerNumberOrLast(right)
     if (byBlocker !== 0) return byBlocker
+    // 文字键的挡路者（OMB-2）在上面都算「最后」，这里再按数字感知排序把同一张挡路者的卡聚在一起、先后稳定。
+    if (left.blockedBy && right.blockedBy) {
+      const byBlockerKey = BOARD_KEY_COLLATOR.compare(String(left.blockedBy.no), String(right.blockedBy.no))
+      if (byBlockerKey !== 0) return byBlockerKey
+    }
   }
   return compareWithinSection(left, right)
 }

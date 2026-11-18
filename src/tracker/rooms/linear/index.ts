@@ -17,7 +17,8 @@
  * ── 这个切片还没有的东西 ─────────────────────────────────────────────────────
  * 其余操作：写侧、评论、标签、关系、子票、计数、翻页、预算读数（都在 #13 的票面上）。
  */
-import type { BackendContext, OpContext } from '../../contract/contexts.js'
+import type { BackendContext, OpContext, RepoHandle } from '../../contract/contexts.js'
+import type { RepositoryRef } from '../../contract/entities.js'
 import type { AccountSeamResult } from '../../contract/accounts.js'
 import type { RoomOperations } from '../../contract/operations.js'
 import type { BackendModule } from '../../contract/backend-module.js'
@@ -188,11 +189,30 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
   }
 }
 
+/**
+ * 仓库身份（#45）：Linear 没有 owner/name 这种远端仓库，它的「仓库」就是声明了绑定的工作区目录。
+ *
+ * 为什么必须给：本房间所有操作都不读 `repo` 参数，但宿主的详情、评论与写评论入口在调房间之前，
+ * 先要求 `repoRef.refId` 非空，否则回「cannot resolve the target repository (refId missing)」。
+ * 以前模块没有 describe，注册表回退的骨架只给本地 Markdown 填目录，Linear 的 refId 是空串：
+ * 列表能出（快照路径自己兜了一个 refId=cwd），点开一张票却报这句话。
+ * 取 handle.refId 优先、没有再取 cwd，与本地 Markdown 同口径；url 留空，不替 Linear 编网址。
+ * 反例：不要拿它给 GitHub / GitLab 兜底，那两家的目录名不是仓库，空 refId 对它们是诚实的失败（见 tracker/session/repo-ref-note.ts）。
+ */
+export function describe(handle: RepoHandle, backendId: string = 'linear'): RepositoryRef {
+  const cwd = handle && handle.cwd ? String(handle.cwd) : ''
+  const refId = handle && handle.refId ? String(handle.refId) : cwd
+  const out: RepositoryRef = { backend: backendId, refId: refId, name: refId ? (refId.split(/[\\/]/).pop() || refId) : backendId, url: '' }
+  if (handle && handle.effortId !== undefined && handle.effortId !== null) out.effortId = String(handle.effortId)
+  return out
+}
+
 /** 模块对象：注册表启动时读的那一份静态描述。 */
 export const linearModule = {
   id: 'linear',
   label: 'Linear',
   create: (ctx: BackendContext) => createLinearBackend(ctx),
+  describe,
   /** 有声明就认领（见文件头）；读不到声明才回 false。 */
   matches: async (_handle, opCtx) => (await readBinding(opCtx)) !== null,
   budget: { kind: 'requests-only', countsRequests: true, countsPoints: false, independentBuckets: false },

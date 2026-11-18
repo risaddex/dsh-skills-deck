@@ -18,7 +18,7 @@
  */
 declare function Ic(props?: any): any;
 declare const Tip: any;
-declare function issueUrlFor(...args: any[]): any;
+declare function issueUrlFor(...args: any[]): any; declare function rowNavKeyOf(...args: any[]): any;
 // #1557：容器打开方式由后端声明（openContainer），本文件不再自己按地址前缀分流。
 declare function openModeFor(...args: any[]): any;
 declare function openTrackerTarget(...args: any[]): any;
@@ -58,14 +58,21 @@ export const DetailActionBar = ({ st, m, kind, cState, effStats, tri }: any) => 
       : (state === 'done'
         ? { labelKey: 'act.done', color: triDoneColor(), icon: 'check', titleKey: 'map.doneTitle' }
         : { labelKey: 'act.execute', color: (typeof CONTAINER_ACCENT === 'object' && CONTAINER_ACCENT) ? CONTAINER_ACCENT.map : '', icon: 'play', titleKey: 'map.executeTitle' })))
-  const url = (typeof issueUrlFor === 'function') ? (function () { try { return issueUrlFor(st, m.number, (typeof effortOf === 'function') ? effortOf(m) : undefined) } catch (e) { return '' } })() : ''
+  // #45：这张容器交给「打开链接、拼提示词」的编号。key 不是纯数字的行（Linear 的 OMB-903）交文本 key，
+  //   其余行照旧交 number（行为一字不变）；规则真源是 kernel/link.ts 的 rowNavKeyOf，
+  //   单文件求值的门禁里没有这个全局名字，所以先问 typeof，问不到时退回改动前的 m.number。
+  const mNav = (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(m) : m.number)
+  // 提示词构建函数（containerPromptText、startText）在内核里自己读行上的 number；文本 key 的行要把 number 换成 mNav 再交给它们。
+  //   number 本来就等于 mNav 的行（GitHub、Markdown）原样交 m，对象都不换。
+  const mPrompt = (mNav === m.number) ? m : Object.assign({}, m, { number: mNav })
+  const url = (typeof issueUrlFor === 'function') ? (function () { try { return issueUrlFor(st, mNav, (typeof effortOf === 'function') ? effortOf(m) : undefined) } catch (e) { return '' } })() : ''
   // 点下去注入什么。真源是 container-view.ts 的 containerPromptText；它不在时退回今天的老口径
   //   （检查 / 完成 / 推进三段），行为与今天一字不差。
   const promptText = function (): string {
     if (typeof containerPromptText === 'function') {
       try {
         // 统计用 effStats（按需取回的那一份），让收尾提示词里的数字与头部计数行一致。
-        return containerPromptText(st, Object.assign({}, m, { stats: effStats || m.stats }), cKind, state, url)
+        return containerPromptText(st, Object.assign({}, mPrompt, { stats: effStats || m.stats }), cKind, state, url)
       } catch (e) { /* 落回老口径 */ }
     }
     if (state === 'empty') {
@@ -73,18 +80,18 @@ export const DetailActionBar = ({ st, m, kind, cState, effStats, tri }: any) => 
       //   不在时才会走到，口径与它保持一致。
       if (cKind === 'spec') return '/to-tickets ' + url
       let t2 = ''
-      try { t2 = inspectPrompt(st, m.number, m.title, (typeof effortOf === 'function') ? effortOf(m) : undefined) } catch (e) {
+      try { t2 = inspectPrompt(st, mNav, m.title, (typeof effortOf === 'function') ? effortOf(m) : undefined) } catch (e) {
         try {
-          t2 = promptTextFor(st, 'mapInspect', { n: (m.number === undefined || m.number === null ? '' : String(m.number)), ['title']: String(m.title || ''), url: url })
+          t2 = promptTextFor(st, 'mapInspect', { n: (mNav === undefined || mNav === null ? '' : String(mNav)), ['title']: String(m.title || ''), url: url })
           if (t2) t2 = '/wayfinder ' + url + '\n\n' + t2
-        } catch (_) { t2 = startText(st, m) }
+        } catch (_) { t2 = startText(st, mPrompt) }
       }
       return t2
     }
-    if (state === 'done') return completePrompt(st, m.number, m.title, (effStats ? effStats.total : 0), (effStats ? effStats.closed : 0), (typeof effortOf === 'function') ? effortOf(m) : undefined)
+    if (state === 'done') return completePrompt(st, mNav, m.title, (effStats ? effStats.total : 0), (effStats ? effStats.closed : 0), (typeof effortOf === 'function') ? effortOf(m) : undefined)
     // 规格未完成：注入 /implement-spec 链接；通用执行模板首行是 /wayfinder，用在规格上不对（§3.4）。
     if (cKind === 'spec') return '/implement-spec ' + url
-    return startText(st, m)
+    return startText(st, mPrompt)
   }
   // 字色：完成态沿用今天的深绿字（#0c1a10），其余按底色深浅在深墨与白字之间择优。
   const textColor = state === 'done' ? '#0c1a10' : ((typeof isLightHex === 'function' && isLightHex(t.color)) ? '#140a1e' : '#ffffff')
@@ -99,11 +106,11 @@ export const DetailActionBar = ({ st, m, kind, cState, effStats, tri }: any) => 
       // 存档链接：远程后端给网页链接，本地 Markdown 房给「让宿主打开容器文件所在目录」的按钮。
       // #1557：打开方式由后端声明（openContainer），这里不再自己按地址前缀分流。
       const archiveEff = (typeof effortOf === 'function') ? effortOf(m) : undefined
-      const archiveUrl = issueUrlFor(st, m.number, archiveEff)
+      const archiveUrl = issueUrlFor(st, mNav, archiveEff)
       const archiveIsUrl = openModeFor(st, 'container', archiveUrl) === 'url'
       const openArchive = function (e: any) {
         e.stopPropagation()
-        try { openTrackerTarget(st, m.number, (typeof host !== 'undefined' ? host : null), archiveEff, 'container') } catch (err2) {}
+        try { openTrackerTarget(st, mNav, (typeof host !== 'undefined' ? host : null), archiveEff, 'container') } catch (err2) {}
       }
       const archiveBtnStyle: any = { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', fontSize: 11 }
       return archiveIsUrl

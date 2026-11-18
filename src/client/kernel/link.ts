@@ -46,6 +46,20 @@ function __patternSources(st: any) {
   }
   return out
 }
+// #45：一行（列表行、地图里的子票、地图行）交给「进详情、复制链接、打开链接、拼提示词」的编号，全面板只此一份规则；
+// 它住在这里，是因为它的去处就是下面的 issueUrlFor / openTrackerTarget 与导航栈。
+// key 不是纯数字的行（Linear 的 OMB-903）交文本 key：宿主只在 key 解析得出数字时才写 number，Linear 行里它是空，
+// 导航栈拒收空值，点一下就没有任何反应；瘦身行还可能带一个凑出来的 0（parseInt(key) || 0），所以对文本 key 不能先看 number。
+// key 是纯数字的行（GitHub 的 42、本地 Markdown 的 01）照旧交 number，行为一个字不变；两样都没有时交 undefined，由调用方当作没有票。
+// 键只认去空白后非空的文本或有限的数字，与 store-prefs 的 navKeyOf 同一判据（这里不引它：本文件被门禁单独加载）。
+// 反例：别写成 row.number || row.key，那会把本地容器的合法编号 0 丢掉。
+// 视图文件里调用它要先问 typeof（单文件求值的门禁里没有这个全局名字），问不到时退回 row.number，即改动前的行为。
+export const rowNavKeyOf = function (r: any): any {
+  const kv: any = r ? r.key : undefined
+  const k: string = typeof kv === 'string' ? kv.trim() : (typeof kv === 'number' && Number.isFinite(kv) ? String(kv) : '')
+  if (k !== '' && !/^\d+$/.test(k)) return kv
+  return r && r.number != null ? r.number : kv
+}
 export const issueUrlFor = (st: any, key: any, effortId?: any): any => {
   // 优先用后端现算的 url（markdown 的盘符路径已在快照 issues[].url 中）；回退到模板渲染（github）
   // 0 是容器行（key 00）的合法编号，不能当空：这里不能用 ||，否则 0 会被压成空串直接回空。

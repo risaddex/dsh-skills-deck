@@ -42,6 +42,7 @@ declare function pageActionHandlersOf(...args: any[]): any
 declare function MapProfileHeader(props?: any): any
 declare function TicketCardFlow(props?: any): any
 declare function mdImgOverlay(...args: any[]): any
+declare function rowNavKeyOf(...args: any[]): any
 
 /**
  * 面包屑与老页同口径（MapDetail.ts:306-315）：栈里有上一级就显示「上一级编号 / 当前地图编号」，
@@ -54,9 +55,9 @@ function navCrumbOf(st: any, m: any): string {
   if (arr && arr.length >= 2) {
     const parent = arr[arr.length - 2]
     const head = arr.length > 2 ? '… / ' : ''
-    return head + '#' + parent.n + ' / #' + m.number
+    return head + '#' + parent.n + ' / #' + (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(m) : m.number)
   }
-  return tr('panel.tabList') + ' / #' + m.number
+  return tr('panel.tabList') + ' / #' + (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(m) : m.number)
 }
 
 /** 卡片 DOM id 的前缀：一张页面里可能同时有两张同编号的票（跨 effort 的脏数据），加地图前缀避开。
@@ -125,10 +126,13 @@ export function MapDetailV2Page(props: any): any {
   // 编号取不到时不动作：宁可不跳，也不要压一个打不开的页面。
   // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串、非数字与负数，不拦 0。
   const openArchive = function () {
-    const raw = m && (m.number !== undefined && m.number !== null ? m.number : m.key)
+    // #45: a Linear container's key is text (OMB-100); Number() of it is NaN, which used to count as "no usable number" and
+    //   did nothing. The text key is now passed to the navigation stack as it is; a numeric key is still converted to a
+    //   number and a negative one still does nothing.
+    const raw = m && (typeof rowNavKeyOf === 'function' ? rowNavKeyOf(m) : (m.number !== undefined && m.number !== null ? m.number : m.key))
     if (raw === undefined || raw === null || String(raw).trim() === '') return
-    const n = Number(raw)
-    if (!isFinite(n) || n < 0) return
+    const n = isFinite(Number(raw)) ? Number(raw) : raw
+    if (typeof n === 'number' && n < 0) return
     if (typeof pushNav === 'function') pushNav(st, 'issue', n, effortOf(m))
   }
 

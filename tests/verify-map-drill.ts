@@ -116,22 +116,22 @@ const eqStack = (st, arr) => JSON.stringify(st.navStack) === JSON.stringify(arr)
 // ============ 一、四层混合链逐级返回（含两种两层链） ============
 let st = { activeMap: null, activeIssue: null, navStack: [], tick: 0 }
 nav.pushNav(st, 'map', 10); nav.pushNav(st, 'issue', 20); nav.pushNav(st, 'map', 30); nav.pushNav(st, 'issue', 40)
-check(eqStack(st, [{ kind: 'map', n: 10, effortId: '' }, { kind: 'issue', n: 20, effortId: '' }, { kind: 'map', n: 30, effortId: '' }, { kind: 'issue', n: 40, effortId: '' }]), '矩阵：四层混合链压栈保留完整返回路（地图10/工单20/地图30/工单40）')
+check(eqStack(st, [{ kind: 'map', n: '10', effortId: '' }, { kind: 'issue', n: '20', effortId: '' }, { kind: 'map', n: '30', effortId: '' }, { kind: 'issue', n: '40', effortId: '' }]), '矩阵：四层混合链压栈保留完整返回路（地图10/工单20/地图30/工单40）')
 nav.popNav(st)
-check(eqStack(st, [{ kind: 'map', n: 10, effortId: '' }, { kind: 'issue', n: 20, effortId: '' }, { kind: 'map', n: 30, effortId: '' }]) && st.activeMap === 30 && st.activeIssue === null, '矩阵：四层链返回先回到地图30')
+check(eqStack(st, [{ kind: 'map', n: '10', effortId: '' }, { kind: 'issue', n: '20', effortId: '' }, { kind: 'map', n: '30', effortId: '' }]) && st.activeMap === '30' && st.activeIssue === null, '矩阵：四层链返回先回到地图30')
 nav.popNav(st)
-check(eqStack(st, [{ kind: 'map', n: 10, effortId: '' }, { kind: 'issue', n: 20, effortId: '' }]) && st.activeIssue === 20 && st.activeMap === null, '矩阵：四层链再返回回到工单20')
+check(eqStack(st, [{ kind: 'map', n: '10', effortId: '' }, { kind: 'issue', n: '20', effortId: '' }]) && st.activeIssue === '20' && st.activeMap === null, '矩阵：四层链再返回回到工单20')
 nav.popNav(st)
-check(eqStack(st, [{ kind: 'map', n: 10, effortId: '' }]) && st.activeMap === 10 && st.activeIssue === null, '矩阵：四层链再返回回到地图10')
+check(eqStack(st, [{ kind: 'map', n: '10', effortId: '' }]) && st.activeMap === '10' && st.activeIssue === null, '矩阵：四层链再返回回到地图10')
 nav.popNav(st)
 check(eqStack(st, []) && st.activeMap === null && st.activeIssue === null, '矩阵：四层链退空栈回列表')
 
 st = { activeMap: null, activeIssue: null, navStack: [], tick: 0 }
 nav.pushNav(st, 'map', 550); nav.pushNav(st, 'issue', 7); nav.popNav(st)
-check(eqStack(st, [{ kind: 'map', n: 550, effortId: '' }]) && st.activeMap === 550 && st.activeIssue === null, '矩阵：地图进普通工单再返回，回到地图550')
+check(eqStack(st, [{ kind: 'map', n: '550', effortId: '' }]) && st.activeMap === '550' && st.activeIssue === null, '矩阵：地图进普通工单再返回，回到地图550')
 st = { activeMap: null, activeIssue: null, navStack: [], tick: 0 }
 nav.pushNav(st, 'map', 550); nav.pushNav(st, 'map', 551); nav.popNav(st)
-check(eqStack(st, [{ kind: 'map', n: 550, effortId: '' }]) && st.activeMap === 550, '矩阵：地图进下一级地图再返回，回到上一级550')
+check(eqStack(st, [{ kind: 'map', n: '550', effortId: '' }]) && st.activeMap === '550', '矩阵：地图进下一级地图再返回，回到上一级550')
 
 // ============ 一补、行进详情再返回端到端（真分流函数进，真返回函数出） ============
 const e2eMapSrc = ['hasMapTag', 'enterDetail', 'goBack'].map((n) => extractConst(mapSrc, n)).join('\n')
@@ -142,26 +142,26 @@ const runE2E2 = (bundle, names, t, seedStack, maps) => {
   const fn = compileFn(['st', 'pushNav', 'popNav'], (names.indexOf('enterSubDetail') >= 0 ? withIssueEffort(bundle) : withIdentity(bundle)) + '\nreturn { ' + names + ' }')
   return { s: s, api: fn(s, function (a, k, n, e) { return nav.pushNav(a, k, n, e) }, function (a) { return nav.popNav(a) }) }
 }
-let e = runE2E2(e2eMapSrc, 'enterDetail, goBack', null, [['map', 550]], [{ number: 550 }])
+let e = runE2E2(e2eMapSrc, 'enterDetail, goBack', null, [['map', '550']], [{ number: 550 }])
 e.api.enterDetail({ number: 7, labels: [{ name: 'bug' }], state: 'OPEN' })
-check(eqStack(e.s, [{ kind: 'map', n: 550, effortId: '' }, { kind: 'issue', n: 7, effortId: '' }]), '端到端：地图行进普通工单压栈')
+check(eqStack(e.s, [{ kind: 'map', n: '550', effortId: '' }, { kind: 'issue', n: '7', effortId: '' }]), '端到端：地图行进普通工单压栈')
 e.api.goBack()
-check(eqStack(e.s, [{ kind: 'map', n: 550, effortId: '' }]) && e.s.activeMap === 550, '端到端：工单返回弹栈回到地图550')
-e = runE2E2(e2eMapSrc, 'enterDetail, goBack', null, [['map', 550]], [{ number: 550 }, { number: 551 }])
+check(eqStack(e.s, [{ kind: 'map', n: '550', effortId: '' }]) && e.s.activeMap === '550', '端到端：工单返回弹栈回到地图550')
+e = runE2E2(e2eMapSrc, 'enterDetail, goBack', null, [['map', '550']], [{ number: 550 }, { number: 551 }])
 e.api.enterDetail({ number: 551, labels: [{ name: 'wayfinder:map' }], state: 'OPEN' })
-check(eqStack(e.s, [{ kind: 'map', n: 550, effortId: '' }, { kind: 'map', n: 551, effortId: '' }]), '端到端：地图行进下一级地图压栈')
+check(eqStack(e.s, [{ kind: 'map', n: '550', effortId: '' }, { kind: 'map', n: '551', effortId: '' }]), '端到端：地图行进下一级地图压栈')
 e.api.goBack()
-check(eqStack(e.s, [{ kind: 'map', n: 550, effortId: '' }]) && e.s.activeMap === 550, '端到端：地图返回弹栈回到上一级550')
-e = runE2E2(e2eSubSrc, 'enterSubDetailBound, goBackIssue', null, [['issue', 20]], [{ number: 551 }])
+check(eqStack(e.s, [{ kind: 'map', n: '550', effortId: '' }]) && e.s.activeMap === '550', '端到端：地图返回弹栈回到上一级550')
+e = runE2E2(e2eSubSrc, 'enterSubDetailBound, goBackIssue', null, [['issue', '20']], [{ number: 551 }])
 e.api.enterSubDetailBound({ number: 551, labels: [{ name: 'wayfinder:map' }] })
-check(eqStack(e.s, [{ kind: 'issue', n: 20, effortId: '' }, { kind: 'map', n: 551, effortId: '' }]), '端到端：子票按标签进地图压栈')
+check(eqStack(e.s, [{ kind: 'issue', n: '20', effortId: '' }, { kind: 'map', n: '551', effortId: '' }]), '端到端：子票按标签进地图压栈')
 e.api.goBackIssue()
-check(eqStack(e.s, [{ kind: 'issue', n: 20, effortId: '' }]) && e.s.activeIssue === 20, '端到端：子票层返回弹栈回到工单20')
+check(eqStack(e.s, [{ kind: 'issue', n: '20', effortId: '' }]) && e.s.activeIssue === '20', '端到端：子票层返回弹栈回到工单20')
 
 // effort 维度：子票自带 effortId 时，压栈坐标必须带上它（同号票在不同 effort 里是两张票）
-e = runE2E2(e2eSubSrc, 'enterSubDetailBound, goBackIssue', null, [['issue', 20]], [{ number: 551 }])
+e = runE2E2(e2eSubSrc, 'enterSubDetailBound, goBackIssue', null, [['issue', '20']], [{ number: 551 }])
 e.api.enterSubDetailBound({ number: 551, effortId: 'beta', labels: [{ name: 'wayfinder:map' }] })
-check(eqStack(e.s, [{ kind: 'issue', n: 20, effortId: '' }, { kind: 'map', n: 551, effortId: 'beta' }]), '端到端 B：子票带 effortId 时压栈坐标带该 effort')
+check(eqStack(e.s, [{ kind: 'issue', n: '20', effortId: '' }, { kind: 'map', n: '551', effortId: 'beta' }]), '端到端 B：子票带 effortId 时压栈坐标带该 effort')
 
 // 原来的「二、两处返回直调弹栈」已按维护者要求删除：它把 MapDetail.js / IssueDetail.js 里的 goBack
 // 抠出来当文本比对（要求恰好写成 function () { popNav(st) }、不许出现 clearActive），盯的是写法。

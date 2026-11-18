@@ -203,7 +203,24 @@ export function createProbeHandler(deps: ProbeHandlerDeps): { handleProbe: (args
             try { logCtx.fire(level, event, fields) } catch (eL) {}
           }
           const opCtx: any = { cwd, platform: await getPlatform(), fs: ctx.get('fs'), exec: function (c: any, ar: any, o: any): any { return detectionExec(c, ar, o, 'probe') }, logEvent: logTruncation }
-          const r: any = await tracker.list(repoRef, {}, opCtx)
+          // #45：Linear só fala HTTP. O contexto acima só tem exec (feito para as salas que rodam comandos), então a sala devolvia
+          //   "the room has no HTTP channel wired (ctx.http is missing)", errorKind env, a cada 5 segundos: o chip "Failed" e a
+          //   barra amarela que não saíam do painel. O snapshot nunca falhou porque passa pela sessão de leitura, que traz o
+          //   canal HTTP e a conta. Para o backend que fala HTTP o probe lista pela mesma sessão (o caminho que o resto do host
+          //   já usa desde #1444); GitLab e Markdown ficam no caminho de cima, que gates antigos fixam.
+          //   O logEvent da sessão continua valendo: o de baixo só acrescenta a ponte do aviso de lista truncada.
+          let r: any
+          if (String(_selProbe.backendId) === 'linear' && typeof openSession === 'function') {
+            const opened: any = await openSession(cwd)
+            if (!opened || opened.ok !== true || typeof opened.call !== 'function') return { ok: false, error: 'The read session for the probe could not be opened: ' + errText((opened && (opened.detail || opened.reason)) || 'open-failed'), errorKind: 'env' }
+            r = await opened.call(function (session: any, c: any): any {
+              const sessionLog: any = c && c.logEvent
+              const bridged: any = function (level: any, event: any, fields: any): void { logTruncation(level, event, fields); if (typeof sessionLog === 'function') sessionLog(level, event, fields) }
+              return session.list(repoRef, {}, Object.assign({}, c, { logEvent: bridged }))
+            })
+          } else {
+            r = await tracker.list(repoRef, {}, opCtx)
+          }
           if (!r || !r.ok) return { ok: false, error: errText((r && r.error) || 'probe list failed'), errorKind: kindOf(r && r.error) }
           // 这一拍不截断了：清掉「已记过」标记，下次再截断还能落一行。
           if (r.truncated !== true) delete truncationLoggedByRepo[rk1]

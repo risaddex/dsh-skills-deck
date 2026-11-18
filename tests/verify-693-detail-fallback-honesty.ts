@@ -194,7 +194,9 @@ async function loadDetailModule (): Promise<any> {
   //   视图结果上的 withSlots 也按同一口径切真身；顺序按依赖先后拼。
   // #1866：withSlots 多挂了一条评论可写判据（commentsAvailableOf），同样切真身 —— 塞一个恒真桩会让
   //   「库里评论组不知道时不给输入框」这条判据在这扇门禁里测不到真实现。
-  const projSrc = ['function readProjectionMode(', 'function projectionUsesSnapshot(', 'function hhmmOf(', 'function snapshotRowFor(', 'function lastKnownDetailAtMs(', 'function detailFromRow(', 'function knownBlockedNodes(', 'function rowHasDetail(', 'function bodySlotOf(', 'function relationsUnknownOf(', 'function relationsNoticeOf(', 'function commentsAvailableOf(', 'function withSlots(', 'function detailViewFor(']
+  // #45：snapshotRowFor 与两处「是不是同一张票」按文本键比，依赖 detailKeyText / detailRowKey / sameDetailKey，缓存槽用 detailCacheSlot；它们是投影模块里的
+  //   顶层函数，必须排在用到它们的函数之前切进来（顺序按依赖先后），否则一渲染就 ReferenceError。
+  const projSrc = ['function readProjectionMode(', 'function projectionUsesSnapshot(', 'function hhmmOf(', 'function detailKeyText(', 'function detailRowKey(', 'function detailCacheSlot(', 'function sameDetailKey(', 'function snapshotRowFor(', 'function lastKnownDetailAtMs(', 'function detailFromRow(', 'function knownBlockedNodes(', 'function rowHasDetail(', 'function bodySlotOf(', 'function relationsUnknownOf(', 'function relationsNoticeOf(', 'function commentsAvailableOf(', 'function withSlots(', 'function detailViewFor(']
     .map(function (header) { return extractFn(bundle, header) }).join('\n')
   const dir = mkdtempSync(join(tmpdir(), 'dsws693-'))
   const code = shim + motionSrc + '\n' + projSrc + '\n' + foldHookSrc + '\n' + errViewSrc + '\n' + ridcSrc + '\nconst renderIssueDetailComments = __ridc\n' + detailFnSrc + '\nexport { IssueDetail }\n'
