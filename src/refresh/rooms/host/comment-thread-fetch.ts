@@ -21,6 +21,20 @@ import { detailOfProjection, reviewNodeOf, storedCommentPage } from './snapshot-
 // #1864：详情新鲜度的唯一来源是中央时间参数，不在本文件写数字。
 import { ISSUE_DETAIL_LOCAL_TTL_MS } from '../../../shared/time-config/src/values.js'
 
+// #45：票的键是后端给的文本（GitHub 的 `42`、本地 Markdown 的 `01`、Linear 的 `ENG-12`），宿主只原样搬运，不替后端
+// 把它读成数字：`ENG-12` 读成数字是 NaN，详情与评论读路径会把它当成「缺编号」拒掉，回包里的 number 还会变成 NaN。
+// 合法键只有两种：去掉首尾空白后非空的文本，或有限的数字（转成文本）。其余（缺席、空串、NaN、对象）都不是键，返回空串。
+// 本文件的头注释约定不新增模块引用，所以这条规则在这里写一份，与客户端 store-prefs 的 navKeyOf 同一条判据。
+function textKeyOf(n: any): string {
+  if (typeof n === 'number') return Number.isFinite(n) ? String(n) : ''
+  if (typeof n === 'string') return n.trim()
+  return ''
+}
+// 键全是数字时才有「编号」；ENG-12 这样的键没有编号，调用方不得为它造一个。
+function numberOfKey(key: string): number | null {
+  return /^\d+$/.test(key) ? Number(key) : null
+}
+
 // 评论分页的两个数字（#1444）：首屏与每次「加载更多」各取 50 条，一次最多加载到 200 条。
 // 这是契约 GetOpts.comments 的默认值与上限（三个后端房间同数），房间侧也会按 200 截断；
 // 放在文件顶端一处，详情与评论两个处理器共用，不在函数里各写一份。
@@ -227,7 +241,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     if (!_rawDetailCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
     const cwd: any = await normCwd(_rawDetailCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
+    if (textKeyOf(n) === '') return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
     try {
       // 读路径只认会话（#1444）：会话开成之后，后端选择、读额度与记账都由它兜住，本文件不再自己分发。
       const opened: any = await openReadSession(cwd)
@@ -237,7 +251,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: 'cannot resolve the target repository (refId missing)' } }
       // effort 维度：effort 是寻址范围，客户端带上来就放进 ref（不带 = 全仓库，单 effort 后端行为不变）
       if (args && args.effortId !== undefined && args.effortId !== null) repoRef.effortId = String(args.effortId)
-      const key: string = String(n).padStart(2, '0')
+      const key: string = textKeyOf(n).padStart(2, '0')
       // #1864：本地优先。库里有这张票的详情、而且还不算旧，就直接交回，一次取数请求都不发。
       // 库的键按「工作区 + 后端 + 仓库身份」三元组开，与列表写入用的是同一份身份；票号两种写法
       // 都要试：本地 Markdown 的键是补零的（01），GitHub 的键不补零（1），列表写库时按后端原样存。
@@ -312,7 +326,14 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       // 详情需要包含 comments / blockedBy 等：markdown 的 get 在读时回填引用标题（#1537），
       // 界面拿到的就是带标题的形状，这里只做连接包装、不再补标题。
       const out: any = { ok: true, issue: {
-        number: iss.number != null ? iss.number : (iss.key ? parseInt(iss.key,10) : n),
+        // #45：`number` 只在键全是数字时才有；ENG-12 这样的键没有编号，不能写成 NaN（NaN 的类型也是 number，
+        // 会骗过客户端「issue.number 必须是数字」那道门，面板于是存下一张永远对不上行的票）。键本身另放 `key`，
+        // 客户端按它认行。`key` 是加字段，不改任何已有字段的类型。
+        ...(function (): any {
+          const keyText: string = iss.key != null && String(iss.key).trim() !== '' ? String(iss.key) : textKeyOf(n)
+          const num: number | null = iss.number != null ? Number(iss.number) : numberOfKey(keyText)
+          return num !== null && Number.isFinite(num) ? { number: num, key: keyText } : { key: keyText }
+        })(),
         effortId: iss.effortId !== undefined && iss.effortId !== null ? String(iss.effortId) : '',
         title: iss.title || '',
         state: iss.state === 'closed' ? 'CLOSED' : 'OPEN',
@@ -374,7 +395,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     if (!_rawCommentsCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
     const cwd: any = await normCwd(_rawCommentsCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
+    if (textKeyOf(n) === '') return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
     try {
       // 同详情：读评论也只经只读会话；会话开不成时诚实失败，让上层照旧用缓存。
       const opened: any = await openReadSession(cwd)
@@ -390,7 +411,7 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
       if (!repoRef || !repoRef.refId) return { ok: false, error: { kind: 'not-found', message: 'cannot resolve the target repository (refId missing)' } }
       // effort 维度：评论也按 effort 寻址（不带 = 全仓库；多 effort 同号时后端会诚实报 conflict）
       if (args && args.effortId !== undefined && args.effortId !== null) repoRef.effortId = String(args.effortId)
-      const key: string = String(n).padStart(2, '0')
+      const key: string = textKeyOf(n).padStart(2, '0')
       // #1865：这一页库里已经取到过就直接从库交回，一次取数都不发。判据是「库里还有第 loaded + 1 条」
       // 而且这份详情还不算旧（与 #1864 的详情本地优先同一条 TTL）；库里没有这一页才去后端。
       const lib: any = (typeof deps.getSnapshotLibrary === 'function') ? await deps.getSnapshotLibrary().catch(function () { return null }) : null
@@ -451,7 +472,11 @@ export function createCommentThreads(deps: CommentThreadsDeps): any {
     if (!_rawCommentCwd) return { ok: false, error: 'This workspace is not ready yet (its directory has not been recognized); try again after the panel recognizes it.' }
     const cwd: any = await normCwd(_rawCommentCwd)
     // 本地容器的编号是 0（key 00），是合法坐标：只拦缺席、空串与非数字，不拦 0。
-    if (n === undefined || n === null || String(n).trim() === '' || isNaN(Number(n))) return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
+    if (textKeyOf(n) === '') return { ok: false, error: { kind: 'parse', message: 'number is missing' } }
+    // #45：评论是写操作，文本键（ENG-12）的写路径还没有人在真实的 Linear 上试过，所以先明说「不支持」而不是把
+    // `String(Number(n))` 得到的字符串 "NaN" 当成票号发给后端。维护者在一张可丢弃的 Linear 票上试过之后再放开。
+    // 全数字的键（GitHub 的 42、本地 Markdown 的 01）照旧走下面的老路，一个字不变。
+    if (numberOfKey(textKeyOf(n)) === null) return { ok: false, error: { kind: 'unsupported', message: 'commenting on the ticket ' + textKeyOf(n) + ' from the panel is not available yet: its key is not a number, and the write path for a text key has not been tried on a real ticket' } }
     if (typeof body !== 'string' || !body.trim()) return { ok: false, error: { kind: 'parse', message: 'the comment body is empty' } }
     try {
       // #1445：写入只经写会话。上一版在这里自己选后端、拼 opCtx、补 refId、直调房间 comment，
