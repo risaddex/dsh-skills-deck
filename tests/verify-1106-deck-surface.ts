@@ -834,6 +834,7 @@ async function main() {
     // 350 行上限）；它同样住在工具层、同样受下面这套扫描约束，所以进这张精确名单。
     // 2026-11 #1788 再加一份 assignee-note.ts：认领回执里说清「认领人记上了、可见状态没有改」的文案。
     // 它只是回执文案，不是独立工具，但住在工具层、同样受同一套扫描约束，所以进这张精确名单。
+    // 2026-11 one more file, issue-patch-receipt.ts: the small ticket face a deck_issue_patch receipt carries (receipt size).
     // 2026-11 #1790 再加一份 issue-patch-status.ts：状态冲突的预检、归一与拒绝回执从 issue-patch.ts 搬出
     // （那份文件又撞回 350 行上限）；它同样只是工具层的一份内部模块，进这张精确名单。
     // 2026-11 #1831 再加一份 issue-list-filter.ts：读列表把后端回来的行做内存二次筛的那一小段从
@@ -841,8 +842,8 @@ async function main() {
     // 2026-11 #22 再加两份：deck-default-admit.ts（依赖袋没配裁决口时的兜底裁决，从 tracker-session.ts 搬出）
     // 与 identity-resolve.ts（补仓库身份、拼那句注解、记日志，同上）。tracker-session.ts 撞回文件粒度阈值，
     // 这两段各自是独立的一件事，于是各成一份内部模块，进这张精确名单。
-    const EXPECTED_FILES = ['assignee-note.ts', 'context.ts', 'deck-default-admit.ts', 'identity-resolve.ts', 'issue-create-failure.ts', 'issue-create-parts.ts', 'issue-create.ts', 'issue-get.ts', 'issue-list-filter.ts', 'issue-list.ts', 'issue-patch-definition.ts', 'issue-patch-labels.ts', 'issue-patch-status.ts', 'issue-patch.ts', 'issue-report.ts', 'map-link.ts', 'map-plan-create-failure.ts', 'map-plan-create.ts', 'map-plan-readback.ts', 'map-plan-resume.ts', 'map-snapshot.ts', 'md-scope.ts', 'suggest-next-steps.ts', 'tool-order.ts', 'tracker-session-adapt.ts', 'tracker-session.ts', 'work-route.ts'].sort()
-    check(names.join(',') === EXPECTED_FILES.join(','), '工具层是十份工具 + 顺序表门面 + 三个内部模块 + 建议工具 + 会话接线层 + 会话适配壳 + md-scope + 工具定义 + 建票失败回执 + 建图失败回执 + 认领回执文案 + 状态冲突预检 + 列表内存二次筛 + 兜底裁决 + 身份补齐 这二十七份（实际 ' + names.join(',') + '）')
+    const EXPECTED_FILES = ['assignee-note.ts', 'context.ts', 'deck-default-admit.ts', 'identity-resolve.ts', 'issue-create-failure.ts', 'issue-create-parts.ts', 'issue-create.ts', 'issue-get.ts', 'issue-list-filter.ts', 'issue-list.ts', 'issue-patch-definition.ts', 'issue-patch-labels.ts', 'issue-patch-receipt.ts', 'issue-patch-status.ts', 'issue-patch.ts', 'issue-report.ts', 'map-link.ts', 'map-plan-create-failure.ts', 'map-plan-create.ts', 'map-plan-readback.ts', 'map-plan-resume.ts', 'map-snapshot.ts', 'md-scope.ts', 'suggest-next-steps.ts', 'tool-order.ts', 'tracker-session-adapt.ts', 'tracker-session.ts', 'work-route.ts'].sort()
+    check(names.join(',') === EXPECTED_FILES.join(','), '工具层是十份工具 + 顺序表门面 + 三个内部模块 + 建议工具 + 会话接线层 + 会话适配壳 + md-scope + 工具定义 + 建票失败回执 + 建图失败回执 + 认领回执文案 + 状态冲突预检 + 回执票面 + 列表内存二次筛 + 兜底裁决 + 身份补齐 这二十八份（实际 ' + names.join(',') + '）')
 
     // #1799：非 ok 回执的 reason 只许从 src/deck/shell/receipt-reason.ts 那一张映射表出来。
     // 工具层里如果又出现「有失败就写 backend-unsupported」或「映射不出码时手写兜底」，就是这张票要修的旧病复发，
