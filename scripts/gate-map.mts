@@ -1002,6 +1002,13 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // fix 15 of the 22 fail (every Linear assertion; the control fails with "the room has no HTTP channel wired (ctx.http is missing)").
   // Measured by running it: 22 of 22 pass now.
   'verify-45-linear-issue-page': 22,
+  // 2026-11-18 #50: the Linear room had no listSubIssues (the registry stub answered "unsupported"). Two gates, split only for file size, over
+  // one fake Relay-style channel (tests/lib/linear-sub-issues-fake.ts). Room gate = the request (A: 15) + a multi-page walk (B: 8) + blockers
+  // (B2: 3) + the 1000 cap, the page bound and the boundary (C: 10) + a list read in part is never complete (D: 7) + failure classes (D2: 5) = 48.
+  // Callers gate = the real snapshot working set and the real map phone, other rooms untouched (E: 11) + the log (F: 6) = 17. Against the
+  // source before the change 60 of the 65 fail; 65 of 65 pass now, and 9 fail when the capped flag is removed from the room.
+  'verify-50-linear-list-sub-issues': 48,
+  'verify-50-linear-list-sub-issues-callers': 17,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。

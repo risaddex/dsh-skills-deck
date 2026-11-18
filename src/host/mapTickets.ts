@@ -40,6 +40,7 @@ type WfArgs = any;
 // #1584 起只额外静态引用 tracker 层的共享补齐入口（同一把工作区→仓库身份的尺子），不引其它新文件。
 // 日志沿用既有的 host.call / host.call.fail 两个事件（不新增事件名）。
 import { resolveRepoRefForCwd } from '../tracker/session/repo-ref.js'
+import { listLinearSubIssues } from '../tracker/session/linear-sub-issues-via-session.js'
 
 // ── 阻塞者引用态归一（#1768）─────────────────────────────────────────────────────
 // 与 src/host/tracker/snapshotAssemble.ts 的同名逻辑同形：编号折成数字或原串，标题与状态有才带。
@@ -200,7 +201,10 @@ export function createMapTickets(deps?: any): any {
     // host.call 记下了 opId，房间那层 0 行。两个钩子的形状与 src/host/issuePage.js 给 listPage 的那一份一致
     // （没有 logCtx 时：logEvent 静默、isEnabled 只放行错误与告警）。
     const ctx2 = { cwd, opId: opId, platform: await getPlatform(), fs: ctx.get('fs'), exec: function(c?: any, a?: any, o?: any) { return detectionExec(c, a, o, 'map-tickets') }, logEvent: backendLogEvent, isEnabled: backendLogEnabled }
-    const res = await tracker.listSubIssues(repoRef, key, {}, ctx2)
+    // #50：Linear 要 HTTP 通道，这份上下文没有，所以走只读会话（见 tracker/session/linear-sub-issues-via-session.ts）；别的后端照旧直调。
+    const res: any = String(backendId) === 'linear'
+      ? await listLinearSubIssues({ openSession: openSession, cwd: cwd, repoRef: repoRef, key: key, opId: opId })
+      : await tracker.listSubIssues(repoRef, key, {}, ctx2)
     if (!res || res.ok !== true) {
       const err = (res && res.error) || { kind: 'network', message: 'Could not fetch child tickets' }
       // 「这个后端不做这件事」要给人一句能读的话：注册表补的桩与后端自己回的那条都是内部英文
