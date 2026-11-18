@@ -12,7 +12,7 @@ import { normalizeIssue } from "../model/normalize.js";
 import { getDependencies } from "../read/deps-read.js";
 import { writeBlockedByEdges } from "./blocked-by-write.js";
 import { PAGINATION } from "../../../contract/pagination.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 function caughtMessage(e, len) {
   const eb = e;
   return String(eb && eb.message || e).slice(0, len);
@@ -75,7 +75,7 @@ async function setParent(repo, key, parentKey, opts, ctx) {
 async function setParentInner(repo, key, parentKey, opts, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setParent: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setParent: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "setParent: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     const wantParent = parentKey == null ? null : String(parentKey).trim() || null;
@@ -229,7 +229,7 @@ async function setBlockedBy(repo, key, blockers, opts, ctx) {
 async function setBlockedByInner(repo, key, blockers, opts, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setBlockedBy: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setBlockedBy: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "setBlockedBy: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     const want = Array.isArray(blockers) ? blockers.map((b) => String(b).trim()).filter(Boolean) : [];

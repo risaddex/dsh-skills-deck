@@ -4,7 +4,7 @@ import { fail } from "../../../kernel/preflight.js";
 import { ghClient } from "../transport/client.js";
 import { normalizeIssue } from "../model/normalize.js";
 import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 import { labelsOf } from "../model/issue-filter.js";
 import { LIST_PAGE_QUERY, LIST_PAGE_QUERY_WITH_LABELS } from "../channels/graphql/queries.js";
 import { beginRead } from "../routing/read-result.js";
@@ -61,7 +61,7 @@ async function listIssuesPage(repo, filter, opts, ctx) {
     const parsed = parseRepo(repo);
     if (!parsed) {
       emitReadDegraded(ctx, "listPage", "listPage:repo-ref", Date.now() - t0);
-      return fail(ERROR_KIND.NOTFOUND, `listPage: repo.refId missing or malformed: ${repoId(repo)}`, repo);
+      return fail(ERROR_KIND.NOTFOUND, `listPage: repo.refId missing or malformed: ${repoIdentityText(repo)}`, repo);
     }
     const baseLim = Math.min(limitOf(opts), REMOTE_PAGE_LIMIT);
     let lim = learnedPageLimit > 0 ? Math.min(baseLim, learnedPageLimit) : baseLim;

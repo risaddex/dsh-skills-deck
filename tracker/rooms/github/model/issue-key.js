@@ -12,9 +12,17 @@ function repoId(repo) {
   if (typeof repo.name === "string" && repo.name) return repo.name;
   return "";
 }
-var stdin_default = { parseRepo, repoId };
+function repoIdentityText(repo) {
+  const refId = repo && typeof repo.refId === "string" ? repo.refId : "";
+  if (refId) return refId;
+  const name = repo && typeof repo.name === "string" ? repo.name : "";
+  if (name && name.indexOf("/") > 0) return name;
+  return name ? 'no owner/repository was resolved (the workspace folder is "' + name + '", which is not a repository id)' : "no owner/repository was resolved";
+}
+var stdin_default = { parseRepo, repoId, repoIdentityText };
 export {
   stdin_default as default,
   parseRepo,
-  repoId
+  repoId,
+  repoIdentityText
 };

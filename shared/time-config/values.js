@@ -19,6 +19,8 @@ export const TIME_YAML = {
   gitlabReadMs: 8e3,
   gitlabSlowReadMs: 1e4,
   gitlabProbeMs: 15e3,
+  linearProbeMs: 15e3,
+  linearRenewWindowMs: 3e5,
   gitlabRepoGitMs: 15e3,
   gitlabFallbackMs: 5e3,
   gitlabCreateProjectMs: 6e4,
@@ -239,6 +241,8 @@ export const GITHUB_INIT_TIMEOUT_MS = 3e4;
 export const GITLAB_READ_TIMEOUT_MS = 8e3;
 export const GITLAB_SLOW_READ_TIMEOUT_MS = 1e4;
 export const GITLAB_PROBE_TIMEOUT_MS = 15e3;
+export const LINEAR_PROBE_TIMEOUT_MS = 15e3;
+export const LINEAR_RENEW_WINDOW_MS = 3e5;
 export const GITLAB_REPO_GIT_TIMEOUT_MS = 15e3;
 export const GITLAB_FALLBACK_TIMEOUT_MS = 5e3;
 export const GITLAB_CREATE_PROJECT_TIMEOUT_MS = 6e4;

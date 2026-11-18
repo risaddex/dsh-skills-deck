@@ -7,7 +7,7 @@ import { ghClient } from "../transport/client.js";
 import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
 import { readRepoPermissions, readonlyMessage } from "../read/repo-permissions.js";
 import { getIssue } from "../read/issues.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoId, repoIdentityText } from "../model/issue-key.js";
 function normalizeLabelInput(li) {
   if (typeof li === "string") {
     const name2 = li.trim();
@@ -59,7 +59,7 @@ async function setLabelsInner(repo, key, labels, opts, ctx, trail) {
   if (!k) return fail(ERROR_KIND.PARSE, "setLabels: key required (string)", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setLabels: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setLabels: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     if (opts && typeof opts.expectedUpdatedAt === "string" && opts.expectedUpdatedAt !== "") {
       const cur = await getIssue(repo, k, {}, ctx);
       if (!cur.ok) return cur;
@@ -107,5 +107,6 @@ export {
   stdin_default as default,
   parseRepo,
   repoId,
+  repoIdentityText,
   setLabels
 };

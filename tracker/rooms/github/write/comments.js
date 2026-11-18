@@ -5,7 +5,7 @@ import { fail } from "../../../kernel/preflight.js";
 import { ghClient } from "../transport/client.js";
 import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
 import { beginWriteTrail, emitIssueWrite } from "../support/write-log.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 async function addComment(repo, key, body, ctx) {
   const t0 = Date.now();
   const trail = beginWriteTrail();
@@ -16,7 +16,7 @@ async function addComment(repo, key, body, ctx) {
 async function addCommentInner(repo, key, body, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `comment: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `comment: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "comment: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     if (typeof body !== "string" || !body.trim()) return fail(ERROR_KIND.PARSE, "comment: body required", body, TRACKER_ERROR_STAGE.INPUT_REFUSED);

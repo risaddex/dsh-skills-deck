@@ -18,7 +18,7 @@ import { createBudgetModel } from "./budget-model.js";
 import { createQuotaSyncStatus } from "./quota-sync-status.js";
 import { createSessionOpener } from "./session-opener.js";
 import { createQuotaLogWiring } from "./quota-log-wiring.js";
-import { createOutboundControl } from "./outbound-control.js";
+import { createHttpChannel, createOutboundControl } from "./room-host-services.js";
 import { hostTimers } from "../../contract/host-timer-ports.js";
 import { createPatchWiring } from "./patch-wiring.js";
 import { createWriteEventFetch } from "./write-event-fetch.js";
@@ -148,7 +148,9 @@ function createRefreshWiring(deps) {
             return level === "error" || level === "warn";
           }
         },
-        outbound: createOutboundControl(logCtx)
+        outbound: createOutboundControl(logCtx),
+        // #24：http 与 outbound 共用同一个名额闸（背后同一份进程级单例，取两份不会造成两套上限）。
+        http: createHttpChannel({ outbound: createOutboundControl(logCtx) })
       };
     }
     return Object.assign({}, syncBackendObj, { platform: syncPlatform });

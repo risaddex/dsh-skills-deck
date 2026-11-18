@@ -7,6 +7,16 @@ function errorText(e) {
     return "unknown error";
   }
 }
+function messageOf(value) {
+  try {
+    const rec = value;
+    if (rec && typeof rec.message === "string" && rec.message) return rec.message;
+    const nested = rec && rec.error && typeof rec.error === "object" ? rec.error.message : void 0;
+    return typeof nested === "string" && nested ? nested : "";
+  } catch {
+    return "";
+  }
+}
 function refIdOf(ref) {
   try {
     const value = ref?.refId;
@@ -54,7 +64,10 @@ async function resolveSessionRepoRef(input) {
     if (!steps.some(function(s) {
       return s.step === "remote-locate";
     })) {
-      steps.push({ step: "remote-locate", ok: !!(owner && name) });
+      const step = { step: "remote-locate", ok: !!(owner && name) };
+      const refusal = messageOf(located);
+      if (!step.ok && refusal) step.error = refusal;
+      steps.push(step);
     }
     if (owner && name) {
       const refId = owner + "/" + name;

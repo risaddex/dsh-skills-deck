@@ -4,6 +4,7 @@ import { emitReadDegraded } from "./support/read-log.js";
 import { remoteUrlsOfGitConfig } from "../../kernel/git-remote.js";
 import { normalizeTrackerText, parseIssueTracker } from "../../kernel/issue-tracker-declaration.js";
 import { listIssues, getIssue } from "./issues/read.js";
+import { refuseAccountRead } from "../../kernel/account-read-refusal.js";
 import { createIssue, closeIssue, reopenIssue, updateIssue } from "./issues/write.js";
 import { addComment } from "./comments/write.js";
 import { setLabels } from "./labels/assign.js";
@@ -95,8 +96,8 @@ function createGitlabBackend(ctx) {
     issueAddress: (ref, key) => issueAddress(ref, key),
     getRepoKey: (cwd, opCtx) => getRepoKey(cwd, opCtx || ctx),
     preflight: (handle, opCtx) => glabPreflight(handle, opCtx || ctx),
-    list: (repo, filter, opCtx) => listIssues(ctx, repo, filter, opCtx || ctx),
-    get: (repo, key, opts, opCtx) => getIssue(ctx, repo, key, opts, opCtx || ctx),
+    list: async (repo, filter, opCtx) => refuseAccountRead(filter) || listIssues(ctx, repo, filter, opCtx || ctx),
+    get: async (repo, key, opts, opCtx) => refuseAccountRead(opts) || getIssue(ctx, repo, key, opts, opCtx || ctx),
     getDependencies: (repo, key, opts, opCtx) => getDependencies(ctx, repo, key, opts, opCtx || ctx),
     create: (repo, input, opCtx) => createIssue(ctx, repo, input, opCtx || ctx),
     close: (repo, key, opts, opCtx) => closeIssue(ctx, repo, key, opts, opCtx || ctx),

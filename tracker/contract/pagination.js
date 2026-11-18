@@ -57,6 +57,22 @@ const PAGINATION = {
     // 本地 Markdown 房只有分页契约这一组数字：缺省 50、上限 200，与另外两房同一口径。
     limitDefault: 50,
     limitMax: 200
+  },
+  linear: {
+    // 分页契约这一格与另外三房同一口径：缺省 50、上限 200。它是**对外承诺**（PageOpts.limit 的语义），
+    // 不让某一家接口更宽就跟着放宽 —— 放宽之后调用方要 200 会拿到 250，别家的行为就对不上。
+    limitDefault: 50,
+    limitMax: 200,
+    // 连接硬上限 250 是 Linear 自己的接口事实（研究笔记 §9：「Between 1 and 250. Defaults to 50 when
+    // neither first nor last is supplied」），只在本房内部（例如计数一页取多少）用，不外露成契约上限。
+    connectionMax: 250,
+    // 列表一页要多少张：与 Linear 读侧同一个 50（整页带全字段时的保守值）。
+    listPageSize: 50,
+    // 计数要一页页走到 hasNextPage=false；最多翻 40 页（=1 万张）就如实回 unsupported，
+    // 防远端异常时死翻 —— 计数宁可失败，也不给一个只是下界的数。
+    countMaxPages: 40,
+    // 多账号读取共用一次工具预算；每本账最多五页，撞上限报告截断而非无限翻页。
+    accountListMaxPages: 5
   }
 };
 export {

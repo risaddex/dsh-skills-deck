@@ -5,7 +5,7 @@ import { fail } from "../../../kernel/preflight.js";
 import { ghClient } from "../transport/client.js";
 import { getIssue, listIssues } from "./issues.js";
 import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 import { normalizeDependencyEdges } from "../model/normalize.js";
 import { DEPS_MAX, DEPS_QUERY } from "../channels/graphql/queries.js";
 import { emitReadDegraded } from "../support/read-log.js";
@@ -118,7 +118,7 @@ function caughtMessage(e, len) {
 async function getDependenciesInner(repo, key, opts, ctx) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `getDependencies: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `getDependencies: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     if (opts && Array.isArray(opts.keys) && opts.keys.length) {
       const results = [];
       for (const kk of opts.keys) {

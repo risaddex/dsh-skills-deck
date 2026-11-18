@@ -21,6 +21,7 @@ import { estimateToolCost, toolCostInputFrom } from "../../refresh/kernel/tool-c
 import { DECK_SANDBOX_TIMEOUT_MS } from "../../shared/time-config/values.js";
 import { guardStatus, namesOf } from "./issue-patch-status.js";
 import { runLabelsStep } from "./issue-patch-labels.js";
+import { receiptTicketOf } from "./issue-patch-receipt.js";
 import { triageStateProblem } from "../rules/triage-state.js";
 import { definition } from "./issue-patch-definition.js";
 function createDeckIssuePatch(deps) {
@@ -368,7 +369,7 @@ function createDeckIssuePatch(deps) {
           status,
           reason,
           text: "Ticket " + key + ": this call covered " + items.length + " steps, " + items.filter((i) => i.status === "ok").length + " went through." + firstFailureText,
-          data: { requested: Object.keys(wants).filter((k) => wants[k]), ticket: readBack },
+          data: { requested: Object.keys(wants).filter((k) => wants[k]), ticket: receiptTicketOf(readBack, key, wants) },
           items,
           readBack: readBackDigest,
           notes,

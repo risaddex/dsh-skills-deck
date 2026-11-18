@@ -6,7 +6,7 @@ import { ghClient } from "../transport/client.js";
 import { normalizeIssue } from "../model/normalize.js";
 import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
 import { SUB_ISSUES_QUERY } from "../channels/graphql/queries.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 import { emitReadDegraded } from "../support/read-log.js";
 import { beginRead } from "../routing/read-result.js";
 import { attachRuntimeAnswer, runtimeCapabilityFor } from "../routing/runtime-capability.js";
@@ -21,7 +21,7 @@ async function listSubIssuesInner(repo, mapKey, opts, ctx) {
     const parsed = parseRepo(repo);
     if (!parsed) {
       emitReadDegraded(ctx, "subIssues", "subIssues:repo-ref", Date.now() - t0);
-      return fail(ERROR_KIND.NOTFOUND, `Fetching child tickets: repo.refId is missing or has the wrong shape: ${repoId(repo)}`, repo);
+      return fail(ERROR_KIND.NOTFOUND, `Fetching child tickets: repo.refId is missing or has the wrong shape: ${repoIdentityText(repo)}`, repo);
     }
     const num = Number(String(mapKey == null ? "" : mapKey).trim());
     if (!Number.isFinite(num)) return fail(ERROR_KIND.PARSE, `Fetching child tickets: a GitHub map number must be numeric: ${mapKey}`, mapKey, TRACKER_ERROR_STAGE.INPUT_REFUSED);

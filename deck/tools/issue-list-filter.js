@@ -92,6 +92,7 @@ function filterRows(rows, opts) {
       ...statusRowFields(rec)
     };
     if (typeof rec.body === "string" && parseOriginalWords(rec.body).length > 0) row.hasOriginalWords = true;
+    if (typeof rec.account === "string") row.account = rec.account;
     matched.push(row);
   }
   return matched;

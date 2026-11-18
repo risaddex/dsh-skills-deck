@@ -3,7 +3,7 @@ import { ERROR_KIND } from "../../../contract/vocabulary.js";
 import { fail } from "../../../kernel/preflight.js";
 import { ghClient } from "../transport/client.js";
 import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 import { labelsOf } from "../model/issue-filter.js";
 import { COUNTS_QUERY, COUNTS_QUERY_WITH_LABELS } from "../channels/graphql/queries.js";
 import { emitReadDegraded } from "../support/read-log.js";
@@ -22,7 +22,7 @@ async function countIssues(repo, filter, ctx) {
     const parsed = parseRepo(repo);
     if (!parsed) {
       emitReadDegraded(ctx, "counts", "counts:repo-ref", Date.now() - t0);
-      return fail(ERROR_KIND.NOTFOUND, `counts: repo.refId missing or malformed: ${repoId(repo)}`, repo);
+      return fail(ERROR_KIND.NOTFOUND, `counts: repo.refId missing or malformed: ${repoIdentityText(repo)}`, repo);
     }
     const narrow = narrowStateOf(filter);
     const labels = labelsOf(filter);

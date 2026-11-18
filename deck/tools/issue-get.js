@@ -49,7 +49,7 @@ const definition = {
   parameters: {
     type: "object",
     properties: {
-      key: { type: "string", description: "The ticket number, for example 713" },
+      key: { type: "string", description: "The ticket number, for example 713; alias:ENG-123 explicitly selects a Linear account reachable from this project. A bare key keeps the bound backend. Account-qualified reads do not fetch comments or reverse dependencies." },
       body: { type: "string", description: "How the body comes back: excerpt returns only the first 2000 characters (the default, to save context); full returns the whole body in chunks (a large body is not cut, and the digest lets you verify it is complete). The body appears in exactly one place: data.body.text, data.body.chunks or data.section.text." },
       comments: { type: "number", description: "How many comments to bring back at most; the default is 0, which returns only the total and none of the text; ask for the text when you need it, up to 200" },
       section: { type: "string", description: "Return only this section of the body (a substring of its ## heading); when omitted, the first 2000 characters of the body come back" },
@@ -100,6 +100,7 @@ function issueBrief(issue) {
     title: issue.title,
     state: issue.state,
     type: issue.type,
+    ...typeof issue.account === "string" ? { account: issue.account } : {},
     labels: Array.isArray(issue.labels) ? issue.labels.map((l) => l && l.name || String(l)) : [],
     assignees: assigneeNames(issue.assignees),
     updatedAt: issue.updatedAt || "",
@@ -161,7 +162,10 @@ function createDeckIssueGet(deps) {
   async function run(exec, args) {
     const toolEntryAt = typeof d.now === "function" ? d.now() : Date.now();
     const a = args || {};
-    const key = String(a.key === void 0 || a.key === null ? "" : a.key).trim();
+    const requestedKey = String(a.key === void 0 || a.key === null ? "" : a.key).trim();
+    const qualified = /^([a-z][a-z0-9-]*):([A-Za-z][A-Za-z0-9_]*-\d+)$/.exec(requestedKey);
+    const account = qualified ? qualified[1] : "";
+    const key = qualified ? qualified[2] : requestedKey;
     const est = shell.estimateFor("deck_issue_get", a);
     const s = await sessionContextOfAsync(exec, { canonicalKey: d.canonicalKey, workspaceKeyOf: d.workspaceKeyOf });
     if (!s.ok) return shell.unsupported("deck_issue_get", s.reason, s.text, { cost: { estimated: est } });
@@ -192,9 +196,9 @@ function createDeckIssueGet(deps) {
         const n = sc.sentRequests();
         return { requests: n, points: n * 3 };
       };
-      const gotP = t.get(repo, key, { comments: { first } }, opCtx);
+      const gotP = t.get(repo, key, { comments: { first }, ...account ? { account } : {} }, opCtx);
       let depSettled = false;
-      const depP = wantBlocking && typeof t.getDependencies === "function" ? t.getDependencies(repo, key, {}, opCtx).then(function(v) {
+      const depP = wantBlocking && !account && typeof t.getDependencies === "function" ? t.getDependencies(repo, key, {}, opCtx).then(function(v) {
         depSettled = true;
         return v;
       }, function(e) {
@@ -278,6 +282,7 @@ function createDeckIssueGet(deps) {
       const rel = relationsOf(issue, dependencies);
       if (!wantBlocking) rel.blocking = [];
       const notes = [];
+      if (account) notes.push("Account-qualified read: reverse dependencies were not queried because that operation cannot select an account; empty relation arrays do not confirm that no edges exist.");
       if (scope.effortId) notes.push(mdScopeNote(scope.scene, scope.effortId));
       if (!wantBlocking) notes.push("The reverse blocking edges were not fetched this time (blocking=false, one reverse-edge query skipped): the empty blocks entry above does not mean 0, so call again with blocking=true if you need them.");
       if (dep && dep.ok !== true) notes.push("The blocking edges were not read this time (" + (depTimeout ? "the blocking-edge query timed out: " + depTimeout.slice(0, 200) : "the backend said: " + String(dep.error && dep.error.message || "").slice(0, 200)) + "): only the ones the ticket carries itself are listed above.");
@@ -305,7 +310,7 @@ function createDeckIssueGet(deps) {
       if (first === 0) notes.push("Comments default to 0 (there are " + commentTotal + " in total): to read the comment text, call again with comments=N (up to 200); the total is already given here.");
       const stateText = String(issue.state || "unknown state");
       const closedText = issue.closedAt ? " (closed on " + String(issue.closedAt).slice(0, 10) + ")" : "";
-      const blockingText = wantBlocking ? "blocks " + rel.blocking.length + (dependencies && dependencies.blockingComplete === false ? " (possibly incomplete, see the notes)." : ".") : "blocks not fetched (blocking=false).";
+      const blockingText = account ? "blocks not fetched (account-qualified read)." : wantBlocking ? "blocks " + rel.blocking.length + (dependencies && dependencies.blockingComplete === false ? " (possibly incomplete, see the notes)." : ".") : "blocks not fetched (blocking=false).";
       const brief = issueBrief(issue);
       const sectionMode = bodyMode === "excerpt" && sectionFound;
       const bodyPayload = bodyMode === "full" ? { mode: "full", length: bodyText.length, digest, chunks: chunkBody(bodyText) } : sectionMode ? { mode: "section", length: bodyText.length, digest } : { mode: "excerpt", length: bodyText.length, digest, text: excerpt };
@@ -320,6 +325,7 @@ function createDeckIssueGet(deps) {
             commentCount: commentTotal,
             section: sectionPayload,
             relations: rel,
+            ...account ? { relationsComplete: false, commentsComplete: false, qualifiedKey: requestedKey } : {},
             landings: {
               // 读路径只知道「契约的字段里有这条关系」，分不出原生层级与平级链接，如实降一档（判据见 shell.js）。
               parent: rel.parentKey ? EDGE_LANDING.CONTRACT_PARENT_FIELD : EDGE_LANDING.UNKNOWN,

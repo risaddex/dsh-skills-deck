@@ -106,8 +106,14 @@ const OPERATION_ENCYCLOPEDIA = {
   // 读预算：读插件自己的账本，不走任何远端渠道；它本来就不花额度，永远放行。
   readBudget: { kind: "read", channels: "local", result: "budget", fieldGroups: ["counts"], spend: ["local"] }
 };
+const LOCATOR_SPEND_PLANS = {
+  getRepoKey: ["local", "graphql"],
+  describe: ["local"],
+  issueAddress: ["local"]
+};
 export {
   FIELD_GROUPS,
+  LOCATOR_SPEND_PLANS,
   OPERATION_ENCYCLOPEDIA,
   READ_CHANNELS,
   READ_RESULT_KINDS,

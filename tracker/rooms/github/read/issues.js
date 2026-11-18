@@ -30,7 +30,7 @@ import {
 import { debugOn, guardEmit } from "../../../kernel/log-emit.js";
 import { PAGINATION } from "../../../contract/pagination.js";
 import { GITHUB_REST_READ_TIMEOUT_MS } from "../../../../shared/time-config/values.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoId, repoIdentityText } from "../model/issue-key.js";
 function caughtMessage(e, len) {
   const eb = e;
   return String(eb && eb.message || e).slice(0, len);
@@ -63,7 +63,7 @@ async function listIssues(repo, filter, ctx) {
     const parsed = parseRepo(repo);
     if (!parsed) {
       emitReadDegraded(ctx, "list", "list:repo-ref", Date.now() - tList);
-      return fail(ERROR_KIND.NOTFOUND, `list: repo.refId missing or malformed: ${repoId(repo)}`, repo);
+      return fail(ERROR_KIND.NOTFOUND, `list: repo.refId missing or malformed: ${repoIdentityText(repo)}`, repo);
     }
     const c = ghClient(ctx);
     const t0 = Date.now();
@@ -294,7 +294,7 @@ async function getIssue(repo, key, opts, ctx) {
     const parsed = parseRepo(repo);
     if (!parsed) {
       emitReadDegraded(ctx, "get", "get:repo-ref", Date.now() - tGet);
-      return fail(ERROR_KIND.NOTFOUND, `get: repo.refId missing: ${repoId(repo)}`, repo);
+      return fail(ERROR_KIND.NOTFOUND, `get: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     }
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "get: key required (string)", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
@@ -447,5 +447,6 @@ export {
   getIssue,
   listIssues,
   parseRepo,
-  repoId
+  repoId,
+  repoIdentityText
 };

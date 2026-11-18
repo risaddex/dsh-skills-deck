@@ -2,7 +2,7 @@
 import { ERROR_KIND } from "../../../contract/vocabulary.js";
 import { fail } from "../../../kernel/preflight.js";
 import { PAGINATION } from "../../../contract/pagination.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 import { listIssuesPage } from "./page.js";
 import { beginRead } from "../routing/read-result.js";
 import { mapsProvenanceFromGraphql } from "../routing/read-assembly.js";
@@ -20,7 +20,7 @@ function hasMapLabel(labels) {
 async function listMaps(repo, ctx) {
   const clock = beginRead();
   if (!parseRepo(repo)) {
-    return fail(ERROR_KIND.NOTFOUND, "listMaps: repo.refId missing or malformed: " + repoId(repo), repo);
+    return fail(ERROR_KIND.NOTFOUND, "listMaps: repo.refId missing or malformed: " + repoIdentityText(repo), repo);
   }
   const collected = [];
   const labelsPerRow = [];

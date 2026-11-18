@@ -7,7 +7,7 @@ import { estimateToolCost, toolCostInputFrom } from "../../refresh/kernel/tool-c
 import { readCallTimeoutOf, withCallScope } from "../../refresh/rooms/host/tool-call-budget-enforcement.js";
 import { DECK_SANDBOX_TIMEOUT_MS } from "../../shared/time-config/values.js";
 import { withCap } from "../shell/capped-wait.js";
-import { evidenceFields, failureOf } from "../shell/receipt-reason.js";
+import { evidenceFields, failureOf, reasonForResult } from "../shell/receipt-reason.js";
 import { filterRows } from "./issue-list-filter.js";
 const BACKEND_INCOMPLETE = "The backend stopped at its own fetch limit, so this list may be incomplete.";
 function nextStepText(reason) {
@@ -54,6 +54,8 @@ const definition = {
   parameters: {
     type: "object",
     properties: {
+      account: { type: "string", description: "Linear account alias, or * for all accounts reachable from this project; omitted keeps the bound backend" },
+      scope: { type: "string", enum: ["assigned", "review"], description: "Narrow Linear tickets to those assigned to me or awaiting review; without account, uses the bound account" },
       state: { type: "string", enum: ["open", "closed", "all"], description: "Which state to list; the default is open" },
       type: { type: "string", enum: ["issue", "map", "spec", "all"], description: "Which type to list; the default is all" },
       labels: { type: "array", items: { type: "string" }, description: "A row must carry all of these labels (AND); no filter by default" },
@@ -152,10 +154,12 @@ function createDeckIssueList(deps) {
       const t = sc.tracker;
       const opCtx = sc.opCtx;
       const filter = {};
+      if (a.account !== void 0) filter.account = String(a.account).trim();
+      if (a.scope !== void 0) filter.scope = String(a.scope).trim();
       if (state !== "all") filter.state = state;
       if (type !== "all") filter.type = type;
       if (wantLabels.length) filter.labels = wantLabels.slice();
-      if (shouldUseThinMapList({ type, labels: wantLabels, assignee: wantAssignee, query: wantQuery, effortId: scope && scope.effortId || "" }) && typeof t.listMaps === "function") {
+      if (a.account === void 0 && a.scope === void 0 && shouldUseThinMapList({ type, labels: wantLabels, assignee: wantAssignee, query: wantQuery, effortId: scope && scope.effortId || "" }) && typeof t.listMaps === "function") {
         const thin = await t.listMaps(repo, opCtx);
         const thinBody = thin || {};
         const thinUnsupported = thinBody.ok === false && thinBody.error && String(thinBody.error.kind) === "unsupported";
@@ -225,11 +229,12 @@ function createDeckIssueList(deps) {
             status: DECK_STATUS.UNSUPPORTED,
             reason: ev.code,
             text: "The ISSUE list did not come back (the backend said: " + msg + "). " + nextStepText(ev.code),
-            data: { error: Object.assign({ message: msg }, evidenceFields(ev)) }
+            data: { error: Object.assign({ message: msg }, evidenceFields(ev)), ...Array.isArray(listed?.errors) ? { errors: listed.errors } : {} }
           },
           claimed: { requests: 1, points: 3 }
         };
       }
+      const accountErrors = Array.isArray(listed.errors) ? listed.errors : [];
       const rows = Array.isArray(listed.data) ? listed.data : [];
       const backendTruncated = listed.truncated === true;
       const backendFallback = listed.fallback === "rest";
@@ -253,7 +258,7 @@ function createDeckIssueList(deps) {
       if (backendFallback) {
         if (fallbackReason === "quota") notes.push("The main path of the backend hit its quota this time, so the REST fallback path was used (opId " + (opId || "unknown") + "): REST has its own page cap, so when the last page fails only what was already fetched comes back." + backendIncompleteNote);
         else notes.push("The main path of the backend was not available this time, so the REST fallback path was used (reason " + (fallbackReason || "other") + ", opId " + (opId || "unknown") + "; looking up read.degraded by that opId in the log finds the same run): REST has its own page cap, so when the last page fails only what was already fetched comes back." + backendIncompleteNote);
-      } else if (backendTruncated) notes.push("The backend stopped at its own limit this time (GitLab takes at most 100 per page and only the first page; GitHub caps issues at 500 and pull requests at 1000), so this list may be incomplete: narrow state or label and query again (those two are really pushed down to the backend; assignee and query are filtered in this layer only, so narrowing them does not make the backend fetch less).");
+      } else if (backendTruncated) notes.push(a.account !== void 0 || a.scope !== void 0 ? "The account read reached its page limit. This list may be incomplete; narrow the account or scope and query again. Raising the receipt limit does not fetch additional pages." : "The backend stopped at its own limit this time (GitLab takes at most 100 per page and only the first page; GitHub caps issues at 500 and pull requests at 1000), so this list may be incomplete: narrow state or label and query again (those two are really pushed down to the backend; assignee and query are filtered in this layer only, so narrowing them does not make the backend fetch less).");
       if (truncated) notes.push("Only the first " + sliced.length + " rows came back (out of " + total + " that match): narrow the filters or raise limit and fetch again.");
       const backendIncompleteText = backendTruncated ? backendFallback ? "This list may be incomplete." : BACKEND_INCOMPLETE : "";
       const data = {
@@ -264,14 +269,22 @@ function createDeckIssueList(deps) {
         issues: sliced,
         opId
       };
+      if (accountErrors?.length) {
+        data.errors = listed.errors;
+        data.partial = true;
+        notes.push("Some accounts could not be read; errors lists each failed account. Rows from the other accounts are preserved.");
+      }
+      if (a.account !== void 0) data.account = String(a.account).trim();
+      if (a.scope !== void 0) data.scope = String(a.scope).trim();
       if (backendFallback) {
         data.fallback = "rest";
         data.fallbackReason = fallbackReason || "other";
       }
       return {
         value: {
-          status: DECK_STATUS.OK,
-          text: "ISSUE list: " + total + " rows match (" + cond.join(", ") + "), returning " + sliced.length + ", of which " + statusConflictCount + " have a status conflict." + backendIncompleteText,
+          status: listed.partial === true ? DECK_STATUS.PARTIAL : DECK_STATUS.OK,
+          ...listed.partial === true ? { reason: reasonForResult({ ok: false, error: accountErrors?.[0]?.error }, "read") } : {},
+          text: (listed.partial === true ? "Partial account read. " : "") + "ISSUE list: " + total + " rows match (" + cond.join(", ") + "), returning " + sliced.length + ", of which " + statusConflictCount + " have a status conflict." + backendIncompleteText,
           data,
           notes,
           touched: []

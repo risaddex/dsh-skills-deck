@@ -117,7 +117,21 @@ function createProbeHandler(deps) {
           const opCtx = { cwd, platform: await getPlatform(), fs: ctx.get("fs"), exec: function(c, ar, o) {
             return detectionExec(c, ar, o, "probe");
           }, logEvent: logTruncation };
-          const r = await tracker.list(repoRef, {}, opCtx);
+          let r;
+          if (String(_selProbe.backendId) === "linear" && typeof openSession === "function") {
+            const opened = await openSession(cwd);
+            if (!opened || opened.ok !== true || typeof opened.call !== "function") return { ok: false, error: "The read session for the probe could not be opened: " + errText(opened && (opened.detail || opened.reason) || "open-failed"), errorKind: "env" };
+            r = await opened.call(function(session, c) {
+              const sessionLog = c && c.logEvent;
+              const bridged = function(level, event, fields) {
+                logTruncation(level, event, fields);
+                if (typeof sessionLog === "function") sessionLog(level, event, fields);
+              };
+              return session.list(repoRef, {}, Object.assign({}, c, { logEvent: bridged }));
+            });
+          } else {
+            r = await tracker.list(repoRef, {}, opCtx);
+          }
           if (!r || !r.ok) return { ok: false, error: errText(r && r.error || "probe list failed"), errorKind: kindOf(r && r.error) };
           if (r.truncated !== true) delete truncationLoggedByRepo[rk1];
           const all = Array.isArray(r.data) ? r.data : [];

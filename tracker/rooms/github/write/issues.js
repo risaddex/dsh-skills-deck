@@ -8,7 +8,7 @@ import { ghFailureMessage, ghVerdictOf } from "../support/errors.js";
 import { planCloseReason } from "./close-reason.js";
 import { rosterUpsert } from "../model/roster.js";
 import { getIssue } from "../read/issues.js";
-import { parseRepo, repoId } from "../model/issue-key.js";
+import { parseRepo, repoIdentityText } from "../model/issue-key.js";
 import { checkIdempotencyKey } from "../../../../refresh/contract/idempotency-keys.js";
 import { withAnchor, lookupByAnchor } from "../routing/idempotency.js";
 import { beginWriteTrail, emitIssueWrite } from "../support/write-log.js";
@@ -26,7 +26,7 @@ async function createIssue(repo, input, ctx) {
 async function createIssueInner(repo, input, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `create: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `create: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     if (!input || typeof input.title !== "string" || !input.title.trim()) return fail(ERROR_KIND.PARSE, "create: title required", input, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     const wantKey = input.idempotencyKey === void 0 || input.idempotencyKey === null ? null : checkIdempotencyKey(input.idempotencyKey);
     if (wantKey && !wantKey.ok) return fail(ERROR_KIND.PARSE, `create: idempotencyKey cannot be used: ${wantKey.reason}`, input.idempotencyKey, TRACKER_ERROR_STAGE.INPUT_REFUSED);
@@ -146,7 +146,7 @@ async function closeIssue(repo, key, opts, ctx) {
 async function closeIssueInner(repo, key, opts, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `close: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `close: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "close: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     const c = ghClient(ctx);
@@ -195,7 +195,7 @@ async function reopenIssue(repo, key, ctx) {
 async function reopenIssueInner(repo, key, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `reopen: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `reopen: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "reopen: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     const c = ghClient(ctx);
@@ -240,7 +240,7 @@ async function updateIssue(repo, key, patch, ctx) {
 async function updateIssueInner(repo, key, patch, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `update: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `update: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "update: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     if (!patch || typeof patch !== "object") return fail(ERROR_KIND.PARSE, "update: patch required", patch, TRACKER_ERROR_STAGE.INPUT_REFUSED);
@@ -309,7 +309,7 @@ async function setAssignees(repo, key, assignees, opts, ctx) {
 async function setAssigneesInner(repo, key, assignees, opts, ctx, trail) {
   try {
     const parsed = parseRepo(repo);
-    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setAssignees: repo.refId missing: ${repoId(repo)}`, repo);
+    if (!parsed) return fail(ERROR_KIND.NOTFOUND, `setAssignees: repo.refId missing: ${repoIdentityText(repo)}`, repo);
     const k = String(key || "").trim();
     if (!k) return fail(ERROR_KIND.PARSE, "setAssignees: key required", key, TRACKER_ERROR_STAGE.INPUT_REFUSED);
     const wanted = [];
