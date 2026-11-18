@@ -140,6 +140,12 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
       //   背景：#1511 起编号已经写成「#目录/01」，这枚徽标里写的目录名与同一行编号里的目录名重复，
       //   一行里同一段文字出现两次。改回 true 即恢复显示（三处同名开关：ListTabRow、IssueDetail、MapDetailHead）。
       const SHOW_EFFORT_BADGE = false
+      // #45：这一行交给「进详情、复制链接、打开链接」的编号。key 是纯数字的行（GitHub、GitLab、本地 Markdown）照旧交 number，
+      //   所以它们的行为一个字不变；key 不是纯数字的行（Linear 的 OMB-903）交文本 key。
+      //   不能直接交 x.number：宿主只在 key 解析得出数字时才写 number，Linear 行里它是空，导航栈拒收空值，点整行就没有任何反应；
+      //   瘦身行还可能带一个凑出来的 0（snapshotAssemble 的 parseInt(key) || 0），所以对文本 key 不能先看 number。
+      //   本函数只住在这一个闭包里，不新增全局名字（构建把视图拼进同一个闭包，同名会静默覆盖）。
+      const navKey = function (r: any) { const k = r.key != null ? String(r.key).trim() : ''; if (k !== '' && !/^\d+$/.test(k)) return r.key; return r.number != null ? r.number : r.key }
       const has = function (x: any, nm: any) { return (x.labels || []).some(function (l: any) { return l.name === nm }) }
       // #949 瞬间底座：行内可点小药丸（+N 更多、被阻塞跳转）也要能被键盘走到。
       //   #956 评审修正：本地那份键盘处理退役，改调共享层的 chipKeyDown（同图收敛只留一处）；
@@ -159,7 +165,7 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
           if (ok === true) { try { setTimeout(function () { if (st.copyFlash && st.copyFlash.key === key && st.copyFlash.kind === 'ok') { st.copyFlash = null; try { emit(st) } catch (eR) {} } }, COPY_FLASH_MS) } catch (eT) {} }
         }
         try {
-          const r = copyText(st, issueUrlFor(st, x.number, effortOf(x)), tr('toast.copiedLink', { n: x.number }))
+          const r = copyText(st, issueUrlFor(st, navKey(x), effortOf(x)), tr('toast.copiedLink', { n: navKey(x) }))
           if (r && typeof r.then === 'function') r.then(done, function () { done(false) })
           else done(!!r)
         } catch (eC) { done(false) }
@@ -200,7 +206,7 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
       const isMap = kind === 'map'
       const isSpec = kind === 'spec'
       // 容器对象：探索地图与规格都从同一份快照容器表里按身份找（规格也在里面，不是另一张表）
-      const containerObj = isContainer ? findMapByIdentity(st.snapshot && st.snapshot.maps, x.number, effortOf(x)) : null
+      const containerObj = isContainer ? findMapByIdentity(st.snapshot && st.snapshot.maps, navKey(x), effortOf(x)) : null
       // v15-26：被阻塞判定（open 阻塞者）→ 隐藏动作按钮 + 红色「被阻塞」标签（地图子票点击跳所属 map 详情；#544 独立票无所属地图，只展示不跳转）
       const blk = blockOf[idOf(x)]
       const blocked = !!(blk && blk.by && blk.by.length)
@@ -260,13 +266,13 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
       //   执行态为什么不用通用「执行这张票」模板：那个模板正文首行是 /wayfinder，用在规格上不对（§3.4）。
       //   真源是 container-view.ts 的 containerPromptText；门禁单独求值本文件时那份函数不在，按同口径退化。
       const specPromptText = function () {
-        const url = (typeof issueUrlFor === 'function') ? (issueUrlFor(st, x.number, effortOf(x)) || '') : ''
+        const url = (typeof issueUrlFor === 'function') ? (issueUrlFor(st, navKey(x), effortOf(x)) || '') : ''
         if (typeof containerPromptText === 'function') {
           try { return containerPromptText(st, containerObj, kind, cState, url) } catch (e) { /* 落回下面那份同口径文本 */ }
         }
         if (cState === 'done') {
           const s = (containerObj && containerObj.stats) ? containerObj.stats : { total: 0, closed: 0 }
-          return (typeof completePrompt === 'function') ? completePrompt(st, x.number, x.title, s.total, s.closed, effortOf(x)) : ''
+          return (typeof completePrompt === 'function') ? completePrompt(st, navKey(x), x.title, s.total, s.closed, effortOf(x)) : ''
         }
         if (cState === 'empty') return '/to-tickets ' + url
         return '/implement-spec ' + url
@@ -288,12 +294,12 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
         if (mapEmpty) {
           // 探索地图：没有子票 → 检查（这段逻辑照旧，行为不变）
           // 本次界面反馈需求：这颗按钮自己带按压态与点击日志，否则点它记的是整行那条。
-          return h(Tip, { content: tr('map.inspectTitle') }, h('button', { className: 'dsws-btn primary' + (narrow ? ' narrow-icon' : '') + ' dsws-hov', 'data-press': 'button', 'data-log': 'list.row.inspect.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); let t = ''; try { t = inspectPrompt(st, x.number, x.title, effortOf(x)) } catch { const u = typeof issueUrlFor === 'function' ? (function () { try { return issueUrlFor(st, x.number, effortOf(x)) } catch (_) { return '' } })() : '', uu = u || (x.number != null ? '#' + String(x.number) : ''); t = uu ? '/wayfinder ' + uu : '/wayfinder'; try { t = promptTextFor(st, 'mapInspect', { n: (x.number === undefined || x.number === null ? '' : String(x.number)), ['title']: String(x.title || ''), url: u }); if (u) t = '/wayfinder ' + u + '\n\n' + t } catch (_) {} } inject(st, t) }, style: { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', background: emptyColor(), borderColor: 'transparent', color: '#140a1e', fontWeight: 600 } }, [Ic({ n: 'search', size: 10 }), narrow ? null : h('span', null, tr('act.inspect'))]))
+          return h(Tip, { content: tr('map.inspectTitle') }, h('button', { className: 'dsws-btn primary' + (narrow ? ' narrow-icon' : '') + ' dsws-hov', 'data-press': 'button', 'data-log': 'list.row.inspect.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); let t = ''; try { t = inspectPrompt(st, navKey(x), x.title, effortOf(x)) } catch { const u = typeof issueUrlFor === 'function' ? (function () { try { return issueUrlFor(st, navKey(x), effortOf(x)) } catch (_) { return '' } })() : '', uu = u || (navKey(x) != null ? '#' + String(navKey(x)) : ''); t = uu ? '/wayfinder ' + uu : '/wayfinder'; try { t = promptTextFor(st, 'mapInspect', { n: (navKey(x) === undefined || navKey(x) === null ? '' : String(navKey(x))), ['title']: String(x.title || ''), url: u }); if (u) t = '/wayfinder ' + u + '\n\n' + t } catch (_) {} } inject(st, t) }, style: { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', background: emptyColor(), borderColor: 'transparent', color: '#140a1e', fontWeight: 600 } }, [Ic({ n: 'search', size: 10 }), narrow ? null : h('span', null, tr('act.inspect'))]))
         }
         if (mapDone) {
           // 探索地图：子票全关 → 完成（这段逻辑照旧，行为不变）
           // 本次界面反馈需求：这颗按钮自己带按压态与点击日志，否则点它记的是整行那条。
-          return h(Tip, { content: tr('map.doneTitle') }, h('button', { className: 'dsws-btn primary' + (narrow ? ' narrow-icon' : '') + ' dsws-hov', 'data-press': 'button', 'data-log': 'list.row.done.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); const t = completePrompt(st, x.number, x.title, containerObj.stats.total, containerObj.stats.closed, effortOf(x)); inject(st, t) }, style: { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', background: doneColor(), borderColor: 'transparent', color: '#0c1a10', fontWeight: 600 } }, [Ic({ n: 'check', size: 10 }), narrow ? null: h('span', null, tr('act.done'))]))
+          return h(Tip, { content: tr('map.doneTitle') }, h('button', { className: 'dsws-btn primary' + (narrow ? ' narrow-icon' : '') + ' dsws-hov', 'data-press': 'button', 'data-log': 'list.row.done.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); const t = completePrompt(st, navKey(x), x.title, containerObj.stats.total, containerObj.stats.closed, effortOf(x)); inject(st, t) }, style: { display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', background: doneColor(), borderColor: 'transparent', color: '#0c1a10', fontWeight: 600 } }, [Ic({ n: 'check', size: 10 }), narrow ? null: h('span', null, tr('act.done'))]))
         }
         return mkRowAction(st, x, narrow, colorOf)
       })()
@@ -328,8 +334,8 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
         'data-log': 'list.row.' + (x.key != null ? x.key : x.number),
         onClick: function () {
           // #1286：容器行（探索地图与规格）点开都进容器详情，走地图那条路；普通票进票详情。
-          if (isContainer && containerObj) { setActiveMap(st, x.number, effortOf(x)) }
-          else { setActiveIssue(st, x.number, effortOf(x)) }
+          if (isContainer && containerObj) { setActiveMap(st, navKey(x), effortOf(x)) }
+          else { setActiveIssue(st, navKey(x), effortOf(x)) }
         },
         onKeyDown: function (e: any) {
           // #956 评审修正：事件从子孙冒上来时不重复触发 —— 行内还有小药丸与复制、外链、新会话等真按钮，
@@ -353,7 +359,7 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
             // #715：写入窗口期给这一行加一枚极轻的「更新中」标记 —— 不改状态、不改布局：
             //   只是编号下面多一小片虚边框的字，窗口一过（host-budget.ts 的 PATCH_MERGE_WINDOW_MS）自己就不画了。
             //   事实来源：写入成功那一处记下的时刻（kernel/api-io.js 的 markRowWrite → st.writeAt）。
-            truthWriteWindowOpen(st.writeAt && (st.writeAt[String(x.number)] || st.writeAt[idOf(x)]), Date.now()) ? h('span', { className: 'dsws-chip dsws-writing', style: { fontSize: 9, lineHeight: 1.5, padding: '0 4px', flex: 'none', opacity: 0.75, background: 'rgba(88,166,255,.10)', color: '#58a6ff', border: '1px dashed rgba(88,166,255,.45)' } }, tr('truth.writing')) : null,
+            truthWriteWindowOpen(st.writeAt && (st.writeAt[String(navKey(x))] || st.writeAt[idOf(x)]), Date.now()) ? h('span', { className: 'dsws-chip dsws-writing', style: { fontSize: 9, lineHeight: 1.5, padding: '0 4px', flex: 'none', opacity: 0.75, background: 'rgba(88,166,255,.10)', color: '#58a6ff', border: '1px dashed rgba(88,166,255,.45)' } }, tr('truth.writing')) : null,
           ]),
           h('span', { style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 } }, [h(Tip, { content: h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } }, [h('div', { style: { fontSize: 10, color: '#8b8b95', lineHeight: '14px' } }, tr('tip.header.fullTitle')), h('div', { style: { fontSize: 11, color: '#e6edf3', lineHeight: '16px', wordBreak: 'break-word', whiteSpace: 'normal' } }, x.title)]) }, h('span', { className: 'dsws-tt-wrap', 'data-dsws-row-part': 'title', style: { flex: 1, minWidth: 0, fontWeight: isContainer ? 600 : undefined, color: isOpen ? undefined : 'var(--dsw-alias-label-secondary,#a1a1aa)' } }, x.title)), (x.author && x.author.login && x.author.login !== ((st.snapshot && (st.snapshot.viewer && st.snapshot.viewer.login || st.snapshot.viewerLogin)) || '')) ? (x.author.avatarUrl ? h(Tip, { content: (x.author.name ? x.author.name + ' (@' + x.author.login + ')' : '@' + x.author.login) }, h('img', { src: x.author.avatarUrl, style: { width: 16, height: 16, borderRadius: '50%', border: '2px solid ' + authorColor(x.author.login), flex: 'none' }, alt: x.author.login })) : h(Tip, { content: (x.author.name ? x.author.name + ' (@' + x.author.login + ')' : '@' + x.author.login) }, h('span', { style: { width: 16, height: 16, borderRadius: '50%', background: hexA(authorColor(x.author.login), 0.18), border: '2px solid ' + authorColor(x.author.login), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' } }, [Ic({ n: 'person', size: 10 })]))) : null]),
           (isContainer && containerObj && containerObj.stats && !mapClosed) ? ringOf(containerObj.stats, kind) : null,
@@ -376,23 +382,23 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
             isOpen && !blocked ? h('div', { style: { display: 'flex', gap: 3, alignItems: 'center', flex: 'none' } }, [
               // #1286：主按钮按容器三态取（上面算好的 primaryBtn）；新会话按钮与它永远同色实心。
               primaryBtn,
-              h(Tip, { content: tr('tip.newSession', { n: x.number }) }, h('button', { className: 'dsws-btn primary' + (narrow ? ' narrow-icon' : ''), 'data-press': 'button', 'data-log': 'list.row.newsession.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); openInNewSession(st, x) }, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', marginLeft: 4, background: primaryColor, borderColor: 'transparent', color: primaryText } }, [Ic({ n: 'external-link', size: 10 }), narrow ? null : h('span', null, tr('list.newSessionLabel'))])),
+              h(Tip, { content: tr('tip.newSession', { n: navKey(x) }) }, h('button', { className: 'dsws-btn primary' + (narrow ? ' narrow-icon' : ''), 'data-press': 'button', 'data-log': 'list.row.newsession.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); openInNewSession(st, x) }, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', fontSize: 11, flex: 'none', marginLeft: 4, background: primaryColor, borderColor: 'transparent', color: primaryText } }, [Ic({ n: 'external-link', size: 10 }), narrow ? null : h('span', null, tr('list.newSessionLabel'))])),
             ]) : null,
             isOpen ? h('div', { className: 'dsws-aux', style: { display: 'flex', gap: 2, alignItems: 'center', flex: 'none' } }, [
               // v1.3.3：复制/外链图标增大 11 → 13；Q6 解耦：复制=绝对路径/链接，跳转按后端声明的打开方式分派
               //   （远程后端开网页，本地 Markdown 的票开文件、地图/规格容器开所在目录；#1557）
               h(Tip, { content: tr('tip.copyLink') }, h('button', { className: 'dsws-btn ghost' + (copyRes === 'ok' ? ' dsws-fb-okflash dsws-fb-success-ring dsws-fb-pop' : '') + (copyRes === 'fail' ? ' dsws-fb-errflash dsws-fb-shake' : ''), 'data-press': 'icon', 'data-log': 'list.row.copy.' + (x.key != null ? x.key : x.number), onClick: function (e: any) { e.stopPropagation(); copyUrl(x) }, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, copyRes === 'ok' ? Ic({ n: 'check', size: 13 }) : (copyRes === 'fail' ? Ic({ n: 'x', size: 13 }) : Ic({ n: 'clipboard', size: 13 })))),
               (function(){
-                const _u = issueUrlFor(st, x.number, effortOf(x));
+                const _u = issueUrlFor(st, navKey(x), effortOf(x));
                 // #1557：打开方式由后端声明（openIssue / openContainer）——列表里的容器行跟地图走（开文件夹），
                 //   普通票开文件；视图不再自己按地址前缀分流。
                 const _kind = (typeof containerKindOf === 'function' && containerKindOf(x)) ? 'container' : 'issue';
                 const _isUrl = openModeFor(st, _kind, _u) === 'url';
-                const _open = function(e: any){ e.stopPropagation(); openTrackerTarget(st, x.number, (typeof host !== 'undefined' ? host : null), effortOf(x), _kind) };
-                const _tip = tr('tip.openInTracker', { n: x.number });
+                const _open = function(e: any){ e.stopPropagation(); openTrackerTarget(st, navKey(x), (typeof host !== 'undefined' ? host : null), effortOf(x), _kind) };
+                const _tip = tr('tip.openInTracker', { n: navKey(x) });
                 return _isUrl
-                  ? h(Tip, { content: _tip }, h('a', { className: 'dsws-btn ghost', href: _u, target: '_blank', rel: 'noreferrer', 'data-press': 'icon', 'data-log': 'list.row.link.' + x.number, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, Ic({ n: 'link', size: 13 })))
-                  : h(Tip, { content: _tip }, h('button', { className: 'dsws-btn ghost', onClick: _open, 'data-press': 'icon', 'data-log': 'list.row.link.' + x.number, style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, Ic({ n: 'link', size: 13 })));
+                  ? h(Tip, { content: _tip }, h('a', { className: 'dsws-btn ghost', href: _u, target: '_blank', rel: 'noreferrer', 'data-press': 'icon', 'data-log': 'list.row.link.' + navKey(x), style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, Ic({ n: 'link', size: 13 })))
+                  : h(Tip, { content: _tip }, h('button', { className: 'dsws-btn ghost', onClick: _open, 'data-press': 'icon', 'data-log': 'list.row.link.' + navKey(x), style: { textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 4px', flex: 'none' } }, Ic({ n: 'link', size: 13 })));
               })(),
             ]) : null,
           ]),

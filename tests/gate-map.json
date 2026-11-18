@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T01:57:57.944Z",
+  "generatedAt": "2026-11-18T02:30:30.003Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 625,
-  "gateCount": 625,
-  "attributedGates": 566,
+  "chainLength": 626,
+  "gateCount": 626,
+  "attributedGates": 567,
   "unattributedGates": 59,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 147,
+  "completionRecordedGates": 148,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 992,
@@ -7939,6 +7939,21 @@
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
     },
     {
+      "step": "node tests/verify-45-list-row-opens-by-key.ts",
+      "file": "tests/verify-45-list-row-opens-by-key.ts",
+      "guards": [
+        "src/client/views/ListTabRow.ts"
+      ],
+      "dirs": [
+        "src/client/views"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 25,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
+    },
+    {
       "step": "node tests/verify-45-text-key-rule.ts",
       "file": "tests/verify-45-text-key-rule.ts",
       "guards": [
@@ -15288,6 +15303,7 @@
       "node tests/verify-1922-retire-eviction.ts",
       "node tests/verify-1933-network-fallback.ts",
       "node tests/verify-45-detail-page-by-key.ts",
+      "node tests/verify-45-list-row-opens-by-key.ts",
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-599-merged-pr.ts",
       "node tests/verify-626-type-chip.ts",
