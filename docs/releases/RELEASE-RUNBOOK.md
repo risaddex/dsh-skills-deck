@@ -115,7 +115,7 @@
 
 > **执行主体：AI** — 下述 6 步均由 AI 按序执行，人不敲命令；第 2 步的人机交接仅为浏览器扫码一次。
 
-> **发布前必须收口真机验证清单**：本版 `[真机验证] vX.Y.Z` 清单票必须恰好一张、已关闭，而且票面正文与评论记录内部一致（场景总览表的编号集合、每条场景的结论、正文与收口评论里的各处计数都对得上）；批次开始评论与每条场景结果评论都要带候选身份行，所有候选提交都要是发布提交的祖先（候选提交与发布提交不同时，票面要有「候选与发布差异审计」说明差异为什么可以接受），否则发布被阻断。两条发布路径都会自动跑这个检查（`scripts/publish-token.ps1` 在发布前；`scripts/wizard-release.sh` 在 Stage 3 第五步，也就是上面第 2 步之前），检查实现是 `node scripts/release-preflight.mts`；手工执行 `npm publish` 时请先自己跑一次，对不上的地方它会逐条列出并给出改法。发布成功后 `scripts/release-postflight.mts` 会给清单票补发布记录并建下一版占位票。规则见 [`docs/agents/real-machine-verification.md`](../agents/real-machine-verification.md)。
+> **发布前必须收口真机验证清单**：本版 `[真机验证] vX.Y.Z` 清单票必须恰好一张、已关闭，而且票面正文与评论记录内部一致（场景总览表的编号集合、每条场景的结论、正文与收口评论里的各处计数都对得上）；批次开始评论与每条场景结果评论都要带候选身份行，所有候选提交都要是发布提交的祖先（候选提交与发布提交不同时，票面要有「候选与发布差异审计」说明差异为什么可以接受），否则发布被阻断。三条发布路径都会自动跑这个检查（`scripts/publish-token.ps1` 在发布前；`scripts/wizard-release.sh` 在 Stage 3 第五步，也就是上面第 2 步之前；`scripts/release-dist.mts` 在 `--push` 建引用、打标签、发 dispatch 之前，检查的退出码不是 0 就停手，而 `--dry-run` 与另外两条的演练模式一样只提示不阻断），检查实现是 `node scripts/release-preflight.mts`；手工执行 `npm publish` 时请先自己跑一次，对不上的地方它会逐条列出并给出改法。发布成功后 `scripts/release-postflight.mts` 会给清单票补发布记录并建下一版占位票。规则见 [`docs/agents/real-machine-verification.md`](../agents/real-machine-verification.md)。
 
 > **发布脚本自己证明「发出去的字节 = 门禁验过的字节」（#1648）**：`scripts/release-integrity.mts` 把 npm 的 tarball 解包成「逐文件清单」——每个文件的路径、字节数、sha256，再加一个整份清单的指纹——三处各拍一次：门禁构建完之后拍一次（`GATE-SNAPSHOT`）；发布前在包目录里补跑该包的 `prepublishOnly`（发布时 npm 会跑它，可能重新生成文件）再拍一次，与门禁那份比对，不一致打 `PRE-PACK-DIFF` 并停在发布之前，一致打 `PRE-PACK-SAME`；发布完成后按 `包名@版本` 从 registry 拉回 tarball 再拍一次，与发布前那份比对，一致打 `BYTES-SAME`，不一致打 `BYTES-DIFF` 并以非零退出——此时已经发出去、npm 不支持撤回，脚本会把「必须人工核对」写进日志与退出码。比对按逐文件 sha256，不按整个 tarball 的哈希：打包元数据（时间戳、写入顺序）会让同一份内容两次打包的整体哈希不同，那个差异说明不了内容变了。
 
