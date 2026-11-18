@@ -945,6 +945,14 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // o controle sem sessão reproduz a mensagem do log (1) + sucesso pela sessão (5) + falhas com o tipo certo (3) + GitLab e Markdown intactos (2 × 2) = 14.
   // Contra o código anterior 9 das 14 falham. Medido em execução: 14 de 14 passam agora.
   'verify-45-linear-probe': 14,
+  // 2026-11-18 #45：com um workspace Linear a barra de status mostrava "Environment status unavailable — re-check" e ela nunca saía. A lista do guia de
+  // primeira execução (GUIDE_STEPS) só nomeia github, markdown e gitlab; para linear a lista é vazia e o código caía no fallback "ainda não escolheu backend"
+  // usando a lista do GitHub, onde há um passo que bloqueia a inicialização (gh:remote), que o snapshot do Linear nunca contém. A leitura concluía que o snapshot
+  // estava incompleto e mostrava a barra neutra para sempre (log: reason missing-blocks-setup, decideStep gh:remote, backendId linear). O fallback agora vale só
+  // quando nenhum backend foi escolhido. O gate roda a decisão real: o defeito (3) + sem linhas ainda (1) + controles: sem backend e id vazio (2), GitHub que perde
+  // gh:remote continua com a barra neutra (1), GitLab e Markdown com a lista própria (2), backend desconhecido não empresta a do GitHub (1) = 11.
+  // Contra o código anterior 4 das 11 falham.
+  'verify-45-linear-banner': 11,
   // 2026-11-17 #45：Linear 票点开后详情报「cannot resolve the target repository (refId missing)」。房间从不读 repo 参数，
   // 但宿主的详情与评论入口在调房间之前先要非空 refId，而 Linear 模块没有 describe，注册表骨架只给本地 Markdown 填目录。
   // 本门禁钉住：模块 describe 的 5 种输入 = 5；注册表视图（Linear 有身份、没有 describe 的对照、GitHub 只有目录仍为空的对照）= 3；

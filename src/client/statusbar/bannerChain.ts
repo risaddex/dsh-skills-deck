@@ -69,10 +69,15 @@ const chainStepOf = function (st: any, id: any) {
 
 // 这个后端的那份清单。后端还没定下来时（全新工作区的第一步）拿 GitHub 那份兜底 ——
 //   清单第 1 步「已选择后端」三个后端都有，取它只为把蓝条那一档判出来。
+//   #45：这个兜底只给「还没选后端」。选定了、却没有自己那份清单的后端（Linear）不能借 GitHub 的：GitHub 清单里有挡着初始化的
+//   gh:remote，Linear 的链快照里永远没有它，显示层就把「快照不全」当成真的，状态栏常驻「环境状态没取到」那条中性黄条
+//   （日志里 reason=missing-blocks-setup、decideStep=gh:remote、backendId=linear）。没有清单就没有首开引导，不出横幅。
 const guideListOf = function (st: any) {
   if (typeof guideStepsFor !== 'function') return []
-  const mine = guideStepsFor(backendIdOf(st))
+  const bid = backendIdOf(st)
+  const mine = guideStepsFor(bid)
   if (mine && mine.length) return mine
+  if (bid) return []
   return guideStepsFor('github')
 }
 
