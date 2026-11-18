@@ -17,7 +17,8 @@
 // 门禁归属: scripts/release-dist.mts
 // 门禁归属: scripts/lib/release-dist-safety.mts
 import fs from 'node:fs'
-import { requireReleaseGate, ReleaseGateRefusedError } from '../scripts/lib/release-dist-safety.mts'
+import { requireReleaseGate, ReleaseGateRefusedError, requireCandidateBytes, ReleaseBytesRefusedError } from '../scripts/lib/release-dist-safety.mts'
+import { judgeReleaseBytes } from '../scripts/lib/release-candidate-audit.mts'
 import { runPreflightGate } from '../scripts/lib/release-preflight-gate.mts'
 import { printGateResult } from './lib/gate-result.ts'
 
@@ -198,6 +199,62 @@ async function main(): Promise<void> {
     check(
       !/release-checklist-unique|release-checklist-closed|release-checklist-consistency|release-batch-identity|release-ancestor-audit|release-candidate-valid/.test(script + safety),
       'G7 脚本与安全库都不复制门禁的六条规则（规则只在 runPreflightGate 里，改规则只改一处）',
+      '',
+    )
+  }
+
+  // ---- H. 字节对账：--candidate 给了就必须比「要发的字节」与候选包，差在没有审计时停手 ----
+  // 为什么这条不能只信门禁：门禁跑在构建之前，那时 tarball 还不存在，它只能校验候选清单本身与票面。
+  // 「这次要发出去的字节就是验过的那份」只有打包之后才比得了；review 在 PR #55 上正是抓的这一点。
+  {
+    const lines: Line[] = []
+    const emit = (line: Line): void => { lines.push(line) }
+    const texts = (): string => lines.map((line) => line.text).join(' | ')
+    const same = { verdict: 'same' as const, message: 'the bytes match the candidate' }
+    const audited = { verdict: 'diff-audited' as const, message: 'the bytes differ but the ticket has a diff audit' }
+    const diff = { verdict: 'diff' as const, message: 'the bytes differ from the candidate' }
+
+    check(requireCandidateBytes(null, { push: true, emit }) === 'skip' && /CANDIDATE-SKIP/.test(texts()), 'H1 没给候选清单时只打 CANDIDATE-SKIP，并按「没对账」继续（跳过不是通过）', texts())
+    check(requireCandidateBytes(same, { push: true, emit }) === 'pass' && /CANDIDATE-SAME/.test(texts()), 'H2 字节与候选一致时打 CANDIDATE-SAME 并继续', texts())
+    check(requireCandidateBytes(audited, { push: true, emit }) === 'pass' && /CANDIDATE-DIFF-AUDITED/.test(texts()), 'H3 不一致但清单票写了差异审计时打 CANDIDATE-DIFF-AUDITED 并继续', texts())
+    let refused: unknown = null
+    try { requireCandidateBytes(diff, { push: true, emit }) } catch (error) { refused = error }
+    check(
+      refused instanceof ReleaseBytesRefusedError && refused.exitCode === 1,
+      'H4 不一致且没有审计时抛出 ReleaseBytesRefusedError（退出码 1：要人动手改，不是环境缺失）',
+      String((refused as { message?: string })?.message ?? refused),
+    )
+    check(/CANDIDATE-DIFF/.test(texts()) && /no ref, tag, push or dispatch was created/i.test(String((refused as { message?: string })?.message ?? '')), 'H5 拒绝时打出 CANDIDATE-DIFF 行，并说清什么都没建出来', texts())
+    const softLines: Line[] = []
+    check(
+      requireCandidateBytes(diff, { push: false, emit: (line) => { softLines.push(line) } }) === 'warn' && softLines.some((line) => /CANDIDATE-DIFF-SOFT/.test(line.text)),
+      'H6 演练模式下字节不一致只警告不阻断（演练摆结论，不替人拍板）',
+      show(softLines.map((line) => line.text.slice(0, 40))),
+    )
+    // 真判据接进判定：用 lib 里那一个函数产出的结论，证明两边的形状接得上，而不是各写一份规则。
+    const realDiff = judgeReleaseBytes({ candidateFileDigest: 'a'.repeat(64), publishedFileDigest: 'b'.repeat(64), auditCovered: false })
+    const realAudited = judgeReleaseBytes({ candidateFileDigest: 'a'.repeat(64), publishedFileDigest: 'b'.repeat(64), auditCovered: true })
+    let realRefused: unknown = null
+    try { requireCandidateBytes({ verdict: realDiff.verdict, message: realDiff.message }, { push: true, emit: () => {} }) } catch (error) { realRefused = error }
+    check(realDiff.verdict === 'diff' && realRefused instanceof ReleaseBytesRefusedError, 'H7 lib 的 judgeReleaseBytes 判「不一致」时判定确实停手（两边的结论形状接得上）', realDiff.verdict)
+    check(realAudited.verdict === 'diff-audited' && requireCandidateBytes({ verdict: realAudited.verdict, message: realAudited.message }, { push: true, emit: () => {} }) === 'pass', 'H8 同一对指纹在有差异审计时放行（放行与否只看审计，不看谁写的）', realAudited.verdict)
+
+    const script = fs.readFileSync('scripts/release-dist.mts', 'utf8')
+    const compareAt = script.indexOf('judgeReleaseBytes(')
+    const seamAt = script.indexOf('requireCandidateBytes(candidateVerdict, { push })')
+    check(
+      compareAt >= 0 && seamAt >= 0 && compareAt < seamAt && script.includes("'PREFLIGHT-CANDIDATE-AUDIT'"),
+      'H9 脚本自己比字节（judgeReleaseBytes），并把差异审计取自门禁自己打的 PREFLIGHT-CANDIDATE-AUDIT 行',
+      show([compareAt, seamAt]),
+    )
+    check(
+      seamAt >= 0 && seamAt < script.indexOf("'update-ref'") && seamAt < script.indexOf('pushAndNotify(run, tag)'),
+      'H10 字节对账在建引用与推送之前（dist 标签单向，发出去撤不回来）',
+      show(seamAt),
+    )
+    check(
+      /digestOfFiles\(readTarballEntries\(tarball\)\)/.test(script) && !/createHash/.test(script),
+      'H11 指纹一律用 release-integrity 那一份算（脚本里不另写一套哈希）',
       '',
     )
   }

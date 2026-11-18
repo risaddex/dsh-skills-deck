@@ -572,7 +572,12 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // A gate prova a decisão (0 continua, 1 e 2 param, código desconhecido conta como ambiente, ensaio só avisa),
   // que nenhuma das seis regras foi copiada para o script, e que a chamada fica antes de build/update-ref/tag.
   // Contra o fonte anterior (script revertido, ajudante novo) 6 das 32 falham: as de fiação. Medido por execução.
-  'verify-release-dist-gate': 32,
+  // 2026-11-18, review no PR #55: com --candidate o portão só valida o manifesto (roda antes do build, quando o
+  // tarball ainda não existe), então nada comparava os bytes a publicar com o candidato. A comparação entrou no
+  // script pelo mesmo judgeReleaseBytes do publish-token, e a diferença só passa com o PREFLIGHT-CANDIDATE-AUDIT
+  // que o portão imprime. Bloco H soma 11 asserções (跳过/一致/差异审计/拒绝/演练/真判据/接线) → 32 → 43，
+  // medidas por execução; contra o script anterior as âncoras H9–H11 não existem (medido no texto de HEAD).
+  'verify-release-dist-gate': 43,
   // 2026-11-17 retro da sessão do #17: Markdown já versionado não pode perder seções '## ' sem declarar.
   // A contagem é de execução isolada; muda junto com as asserções de tests/verify-md-sections.ts.
   'verify-md-sections': 48,

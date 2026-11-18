@@ -133,3 +133,66 @@ export function requireReleaseGate(outcome: ReleaseGateOutcome, options: Release
       '. No ref, tag, push or dispatch was created; change what the findings above ask for and run --dry-run again.',
   )
 }
+
+/** 发布字节与候选清单对账的结论：规则在 lib/release-candidate-audit.mts 的 judgeReleaseBytes 里，这里只接结论。 */
+export interface CandidateBytesVerdict {
+  /** same＝字节就是候选那份；diff-audited＝不同但清单票写了差异审计；diff＝不同且没有审计。 */
+  readonly verdict: 'same' | 'diff-audited' | 'diff'
+  /** 给人看的一句话，由 judgeReleaseBytes 生成，这里不改写。 */
+  readonly message: string
+}
+
+/**
+ * 字节与候选对不上、清单票又没有差异审计时抛出的错误。
+ *
+ * 为什么不复用 ReleaseGateRefusedError：那一个说的是「门禁没放行（票面或环境）」，这一句说的是
+ * 「要发的字节不是验过的那份」，两者要改的东西不同（那里改票，这里重建候选或改审计）。退出码都按
+ * 发布脚本的约定回 1：这是要人动手改，不是环境缺失。
+ */
+export class ReleaseBytesRefusedError extends Error {
+  /** 固定 1：与 publish-token.ps1 的 CANDIDATE-DIFF 分支同一档。 */
+  readonly exitCode = 1
+
+  constructor(message: string) {
+    super(message)
+    this.name = 'ReleaseBytesRefusedError'
+  }
+}
+
+/**
+ * 按「发布字节 vs 候选包」的结论决定往下走还是停手。
+ *
+ * 三个状态各自落在哪里（与 publish-token.ps1 的 CANDIDATE-* 分支同口径）：
+ *   - 没给候选清单（verdict 为 null）：打 CANDIDATE-SKIP 继续。规则明说这是「跳过」不是「通过」，
+ *     log 里要留下这句话，否则事后没人分得清「对过账」和「没对」。
+ *   - same / diff-audited：打对应结论行继续；差异审计只在清单票正文里写了才走到 diff-audited。
+ *   - diff：推送中止。演练只提示——演练的用处是把结论摆出来，不是替人拍板。
+ *
+ * 为什么这条对账必须在建引用之前跑：dist 标签是单向的，一次推出去的字节没法撤回；对账放在
+ * update-ref 之后等于事后才发现发错了。
+ */
+export function requireCandidateBytes(
+  verdict: CandidateBytesVerdict | null,
+  options: ReleaseGateOptions,
+): 'skip' | 'pass' | 'warn' {
+  const emit = options.emit ?? ((line: ReleaseGateLine): void => {
+    if (line.stream === 'err') console.error(line.text)
+    else console.log(line.text)
+  })
+  if (verdict === null) {
+    emit({ stream: 'out', text: 'CANDIDATE-SKIP no candidate manifest was given, so the bytes to publish were not compared with a candidate package' })
+    return 'skip'
+  }
+  if (verdict.verdict === 'diff') {
+    if (!options.push) {
+      emit({ stream: 'err', text: 'CANDIDATE-DIFF-SOFT dry-run: ' + verdict.message + '. A --push would be refused here; this dry run only warns.' })
+      return 'warn'
+    }
+    emit({ stream: 'err', text: 'CANDIDATE-DIFF ' + verdict.message })
+    throw new ReleaseBytesRefusedError(
+      verdict.message + '. No ref, tag, push or dispatch was created; rebuild the candidate from this commit, or write the diff audit in the checklist ticket and run --dry-run again.',
+    )
+  }
+  emit({ stream: 'out', text: (verdict.verdict === 'same' ? 'CANDIDATE-SAME ' : 'CANDIDATE-DIFF-AUDITED ') + verdict.message })
+  return 'pass'
+}
