@@ -28,7 +28,9 @@ Reviewers check judgement rules in `CODING_STANDARDS.md`.
 
 ### Asking questions
 
-When a person has to make the call, write the question directly in the conversation body instead of using a popup-style question tool — a popup covers the explanation in the body, and the person cannot see the full background.
+When a person has to make the call, prefer the harness's native question tool (for example `ask_user_question`, which lets each question carry several options) over writing a manual `❓ Q1, Q2 …` list. The tool only holds option labels and a short custom text, so write the full background in the conversation body first and use the tool for the choice itself: one question per decision, each with a recommended answer. If the session has no such tool, ask directly in the conversation body instead.
+
+This reverses the earlier rule in this section, which said never to use a popup-style question tool. The reversal was decided in [#43](https://github.com/risaddex/dsh-skills-deck/issues/43); see `.out-of-scope/popup-question-tool.md` for the history.
 
 ### Human-first wording
 

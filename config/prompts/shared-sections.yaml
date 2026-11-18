@@ -16,11 +16,13 @@ sharedTools:
     ## 工具
     - [ ] issue 相关操作优先使用 deck_ 开头的工具处理，如果deck_工具异常，根据当前工作区选择合适方式处理。
     - [ ] 及时使用 deck_issue_report 工具上报处理过、处理中的 issue 编号。
+    - [ ] 需要用户拿主意时，优先使用 harness 自带的提问工具（如 `ask_user_question`，每个问题可给多个选项），不要只在回复里手写「❓ Q1、Q2……」：先在回复里把完整背景写清，工具只承载选择本身，每个决定一个问题并给出推荐答案；会话里没有这类工具时，才改用在回复里手写提问。
     - [ ] 每轮回复收尾时先判断一次：用户接下来几乎一定会做什么？想得到就调用 suggest_next_steps 给出 2~4 条最可能被他选中的做法；这一轮在等用户拍板时，其中一条把每题的推荐答案列好；想不到就不调用。
   en: |-
     ## Tools
     - [ ] Prefer the deck_ tools for issue operations; if the deck_ tools fail, choose a suitable approach for the current workspace.
     - [ ] Report processed and in-progress issue numbers with the deck_issue_report tool in a timely manner.
+    - [ ] When the user has to make a call, prefer the harness's native question tool (for example `ask_user_question`, which lets each question carry several options) over writing the manual `❓ Q1, Q2 …` format in the reply: put the full background in the reply first and use the tool only for the choice itself, one question per decision, each with a recommended answer; only when the session has no such tool, ask in the reply by hand.
     - [ ] As every reply ends, ask yourself once: what will the user almost certainly do next? If you can name it, call suggest_next_steps with 2–4 options the user is most likely to pick; when the turn is waiting for the user to decide, one of them lists your recommended answer to each question; if you cannot name it, do not call.
 
 # investigation：「## 调查（建议先查后问）」那四条 —— #1212 加进 10 个模板（七个动作模板 + 三个建票模板），
