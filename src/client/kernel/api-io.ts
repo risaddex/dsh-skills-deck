@@ -287,7 +287,7 @@
     }
     export const clearIssueDetailCache = function (st: any, n: any, effortId: any) {
       if (n != null) {
-        const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : String(n).trim(), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
+        const keyText = typeof n === 'number' ? (Number.isFinite(n) ? String(n) : '') : (typeof n === 'string' ? n.trim() : ''), num: any = /^\d+$/.test(keyText) ? Number(keyText) : keyText
         if (st.issueCache) {
           // 带 effort 就精确删；不带就把该编号在所有 effort 下的缓存都删（旧调用方零改动）
           if (effortId !== undefined && effortId !== null) delete st.issueCache[idOfParts(String(effortId), num)]
