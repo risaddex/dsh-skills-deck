@@ -329,7 +329,10 @@ async function main() {
       const mkPatch = () => patchMod.createDeckIssuePatch(baseDeps(g.gate, stubRegistry(bodyTracker), budget))
       const noDigest = await mkPatch().run(execFor(), { key: '7', body: bigBody + '改' })
       const noDigestText = JSON.stringify(noDigest)
-      check(noDigestText.indexOf('bodyDigest') >= 0 && noDigest.data && noDigest.data.ticket && noDigest.data.ticket.body === bigBody, '没带指纹写正文：一个字不动并告诉怎么取指纹')
+      // The receipt no longer echoes the ticket body, so "not a word changed" is shown by the text step failing
+      // (bodyTracker has no update method: any write attempt would have thrown instead of failing cleanly).
+      const noDigestTextStep = (noDigest.items || []).find((i) => i.step === 'text') || {}
+      check(noDigestText.indexOf('bodyDigest') >= 0 && noDigestTextStep.status === 'failed' && !(noDigest.data && noDigest.data.ticket && 'body' in noDigest.data.ticket), '没带指纹写正文：一个字不动并告诉怎么取指纹')
       const wrong = await mkPatch().run(execFor(), { key: '7', body: bigBody + '改', bodyDigest: '0'.repeat(64) })
       check(JSON.stringify(wrong).indexOf('The body digest does not match') >= 0, '指纹对不上：一个字不动并提示重读')
     }

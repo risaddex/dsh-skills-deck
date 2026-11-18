@@ -3,7 +3,8 @@
 // 一次调用改一张票：评论 / 标签流转 / 认领 / 关闭重开 / 标题正文 / 进度区 / 维护者原话区。
 // 只做调用方点名的那几件事，没点名的字段一个字都不碰（改票最怕「顺手改了别的东西」）。
 // 做完的每一步都单独记一条 item：哪一步成、哪一步没成、后端原话是什么。
-// 返回值就是写后的真状态（能读回就读回一次），AI 不必再读一次确认。
+// 写后能读回就读回一次：回执用 readBack（key / state / updatedAt）与 data.ticket 里被改字段的真值让 AI 不必再读一次确认；
+// 正文与评论不再随回执返回（回执体积，见 issue-patch-receipt.ts）。
 //
 // #1298 T7 的口径（规格容器的自动关闭权限）：这个工具只允许「关」，不允许「重开」——重开只由人在后端做。
 // 关规格之前有三道闸，全在同一次调用里判，判不过就一个字都不动地拒绝：实施票必须全部关闭；
@@ -42,6 +43,8 @@ import { DECK_SANDBOX_TIMEOUT_MS } from '../../shared/time-config/src/values.js'
 // #1790 缺陷 A：状态冲突的预检、归一与拒绝回执住在 issue-patch-status（本文件有效行贴着每文件 350 行的上限）。
 import { guardStatus, namesOf } from './issue-patch-status.js'
 import { runLabelsStep } from './issue-patch-labels.js'
+// The receipt carries a small ticket face (key plus the fields this call changed), not the whole read-back.
+import { receiptTicketOf } from './issue-patch-receipt.js'
 // #1832：一张票最多一枚 triage 状态；addLabels 一次给两枚以上时在选后端之前整笔拒绝。
 import { triageStateProblem } from '../rules/triage-state.js'
 
@@ -439,10 +442,12 @@ export function createDeckIssuePatch(deps?: DeckIssuePatchDeps) {
       const back = (typeof t.get === 'function' && !sc.outOfBudget()) ? await t.get(repo, key, {}, opCtx) : null
       const readBack = (back && back.ok === true) ? back.data : null
       if (!readBack) notes.push('the read-back after the write did not come back (backend words: ' + String((back && back.error && back.error.message) || 'no reason given').slice(0, 160) + '): each step above was recorded from the backend answer.')
-      // #1273：整票只装一份，放在 data.ticket（api 文档承诺「返回值就是写后的真状态」，工作路线也按它记账）；
-      // 顶层 readBack 只放核对用的三格。以前顶层也塞整票，渲染层靠对象引用相等去重只在同进程成立，
-      // 一旦经过连接、fetch 或 PTC 会话的 JSON 边界，同一张票就连正文带评论整份进上下文两遍。
-      // 三格与 data.ticket 出自同一次写后回读，所以「readBack 说改成什么了」和「data.ticket 里是什么」始终一致。
+      // #1273：顶层 readBack 只放核对用的三格，整票不再往顶层塞（以前同一张票连正文带评论会进上下文两遍）。
+      // Receipt size: data.ticket is now a small face made by receiptTicketOf — the key, title and effortId
+      // (the work route reads them) plus the post-write value of only the fields this call changed. The body
+      // and the comments are no longer echoed (the receipt was about 10 KB per call); read them with
+      // deck_issue_get when needed. The three readBack fields and data.ticket come from the same read-back,
+      // so they always agree, and `items` still carries the new progress entry.
       const readBackRecord = (readBack || {}) as Record<string, unknown>
       const readBackDigest = readBack ? { key: String(readBackRecord.key ?? key), state: readBackRecord.state == null ? null : String(readBackRecord.state), updatedAt: readBackRecord.updatedAt ?? null } : null
       const status = statusOfItems(items)
@@ -459,7 +464,7 @@ export function createDeckIssuePatch(deps?: DeckIssuePatchDeps) {
           status: status,
           reason: reason,
           text: 'Ticket ' + key + ': this call covered ' + items.length + ' steps, ' + items.filter((i) => i.status === 'ok').length + ' went through.' + firstFailureText,
-          data: { requested: Object.keys(wants).filter((k) => wants[k]), ticket: readBack },
+          data: { requested: Object.keys(wants).filter((k) => wants[k]), ticket: receiptTicketOf(readBack as Record<string, unknown> | null, key, wants) },
           items: items,
           readBack: readBackDigest,
           notes: notes,

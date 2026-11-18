@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T14:40:22.180Z",
+  "generatedAt": "2026-11-18T14:52:38.000Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 639,
-  "gateCount": 639,
-  "attributedGates": 577,
+  "chainLength": 640,
+  "gateCount": 640,
+  "attributedGates": 578,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
   "completionRecordedGates": 161,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 992,
+  "graphFileCount": 993,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -513,6 +513,38 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 5 条"
+    },
+    {
+      "step": "node tests/verify-deck-patch-receipt-slim.ts",
+      "file": "tests/verify-deck-patch-receipt-slim.ts",
+      "guards": [
+        "src/deck/registration/register-options.ts",
+        "src/deck/tools/issue-create.ts",
+        "src/deck/tools/issue-patch-receipt.ts",
+        "src/deck/tools/issue-patch-status.ts",
+        "src/deck/tools/issue-patch.ts",
+        "src/refresh/kernel/host-budget.ts",
+        "src/refresh/kernel/tool-call-budget.ts",
+        "src/refresh/rooms/host/quota-ledger.ts",
+        "src/refresh/rooms/host/refresh-gate.ts",
+        "src/tracker/registry/core.ts",
+        "src/tracker/rooms/markdown/index.ts",
+        "tests/lib/deck-decide-stub.ts"
+      ],
+      "dirs": [
+        "src/deck/registration",
+        "src/deck/tools",
+        "src/refresh/kernel",
+        "src/refresh/rooms/host",
+        "src/tracker/registry",
+        "src/tracker/rooms/markdown",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 11 条"
     },
     {
       "step": "node tests/verify-deck-quota-sync.ts",
@@ -15713,6 +15745,7 @@
     "src/deck/registration": [
       "node tests/verify-deck-exec-phone.ts",
       "node tests/verify-deck-no-hang.ts",
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-render-detail.ts",
       "node tests/verify-deck-tools-agent-register.ts",
       "node tests/verify-deck-tools-row-zero-dep.ts",
@@ -15778,6 +15811,7 @@
     "src/deck/tools": [
       "node tests/verify-deck-no-hang.ts",
       "node tests/verify-deck-parallel.ts",
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-repo-resolve.ts",
       "node tests/verify-deck-thin-reads.ts",
       "node tests/verify-deck-tools-agent-register.ts",
@@ -16042,6 +16076,7 @@
     "src/refresh/kernel": [
       "node tests/verify-deck-no-hang.ts",
       "node tests/verify-deck-parallel.ts",
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-thin-reads.ts",
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-deck-tools.ts",
@@ -16169,6 +16204,7 @@
       "node tests/verify-deck-event-gate.ts",
       "node tests/verify-deck-no-hang.ts",
       "node tests/verify-deck-parallel.ts",
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-thin-reads.ts",
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-deck-tools.ts",
@@ -16643,6 +16679,7 @@
       "node tests/verify-time-config.ts"
     ],
     "src/tracker/registry": [
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-deck-tools.ts",
       "node tests/verify-dependency-rules.ts",
@@ -16893,6 +16930,7 @@
       "node tests/verify-45-linear-repo-identity.ts"
     ],
     "src/tracker/rooms/markdown": [
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-tools-matrix.ts",
       "node tests/verify-deck-tools.ts",
       "node tests/verify-10-bilingual-ticket-text.ts",
@@ -17150,6 +17188,7 @@
       "node tests/verify-chain-renderer.ts",
       "node tests/verify-deck-no-hang.ts",
       "node tests/verify-deck-parallel.ts",
+      "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-slots.ts",
       "node tests/verify-deck-thin-reads.ts",
       "node tests/verify-deck-tools-matrix.ts",
@@ -17357,9 +17396,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1015,
+    "fileCount": 1016,
     "dirCount": 106,
-    "coveredFileCount": 1015,
+    "coveredFileCount": 1016,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -17729,6 +17768,7 @@
       "src/deck/tools/issue-list.ts",
       "src/deck/tools/issue-patch-definition.ts",
       "src/deck/tools/issue-patch-labels.ts",
+      "src/deck/tools/issue-patch-receipt.ts",
       "src/deck/tools/issue-patch-status.ts",
       "src/deck/tools/issue-patch.ts",
       "src/deck/tools/issue-report.ts",
