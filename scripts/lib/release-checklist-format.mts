@@ -78,7 +78,11 @@ export const CHECKLIST_FORMAT: ChecklistFormat = {
     needsComment: ['passed', 'failed'],
   },
   batchStartMarker: 'Batch start',
-  scenarioIdPattern: /[A-Za-z0-9]{1,10}-\d{2}(?![\d-])/u,
+  // 场景编号的形状，但它绝不能把日历日期读成编号：日期（2026-11-17）的尾巴 `11-17` 也是「字母数字 +
+  // 两位数字」，所以匹配起点不许落在一个字母、数字或连字符之后；少了这个左界，一句话只要把日期和一个
+  // 结果词写在同一行，就会凭空多出一条针对 `11-17` 的结论，计数与收口行对不上、发布被卡住
+  // （2026-11-17 与 2026-11-18 各踩过一次）。独立的 `11-17` 仍然是编号，只有 `2026-11-17` 尾巴那段不算。
+  scenarioIdPattern: /(?<![A-Za-z0-9-])[A-Za-z0-9]{1,10}-\d{2}(?![\d-])/u,
   batchHeading: '## Batch records',
   auditHeading: '## Candidate and release difference audit',
 }

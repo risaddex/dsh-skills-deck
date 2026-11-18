@@ -563,7 +563,21 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 薄 CLI 没有跳过开关、两条发布路径（publish-token.ps1 / wizard-release.sh）按退出码四态分流、
   // gh 票面适配器形状合规；六条规则的输入用假适配器 + 假 git 端口驱动，不碰真 gh、不发网络请求。
   // 16 组 A–L 共 88 条，单跑实测得出的。
-  'verify-release-gate': 93,
+  // 2026-11-18 追加 P 组 4 条：结论行里带着完整日历日期时不能再多读出一个编号——`2026-11-17` 的尾巴
+  // `11-17` 也是「字母数字-两位数字」，会把一条故意 void 的行记成通过、通过数比实际多一条、发布被卡住
+  // （当天与前一天各踩过一次）。对着旧形状跑这 4 条全红（通过数 2），所以 93 → 97 是实测出来的。
+  'verify-release-gate': 97,
+  // 2026-11-18 retro da release 2.0.0: a rota de publicação que este fork usa (release-dist.mts --push)
+  // não chamava o portão de pré-release, e o tag dist/v2.0.0 saiu com a lista de verificação aberta.
+  // A gate prova a decisão (0 continua, 1 e 2 param, código desconhecido conta como ambiente, ensaio só avisa),
+  // que nenhuma das seis regras foi copiada para o script, e que a chamada fica antes de build/update-ref/tag.
+  // Contra o fonte anterior (script revertido, ajudante novo) 6 das 32 falham: as de fiação. Medido por execução.
+  // 2026-11-18, review no PR #55: com --candidate o portão só valida o manifesto (roda antes do build, quando o
+  // tarball ainda não existe), então nada comparava os bytes a publicar com o candidato. A comparação entrou no
+  // script pelo mesmo judgeReleaseBytes do publish-token, e a diferença só passa com o PREFLIGHT-CANDIDATE-AUDIT
+  // que o portão imprime. Bloco H soma 11 asserções (跳过/一致/差异审计/拒绝/演练/真判据/接线) → 32 → 43，
+  // medidas por execução; contra o script anterior as âncoras H9–H11 não existem (medido no texto de HEAD).
+  'verify-release-dist-gate': 43,
   // 2026-11-17 retro da sessão do #17: Markdown já versionado não pode perder seções '## ' sem declarar.
   // A contagem é de execução isolada; muda junto com as asserções de tests/verify-md-sections.ts.
   'verify-md-sections': 48,
