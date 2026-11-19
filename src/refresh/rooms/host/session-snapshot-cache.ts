@@ -22,6 +22,8 @@ import { firstScreenFromLibrary, type FirstScreenLibrary } from './snapshot-libr
 import { libraryVersionOf, notModifiedForVersion } from './snapshot-reply-version.js'
 // #1887：六个数字由快照库一次查询算出；电话层只负责在库写到最新之后把它挂到 deck 上。
 import { applyDeckCounts } from '../../../tracker/deck-counts.js'
+// #64：每行的层级按「分层结果的键」回头查，身份规则（票号优先、否则文字键）只在内核分组文件里写一次。
+import { ticketIdentityOf } from '../../../tracker/kernel/grouping.js'
 // #1899：首屏回包的读数（行数/字节数/耗时/版本）与退化原因落在这里记，口径只此一份。
 import {
   applySnapshotReadout,
@@ -58,7 +60,7 @@ type ComposerOpts = { ifNoneMatch?: string; force?: boolean; previousSnapshot?: 
 // 以前那份「库为空就拿内存副本兜底」的入口（createWorkingCopyFallback）已随工作副本一起退役。
 type Composed = { ok: boolean; error?: { message?: string } | null; snapshot?: unknown; fail?: unknown; notModified?: unknown; status?: unknown; version?: unknown; cached?: unknown }
 type Composer = { composeSnapshot(id: string, repo: RepoRef, ctx: unknown, o: ComposerOpts): Promise<Composed> }
-type Levels = { byNumber?: Record<string, unknown>; byKey?: Record<string, unknown> }
+type Levels = { byNumber?: Record<string, unknown> }
 type Envelope = ReturnType<typeof createSnapshotEnvelope>
 // 在途表取回的那份回包：两条电话路各自组装，形状不同，取回时只能按「是对象、可能带 ok」这一层还原。
 type Reply = { ok?: unknown; [k: string]: unknown }
@@ -241,8 +243,7 @@ export function createSessionSnapshot(deps: SnapshotDeps) {
               const tickets = m.tickets || []
               const lvInfo: Levels = (typeof computeLevels === 'function') ? computeLevels(tickets) : { byNumber: {} }
               tickets.forEach(function(t){
-                if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number]
-                else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key]
+                const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : undefined; if (levelOfRow != null) t.level = levelOfRow
               })
               const stats = (typeof groupTickets === 'function') ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x){return x.state!=='CLOSED'}).length, closed: tickets.filter(function(x){return x.state==='CLOSED'}).length, frontier:0, claimed:0, blocked:0, levels:[], levelOf:{} }
               m.stats = stats
@@ -430,8 +431,7 @@ export function createSessionSnapshot(deps: SnapshotDeps) {
             })
             const lvInfo: Levels = (typeof computeLevels === 'function') ? computeLevels(tickets) : { byNumber: {} }
             tickets.forEach(function(t){ 
-              if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number]
-              else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key]
+              const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : undefined; if (levelOfRow != null) t.level = levelOfRow
             })
             const stats: unknown = (typeof groupTickets === 'function') ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x){return x.state!=='CLOSED'}).length, closed: tickets.filter(function(x){return x.state==='CLOSED'}).length, frontier:0, claimed:0, blocked:0, levels:[], levelOf:{} }
             m.stats = stats

@@ -79,6 +79,8 @@ export function createTicketGrouping(): { computeLevels: (tickets: any) => Ticke
       // 票的身份：有票号就用票号（数字房间一字不变），没有票号的行（Linear 的 ENG-101，键里解析不出数字）退回文字键。
       // 为什么不能只认 t.number：文字键的行没有票号，所有这类行会挤进同一个 undefined 格，本批内的阻塞者查不到、层级全是 0（PR #62 评审）。
       // 这句判断在本文件与 src/tracker/kernel/grouping.ts 的 computeLevels / groupTickets 里各写一份，口径必须同步。
+      // 与 src/tracker/kernel/grouping.ts 导出的 ticketIdentityOf 是同一条规则（本文件零依赖，不能 import，只能自带一句）；
+      // tests/verify-64-text-key-level-blocks.ts 的 D 组逐样本核对两边答同一个键（#64）。
       const idOf = function (t: any): any { return t.number !== undefined && t.number !== null ? t.number : refKeyOf(t.key) }
       // 票号到票的索引：键走 refKeyOf（'01'、1、' 1 ' 同一格），值是外部给的票对象，本文件不校验它们的形状。
       const byNum: any = {}

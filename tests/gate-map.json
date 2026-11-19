@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T21:34:08.688Z",
+  "generatedAt": "2026-11-19T11:16:01.545Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 650,
-  "gateCount": 650,
-  "attributedGates": 587,
+  "chainLength": 651,
+  "gateCount": 651,
+  "attributedGates": 588,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 171,
+  "completionRecordedGates": 172,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 996,
@@ -8593,6 +8593,28 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 4 条"
     },
     {
+      "step": "node tests/verify-64-text-key-level-blocks.ts",
+      "file": "tests/verify-64-text-key-level-blocks.ts",
+      "guards": [
+        "src/host/ticketGrouping.ts",
+        "src/host/tracker/snapshotAssemble.ts",
+        "src/refresh/rooms/host/session-refresh-schedule.ts",
+        "src/refresh/rooms/host/session-snapshot-cache.ts",
+        "src/tracker/kernel/grouping.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "src/host/tracker",
+        "src/refresh/rooms/host",
+        "src/tracker/kernel"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 33,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 5 条）"
+    },
+    {
       "step": "node tests/verify-640-dock-width-browser.ts",
       "file": "tests/verify-640-dock-width-browser.ts",
       "guards": [
@@ -16135,6 +16157,7 @@
       "node tests/verify-596-rpc-carrier.ts",
       "node tests/verify-61-snapshot-unknown-blockers.ts",
       "node tests/verify-62-linear-text-key-grouping.ts",
+      "node tests/verify-64-text-key-level-blocks.ts",
       "node tests/verify-656-subworkspace-acceptance.ts",
       "node tests/verify-666-subws-mark-root.ts",
       "node tests/verify-683-choice-store.ts",
@@ -16238,6 +16261,7 @@
       "node tests/verify-507-pr-offline.ts",
       "node tests/verify-61-snapshot-unknown-blockers.ts",
       "node tests/verify-62-linear-text-key-grouping.ts",
+      "node tests/verify-64-text-key-level-blocks.ts",
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-907-chain-titles.ts",
       "node tests/verify-934-935-invariants.ts",
@@ -16512,6 +16536,7 @@
       "node tests/verify-507-pr-offline.ts",
       "node tests/verify-524-pr-detail.ts",
       "node tests/verify-599-merged-pr.ts",
+      "node tests/verify-64-text-key-level-blocks.ts",
       "node tests/verify-683-host-wiring.ts",
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-696-shared-cache.ts",
@@ -16864,6 +16889,7 @@
       "node tests/verify-544-standalone-blocked.ts",
       "node tests/verify-61-snapshot-unknown-blockers.ts",
       "node tests/verify-62-linear-text-key-grouping.ts",
+      "node tests/verify-64-text-key-level-blocks.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
       "node tests/verify-error-normalize-log.ts",

@@ -14,6 +14,8 @@ import { SNAPSHOT_TTL_MS } from '../../../shared/time-config/src/values.js'
 // #1584 F1：强制刷新主路径与首屏同构，原来也用注册表 describe 自己造身份；
 // 空 refId 不能当身份（GitHub / GitLab 只给目录时 describe 回的就是空壳），给不出就问会话。
 import { resolveRepoRefForCwd } from '../../../tracker/session/repo-ref.js'
+// #64：每行的层级按「分层结果的键」回头查，身份规则（票号优先、否则文字键）只在内核分组文件里写一次。
+import { ticketIdentityOf } from '../../../tracker/kernel/grouping.js'
 // #1870：刷新要的「上一份快照」与首屏读的是同一件事（开库、读回放、拆包），复用首屏那一份实现。
 import { firstScreenFromLibrary, withLibraryCounts } from './snapshot-library-first-screen.js'
 
@@ -50,7 +52,7 @@ type ComposerOpts = { ifNoneMatch?: string; force?: boolean; previousSnapshot?: 
 // 编排回包：snapshot 是后端原始快照（交给 upcaseSnapStates 收形）；error.message 是给人看的那句话。
 type Composed = { ok: boolean; error?: { message?: string } | null; snapshot?: unknown; fail?: unknown; notModified?: unknown; status?: unknown; version?: unknown; cached?: unknown }
 type Composer = { composeSnapshot(id: string, repo: RepoRef, ctx: unknown, o: ComposerOpts): Promise<Composed> }
-type Levels = { byNumber?: Record<string, unknown>; byKey?: Record<string, unknown>; [k: string]: unknown }
+type Levels = { byNumber?: Record<string, unknown>; [k: string]: unknown }
 type Deck = { counts?: { open?: unknown; closed?: unknown } | null; partial?: boolean; missingOpen?: unknown; [k: string]: unknown }
 // 信封（与 wf.snapshot 同一个实例）：这里只声明本文件用到的两口。
 type Envelope = { buildSnap(o: SnapInput): SnapOut; withWorkRouteTable<T>(reply: T, args?: Args): Promise<T> }
@@ -230,8 +232,7 @@ export function createSessionRefresh(deps: RefreshDeps) {
               const tickets = m.tickets || []
               const lvInfo: Levels = (typeof computeLevels === 'function') ? computeLevels(tickets) : { byNumber: {} }
               tickets.forEach(function(t){ 
-                if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number]
-                else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key]
+                const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : undefined; if (levelOfRow != null) t.level = levelOfRow
               })
               const stats = (typeof groupTickets === 'function') ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x){return x.state!=='CLOSED'}).length, closed: tickets.filter(function(x){return x.state==='CLOSED'}).length, frontier:0, claimed:0, blocked:0, levels:[], levelOf:{} }
               m.stats = stats
@@ -421,8 +422,7 @@ export function createSessionRefresh(deps: RefreshDeps) {
             })
             const lvInfo: Levels = (typeof computeLevels === 'function') ? computeLevels(tickets) : { byNumber: {} }
             tickets.forEach(function(t){ 
-              if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number]
-              else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key]
+              const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : undefined; if (levelOfRow != null) t.level = levelOfRow
             })
             const stats = (typeof groupTickets === 'function') ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x){return x.state!=='CLOSED'}).length, closed: tickets.filter(function(x){return x.state==='CLOSED'}).length, frontier:0, claimed:0, blocked:0, levels:[], levelOf:{} }
             m.stats = stats
