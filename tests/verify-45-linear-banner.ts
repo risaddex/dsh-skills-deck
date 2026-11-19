@@ -6,6 +6,9 @@
 // set-up (`gh:remote`, "repository linked"), and the Linear check snapshot never contains it, so the code concluded the snapshot was
 // incomplete and showed the neutral "could not read the environment" bar for ever (the host log said: reason missing-blocks-setup,
 // decideStep gh:remote, backendId linear). The fallback is only meant for the case where no backend is chosen yet.
+// #65 changed this on purpose: Linear now has ONE guide step of its own ('linear:binding', a binding check with its own banner), so "no guide list
+// for linear" is no longer true. What stays true, and is still asserted here, is the point of #45: a Linear workspace never borrows GitHub's list,
+// so it never gets the neutral bar or the gh:remote stop. The new banner itself is asserted in tests/verify-65-linear-setup-hint.ts.
 // 门禁归属: src/client/statusbar/bannerChain.ts
 // Run: node --import ./scripts/ts-hook.mts tests/verify-45-linear-banner.ts
 import { compileFn } from './lib/eval-probe.js'
@@ -28,9 +31,10 @@ const LINEAR_ROWS = [row('env:home'), row('env:platform'), row('skill:wayfinder'
 
 // 1) the defect, as the log showed it
 {
-  check(guideStepsFor('linear').length === 0, 'the guide list has no steps of its own for linear (so the fallback is what decides)')
+  const own = guideStepsFor('linear').map((s: any) => String(s.id))
+  check(JSON.stringify(own) === JSON.stringify(['linear:binding']), 'the guide list of linear is its own one step (' + own.join(',') + '), none of it borrowed from the GitHub list (changed by #65)')
   const d: any = mod.guideBannerDecision(stOf('linear', LINEAR_ROWS), false)
-  check(d.step === null, 'a Linear workspace gets no first-run banner from the GitHub list (got ' + JSON.stringify({ id: d.step && d.step.id, reason: d.reason, stepId: d.stepId }) + ')')
+  check(d.step === null, 'a Linear snapshot that has no linear:binding row gets no first-run banner from the GitHub list (got ' + JSON.stringify({ id: d.step && d.step.id, reason: d.reason, stepId: d.stepId }) + ')')
   check(d.reason !== 'missing-blocks-setup' && d.stepId !== 'gh:remote', 'and the decision never stops at the GitHub step gh:remote (reason ' + d.reason + ', step ' + d.stepId + ')')
   const diag: any = mod.guideBannerDiagnosis(stOf('linear', LINEAR_ROWS), false)
   check(diag.step === null && diag.meta === null, 'the diagnosis used by the status bar carries no banner either')

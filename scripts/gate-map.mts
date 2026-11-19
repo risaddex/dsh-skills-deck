@@ -1049,6 +1049,15 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // workspace is a success after one request (1) + the checker catches a truncated list and the stub answer (2) = 28. Against the source before the
   // fix 25 of the 28 fail (the three that pass are the fetch trap and the two checker probes). Measured by running it: 28 of 28 pass now.
   'verify-48-linear-list-labels': 28,
+  // issue #65 (option C): a Linear workspace with no `# Issue tracker: linear` section got no setup hint at all, because #45 had removed the guide for Linear and
+  // nothing in the plugin could write the section. One gate over the real banner decision, the real guide list and check catalog, the real binding predicate
+  // (fake workspace file), the pure writer over four file states (each read back by the real parseBinding), and the real host phone over a fake account seam:
+  // banner for pending / fail / current rows + diagnosis keys + both languages in panel.yaml (a: 3 x 2 + 3 = 9) + done row, no rows, and the predicate over
+  // five file states (b: 8) + the guide lists unchanged for the three other backends, the Linear list, the step and the catalog (c: 11) + the writer, section
+  // rendering and refusals, seven file cases x 2 and the round trip (d: 28) + the phone: aliases only, no token-like text, one / many / none / failed / thrown /
+  // no seam, Chinese, dropped entries (e: 15) = 63 (counted by running it). Against the source before the change 13 of the first 24 assertions fail and the
+  // rest crash on the missing files; 63 of 63 pass now.
+  'verify-65-linear-setup-hint': 63,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。
