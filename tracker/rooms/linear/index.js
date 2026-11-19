@@ -4,9 +4,11 @@ import { getIssue, listIssues } from "./read.js";
 import { listAccountIssues, getAccountIssue, listConfiguredAccounts } from "./account-read.js";
 import { commentOnIssue, updateIssue, setIssueStateType, createIssue, setParentOfIssue } from "./write.js";
 import { setLabelsOfIssue } from "./labels.js";
+import { listLabelsOfTeam } from "./label-list.js";
 import { setAssigneesOfIssue } from "./assignees.js";
 import { setBlockedByOfIssue } from "./relations.js";
 import { countsOf, listPageOf, readBudgetOf } from "./paging.js";
+import { listSubIssuesOf } from "./sub-issues.js";
 import { preflightLinear } from "./preflight.js";
 import { failLinear } from "./errors.js";
 import { readBinding } from "./binding.js";
@@ -16,9 +18,11 @@ import { preflightLinear as preflightLinear2, readIdentity } from "./preflight.j
 import { getIssue as getIssue2, listIssues as listIssues2, buildIssuesFilter, unsupportedFilters } from "./read.js";
 import { commentOnIssue as commentOnIssue2, updateIssue as updateIssue2, setIssueStateType as setIssueStateType2, createIssue as createIssue2, setParentOfIssue as setParentOfIssue2 } from "./write.js";
 import { setLabelsOfIssue as setLabelsOfIssue2 } from "./labels.js";
+import { listLabelsOfTeam as listLabelsOfTeam2 } from "./label-list.js";
 import { setAssigneesOfIssue as setAssigneesOfIssue2 } from "./assignees.js";
 import { setBlockedByOfIssue as setBlockedByOfIssue2 } from "./relations.js";
 import { countsOf as countsOf2, listPageOf as listPageOf2, readBudgetOf as readBudgetOf2 } from "./paging.js";
+import { listSubIssuesOf as listSubIssuesOf2 } from "./sub-issues.js";
 import { parseBinding, readBinding as readBinding2, BINDING_PATH } from "./binding.js";
 function toAccount(result) {
   if (!result.ok) return null;
@@ -83,6 +87,13 @@ function createLinearBackend(ctx, account) {
       return listPageOf(opCtx || ctx, got.account, filter, opts);
     },
     readBudget: async (opCtx) => readBudgetOf(opCtx || ctx),
+    // 一张票的子票（#50）：键是文本（ENG-12 或 UUID），原样交下去；翻页、上限与「不全」的交代都在 sub-issues.ts。
+    listSubIssues: async (_repo, mapKey, _opts, opCtx) => {
+      const requestCtx = opCtx || ctx;
+      const got = await using(requestCtx);
+      if (!got.ok) return { ok: false, error: got.error };
+      return listSubIssuesOf(requestCtx, got.account, mapKey);
+    },
     comment: async (_repo, key, body, opCtx) => {
       const got = await using(opCtx || ctx);
       if (!got.ok) return { ok: false, error: got.error };
@@ -133,6 +144,13 @@ function createLinearBackend(ctx, account) {
       if (!got.ok) return { ok: false, error: got.error };
       return setParentOfIssue(opCtx || ctx, got.account, key, parentKey, opts);
     },
+    listLabels: async (_repo, opCtx) => {
+      const requestCtx = opCtx || ctx;
+      const got = await using(requestCtx);
+      if (!got.ok) return { ok: false, error: got.error };
+      const binding = await readBinding(requestCtx);
+      return listLabelsOfTeam(requestCtx, got.account, binding ? binding.team : "");
+    },
     reopen: async (_repo, key, opCtx) => {
       const got = await using(opCtx || ctx);
       if (!got.ok) return { ok: false, error: got.error };
@@ -154,6 +172,19 @@ const linearModule = {
   describe,
   /** 有声明就认领（见文件头）；读不到声明才回 false。 */
   matches: async (_handle, opCtx) => await readBinding(opCtx) !== null,
+  // #65：setupRun 这条通用提示词按这四个词条键填空。不声明就会落到 GitHub 的默认键组，把「GitHub Issues」写进一个 Linear 工作区；
+  //   声明了它们，通用路径（检查页那颗「初始化」、切换后端的对齐）说的也是 Linear。真正写绑定的是横幅那颗按钮（wf.linearBindingPrompt），
+  //   所以备注里只交代这一点，不重复一份写文件的步骤。
+  setupPrompt: {
+    trackerLine: "setup.linear.trackerLine",
+    trackerChoice: "setup.linear.trackerChoice",
+    backendNote: "setup.linear.backendNote",
+    labelReqs: "setup.linear.labelReqs"
+  },
+  // 命令词表：Linear 没有命令行工具，只声明站点名（{cli} 留空，渲染时回落中性说法），与本地 Markdown 同口径。
+  prompts: {
+    commandVocabulary: { cliBrand: "Linear" }
+  },
   budget: { kind: "requests-only", countsRequests: true, countsPoints: false, independentBuckets: false }
 };
 export {
@@ -170,7 +201,9 @@ export {
   issueTypeOf,
   linearModule,
   listIssues2 as listIssues,
+  listLabelsOfTeam2 as listLabelsOfTeam,
   listPageOf2 as listPageOf,
+  listSubIssuesOf2 as listSubIssuesOf,
   parseBinding,
   preflightLinear2 as preflightLinear,
   readBinding2 as readBinding,

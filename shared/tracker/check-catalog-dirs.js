@@ -160,18 +160,29 @@ const MARKDOWN_CATALOG = Object.freeze([
     origin: "backends/markdown/parse.js / #1488 container discovery / #1513"
   }
 ]);
-for (const list of [GENERIC_CATALOG, GITHUB_CATALOG, GITLAB_CATALOG, MARKDOWN_CATALOG]) {
+const LINEAR_CATALOG = Object.freeze([
+  {
+    id: "linear:binding",
+    label: "Linear account binding is declared",
+    scope: "backend",
+    backends: ["linear"],
+    check: { kind: "backend", id: "bindingDeclared", backendId: "linear" },
+    origin: "src/tracker/rooms/linear/binding-check.ts (#65)"
+  }
+]);
+for (const list of [GENERIC_CATALOG, GITHUB_CATALOG, GITLAB_CATALOG, MARKDOWN_CATALOG, LINEAR_CATALOG]) {
   for (const item of list) Object.freeze(item);
 }
 const ALL_CATALOGS = Object.freeze({
   generic: GENERIC_CATALOG,
   github: GITHUB_CATALOG,
   gitlab: GITLAB_CATALOG,
-  markdown: MARKDOWN_CATALOG
+  markdown: MARKDOWN_CATALOG,
+  linear: LINEAR_CATALOG
 });
 function scopeOf(checkId) {
   if (GENERIC_CATALOG.some((c) => c.id === checkId)) return "generic";
-  if (GITHUB_CATALOG.some((c) => c.id === checkId) || GITLAB_CATALOG.some((c) => c.id === checkId) || MARKDOWN_CATALOG.some((c) => c.id === checkId)) return "backend";
+  if (GITHUB_CATALOG.some((c) => c.id === checkId) || GITLAB_CATALOG.some((c) => c.id === checkId) || MARKDOWN_CATALOG.some((c) => c.id === checkId) || LINEAR_CATALOG.some((c) => c.id === checkId)) return "backend";
   return null;
 }
 function catalogFor(backendId) {
@@ -179,6 +190,7 @@ function catalogFor(backendId) {
   if (backendId === "github") base.push(...GITHUB_CATALOG);
   else if (backendId === "gitlab") base.push(...GITLAB_CATALOG);
   else if (backendId === "markdown") base.push(...MARKDOWN_CATALOG);
+  else if (backendId === "linear") base.push(...LINEAR_CATALOG);
   return base;
 }
 function backendItemsOf(backendId) {
@@ -207,6 +219,7 @@ export {
   GENERIC_CATALOG,
   GITHUB_CATALOG,
   GITLAB_CATALOG,
+  LINEAR_CATALOG,
   MARKDOWN_CATALOG,
   MIGRATION_MAP,
   backendItemsOf,

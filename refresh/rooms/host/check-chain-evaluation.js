@@ -3,6 +3,7 @@ import { refreshSourceOf } from "../../contract/trigger-classification.js";
 import { workspaceKeyOf } from "../../contract/workspace-keys.js";
 import { getChainRide } from "./chain-coalescing.js";
 import { PREDICATE_TIMEOUT_MS, GH_LOGIN_PREFETCH_MS, PREDICATE_LOG_SAMPLE_MS } from "../../../shared/time-config/values.js";
+import { registerLinearBindingPredicate } from "./chain-linear-predicate.js";
 import { createRepoIdentityEvidence, ghAuthVerdict, glabAuthVerdict, glabRepoAccessVerdict, probeChainEnv, repoAccessVerdict } from "./chain-env-map.js";
 import { assembleFullSnapshot, enrichSnap, stepEvalParallel } from "./chain-step-rows.js";
 function createDetectChain(deps) {
@@ -284,6 +285,7 @@ function createDetectChain(deps) {
           registry.register("backend:markdown:containersReadable", mdPred);
         } catch (e) {
         }
+        registerLinearBindingPredicate(registry, { platform, cwd, lang: chainLang });
         try {
           registry.register("preflight:glabAuth", async function(check, pctx) {
             try {

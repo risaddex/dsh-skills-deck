@@ -2,6 +2,7 @@
 import { projectUiDescription } from "../../../tracker/ui-description.js";
 import { SNAPSHOT_TTL_MS } from "../../../shared/time-config/values.js";
 import { resolveRepoRefForCwd } from "../../../tracker/session/repo-ref.js";
+import { ticketIdentityOf } from "../../../tracker/kernel/grouping.js";
 import { firstScreenFromLibrary, withLibraryCounts } from "./snapshot-library-first-screen.js";
 function createSessionRefresh(deps) {
   const { canonicalKey, selectEarly, isComposerSelection, resetGhCache, getTrackerRegistry, getPlatform, ctx, upcaseSnapStates, computeLevels, groupTickets, getRepoRoot, getRepoKey, adoptSnapshot, detectionExec, getGhPath, getGhLastError, errText, DEFAULT_CWD, logCtx, envelope, send, budgetReadout, openSession, noteRefreshFailure, getSnapshotLibrary } = deps;
@@ -179,8 +180,8 @@ function createSessionRefresh(deps) {
             const tickets = m.tickets || [];
             const lvInfo = typeof computeLevels === "function" ? computeLevels(tickets) : { byNumber: {} };
             tickets.forEach(function(t) {
-              if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number];
-              else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key];
+              const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : void 0;
+              if (levelOfRow != null) t.level = levelOfRow;
             });
             const stats = typeof groupTickets === "function" ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x) {
               return x.state !== "CLOSED";
@@ -403,8 +404,8 @@ function createSessionRefresh(deps) {
           });
           const lvInfo = typeof computeLevels === "function" ? computeLevels(tickets) : { byNumber: {} };
           tickets.forEach(function(t) {
-            if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number];
-            else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key];
+            const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : void 0;
+            if (levelOfRow != null) t.level = levelOfRow;
           });
           const stats = typeof groupTickets === "function" ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x) {
             return x.state !== "CLOSED";

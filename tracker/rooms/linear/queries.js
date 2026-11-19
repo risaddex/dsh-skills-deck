@@ -57,6 +57,18 @@ const ISSUES_WITH_BLOCKERS_QUERY = `query LinearIssuesWithBlockers($first: Int!,
   }
 }
 ${ISSUE_CORE}`;
+const SUB_ISSUES_ORDER_BY = "createdAt";
+const SUB_ISSUES_ORDER = "newest-first";
+const SUB_ISSUES_QUERY = `query LinearSubIssues($id: String!, $first: Int!, $after: String) {
+  issue(id: $id) {
+    identifier
+    children(first: $first, after: $after, orderBy: ${SUB_ISSUES_ORDER_BY}) {
+      nodes { ...LinearIssueCore ${blockersSelection(LIST_BLOCKERS_PER_TICKET)} }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}
+${ISSUE_CORE}`;
 export {
   COMMENTS_FETCH_CAP,
   IDENTITY_QUERY,
@@ -67,6 +79,9 @@ export {
   ISSUE_WITH_COMMENTS_QUERY,
   LIST_BLOCKERS_PER_TICKET,
   MAX_PAGE,
+  SUB_ISSUES_ORDER,
+  SUB_ISSUES_ORDER_BY,
+  SUB_ISSUES_QUERY,
   TEAM_QUERY,
   blockersSelection
 };

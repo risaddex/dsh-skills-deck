@@ -125,7 +125,7 @@ async function listOne(ctx, ready, filter) {
   }
   const project = await projectOf(ctx, ready);
   if (!project.ok) return project;
-  const conditions = [buildIssuesFilter(filter) || {}];
+  const conditions = [buildIssuesFilter({ ...filter, labels: void 0 }) || {}];
   if (project.data) conditions.push({ project: { id: { eq: project.data } } });
   const teams = teamsOf(ready);
   if (ready.binding.alias === ready.entry.alias && ready.binding.team && ready.entry.teams.length && !teams.length) return failLinear(ERROR_KIND.CONFLICT, "the bound Linear team is outside the configured account teams");

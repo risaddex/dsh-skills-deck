@@ -26,17 +26,21 @@ function blockerBlocks(ticket, blocker, byNum) {
   if (!seen) return true;
   return false;
 }
+function ticketIdentityOf(t) {
+  return t.number !== void 0 && t.number !== null ? t.number : refKeyOf(t.key);
+}
 function computeLevels(tickets) {
+  const idOf = ticketIdentityOf;
   const byNum = {};
   tickets.forEach((t) => {
-    byNum[refKeyOf(t.number)] = t;
+    byNum[refKeyOf(idOf(t))] = t;
   });
   const memo = {};
   const levelOf = (t) => {
-    if (memo[t.number] !== void 0) return memo[t.number];
+    if (memo[idOf(t)] !== void 0) return memo[idOf(t)];
     const blockers = (t.blockedBy || []).map((b) => byNum[refKeyOf(b)]).filter(Boolean);
     if (!blockers.length) {
-      memo[t.number] = 0;
+      memo[idOf(t)] = 0;
       return 0;
     }
     let maxL = -1;
@@ -44,32 +48,32 @@ function computeLevels(tickets) {
       const l = levelOf(b);
       if (l > maxL) maxL = l;
     });
-    memo[t.number] = maxL + 1;
-    return memo[t.number];
+    memo[idOf(t)] = maxL + 1;
+    return memo[idOf(t)];
   };
   const byNumber = {};
   tickets.forEach((t) => {
-    byNumber[t.number] = levelOf(t);
+    byNumber[idOf(t)] = levelOf(t);
   });
   const levels = [];
   tickets.forEach((t) => {
-    const lv = byNumber[t.number];
+    const lv = byNumber[idOf(t)];
     let layer = levels[lv];
     if (!layer) {
       layer = { level: lv, numbers: [], open: 0, closed: 0, total: 0, frontier: 0, claimed: 0, blocked: 0 };
       levels[lv] = layer;
     }
-    layer.numbers.push(t.number);
+    layer.numbers.push(idOf(t));
     layer.total++;
     if (t.state === "CLOSED") layer.closed++;
     else layer.open++;
   });
   levels.forEach((layer) => {
     if (!layer) return;
-    const openT = tickets.filter((t) => byNumber[t.number] === layer.level && t.state === "OPEN");
-    layer.frontier = openT.filter((t) => !t.claimedBy && !t.blockedBy.some((b) => blockerBlocks(t, b, byNum))).length;
+    const openT = tickets.filter((t) => byNumber[idOf(t)] === layer.level && t.state === "OPEN");
+    layer.frontier = openT.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))).length;
     layer.claimed = openT.filter((t) => t.claimedBy).length;
-    layer.blocked = openT.filter((t) => !t.claimedBy && t.blockedBy.some((b) => blockerBlocks(t, b, byNum))).length;
+    layer.blocked = openT.filter((t) => !t.claimedBy && (!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum)))).length;
   });
   const compact = levels.filter((layer) => Boolean(layer));
   return { byNumber, levels: compact };
@@ -77,13 +81,13 @@ function computeLevels(tickets) {
 function groupTickets(tickets) {
   const byNum = {};
   tickets.forEach((t) => {
-    byNum[refKeyOf(t.number)] = t;
+    byNum[refKeyOf(ticketIdentityOf(t))] = t;
   });
   const open = tickets.filter((t) => t.state === "OPEN");
   const closed = tickets.filter((t) => t.state === "CLOSED");
-  const frontier = open.filter((t) => !t.claimedBy && !t.blockedBy.some((b) => blockerBlocks(t, b, byNum)));
+  const frontier = open.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum))));
   const claimed = open.filter((t) => t.claimedBy);
-  const blocked = open.filter((t) => !t.claimedBy && t.blockedBy.some((b) => blockerBlocks(t, b, byNum)));
+  const blocked = open.filter((t) => !t.claimedBy && (!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum))));
   const lv = computeLevels(tickets);
   return {
     total: tickets.length,
@@ -98,5 +102,6 @@ function groupTickets(tickets) {
 }
 export {
   computeLevels,
-  groupTickets
+  groupTickets,
+  ticketIdentityOf
 };

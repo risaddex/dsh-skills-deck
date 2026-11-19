@@ -10,11 +10,27 @@ function unsupportedFilters(filter) {
   if (!filter) return [];
   const out = [];
   if (filter.type) out.push("type");
-  if (Array.isArray(filter.labels) && filter.labels.length > 0) out.push("labels");
   if (filter.parentKey !== void 0) out.push("parentKey");
   if (Array.isArray(filter.keys) && filter.keys.length > 0) out.push("keys");
   if (filter.isPullRequest === true) out.push("isPullRequest");
   return out;
+}
+function labelNamesOf(filter) {
+  if (!Array.isArray(filter.labels)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  const names = [];
+  for (const raw of filter.labels) {
+    const name = String(raw === void 0 || raw === null ? "" : raw).trim();
+    const folded = name.toLowerCase();
+    if (!name || seen.has(folded)) continue;
+    seen.add(folded);
+    names.push(name);
+  }
+  return names;
+}
+function labelsCondition(names) {
+  const some = (name) => ({ some: { name: { eqIgnoreCase: name } } });
+  return names.length === 1 ? some(names[0]) : { and: names.map(some) };
 }
 function buildIssuesFilter(filter) {
   if (!filter) return void 0;
@@ -22,6 +38,8 @@ function buildIssuesFilter(filter) {
   if (filter.state === "open") conditions.state = { type: { nin: CLOSED_STATE_TYPES } };
   if (filter.state === "closed") conditions.state = { type: { in: CLOSED_STATE_TYPES } };
   if (filter.since) conditions.updatedAt = { gte: String(filter.since) };
+  const names = labelNamesOf(filter);
+  if (names.length > 0) conditions.labels = labelsCondition(names);
   return Object.keys(conditions).length > 0 ? conditions : void 0;
 }
 function withBlockers(issue, node) {
@@ -84,5 +102,6 @@ export {
   buildIssuesFilter,
   getIssue,
   listIssues,
-  unsupportedFilters
+  unsupportedFilters,
+  withBlockers
 };

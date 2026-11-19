@@ -19,7 +19,9 @@ const MISSING = Object.freeze({
   // 「工作区已初始化」注入初始化全文（布局没选过时先弹那张小卡，由注入决策漏斗负责）。
   setupRun: Object.freeze({ type: STEP_ACTION.INJECT, prompt: "setupRun" }),
   // 技能套件那一步注入安装指引。
-  installSkills: Object.freeze({ type: STEP_ACTION.INJECT, prompt: "installSkills" })
+  installSkills: Object.freeze({ type: STEP_ACTION.INJECT, prompt: "installSkills" }),
+  // #65：Linear 没有绑定声明时，按钮向宿主要一段拼好的提示词再注入（不走 setupRun：它以 /setup-matt-pocock-skills 开头，别名清单也只有宿主读得到）。
+  linearBinding: Object.freeze({ type: "host-prompt", method: "wf.linearBindingPrompt" })
 });
 const BANNER = Object.freeze({
   gate: Object.freeze({ text: "banner.gate", btn: "banner.gateBtn", tone: "info" }),
@@ -28,7 +30,9 @@ const BANNER = Object.freeze({
   ghAuthUnknown: Object.freeze({ text: "banner.ghauthUnknown", btn: "banner.ghauthUnknownBtn", tone: "warn" }),
   setup: Object.freeze({ text: "banner.setup", btn: "banner.setupBtn", tone: "warn" }),
   skills: Object.freeze({ text: "banner.skills", btn: "banner.skillsBtn", tone: "warn" }),
-  repo: Object.freeze({ text: "banner.repo", btn: "banner.repoBtn", tone: "warn" })
+  repo: Object.freeze({ text: "banner.repo", btn: "banner.repoBtn", tone: "warn" }),
+  // #65：Linear 还没有绑定声明。
+  linearBinding: Object.freeze({ text: "banner.linearBinding", btn: "banner.linearBindingBtn", tone: "warn" })
 });
 const GUIDE_STEPS = Object.freeze([
   {
@@ -105,6 +109,16 @@ const GUIDE_STEPS = Object.freeze([
     banner: BANNER.repo,
     missing: MISSING.repoRemoteFix,
     blocksSetup: true
+  },
+  {
+    // #65：Linear 专属一步，不复用通用的「已初始化」与技能两步（理由见 LINEAR_CATALOG 的注释）；不挡初始化，Linear 的链里没有仓库那一步。
+    id: "linear:binding",
+    checks: ["linear:binding"],
+    backends: ["linear"],
+    ready: STEP_READY.CHAIN,
+    banner: BANNER.linearBinding,
+    missing: MISSING.linearBinding,
+    blocksSetup: false
   },
   {
     // 第 7 步：工作区已初始化。2026-11-03 起判据回到初始化产物 docs/agents/issue-tracker.md

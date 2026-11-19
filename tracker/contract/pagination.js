@@ -72,7 +72,16 @@ const PAGINATION = {
     // 防远端异常时死翻 —— 计数宁可失败，也不给一个只是下界的数。
     countMaxPages: 40,
     // 多账号读取共用一次工具预算；每本账最多五页，撞上限报告截断而非无限翻页。
-    accountListMaxPages: 5
+    accountListMaxPages: 5,
+    // 一张地图的子票（listSubIssues）：每页 50 张，不是连接上限 250，也不是另两房的 100。理由是 Linear 的查询复杂度：
+    // 单次查询超过 10000 点整条被拒，而子票每行都带标签与阻塞者，一页 50 行按公布的算法是 5000 多点，一页 100 行就是 1 万点以上
+    // （tests/verify-50-linear-list-sub-issues.ts 按 tests/lib/linear-complexity.ts 量这一条）。
+    // 一张地图最多装 1000 张，与 GitHub、GitLab 两房同一个契约硬上限（contract/operations.ts 的 listSubIssues）。
+    subIssuesPageSize: 50,
+    subIssuesMax: 1e3,
+    // 翻页的次数上限：防远端一直说「还有下一页」而没有一行数据时死翻。1000 张按每页 50 张是 20 页，这里留一倍的余量给
+    // 被丢掉的行与空页；翻到这个数还没到底就把这一趟标成「截断」，绝不当成读全了。
+    subIssuesMaxPages: 40
   }
 };
 export {

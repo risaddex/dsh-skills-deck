@@ -8,6 +8,7 @@ import { createSnapshotDecoration } from "./snapshot-decoration.js";
 import { firstScreenFromLibrary } from "./snapshot-library-first-screen.js";
 import { libraryVersionOf, notModifiedForVersion } from "./snapshot-reply-version.js";
 import { applyDeckCounts } from "../../../tracker/deck-counts.js";
+import { ticketIdentityOf } from "../../../tracker/kernel/grouping.js";
 import {
   applySnapshotReadout,
   createSnapshotReadout,
@@ -175,8 +176,8 @@ function createSessionSnapshot(deps) {
               const tickets = m.tickets || [];
               const lvInfo = typeof computeLevels === "function" ? computeLevels(tickets) : { byNumber: {} };
               tickets.forEach(function(t) {
-                if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number];
-                else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key];
+                const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : void 0;
+                if (levelOfRow != null) t.level = levelOfRow;
               });
               const stats = typeof groupTickets === "function" ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x) {
                 return x.state !== "CLOSED";
@@ -406,8 +407,8 @@ function createSessionSnapshot(deps) {
             });
             const lvInfo = typeof computeLevels === "function" ? computeLevels(tickets) : { byNumber: {} };
             tickets.forEach(function(t) {
-              if (t.number != null && lvInfo.byNumber && lvInfo.byNumber[t.number] != null) t.level = lvInfo.byNumber[t.number];
-              else if (t.key != null && lvInfo.byKey && lvInfo.byKey[t.key] != null) t.level = lvInfo.byKey[t.key];
+              const levelOfRow = lvInfo.byNumber ? lvInfo.byNumber[String(ticketIdentityOf(t))] : void 0;
+              if (levelOfRow != null) t.level = levelOfRow;
             });
             const stats = typeof groupTickets === "function" ? groupTickets(tickets) : { total: tickets.length, open: tickets.filter(function(x) {
               return x.state !== "CLOSED";

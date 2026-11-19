@@ -49,9 +49,17 @@ async function loadMarkdownHostExtras() {
     checkContainersReadable: checks.checkContainersReadable
   };
 }
+async function loadLinearHostExtras() {
+  const [check, prompt] = await Promise.all([
+    import("../rooms/linear/binding-check.js"),
+    import("../rooms/linear/binding-prompt.js")
+  ]);
+  return { checkLinearBinding: check.checkLinearBinding, publicAliasesOf: prompt.publicAliasesOf, buildBindingPrompt: prompt.buildBindingPrompt };
+}
 export {
   BUILTIN_ROOM_IDS,
   loadBuiltinBackendModules,
   loadGithubHostExtras,
+  loadLinearHostExtras,
   loadMarkdownHostExtras
 };
