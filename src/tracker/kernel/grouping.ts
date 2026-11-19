@@ -143,6 +143,21 @@ function blockerBlocks(ticket: GroupingTicket, blocker: number | string, byNum: 
   return false
 }
 
+/**
+ * 一张票在分层与分组里的身份：有票号就用票号（数字房间与从前一字不变，仍是 number 类型），没有票号的行
+ * （Linear 的 ENG-101，键里解析不出数字）退回文字键（经 refKeyOf 折过空白与补零）。两样都没有给空串。
+ *
+ * 为什么导出：快照装配（src/host/tracker/snapshotAssemble.ts）与两条电话路（session-snapshot-cache.ts、
+ * session-refresh-schedule.ts）要按「分层结果的键」回头查每一行的层级、并给阻塞者写「挡住谁」；
+ * 它们若各自再写一遍「看 number」，文字键的行就又会被漏掉（#64）。所以这条规则只在这里写一次，
+ * 它们 import 这一个函数；返回值拼进对象键时按 String(...) 用，与 computeLevels 的 byNumber / levelOf 的键同形。
+ * 宿主副本 src/host/ticketGrouping.ts 不能 import（零依赖、动态加载），自带同一句，由 tests/verify-64-text-key-level-blocks.ts 核对。
+ * 反例：不要拿 `t.number ?? t.key` 直接当键——文字键没过 refKeyOf，' ENG-1 ' 与 'ENG-1' 会成两个键，与分层结果对不上。
+ */
+export function ticketIdentityOf(t: { number?: number | null; key?: string | null }): number | string {
+  return t.number !== undefined && t.number !== null ? t.number : refKeyOf(t.key)
+}
+
 // ——— computeLevels：blockedBy DAG 最长路径深度分层（level(root)=0；level(x)=1+max(level(直接阻塞者))） ———
 
 /**
@@ -154,10 +169,11 @@ function blockerBlocks(ticket: GroupingTicket, blocker: number | string, byNum: 
 export function computeLevels(tickets: readonly GroupingTicket[]): LevelsResult {
   // 票号表：每张票都在里面，所以下面查不到只可能是「阻塞者不在本批票里」。
   // 键走 refKeyOf：'01'、1、' 1 ' 必须落在同一格，否则跨容器比对会认错人。
-  // 票的身份：有票号就用票号（数字房间一字不变），没有票号的行（Linear 的 ENG-101，键里解析不出数字）退回文字键。
+  // 票的身份见上面导出的 ticketIdentityOf：有票号就用票号（数字房间一字不变），没有票号的行（Linear 的 ENG-101）退回文字键。
   // 为什么不能只认 t.number：文字键的行没有票号，所有这类行会挤进同一个 undefined 格，本批内的阻塞者查不到、层级全是 0（PR #62 评审）。
-  // 这句判断在本文件与 src/host/ticketGrouping.ts 的 computeLevels / groupTickets 里各写一份，口径必须同步。
-  const idOf = (t: GroupingTicket): number | string => (t.number !== undefined && t.number !== null ? t.number : refKeyOf(t.key))
+  // 这条规则只在 ticketIdentityOf 写一次；宿主那份副本 src/host/ticketGrouping.ts 零依赖、不能 import，只能自带一份，由
+  // tests/verify-64-text-key-level-blocks.ts 的 D 组逐样本核对两份答同一个键（#64）。
+  const idOf = ticketIdentityOf
   const byNum: Record<string, GroupingTicket> = {}
   tickets.forEach((t) => { byNum[refKeyOf(idOf(t))] = t })
   const memo: Record<string, number> = {}
@@ -228,9 +244,9 @@ export interface TicketGroups {
  * tests/verify-map-first-frame.ts 有交叉核对，改一处必须同步改另一处。
  */
 export function groupTickets(tickets: readonly GroupingTicket[]): TicketGroups {
-  // 票号缺席的行（Linear 的 ENG-101）按文字键进索引，与 computeLevels 里的 idOf 同一条规则，改一处必须同步改另一处。
+  // 票号缺席的行（Linear 的 ENG-101）按文字键进索引，与 computeLevels 用同一条身份规则（ticketIdentityOf）。
   const byNum: Record<string, GroupingTicket> = {}
-  tickets.forEach((t) => { byNum[refKeyOf(t.number !== undefined && t.number !== null ? t.number : t.key)] = t })
+  tickets.forEach((t) => { byNum[refKeyOf(ticketIdentityOf(t))] = t })
   const open = tickets.filter((t) => t.state === 'OPEN')
   const closed = tickets.filter((t) => t.state === 'CLOSED')
   const frontier = open.filter((t) => !t.claimedBy && !(!Array.isArray(t.blockedBy) || t.blockedBy.some((b) => blockerBlocks(t, b, byNum))))

@@ -18,6 +18,8 @@
 import { ERROR_KIND } from '../../tracker/contract/vocabulary.js'
 import { effortOf, idOfParts } from '../../tracker/kernel/identity-keys.js'
 import { groupTickets, parseMapBody, parseSpecBody } from '../../tracker/body-parse.js'
+// #64：行的层级与「挡住谁」要按分层结果的键回头查；这条身份规则只在内核分组文件里写一次（见 ticketIdentityOf 的注释）。
+import { ticketIdentityOf } from '../../tracker/kernel/grouping.js'
 // #1277 B 兜底（视图兜底）：行上的类型没标对时，票面文件头那行隐藏标记仍是唯一真源（ADR 2.5）。
 import { isSpecHeaderMarked } from '../../shared/issue-file/src/marker.js'
 import type { RepositoryRef } from '../../shared/tracker/shape.js'
@@ -284,21 +286,27 @@ function normalizeTicket(row: any): any {
 export function normalizeMapTickets(rows: any[]): { tickets: any[]; stats: any } {
   const list = Array.isArray(rows) ? rows : []
   const tickets = list.map(normalizeTicket)
-  const byNumber: Record<string, any> = {}
-  tickets.forEach((t: any) => { if (t && t.number !== undefined && t.number !== null) byNumber[String(t.number)] = t })
+  // 行的身份见 ticketIdentityOf：有票号用票号（数字房间与从前一字不变），文字键的行（Linear 的 ENG-101）用文字键。
+  //   从前这里只认 t.number，文字键的行没有票号，于是它的层级与「挡住谁」两格永远空着（#64）。
+  const idOfRow = (t: any): string => (t ? String(ticketIdentityOf(t)) : '')
+  const byId: Record<string, any> = {}
+  tickets.forEach((t: any) => { const id = idOfRow(t); if (id) byId[id] = t })
   tickets.forEach((t: any) => {
     if (!t || !Array.isArray(t.blockedBy)) return
-    t.blockedBy.forEach((blockerNo: any) => {
-      const blocker = byNumber[String(blockerNo)]
-      if (!blocker || String(blocker.number) === String(t.number)) return
+    t.blockedBy.forEach((blockerRef: any) => {
+      const blocker = byId[String(blockerRef)]
+      if (!blocker || idOfRow(blocker) === idOfRow(t)) return
       if (!Array.isArray(blocker.blocks)) blocker.blocks = []
-      if (blocker.blocks.indexOf(t.number) < 0) blocker.blocks.push(t.number)
+      // blocks 里放被挡票的身份：数字房间仍是数字，文字键的房间是文字键（与 blockedBy 里的写法同形）。
+      const blockedId = ticketIdentityOf(t)
+      if (blocker.blocks.indexOf(blockedId) < 0) blocker.blocks.push(blockedId)
     })
   })
   const stats: any = groupTickets(tickets as any)
   tickets.forEach((t: any) => {
-    if (!t || t.number === undefined || t.number === null) return
-    const level = stats.levelOf[String(t.number)]
+    const id = idOfRow(t)
+    if (!id) return
+    const level = stats.levelOf[id]
     if (typeof level === 'number') t.level = level
   })
   return { tickets, stats }

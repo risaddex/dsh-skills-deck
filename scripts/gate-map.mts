@@ -1033,6 +1033,13 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // the open blocker (A: 7) + the closed blocker (B: 8) + the snapshot path (C: 2) + numeric rooms unchanged (D: 6) = 23.
   // Against the source before the change 12 of the 23 fail (the level, levelOf and frontier assertions of A, B and C); 23 of 23 pass now.
   'verify-62-linear-text-key-grouping': 23,
+  // #64: a Linear row has a text key and no number, so the snapshot code (normalizeMapTickets, and the level lines of the snapshot room, the refresh room
+  // and the snapshot fallback branch) never gave it a per-row level or filled the blocks side of its blocker. This gate runs the real snapshot composer over the
+  // real Linear room rows (A: 8), numeric rooms unchanged (C: 4), the three phone branches over a stubbed grouping with distinct depths for a text-key map
+  // and a numeric map (B: 3 x 2 = 6), and the one identity rule: the export, 7 samples x both copies of the grouping, the number-wins check, and that the
+  // three files use the shared rule and no longer read byKey (D: 1 + 7 + 1 + 3 x 2 = 15) = 33.
+  // Against the source before the change 12 of the 25 assertions that can run fail (A: 3, B: 3, D: 6; the 8 identity assertions that need the export are skipped); 33 of 33 pass now.
+  'verify-64-text-key-level-blocks': 33,
   // issue #49: the Linear room refused every non-empty `labels` filter, so the panel's closed-map page of a Linear workspace
   // (`listPage(ref, { state: 'closed', labels: ['wayfinder:map'] })`) was always an error. This gate runs the real room over a fake
   // channel and asserts on the outgoing GraphQL variables: listPage page + count walk (9), cursor path (5), counts (5), list (4),
