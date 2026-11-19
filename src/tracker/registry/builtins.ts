@@ -143,6 +143,24 @@ export async function loadMarkdownHostExtras(): Promise<MarkdownHostExtras> {
   }
 }
 
+export type LinearHostExtras = {
+  /** The chain check "this workspace declares its Linear binding" (#65): the room's own parseBinding over the workspace file. */
+  checkLinearBinding: typeof import('../rooms/linear/binding-check.js').checkLinearBinding
+  /** Keeps only alias / label / teams of the configured accounts: the one filter between the account seam and any text. */
+  publicAliasesOf: typeof import('../rooms/linear/binding-prompt.js').publicAliasesOf
+  /** The setup prompt for a Linear workspace with no binding (exact section text, ask-the-maintainer rules). */
+  buildBindingPrompt: typeof import('../rooms/linear/binding-prompt.js').buildBindingPrompt
+}
+
+/** 取出 Linear 房那几件宿主实现（#65）；与 Markdown 的取法同形，模块缓存命中不重复求值。 */
+export async function loadLinearHostExtras(): Promise<LinearHostExtras> {
+  const [check, prompt] = await Promise.all([
+    import('../rooms/linear/binding-check.js'),
+    import('../rooms/linear/binding-prompt.js'),
+  ])
+  return { checkLinearBinding: check.checkLinearBinding, publicAliasesOf: prompt.publicAliasesOf, buildBindingPrompt: prompt.buildBindingPrompt }
+}
+
 // ── 房间形状的类型出口（#1161）────────────────────────────────────────────────────────
 // 契约能力的编译期断言（src/tracker/capability-assertions.ts）要用三个房间的「成员集合」与
 // 「工厂返回类型」。它同样不许直接 import 房间（规则 rooms-imported-only-by-assembly），

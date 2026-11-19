@@ -234,9 +234,29 @@ export const MARKDOWN_CATALOG: readonly CatalogItem[] = Object.freeze([
   },
 ])
 
+/** Linear 后端检查目录（仅 linear 适用，#65）。
+ *
+ * 只有一项，而且有意不借通用目录里的 tracker:initialized：那一项只问「docs/agents/issue-tracker.md 在不在」，
+ *   一份 GitHub 写法的说明文件就能让它通过，而 Linear 房间读的是文件里的 `# Issue tracker: linear` 一节。
+ *   所以这里问的是房间自己问的那句话：文件里有没有带 alias 的 Linear 一节。判据本体在
+ *   src/tracker/rooms/linear/binding-check.ts，宿主链与门禁共用同一份。
+ * 反例：把 'linear' 直接加进 GENERIC_CATALOG 的 backends 数组 —— 会把技能检查与 tracker:initialized 一起拉进 Linear 的链，
+ *   又让「文件存在」冒充「绑定存在」。
+ */
+export const LINEAR_CATALOG: readonly CatalogItem[] = Object.freeze([
+  {
+    id: 'linear:binding',
+    label: 'Linear account binding is declared',
+    scope: 'backend',
+    backends: ['linear'],
+    check: { kind: 'backend', id: 'bindingDeclared', backendId: 'linear' },
+    origin: 'src/tracker/rooms/linear/binding-check.ts (#65)',
+  },
+])
+
 // 冻结目录项本身（不只是数组）：GitHub 房的模块检查表现在直接引用这些对象、不再各持一份副本；
 // 元素如果可变，谁都能通过模块表改掉目录里的字，唯一真源就被绕过了。
-for (const list of [GENERIC_CATALOG, GITHUB_CATALOG, GITLAB_CATALOG, MARKDOWN_CATALOG]) {
+for (const list of [GENERIC_CATALOG, GITHUB_CATALOG, GITLAB_CATALOG, MARKDOWN_CATALOG, LINEAR_CATALOG]) {
   for (const item of list) Object.freeze(item)
 }
 
@@ -246,6 +266,7 @@ export const ALL_CATALOGS = Object.freeze({
   github: GITHUB_CATALOG,
   gitlab: GITLAB_CATALOG,
   markdown: MARKDOWN_CATALOG,
+  linear: LINEAR_CATALOG,
 })
 
 /**
@@ -258,7 +279,7 @@ export const ALL_CATALOGS = Object.freeze({
  */
 export function scopeOf(checkId: string): 'generic' | 'backend' | null {
   if (GENERIC_CATALOG.some(c => c.id === checkId)) return 'generic'
-  if (GITHUB_CATALOG.some(c => c.id === checkId) || GITLAB_CATALOG.some(c => c.id === checkId) || MARKDOWN_CATALOG.some(c => c.id === checkId)) return 'backend'
+  if (GITHUB_CATALOG.some(c => c.id === checkId) || GITLAB_CATALOG.some(c => c.id === checkId) || MARKDOWN_CATALOG.some(c => c.id === checkId) || LINEAR_CATALOG.some(c => c.id === checkId)) return 'backend'
   return null
 }
 
@@ -270,11 +291,12 @@ export function scopeOf(checkId: string): 'generic' | 'backend' | null {
  * @param {'github'|'markdown'|'gitlab'|null} backendId
  * @returns {CatalogItem[]}
  */
-export function catalogFor(backendId: 'github' | 'markdown' | 'gitlab' | null | undefined): CatalogItem[] {
+export function catalogFor(backendId: 'github' | 'markdown' | 'gitlab' | 'linear' | null | undefined): CatalogItem[] {
   const base = [...GENERIC_CATALOG]
   if (backendId === 'github') base.push(...GITHUB_CATALOG)
   else if (backendId === 'gitlab') base.push(...GITLAB_CATALOG)
   else if (backendId === 'markdown') base.push(...MARKDOWN_CATALOG)
+  else if (backendId === 'linear') base.push(...LINEAR_CATALOG)
   return base
 }
 
@@ -287,7 +309,7 @@ export function catalogFor(backendId: 'github' | 'markdown' | 'gitlab' | null | 
  * @param {'github'|'markdown'|'gitlab'|null|undefined} backendId
  * @returns {CatalogItem[]}
  */
-export function backendItemsOf(backendId: 'github' | 'markdown' | 'gitlab' | null | undefined): CatalogItem[] {
+export function backendItemsOf(backendId: 'github' | 'markdown' | 'gitlab' | 'linear' | null | undefined): CatalogItem[] {
   return catalogFor(backendId).filter((item) => item.scope === 'backend')
 }
 
@@ -310,5 +332,6 @@ export const MIGRATION_MAP = Object.freeze({
   'md:scratchWritable': 'MARKDOWN_CATALOG[1]',
   'md:containersReadable': 'MARKDOWN_CATALOG[2]',
 })
+// #65：linear:binding 不在上面这张表里。这张表记的是「早期盘点（类别 8）迁进目录的那批检查」，Linear 这一项是 #65 新增的，不是迁来的。
 
 export const CATALOG_VERSION = 1

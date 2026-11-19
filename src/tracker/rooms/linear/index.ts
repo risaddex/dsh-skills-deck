@@ -235,5 +235,18 @@ export const linearModule = {
   describe,
   /** 有声明就认领（见文件头）；读不到声明才回 false。 */
   matches: async (_handle, opCtx) => (await readBinding(opCtx)) !== null,
+  // #65：setupRun 这条通用提示词按这四个词条键填空。不声明就会落到 GitHub 的默认键组，把「GitHub Issues」写进一个 Linear 工作区；
+  //   声明了它们，通用路径（检查页那颗「初始化」、切换后端的对齐）说的也是 Linear。真正写绑定的是横幅那颗按钮（wf.linearBindingPrompt），
+  //   所以备注里只交代这一点，不重复一份写文件的步骤。
+  setupPrompt: {
+    trackerLine: 'setup.linear.trackerLine',
+    trackerChoice: 'setup.linear.trackerChoice',
+    backendNote: 'setup.linear.backendNote',
+    labelReqs: 'setup.linear.labelReqs',
+  },
+  // 命令词表：Linear 没有命令行工具，只声明站点名（{cli} 留空，渲染时回落中性说法），与本地 Markdown 同口径。
+  prompts: {
+    commandVocabulary: { cliBrand: 'Linear' },
+  },
   budget: { kind: 'requests-only', countsRequests: true, countsPoints: false, independentBuckets: false },
 } satisfies BackendModule

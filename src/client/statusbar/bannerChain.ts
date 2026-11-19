@@ -40,6 +40,8 @@ declare function onStatusSetupInit(...args: any[]): any;
 declare function openFormModal(...args: any[]): any;
 declare function openStatusGate(...args: any[]): any;
 declare function openUrl(...args: any[]): any;
+declare function promptLang(...args: any[]): any;
+declare function tr(...args: any[]): any;
 declare function promptText(...args: any[]): any;
 declare function promptTextFor(...args: any[]): any;
 declare function refreshAll(...args: any[]): any;
@@ -346,6 +348,25 @@ export const runGuideRecheck = function (st: any, stepId: any) {
 }
 
 /**
+ * 向宿主要一段已经拼好的提示词再注入会话（#65：Linear 工作区没有绑定时的那颗按钮）。
+ * 只发语言，不发任何账号信息；宿主回的 text 为空或调用失败时一个字都不注入，并在横幅上提示。
+ * 注入之后不改链状态：绑定写好后由人或下一次重取把「linear:binding」那一行刷绿，与别的引导步一致。
+ */
+const runHostPrompt = function (st: any, stepId: any, method: any) {
+  try {
+    if (typeof host === 'undefined' || !host || !host.call || !method) { logGuideInject(String(stepId || ''), 'none'); return }
+    const lang = (typeof promptLang === 'function') ? String(promptLang() || '') : ''
+    const r = host.call(String(method), { cwd: st.cwd || '', lang: lang })
+    Promise.resolve(r).then(function (res: any) {
+      const text = res && res.ok === true && typeof res.text === 'string' ? res.text : ''
+      if (!text) { try { if (typeof flash === 'function') flash(st, tr('banner.linearBindingFail'), 'warn') } catch (eF) {}; logGuideInject(String(stepId || ''), 'none'); return }
+      try { inject(st, text) } catch (eI) {}
+      logGuideInject(String(stepId || ''), 'text')
+    }, function () { logGuideInject(String(stepId || ''), 'none') })
+  } catch (e) { logGuideInject(String(stepId || ''), 'none') }
+}
+
+/**
  * 横幅那颗按钮点下去：照这一步的有效 missing 走（查不到那一路已换成重查，见上面）。
  * 去向：注入一段文案（text）/ 没有文案可注入（none）/ 弹窗类端点动作或强制重查（action）。
  * 无论哪一种都在这里落一行常驻日志，见下面 logGuideInject。
@@ -369,6 +390,12 @@ export const runGuideMissing = function (st: any, step: any) {
   if (missing.type === 'open-backend-picker') {
     try { if (typeof openStatusGate === 'function') openStatusGate(st) } catch (e) {}
     logGuideInject(stepId, 'action'); return 'action'
+  }
+  if (missing.type === 'host-prompt') {
+    // #65：文本由宿主拼好（带着确切的小节文本与别名规则），界面只转交；宿主答不出来就如实记 none，不注入半截话。
+    // 日志由 runHostPrompt 在宿主回话之后落（text = 注入了 / none = 没注入），这里不先记一行，免得同一次点击在日志里出现两次。
+    runHostPrompt(st, stepId, missing.method)
+    return 'action'
   }
   if (missing.type === 'fixes-action') {
     const action = firstFixesActionOf(st, stepId)

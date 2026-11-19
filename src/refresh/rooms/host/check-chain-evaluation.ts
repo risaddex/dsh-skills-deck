@@ -5,6 +5,7 @@ import { refreshSourceOf } from '../../contract/trigger-classification.js'
 import { workspaceKeyOf } from '../../contract/workspace-keys.js'   // #724：链记账给闸的钥匙，与活跃集合同一把（从前传 cwd 原文 → 同一个工作区在闸里有两格）
 import { getChainRide } from './chain-coalescing.js'   // #964 小账本住共享层；#966 用进程单例，出站写路能记写
 import { PREDICATE_TIMEOUT_MS, GH_LOGIN_PREFETCH_MS, PREDICATE_LOG_SAMPLE_MS } from '../../../shared/time-config/src/values.js'   // #1215 时间参数住中央 YAML（predicateTimeoutMs / ghLoginPrefetchMs / predicateLogSampleMs），本文件只读不写
+import { registerLinearBindingPredicate } from './chain-linear-predicate.js'
 import { createRepoIdentityEvidence, ghAuthVerdict, glabAuthVerdict, glabRepoAccessVerdict, probeChainEnv, repoAccessVerdict } from './chain-env-map.js'
 import type { OpenSessionReply, RepoIdentityEvidence } from './chain-env-map.js'
 // #1483：「判定 → 步骤行 / 快照」三件套搬到 chain-step-rows.ts，正常求值与缓存命中重算共用同一套口径；行为逐字保留。
@@ -445,6 +446,8 @@ export function createDetectChain(deps: DetectChainDeps) {
           registry.register('backend:markdown:scratchWritable', mdPred)
           registry.register('backend:markdown:containersReadable', mdPred)
         } catch (e) {}
+        // #65：Linear 工作区的绑定检查（判据与说明见 chain-linear-predicate.ts；读不出结论一律 pending）。
+        registerLinearBindingPredicate(registry, { platform: platform, cwd: cwd, lang: chainLang })
         // #1187：GitLab 后端的两行。目录项要的键是 glab:authed → preflight:glabAuth、glab:repoAccess →
         //   backend:gitlab:repoAccess；从前全仓一条都没注册，注册表便把这两行如实回成
         //   「predicate not registered: …」的 pending —— 界面看到的是一句英文内部串，永远查不出结论。
@@ -484,7 +487,7 @@ export function createDetectChain(deps: DetectChainDeps) {
             // 格子逐字对齐，直接递进去，不转类型也不改值（运行期原样递进去）。
             // 目录只认这三个后端的表（check-catalog-dirs.ts 的 JSDoc 就是这么写的），别的 id 在表里没有格子；
             // 这里只是把「已经认出来是某个后端」收成表认的那几个，转的是类型、值原样递进去。
-            let items = (catDirs.catalogFor ? catDirs.catalogFor(backendId as 'github' | 'markdown' | 'gitlab') : []).filter(function(c){ return c.scope==='backend' }).map(function(ci){ return catViews.catalogItemToCheckItem ? catViews.catalogItemToCheckItem(ci) : null }).filter(Boolean) as CheckItem[]
+            let items = (catDirs.catalogFor ? catDirs.catalogFor(backendId as 'github' | 'markdown' | 'gitlab' | 'linear') : []).filter(function(c){ return c.scope==='backend' }).map(function(ci){ return catViews.catalogItemToCheckItem ? catViews.catalogItemToCheckItem(ci) : null }).filter(Boolean) as CheckItem[]
             // 修复契约（2026-08-28）：后端声明 fixes（hint + 修复动作）→ 按语言解析附到检查项 onFail——
             //   检查失败即有修复入口（注入指引/重查），UI 零派生只渲染分发；后端未声明 fixes 则保持默认（重查）。
             if (items.length) {

@@ -18,7 +18,7 @@ async function main() {
 
   // #1190：GitLab 三步（glab:installed/authed/repoAccess）进清单，与 gh 三步同形（同横幅、同通用键、各自只适用自家后端）。
   //   顺序按后端分组（gh 三步在前、glab 三步在后），各后端过滤后相对顺序不变。
-  const ORDER = ['selection:backendSelected', 'gh:installed', 'gh:authed', 'gh:remote', 'glab:installed', 'glab:authed', 'glab:repoAccess', 'tracker:initialized', 'skill:wayfinder']
+  const ORDER = ['selection:backendSelected', 'gh:installed', 'gh:authed', 'gh:remote', 'glab:installed', 'glab:authed', 'glab:repoAccess', 'linear:binding', 'tracker:initialized', 'skill:wayfinder']
   const idOf = (arr: any[]): string[] => arr.map((s) => String(s.id))
 
   // —— 场景 1：清单本身 = 维护者 2026-09-19 定的那一条顺序 ——
@@ -36,9 +36,12 @@ async function main() {
     assert(Array.isArray(step.backends) && step.backends.length > 0, `步骤 ${step.id} 声明了适用后端`)
     assert(step.banner === null || (step.banner.text && step.banner.btn && step.banner.tone), `步骤 ${step.id} 的 banner 形状合法`)
     const m = step.missing
-    assert(m && (m.type === 'inject' || m.type === 'fixes-action' || m.type === 'open-backend-picker'), `步骤 ${step.id} 的 missing 是三种写法之一`)
+    assert(m && (m.type === 'inject' || m.type === 'fixes-action' || m.type === 'open-backend-picker' || m.type === 'host-prompt'), `步骤 ${step.id} 的 missing 是四种写法之一（#65 加了 host-prompt）`)
     if (m.type === 'inject') {
       assert((typeof m.text === 'string' && m.text.length > 0) || (typeof m.prompt === 'string' && m.prompt.length > 0), `步骤 ${step.id} 的注入要么是原话、要么是提示词 id`)
+    }
+    if (m.type === 'host-prompt') {
+      assert(typeof m.method === 'string' && m.method.indexOf('wf.') === 0, `步骤 ${step.id} 的宿主取词要写明电话名（#65）`)
     }
     assert(typeof step.blocksSetup === 'boolean', `步骤 ${step.id} 的 blocksSetup 是布尔`)
   }
@@ -64,10 +67,12 @@ async function main() {
   assert.deepStrictEqual(idOf(guide.guideStepsFor('markdown')), ['selection:backendSelected', 'tracker:initialized', 'skill:wayfinder'], 'markdown 只拿到通用那三步（不插仓库段）')
   // #1190 起 gitlab 不再与 markdown 同形：自家三步进清单（装/登录/仓库），通用三步照旧。
   assert.deepStrictEqual(idOf(guide.guideStepsFor('gitlab')), ['selection:backendSelected', 'glab:installed', 'glab:authed', 'glab:repoAccess', 'tracker:initialized', 'skill:wayfinder'], 'gitlab 拿到自家三步 + 通用三步（gh 三步不混入）')
+  // #65：Linear 只有自家一步（绑定声明），不带通用的初始化与技能两步；详细断言在 tests/verify-65-linear-setup-hint.ts。
+  assert.deepStrictEqual(idOf(guide.guideStepsFor('linear')), ['linear:binding'], 'linear 只拿到自家那一步')
   assert.deepStrictEqual(guide.guideStepsFor(null), [], '后端没定时返回空数组')
   assert.deepStrictEqual(guide.guideStepsFor(''), [], '后端为空串时返回空数组')
   assert.deepStrictEqual(guide.guideStepsFor('其它'), [], '未知后端返回空数组')
-  for (const b of ['github', 'markdown', 'gitlab']) {
+  for (const b of ['github', 'markdown', 'gitlab', 'linear']) {
     const orig = guide.GUIDE_STEPS.filter((s) => s.backends.indexOf(b) >= 0)
     assert.deepStrictEqual(idOf(guide.guideStepsFor(b)), idOf(orig), `${b}：过滤结果就是清单里适用它的那几步，顺序不变`)
   }

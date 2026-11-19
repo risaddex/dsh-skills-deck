@@ -61,6 +61,9 @@ zh:
   banner.chainUnreadBtn: 重新检查
   banner.repo: 这个目录还没有关联远端仓库
   banner.repoBtn: 创建并发布
+  banner.linearBinding: 这个工作区还没有声明 Linear 账号绑定 —— 点右侧让助手写好
+  banner.linearBindingBtn: 帮我写 Linear 绑定
+  banner.linearBindingFail: 没能生成设置文字，请再点一次
   banner.foldDeck: 收起MattSkillsDeck
   banner.expandDeck: 展开MattSkillsDeck
   banner.foldShort: 收起
@@ -105,6 +108,13 @@ zh:
 
     本次已选后端：GitLab — 请按 GitLab 模板生成 docs/agents/issue-tracker.md
   setup.gitlab.labelReqs: ，并确保仓库中技能所需标签齐全（triage 五角色 + wayfinder 标签 wayfinder:map / research / prototype / grilling / task），不要只建少数几个
+  setup.linear.trackerLine: 本工作区使用 Linear → 提议 Linear
+  setup.linear.trackerChoice: Linear
+  setup.linear.backendNote: |-
+    
+
+    本次已选后端：Linear — 绑定声明由「帮我写 Linear 绑定」那颗按钮单独处理，不走这条初始化。
+  setup.linear.labelReqs: ""
   setup.default.trackerLine: 本仓库为 GitHub → 提议 GitHub Issues
   setup.default.trackerChoice: GitHub Issues
   setup.default.backendNote: |-
@@ -442,6 +452,9 @@ en:
   banner.chainUnreadBtn: Re-check
   banner.repo: This directory has no remote repository yet
   banner.repoBtn: Create & publish
+  banner.linearBinding: This workspace has no Linear account binding yet — click to have the assistant write it
+  banner.linearBindingBtn: Write the Linear binding for me
+  banner.linearBindingFail: Could not build the setup text, please click again
   banner.foldDeck: Collapse MattSkillsDeck
   banner.expandDeck: Expand MattSkillsDeck
   banner.foldShort: Collapse
@@ -486,6 +499,13 @@ en:
 
     Selected backend: GitLab — please generate docs/agents/issue-tracker.md from the GitLab template.
   setup.gitlab.labelReqs: ", and ensure the repo has the complete label set the skills need (the five triage-role labels + the wayfinder labels wayfinder:map / research / prototype / grilling / task) — not just a few"
+  setup.linear.trackerLine: this workspace uses Linear → propose Linear
+  setup.linear.trackerChoice: Linear
+  setup.linear.backendNote: |-
+    
+
+    Selected backend: Linear — the binding declaration is handled by the "Write the Linear binding for me" button on its own, not by this initialization.
+  setup.linear.labelReqs: ""
   setup.default.trackerLine: this repo is on GitHub → propose GitHub Issues
   setup.default.trackerChoice: GitHub Issues
   setup.default.backendNote: |-

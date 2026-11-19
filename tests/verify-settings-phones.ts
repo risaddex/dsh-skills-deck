@@ -263,7 +263,8 @@ async function main() {
     // #1923 加了已关闭容器的容器级投影一条电话 wf.containerProjection，123 → 124。
     // #1922 加了快照库占用读数一条电话 wf.snapshotStoreStats（只给诊断看），124 → 125。
     // issue #3：四条更新电话与仅供更新器使用的 logAppend 一起移除，125 → 120。
-    check(nPhones === 120, '宿主电话一百二十条（增删电话须同步这个数），实得 ' + nPhones + ' 条。')
+    // issue #65：加了 Linear 绑定提示词一条电话 wf.linearBindingPrompt（横幅按钮向宿主要已拼好的设置文字，账号清单只出 alias / label / teams），120 → 121。
+    check(nPhones === 121, '宿主电话一百二十一条（增删电话须同步这个数），实得 ' + nPhones + ' 条。')
   }
 
   // —— 第五件事：每条电话真跑一遍并断言真的落了一行对应的日志 ——
