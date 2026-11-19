@@ -14,6 +14,7 @@ The mutation and write-path facts a Linear tracker adapter must implement, check
 | S6 | https://linear.app/developers/advanced-usage.md | Raw client; `headers: { Authorization: apiKey }` |
 | S7 | https://github.com/linear/linear/tree/master/packages/sdk/src (`types.ts`, `error.ts`, `client.ts`) | SDK source: error wire shape, `LinearErrorType`, auth header |
 | S8 | https://registry.npmjs.org/@linear/sdk/latest | SDK 102.0.0 metadata; `bugs.url` = github.com/linear/linear confirms the repo is Linear's own |
+| O1 | This pass, 2026-11-19: read-only calls to https://api.linear.app/graphql with the workspace's OAuth application token, and reads of the GitHub REST API for `ombrello-seguros/ombrellosolar-backend` | First-hand observation, not documentation. It records what one real workspace does, so it is evidence about behaviour rather than a rule that must hold in every workspace |
 
 The generated schema and the "published GraphQL schema" are the same artefact here: S2 lives in `@linear/sdk` next to `schema.json` and `_generated_sdk.ts` (S7 directory listing). Linear also serves every developer page as Markdown at `<page>.md`, which is what was fetched; the HTML page is the same content.
 
@@ -204,6 +205,25 @@ The generated schema and the "published GraphQL schema" are the same artefact he
   workload identity token; **personal API keys cannot publish agent activities**" (S2 Mutation). Both header forms target the same endpoint
   `https://api.linear.app/graphql` (S1).
 
+## 11. Observation from a real workspace: creating an issue in Linear also opens a GitHub issue
+
+Settled by reading, never writing (O1), on 2026-11-19, against the team `OMB` ("Engarde/Ombrello DEV"), the team where the deck's Linear room was about to be tried.
+
+- **The workspace runs Linear's GitHub integration.** `Query.integrations` answered with the services `github` and `githubCommit`, alongside `mcpServer`, `slack`, `slackPost`, `slackProjectPost`, `figma` and `sentry` (O1, S2 Query.integrations).
+- **Every recent issue carries a GitHub attachment, and no label predicts it.** All 40 of the 40 most recently created `OMB` issues (newest `OMB-927`, 2026-11-19T16:00:26Z; oldest of that set `OMB-886`, 2026-11-05T15:56:13Z) have an `Attachment` whose `sourceType` is `"github"` and whose `url` points into `ombrello-seguros/ombrellosolar-backend`. Three of the 40 carry no label at all (`OMB-927`, `OMB-926`, `OMB-925`), so a label is not what turns the copy on; the label names seen on the other rows are the deck's own vocabulary (`wayfinder:map`, `wayfinder:research`, `needs-triage`, `backend`, ...) (O1).
+- **The direction is Linear to GitHub, by about one second.** The GitHub issue is always created after the Linear issue, and usually by the integration's own bot account:
+  - `OMB-886` created 2026-11-05T15:56:13.885Z; GitHub issue `#755` created 2026-11-05T15:56:15Z, author `linear-code[bot]`.
+  - `OMB-916` created 2026-11-18T14:57:45.383Z; GitHub issue `#819` created 2026-11-18T14:57:46Z, author `linear-code[bot]`.
+  - `OMB-923` created 2026-11-18T21:32:47.585Z; GitHub issue `#834` created 2026-11-18T21:32:48Z, author `risaddex`, followed one second later by a `linear-code[bot]` comment.
+  - `OMB-927` created 2026-11-19T16:00:26.722Z; GitHub issue `#840` created 2026-11-19T16:00:28Z, author `risaddex` (O1).
+- **What the two sides hold.** The GitHub issue of `OMB-927` repeats the Linear description byte for byte and carries a `linear-code[bot]` comment holding `<!-- linear-linkback -->` and a link to the Linear issue. The Linear issue in turn carries a comment written by no user (`user: null`) that reads "This comment thread is synced to a corresponding [GitHub issue](...). All replies are displayed in both locations.", created 1.6 s after the issue itself. `Attachment.creator` is `null` on these attachments, so no member wrote them (O1).
+- **Consequence for any test that writes to Linear here.** "Create one test issue" is not a Linear-only operation in this workspace: it also opens an issue in a GitHub work repository about a second later, and deleting the Linear issue afterwards does not necessarily delete that GitHub issue. A test written to Linear needs a workspace whose GitHub integration does not cover the team.
+
+Two API details exercised along the way:
+
+- `issues(orderBy: createdAt)` returns the **newest first**: the first 100 rows came back `OMB-927` (2026-11-19) down to `OMB-826` (2026-11-04) (O1). The schema never says which direction `createdAt` means (S2 PaginationOrderBy), so this is an observation, not a rule to build on.
+- `IssueFilter` has **no `identifier` field**: passing `identifier: { eq: "OMB-927" }` failed with `BAD_USER_INPUT` and the message `Field "identifier" is not defined by type "IssueFilter"`. A single issue is read by passing the identifier to `Query.issue(id:)`, which accepted `"OMB-927"` and returned the issue. The `description: { contains: ... }` form of `IssueFilter` was exercised too and answered an empty list rather than an error for text that exists nowhere (O1).
+
 ## Final evidence: can an issue or a label be deleted?
 
 - **Issue deletion exists**: `issueDelete(id: String!, permanentlyDelete: Boolean): IssueArchivePayload!` (S2 Mutation). "Moves an issue to the trash
@@ -235,3 +255,8 @@ The generated schema and the "published GraphQL schema" are the same artefact he
 - **`lastSyncId` semantics**: present on every payload as `Float!` but described nowhere in S1–S8, so no sync logic should be built on it. Likewise,
   **what "replacing any conflicting relation" means exactly** in `issueRelationCreate` (which relations count as conflicting, and whether the replaced
   relation is returned) is not stated in the schema.
+- **Whether the first-line anchor comment survives a write to `description`, and whether a search finds it.** The schema calls the description "the issue's description in Markdown" and says nothing about HTML comments (S2 IssueCreateInput.description). The attempt to test it (ticket #44) was stopped before its first write, because creating an issue in the team that was available for the test also opens a GitHub issue in a work repository (section 11). Nothing was written to Linear, so the anchor, the search for it, the spec marker on the second line, the rewriting of a bare identifier or URL into a Markdown link, the survival of a checklist, a table and a block quote, and the effect of a person editing one word in the Linear app are all **still unverified**.
+- **The maximum length of a description and of a comment through the API**, and whether an excess is an error or a silent cut: unverified, for the same reason.
+- **Whether a workspace label's colour can be changed by the token in hand.** Unverified. One extra caveat is now known (O1): the token stored for this workspace is an **OAuth application** token (the `viewer` query answers with the app's own identity, an `@oauthapp.linear.app` address, not a member), which is not the normal member key that the question about label colours asks about, so a result from this token would not settle it either way.
+- **What a safe experiment needs**: a workspace with no GitHub integration covering the team, or an integration scoped to a project the team's test issues do not use. `OMB` is not such a place: it is the only team of that workspace, and its issues are mirrored to `ombrellosolar-backend`.
+
