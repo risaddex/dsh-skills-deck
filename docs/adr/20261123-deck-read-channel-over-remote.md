@@ -39,3 +39,20 @@ All four deck backends — GitHub, GitLab, local Markdown and Linear — are rea
 - DSH Go must replace the HTTP-only eligibility check for this panel with the negotiated `deck.panel.read.v1` check, while leaving the existing HTTP bridge behavior unchanged for local and SSH hosts.
 - The panel intentionally differs from the desktop panel: no comments, no closed items, no filters, no search and no writes. Those are later features, not omissions hidden from the user.
 - A host with older deck or Remote software shows no panel; the deck remains usable through the agent and its tools.
+
+## The deck-side surface (settled while implementing #74)
+
+The deck publishes the channel as one Cordis service named `deckPanelRead`. A remote host plugin reads it with an optional injection, so a host whose deck is older (no service) or whose deck cannot load either read simply has nothing to announce. The service is frozen and has exactly four members:
+
+- `feature`: the string `deck.panel.read.v1`.
+- `operations`: the list `['tree', 'ticket']`.
+- `available()`: answers `{ available: true }` only when the tree read and the ticket read both load; otherwise `{ available: false, reason }` with a short machine-readable reason (`load-failed`, `load-timeout`, `tree-read-missing`, `ticket-read-missing`). It is computed on every call; there is no cache and no timer.
+- `call(operation, params)`: `call('tree', { sessionId })` or `call('ticket', { sessionId, key })`. Any other operation name, any extra key (in particular `cwd` or `path`), a missing or oversized `sessionId`, or a missing ticket key is refused before any read starts.
+
+Every failure has the same shape, `{ ok: false, error: { kind, message } }`, and carries no data. The channel's own kinds are `operation-not-allowed`, `bad-request`, `unavailable`, `timeout`, `read-failed`, `bad-reply` and `oversized`. When a read itself fails, its short lowercase `kind` (for example `session`, `not-found`, `parse`, `fetch-failed`) is passed on, and anything that is not such a short code becomes `read-failed`. The `message` is always a fixed sentence written by the channel from the kind: the text a read produced, and the text of any thrown error, can contain paths and repository names, so neither is sent to the phone. A success reply must carry the same `sessionId` as the request, otherwise it is refused as `bad-reply`; the whole reply (not only its tree or ticket) is measured again against the byte limit the reads use.
+
+The service is published after the host entry has loaded the channel module, which happens shortly after start-up and not inside `apply()`. A remote host must therefore inject it as optional and react when it appears; it must not assume it exists at the first instant.
+
+Why a service and not a route: the existing `/api/dsws` route fronts more than a hundred host calls, several of them writes, so "forward only two of them" would put the read-only promise in the other plugin's allow-list. The service has two operations by construction. It also adds no network entry point.
+
+The time bound is the repository's single "one step wait" value (`stepWaitMs`). Loading the reads and performing the read share one such bound, they do not add up. The relay applies its own, separate bound on top.
