@@ -15,7 +15,7 @@ export default {
   name: 'dsh-skills-deck',
   // 声明 connection + llm + sessionQuery：webServer 仍不加（#596）；llm 给首轮摘要调模型用，sessionQuery 给读首轮两段用（读而不激活），缺任何一个对应功能静默降级（#746）。
   inject: ['connection', 'llm', 'sessionQuery'],
-  // 宿主插件主入口：为什么留在单文件装配——集中注册 121 条宿主电话与启动门，所有具体实现按需动态引入；什么约定不能改——subprocess/timer 未就绪时必须挂起等待而非直接放弃，且本文件总行数受门禁上限 400 行与电话精确计数 121 条约束；
+  // 宿主插件主入口：为什么留在单文件装配——集中注册 122 条宿主电话与启动门，所有具体实现按需动态引入；什么约定不能改——subprocess/timer 未就绪时必须挂起等待而非直接放弃，且本文件总行数受门禁上限 400 行与电话精确计数 122 条约束；
   // 反例——若在 subprocess 未就绪时直接 return 退出而不挂 ctx.inject，慢启动机器上 deck 工具将永远无法注册且无日志可查。
   apply(ctx: HostCtx) {
     // 启动门（2026-09-26）：subprocess/timer 晚到时不再静默跳过——旧代码直接 return， wiring 与工具注册 hook 从没跑起来，deck 工具永不注册还查无对证。 先试一次；不齐就挂到框架依赖门上等人齐（官方 ctx.inject 写法，见 dsh-tool-pwsh）； 30 秒还没齐落一条 warn。 为何只能留在入口，见账本 §1。
@@ -228,6 +228,8 @@ export default {
     let _readChannelsP: Promise<any> | null = null; function _readChannels(): Promise<any> { if (!_readChannelsP) _readChannelsP = (async function(){ const life = await _sessLife(); const mod = await import('../refresh/rooms/host/snapshot-read-channels.js'); return mod.createSnapshotReadChannels({ canonicalKey: function(...args: any[]){ return canonicalKey.apply(null, args) }, selectEarly: life.selectEarly, getTrackerRegistry: function(...args: any[]){ return getTrackerRegistry.apply(null, args) }, getSnapshotLibrary: function(){ return _snapLib() }, getRepoKey: function(...args: any[]){ return getRepoKey.apply(null, args) }, openSession: openSessionFor, logEvent: function(level: any, event: any, fields: any){ try { logCtx.fire(level, event, fields) } catch (eL) {} } }) })(); return _readChannelsP }
     let _deckTreeP: Promise<any> | null = null // #71：按会话读取开放地图/规格树的只读电话；会话解析与快照读取都复用现有出口。
     function _deckTree(): Promise<any> { if (!_deckTreeP) _deckTreeP = (async function(){ const [life, mod] = await Promise.all([ _sessLife(), import('./deckTree.js') ]); return mod.createDeckTreeRead({ handleCwd: life.handleCwd, openSession: openSessionFor }) })(); return _deckTreeP }
+    let _deckTicketP: Promise<any> | null = null // #72：按会话读取一张票详情的只读电话；会话解析与只读会话与树读共用同一份（src/host/deckReadScope.ts）。
+    function _deckTicket(): Promise<any> { if (!_deckTicketP) _deckTicketP = (async function(){ const [life, mod] = await Promise.all([ _sessLife(), import('./deckTicket.js') ]); return mod.createDeckTicketRead({ handleCwd: life.handleCwd, openSession: openSessionFor }) })(); return _deckTicketP }
     let _mapTicketsP: Promise<any> | null = null // #691（阶段 3）：地图子票按需电话 —— 点开一张地图时现去后端把它的子票拉全（已关闭的地图不在快照首屏里）
     function _mapTickets(): Promise<any> { if (!_mapTicketsP) _mapTicketsP = (async function(){ const life = await _sessLife(); const mod = await import('./mapTickets.js'); const grp = await _group(); return mod.createMapTickets({ canonicalKey: function(...args: any[]){ return canonicalKey.apply(null, args) }, selectEarly: life.selectEarly, isComposerSelection: life.isComposerSelection, getTrackerRegistry: function(...args: any[]){ return getTrackerRegistry.apply(null, args) }, getPlatform: function(...args: any[]){ return getPlatform.apply(null, args) }, ctx: ctx, DEFAULT_CWD: DEFAULT_CWD, logCtx: logCtx, groupTickets: grp.groupTickets, getMapBody: function(){ return _mapBody() }, detectionExec: function(...args: any[]){ return detectionExec.apply(null, args) }, openSession: openSessionFor }) })(); return _mapTicketsP }
     let _sessRefP: Promise<any> | null = null
@@ -252,6 +254,7 @@ export default {
     // #691：地图子票按需取（in-panel 地图详情页打开时调用；后端没实现这条读路径时界面照旧用快照那份）
     harness.handle('wf.mapTickets', async function (args: WfArgs) { const h = await _mapTickets(); return h.handleMapTickets(args) })
     harness.handle('wf.deckTree', async function (args: WfArgs) { const h = await _deckTree(); return h.handleTree(args) })
+    harness.handle('wf.deckTicket', async function (args: WfArgs) { const h = await _deckTicket(); return h.handleTicket(args) })
 
     // #1436：胶囊首帧的「本会话处理过哪些票」只读电话 —— 只读本机 work-path 存档，不为了一张名单去重建整份快照（缘由见 src/host/snapshotEnvelope.ts 末尾那一节）。
     let _ownRouteP: Promise<any> | null = null
