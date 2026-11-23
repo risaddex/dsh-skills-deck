@@ -75,6 +75,9 @@ export const MAP_PATH: string = path.join(ROOT, 'tests', 'gate-map.json')
 //   期望比实际小 = 有人加了断言却忘了改这里，也判红，顺手把数字改准。
 // 还没开闸的门禁一律不许写在这里 —— 编一个数字出来，真红就会变假绿。
 export const COMPLETION_RECORDED_GATES: Record<string, number> = {
+  // 2026-11-23 #76：deck_issue_report 的票号归一也要认 Linear 的文本票号（OMB-923），口径与
+  // deck_issue_patch / deck_issue_get 一致；数字票号、去 #、去前导零照旧，其余形状仍然拒掉。16 条单跑实测。
+  'verify-76-report-text-key': 16,
   // 2026-11-23 #72：按会话读取一张票的结构化详情，按行为分三扇（文件粒度上限 20KB，一扇只说自己那一组）。
   // 投影：七样东西（标题/状态/标签/正文/验收标准/进度/阻塞者）、没有可选区块时不凭空造、明确给空照旧给空、
   // triage 状态有才带、评论一个字都不进回包、验收标准只认它那个区（围栏与区外不算，中英标题都认，自造标题不算）；35 条单跑实测。
