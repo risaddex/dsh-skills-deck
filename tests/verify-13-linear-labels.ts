@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     check(calls.length === 2, 'one lookup and one write, nothing else', String(calls.length))
     const lookup = sentOf(calls[0])
     check(lookup.query.indexOf('issueLabels') >= 0, 'the first request asks Linear for the labels', lookup.query.slice(0, 80))
-    check(JSON.stringify(lookup.variables.names) === JSON.stringify(['bug', 'docs']), 'the lookup asks for both names at once', JSON.stringify(lookup.variables))
+    check(JSON.stringify((lookup.variables.filter.or || []).map((c: any) => c.name && c.name.eqIgnoreCase)) === JSON.stringify(['bug', 'docs']), 'the lookup asks for both names at once (#85: ignoring case)', JSON.stringify(lookup.variables))
     check(calls[0] && calls[0].bucket === 'read', 'the lookup is a read for the outbound gate', calls[0] ? calls[0].bucket : '(none)')
     const write = sentOf(calls[1])
     check(write.query.indexOf('issueUpdate') >= 0, 'the second request is the issue write', write.query.slice(0, 80))

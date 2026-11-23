@@ -53,7 +53,8 @@ export interface TrackerError {
  *
  * 取值表 `TRACKER_ERROR_STAGE` 是唯一真源：房间写它、调用方比对它也走这一份，
  * 别再把 `'anchor-lookup'` 写成裸字面量 —— 改名时编译器能顺着常量找到每一处。
- * 今天有两个取值，共同点是「失败发生在链路前段，下一步由这一段决定」：
+ * 今天有三个取值，共同点是「失败发生在链路前段，一个写动作也没有改到票」；
+ * 前两个还会改变下一步的判断，`LABEL_CREATE` 不改，它只是把失败说明白：
  *
  * - `ANCHOR_LOOKUP`：建票前按幂等锚回查时没能做成，后端一个写动作都没发出、票没建。
  *   带上它的失败，`message` 只陈述事实；「调用方还能做什么」只有调用方那一层知道
@@ -65,6 +66,12 @@ export interface TrackerError {
  *   不合法、参数缺项……），一个写动作都没发出。带上它等于说「改输入才能重试」；deck 工具据此
  *   把失败归到 bad-args，而不是当成后端能力不足（#1799 加）。
  *
+ * - `LABEL_CREATE`：把标签名换成标签 id 时，要为缺的名字新建标签，而后端没让建（#85 加）。
+ *   票没建、也没改（已经建出来的标签留在后端，见 Linear 房 `labels.ts` 的 `createLabel`）。
+ *   这个字段只回答「失败发生在哪一步」，**不改变**原因码的判断：`kind` 仍按原表走
+ *   （权限被拒是 `auth`，回执里仍归 backend-unsupported，下一步仍是「停下来」），
+ *   所以原因码的个数与含义不变，真正的原因写在 message 与失败证据的 stage 字段里。
+ *
  * 不传 = 普通失败，调用方不额外推荐做法 —— 别的原因（权限、参数……）原样重试未必有用。
  */
 export const TRACKER_ERROR_STAGE = Object.freeze({
@@ -72,6 +79,8 @@ export const TRACKER_ERROR_STAGE = Object.freeze({
   ANCHOR_LOOKUP: 'anchor-lookup',
   /** 房间在动手之前就拒绝了这次输入：一个写动作都没发出，改输入后才可能成功。 */
   INPUT_REFUSED: 'input-refused',
+  /** 为缺失的标签名新建标签时失败：票没建也没改；说明里列出还缺的名字，先把标签建好才可能成功。 */
+  LABEL_CREATE: 'label-create',
 })
 
 /** 链路阶段的取值类型；从 `TRACKER_ERROR_STAGE` 推出来，保证类型与运行时常量不会写成两个值。 */

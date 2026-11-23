@@ -9,7 +9,7 @@
 // 搬出来还有一个现实原因：map-plan-create.ts 的有效行已经贴着文件粒度门禁的基线（373 行，只许减
 // 不许增），这一段进不去。
 import { DECK_STATUS } from '../shell/call-shell.js'
-import { reasonForResult } from '../shell/receipt-reason.js'
+import { backendMessageLimit, reasonForResult } from '../shell/receipt-reason.js'
 import type { TransportResult } from '../shell/backend-transport.js'
 // 回查阶段的取值从契约的同一张表里取，不在这里另写一遍字面量：改名时编译器能顺着常量找到每一处。
 import { TRACKER_ERROR_STAGE } from '../../tracker/contract/results.js'
@@ -24,7 +24,8 @@ import { TRACKER_ERROR_STAGE } from '../../tracker/contract/results.js'
  */
 export function backendMapCreateFailure(created: TransportResult, planId: string, notes: string[]): { value: Record<string, unknown>; claimed: { requests: number; points: number } } {
   const err = created && created.error
-  const msg = String((err && err.message) || 'the backend did not give a reason').slice(0, 300)
+  // 标签那一步的原话是写给人的名单（#85），不能截在中间；别的失败仍是 300 字。
+  const msg = String((err && err.message) || 'the backend did not give a reason').slice(0, backendMessageLimit(err && err.stage, 300))
   // 只有「回查没做成」这一档有确定可做的下一步；别的失败重试未必有用，不追加任何建议。
   const lookupFailed = !!err && err.stage === TRACKER_ERROR_STAGE.ANCHOR_LOOKUP
   const retryAdvice = lookupFailed
