@@ -75,6 +75,9 @@ export const MAP_PATH: string = path.join(ROOT, 'tests', 'gate-map.json')
 //   期望比实际小 = 有人加了断言却忘了改这里，也判红，顺手把数字改准。
 // 还没开闸的门禁一律不许写在这里 —— 编一个数字出来，真红就会变假绿。
 export const COMPLETION_RECORDED_GATES: Record<string, number> = {
+  // 2026-11-24 #80：写工具成功后「记一笔」那一步要认 Linear 的文本票号（OMB-923）：五个写工具各记各的、
+  // 数字票号照旧、认不出的票号在回执里说实话、释放也认文本票号、chainTicketKey 不动。19 条单跑实测。
+  'verify-80-work-route-text-key': 19,
   // 2026-11-23 #74（规格 #70 第四票）：把树读与票读暴露给远程宿主的读通道（服务 deckPanelRead，功能名 deck.panel.read.v1）。
   // 名字与只有两个操作（清单冻结）、两个读都在且都加载得起来才可用（缺一个整体不可用，探测超时与加载抛错也算不可用且不带路径原文）、
   // 两个读走通并原样带回、其它十六种操作名与非字符串操作名一律被拒且一条读都不发、十九种形状不对的请求（含自由路径 cwd / path）

@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T21:44:11.117Z",
+  "generatedAt": "2026-11-23T22:31:22.260Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 662,
-  "gateCount": 662,
-  "attributedGates": 599,
+  "chainLength": 663,
+  "gateCount": 663,
+  "attributedGates": 600,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 183,
+  "completionRecordedGates": 184,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 1007,
+  "graphFileCount": 1008,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -9798,6 +9798,26 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 10 条"
     },
     {
+      "step": "node tests/verify-80-work-route-text-key.ts",
+      "file": "tests/verify-80-work-route-text-key.ts",
+      "guards": [
+        "src/deck/shell/work-path-bindings.ts",
+        "src/deck/shell/work-path-record.ts",
+        "src/refresh/kernel/refresh-chain.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/deck/shell",
+        "src/refresh/kernel",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 19,
+      "reason": "归属来自：静态 import 说明符 4 条"
+    },
+    {
       "step": "node tests/verify-818-version-control-view.ts",
       "file": "tests/verify-818-version-control-view.ts",
       "guards": [
@@ -16224,6 +16244,7 @@
       "node tests/verify-1790-status-surface.ts",
       "node tests/verify-1799-receipt-reasons.ts",
       "node tests/verify-656-subworkspace-acceptance.ts",
+      "node tests/verify-80-work-route-text-key.ts",
       "node tests/verify-829-parent-reread.ts",
       "node tests/verify-895-bulk-deadline.ts",
       "node tests/verify-895-github-memo.ts",
@@ -16563,6 +16584,7 @@
       "node tests/verify-723-gate-wiring.ts",
       "node tests/verify-784-effortId.ts",
       "node tests/verify-790-parent-edge.ts",
+      "node tests/verify-80-work-route-text-key.ts",
       "node tests/verify-829-parent-reread.ts",
       "node tests/verify-895-bulk-deadline.ts",
       "node tests/verify-898-block-merge.ts",
@@ -17771,6 +17793,7 @@
       "node tests/verify-784-effortId.ts",
       "node tests/verify-786-focus-end.ts",
       "node tests/verify-790-parent-edge.ts",
+      "node tests/verify-80-work-route-text-key.ts",
       "node tests/verify-818-version-control-view.ts",
       "node tests/verify-829-parent-reread.ts",
       "node tests/verify-841-write-phones.ts",
@@ -17875,9 +17898,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1030,
+    "fileCount": 1031,
     "dirCount": 106,
-    "coveredFileCount": 1030,
+    "coveredFileCount": 1031,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -18231,6 +18254,7 @@
       "src/deck/shell/work-path-ledger.ts",
       "src/deck/shell/work-path-privacy.ts",
       "src/deck/shell/work-path-readout.ts",
+      "src/deck/shell/work-path-receipt-read.ts",
       "src/deck/shell/work-path-record.ts",
       "src/deck/shell/work-path-store.ts",
       "src/deck/shell/workspace-anchor.ts",

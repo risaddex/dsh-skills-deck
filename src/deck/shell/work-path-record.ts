@@ -2,7 +2,7 @@
 //
 // 为什么单列一份而不是写进 call-shell.ts：壳文件有效行已到 321，离 350 上限只剩 29 行，
 // 这一步的分支（认哪些工具、认哪些票、失败写备注）展开要五十多行，会把壳顶超标。
-// 本文件除一个运行时值导入（chainTicketKey，见下）外只 import 类型；记与释放两支能力
+// 本文件只 import 类型与同层的 work-path-receipt-read.ts（读回执的那一半，#80 拆出）；记与释放两支能力
 // 由调用方以依赖注入（DeckShellDeps 的 workRouteNote / workRouteRelease）。读在办表走 deck_work_route，不在这里。
 //
 // 谁记、谁不记（规格 #1259 第 5、6、8 条，本票 #1262 铺满）：
@@ -41,122 +41,13 @@
 // 标题与工作单元是锦上添花：能从这次回执里认出来就写进去，认不出就省略键——
 // 存储约定传 undefined 保留上一次的值，传空串会覆盖（见 work-path-store.ts 的 note）。
 //
-// 票号先按链的同一套归一收一次（chainTicketKey：去 #、去前导零）：后端回执的写法并不统一，
-// markdown 建票回 "01"、上报却回 "1"；不先收成同一个键，同一张票会在在办表里出现两条
-// （#1262 的门禁实测：上报回 "1"、建票回 "01" 若各记各的，同一张票就占了两行）。归一后 "#01"、"01"、"1" 都记成 "1"。
-// 这是本文件唯一一处运行时值导入：chain.ts 是共享纯逻辑（不碰 DOM、不碰 Node 内置模块），
-// 与依赖规则门禁里登记的跨层方向一致，不新增豁免。
+// 票号怎么收成同一个键、怎么认 Linear 的文本票号（`OMB-923`）、哪些写工具从回执哪一处取票号与票面，都在
+// work-path-receipt-read.ts（#80 拆出，原因写在那份文件头）：数字票号 "#01"、"01"、"1" 都记成 "1"，文本票号原样记下。
+// 回执里有票号、但一个也认不出来时，本文件在回执备注里说实话（#80），不再悄悄返回。
+// 本文件现在没有运行时的跨层导入，只用类型与那份同层文件。
 
-import { chainTicketKey } from '../../refresh/kernel/refresh-chain.js';
 import type { DeckShellDeps, ShellSession, UnknownRecord } from './call-shell-types.js';
-
-/** 一张票这次要写进工作路线的标题与工作单元；认不出就给空串，调用方据此省略键。 */
-interface TicketFacts {
-  title: string;
-  effortId: string;
-}
-
-/** 一个写工具的登记表：动作、来源、这次写到的票号、票面信息从回执哪一处取。 */
-interface WriteToolRule {
-  action: string;
-  source: string;
-  /** 这次调用写到的票号（已归一、已去重、认不出的丢掉）。 */
-  ticketKeys: (vRec: UnknownRecord) => string[];
-  /** 这张票的标题与工作单元；认不出返回空串，note 时省略键。 */
-  ticketFactsOf: (vRec: UnknownRecord, key: string) => TicketFacts;
-}
-
-/** 存储里标题最多留 80 字，与读出口的展示口径一致。 */
-function clip(t: string): string {
-  return t.slice(0, 80);
-}
-
-function str(v: unknown): string {
-  return typeof v === 'string' ? v : '';
-}
-
-function obj(v: unknown): UnknownRecord | null {
-  return (v && typeof v === 'object') ? (v as UnknownRecord) : null;
-}
-
-/** 把回执里的一串票号收成去重后的键：按链的口径归一，认不出的丢掉，顺序照回执给的顺序。 */
-function normalizeKeys(raw: unknown): string[] {
-  const list = Array.isArray(raw) ? raw : [];
-  const out: string[] = [];
-  for (let i = 0; i < list.length; i++) {
-    const key = chainTicketKey(list[i]);
-    if (key !== '' && out.indexOf(key) < 0) out.push(key);
-  }
-  return out;
-}
-
-/** 大多数写工具都从 touched 取票号：本次写到的每一张票，按回执给的顺序。 */
-function keysOfTouched(vRec: UnknownRecord): string[] {
-  return normalizeKeys(vRec.touched);
-}
-
-/** 上报不碰票面，touched 恒空；它报的那张票在 data.key。 */
-function keysOfReport(vRec: UnknownRecord): string[] {
-  const data = obj(vRec.data);
-  const key = data ? chainTicketKey(data.key) : '';
-  return key === '' ? [] : [key];
-}
-
-/**
- * 建图只记这一次真建出来的子票：items 里 role=child、status=ok、且没标 skipped。
- * 不记地图票（规格只写「它建出的每张子票各一条」），也不记上次已建、这次跳过的子票
- * （记了会刷新它们的动作时间，续跑一次就在办表里再「动」一次）。
- */
-function keysOfPlanChildren(vRec: UnknownRecord): string[] {
-  const items = Array.isArray(vRec.items) ? vRec.items : [];
-  const out: string[] = [];
-  for (let i = 0; i < items.length; i++) {
-    const row = obj(items[i]);
-    if (!row || row.role !== 'child' || row.status !== 'ok' || row.skipped === true) continue;
-    const key = chainTicketKey(row.key);
-    if (key !== '' && out.indexOf(key) < 0) out.push(key);
-  }
-  return out;
-}
-
-/** 建票与改票的回执里都有 data.ticket：key 对得上才算这张票的份，对不上就当作没这份信息。 */
-function ticketFactsOfTicket(vRec: UnknownRecord, key: string): TicketFacts {
-  const data = obj(vRec.data);
-  const ticket = data ? obj(data.ticket) : null;
-  if (!ticket || chainTicketKey(ticket.key) !== key) return { title: '', effortId: '' };
-  return { title: clip(str(ticket.title)), effortId: str(ticket.effortId) };
-}
-
-/** 上报的票面信息就在 data 上（title 与 effortId 直接给，票号已在 data.key 上认过）。 */
-function ticketFactsOfReport(vRec: UnknownRecord): TicketFacts {
-  const data = obj(vRec.data) || {};
-  return { title: clip(str(data.title)), effortId: str(data.effortId) };
-}
-
-/** 建图的回执把每张票放在 items 里，按票号找子票那一行取标题。 */
-function ticketFactsOfPlanChild(vRec: UnknownRecord, key: string): TicketFacts {
-  const items = Array.isArray(vRec.items) ? vRec.items : [];
-  for (let i = 0; i < items.length; i++) {
-    const row = obj(items[i]);
-    if (!row || row.role !== 'child' || chainTicketKey(row.key) !== key) continue;
-    return { title: clip(str(row.title)), effortId: '' };
-  }
-  return { title: '', effortId: '' };
-}
-
-/** 连边的回执里没有标题与工作单元，留空（存储会保留上一次的值，不会抹掉）。 */
-function emptyTicketFacts(): TicketFacts {
-  return { title: '', effortId: '' };
-}
-
-/** 五个写工具的动作类别与来源。读工具不在这张表里，所以它们走不到记一笔那一步。 */
-const WRITE_TOOLS: Record<string, WriteToolRule> = {
-  deck_issue_report: { action: 'report', source: 'reported', ticketKeys: keysOfReport, ticketFactsOf: ticketFactsOfReport },
-  deck_issue_create: { action: 'create', source: 'auto', ticketKeys: keysOfTouched, ticketFactsOf: ticketFactsOfTicket },
-  deck_issue_patch: { action: 'edit', source: 'auto', ticketKeys: keysOfTouched, ticketFactsOf: ticketFactsOfTicket },
-  deck_map_plan_create: { action: 'plan', source: 'auto', ticketKeys: keysOfPlanChildren, ticketFactsOf: ticketFactsOfPlanChild },
-  deck_map_link: { action: 'link', source: 'auto', ticketKeys: keysOfTouched, ticketFactsOf: emptyTicketFacts },
-};
+import { WRITE_TOOLS, obj, str } from './work-path-receipt-read.js';
 
 /**
  * 写工具成功收口处调一次：逐张票记一笔（上报带 release=true 时改走释放一支），不再读在办表、不写回执。
@@ -182,8 +73,10 @@ export async function recordWorkRoute(
   // 不注入；partial 的信封 ok 是 false（只写成了一部分），按失败办，宁可这次少记也不把没写成
   // 的票冒充在办。
   if (str(vRec.status) !== 'ok') return;
-  const tickets = spec.ticketKeys(vRec);
-  if (tickets.length === 0) return;
+  const scan = spec.ticketKeys(vRec);
+  const tickets = scan.keys;
+  // 回执里一个票号都没给（例如建图续跑时没有新建的子票）是正常的，不吭声；给了却一个都认不出才要说实话。
+  if (tickets.length === 0 && scan.unrecognized === 0) return;
   // 释放是工具 value 顶层的内部信号（信封只拷固定那几格，不会漏进回执）：只有上报会带它。
   const releaseMode = spec.action === 'report' && vRec.release === true;
   if (!Array.isArray(vRec.notes)) vRec.notes = [];
@@ -191,10 +84,15 @@ export async function recordWorkRoute(
   if (releaseMode) {
     // 释放这一支接不上时也要说清楚：静默什么都不做会让人以为票已经释放了。
     if (typeof releaseFn !== 'function') {
-      notes.push('The work route did not release this time (no-release-binding): this assembly has no release branch wired up, so the work entry of the ticket is still there.');
+      if (tickets.length > 0) notes.push('The work route did not release this time (no-release-binding): this assembly has no release branch wired up, so the work entry of the ticket is still there.');
       return;
     }
   } else if (typeof note !== 'function') return;
+  // 认不出票号：什么都没记（也没有可释放的），回执里说清楚，免得人以为已经记上了（#80）。
+  if (tickets.length === 0) {
+    notes.push('The work route did not ' + (releaseMode ? 'release' : 'record') + ' this time (unrecognized-ticket-key): the receipt carried ' + scan.unrecognized + ' ticket key(s) in a shape the work board does not recognize, so nothing was ' + (releaseMode ? 'released' : 'recorded') + '. It recognizes a number such as 42 and a tracker key such as OMB-923. To see the work board, call deck_work_route.');
+    return;
+  }
   // 上面按模式各放行一支，这里把可调用形状收窄一次：TS 不会把上一个 if 里的收窄带进下面的新分支。
   const callRelease = releaseFn as NonNullable<typeof releaseFn>;
   const callNote = note as NonNullable<typeof note>;
