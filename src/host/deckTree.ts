@@ -1,0 +1,122 @@
+/**
+ * src/host/deckTree.ts —— 会话 → workspace → 开放地图/规格树的只读宿主电话。
+ *
+ * 这一层只回答一个问题：一个对话的 sessionId 对应哪个 workspace，以及从该 workspace 的
+ * Tracker 读会话里取出的开放工作树是什么形状。它不复制后端判据：workspace 由现有 wf.cwd 解析，
+ * 后端选择、只读权限与 Tracker 契约调用都由现有 openSession 会话承担。
+ *
+ * #72 起「会话 → workspace → 只读会话」与失败折法搬到 src/host/deckReadSession.ts，每一行的归一
+ * 搬到 src/host/deckReadRow.ts：票读（src/host/deckTicket.ts）必须与这里解析出同一个工作区、
+ * 把阻塞者写成一模一样的一行，各留一份就是两个真源。本文件只剩树自己的投影（容器、子票与截断）。
+ *
+ * 边界：不写、不缓存、不读评论。会话找不到就失败，绝不回落到别的 workspace；
+ * 后端没表达的 blockedBy / tickets 保持未知，不折成空数组。
+ */
+
+import { assembleSnapshot } from './tracker/snapshotAssemble.js'
+import { errorTextOf, failureOf, resolveDeckReadSession, type DeckReadDeps } from './deckReadSession.js'
+import { blockersOf, numberOrNull, stateOf, stringOf, type DeckReadBlocker } from './deckReadRow.js'
+
+type TreeTicket = {
+  key: string
+  number: number | null
+  title: string
+  state: string
+  url: string
+  blockedBy?: DeckReadBlocker[]
+}
+
+type TreeContainer = {
+  key: string
+  number: number | null
+  kind: 'map' | 'spec'
+  title: string
+  state: string
+  url: string
+  tickets?: TreeTicket[]
+}
+
+/** 子票行：键必给，其余缺了用空串，读不到就不猜。 */
+function ticketOf(raw: any): TreeTicket | null {
+  const key = stringOf(raw && raw.key).trim()
+  if (!key) return null
+  const out: TreeTicket = {
+    key,
+    number: numberOrNull(raw && raw.number, key),
+    title: stringOf(raw && raw.title),
+    state: stateOf(raw && raw.state),
+    url: stringOf(raw && raw.url),
+  }
+  const blockedBy = blockersOf(raw)
+  if (blockedBy !== undefined) out.blockedBy = blockedBy
+  return out
+}
+
+/** 容器行：只认 map 与 spec 两种种类，别的种类不进树（宁可不显示，也不冒充成一种容器）。 */
+function containerOf(raw: any): TreeContainer | null {
+  const key = stringOf(raw && raw.key).trim()
+  if (!key) return null
+  const kindRaw = stringOf(raw && raw.type)
+  if (kindRaw !== 'map' && kindRaw !== 'spec') return null
+  const out: TreeContainer = {
+    key,
+    number: numberOrNull(raw && raw.number, key),
+    kind: kindRaw,
+    title: stringOf(raw && raw.title),
+    state: stateOf(raw && raw.state),
+    url: stringOf(raw && raw.url),
+  }
+  if (Array.isArray(raw && raw.tickets)) {
+    out.tickets = raw.tickets.map(ticketOf).filter((t: TreeTicket | null): t is TreeTicket => t !== null)
+  }
+  return out
+}
+
+/**
+ * 组装电话。依赖显式传入：会话解析、只读会话与后端选择各只有一条来源。
+ */
+export function createDeckTreeRead(deps: DeckReadDeps): { handleTree: (args?: any) => Promise<any> } {
+  async function handleTree(args?: any): Promise<any> {
+    const resolved = await resolveDeckReadSession(deps, args && args.sessionId, 'The deck tree could not be read')
+    if (!resolved.ok) return resolved
+
+    let listed: any
+    try {
+      listed = await resolved.call((session: any, ctx: any) => session.list(resolved.repoRef, { state: 'open' }, ctx))
+    } catch (e) {
+      return { ok: false, error: { kind: 'fetch-failed', message: errorTextOf(e, 'The deck tree could not be read') } }
+    }
+    if (!listed || listed.ok !== true) return failureOf(listed, 'fetch-failed', 'The deck tree could not be read')
+    if (!Array.isArray(listed.data)) {
+      return { ok: false, error: { kind: 'parse', message: 'The tracker list returned no row array' } }
+    }
+
+    const assembled: any = assembleSnapshot(resolved.repoRef, listed.data)
+    if (!assembled || !Array.isArray(assembled.maps)) {
+      return { ok: false, error: { kind: 'parse', message: 'The tracker rows could not be assembled into a tree' } }
+    }
+    const containers: TreeContainer[] = []
+    for (const raw of assembled.maps) {
+      const container = containerOf(raw)
+      if (!container) continue
+      if (container.state === 'CLOSED') continue
+      containers.push(container)
+    }
+
+    const out: any = {
+      ok: true,
+      sessionId: resolved.sessionId,
+      workspaceRoot: resolved.workspaceRoot,
+      backendId: resolved.backendId,
+      containers,
+      truncated: listed.truncated === true,
+      fallback: listed.fallback === 'rest' ? 'rest' : null,
+    }
+    if (typeof listed.fallbackReason === 'string' && listed.fallbackReason) out.fallbackReason = listed.fallbackReason
+    return out
+  }
+
+  return { handleTree }
+}
+
+export default { createDeckTreeRead }
