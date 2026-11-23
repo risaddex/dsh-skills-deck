@@ -1,3 +1,14 @@
+## 2026-11-23 · v2.1.1 stable: the report tool takes a Linear ticket key, and the deck gains the read channel for the remote panel (#71, #72, #76)
+
+- **What this is**: the version moves from `2.1.0` to `2.1.1`. It is a patch because the user-facing defect fixed here is one tool; the two read phones travel in the same release because they were merged into `main` after `2.1.0`. Their consuming panel is not part of this release's surface, so the 2.1.1 checklist records them as exemptions with the surface stated, and the end-to-end acceptance stays with spec #70.
+- **A Linear ticket key reaches the report tool (#76)**: `deck_issue_report` normalised its key to 1 to 10 digits only, so `OMB-923` became an empty string and the tool refused before it opened the room, while the bare number `923` failed inside the Linear room with `Entity not found`. The normaliser now keeps the numeric rules and passes `LETTERS-DIGITS` through unchanged — the rule `deck_issue_patch` and `deck_issue_get` already follow — so a Linear session can record its work on the board.
+- **The deck tree read for one session (#71)**: a read-only host phone resolves the session to its workspace and returns the open map/spec tree with child tickets and blockers; unknown blockers stay unknown, and a truncated or degraded list says so instead of looking complete.
+- **The deck ticket read for one session (#72)**: a second read-only phone returns one ticket's title, state, labels, body, acceptance criteria, progress and blockers with no comments, and keeps the missing, failed and unreadable outcomes distinguishable.
+- **Docs and tooling**: the deck read channel ADR, the transport facts behind it and the vocabulary it introduces (#70).
+- **Install**: update `dsh-skills-deck` to `2.1.1` in the plugin market, or install it from the `dist/v2.1.1` tag. No data moves.
+- **Verification**: `npm run verify:parallel` on this commit (657/657 main-chain steps, 8/8 smoke steps, 0 new red), the new gate `verify-76-report-text-key` (16 assertions), and scenario `76-01` in the 2.1.1 checklist run on a real machine; #71 and #72 are exempt there with the surface stated.
+- **Commit**: this commit.
+
 ## 2026-11-19 · v2.1.0 stable: the Linear room gains labels, label filters and sub-issues on demand, and a map stops hiding the level and the blockers of a ticket that carries a text key (#48, #49, #50, #61, #64, #65)
 
 - **What this is**: the version moves from `2.0.0` to `2.1.0`. It is a minor version because the Linear room gains operations the panel asks for. It also fixes two places where the map knew something and did not show it: the level of a ticket, and the tickets that ticket blocks.
