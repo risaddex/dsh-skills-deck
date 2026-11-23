@@ -8,16 +8,19 @@
  * 现有 openSession 承担、票本身由 Tracker 契约的 get 读。本文件只做一件事：把契约回来的那张票
  * 投影成面板要的形状，所以四个后端天然走同一条路。
  *
- * 三条不能改的约定：
+ * 四条不能改的约定：
  * 1. 失败分得开：缺票（契约说的 not-found）、读失败（后端自己的原因）、回包读不成形状（parse）。
  *    面板靠这个差别决定说「这张票没了」还是「等一下再试」；把三者混成一个 ok=false 就没法决定。
  * 2. 评论不进回包：规格 #70 第一版不显示评论，所以回包里连一格评论字段都没有，读票时也不向契约要
  *    评论正文（见下面 get 的 opts）。
  * 3. 不知道与空是两件事：后端整格没给标签 / 阻塞者 / 状态时省略那一格，明确给空数组就回空数组。
+ * 4. 一份详情不整份过手机那条通道：整份投影过大时回 oversized 失败，绝不交半份正文 —— 半份正文会被
+ *    面板当成完整正文读，比失败更糟。上限与量法都在共用开头（deckReadSession 的 oversizedFailureOf），
+ *    数字住在契约层的 DECK_READ_LIMITS，树读用的是同一道护栏。
  */
 
 import { parseProgressDetail } from '../tracker/body-parse.js'
-import { resolveDeckReadSession, errorTextOf, failureOf, type DeckReadDeps } from './deckReadSession.js'
+import { resolveDeckReadSession, errorTextOf, failureOf, oversizedFailureOf, type DeckReadDeps } from './deckReadSession.js'
 import { blockersOf, numberOrNull, stateOf, stringOf, type DeckReadBlocker } from './deckReadRow.js'
 
 /** 标签片：名字必给；后端不给颜色时是空串（契约里的 Label 就是这个口径，这里不另造一种）。 */
@@ -200,12 +203,18 @@ export function createDeckTicketRead(deps: DeckReadDeps): { handleTicket: (args?
       return { ok: false, error: { kind: 'parse', message: 'The tracker read returned a row without a ticket identity' } }
     }
 
+    const detail = detailOf(issue, key)
+    // 详情整份投影过一次字节护栏（树读用的是同一道，数字与量法都在 deckReadSession 那一处）：
+    // 正文特别大的票不整份过通道，也不截半份交给面板 —— 半份正文被当成完整正文读，比失败更糟。
+    const oversized = oversizedFailureOf(detail, 'deck ticket')
+    if (oversized) return oversized
+
     return {
       ok: true,
       sessionId: resolved.sessionId,
       workspaceRoot: resolved.workspaceRoot,
       backendId: resolved.backendId,
-      ticket: detailOf(issue, key),
+      ticket: detail,
     }
   }
 
