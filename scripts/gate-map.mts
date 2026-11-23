@@ -75,6 +75,10 @@ export const MAP_PATH: string = path.join(ROOT, 'tests', 'gate-map.json')
 //   期望比实际小 = 有人加了断言却忘了改这里，也判红，顺手把数字改准。
 // 还没开闸的门禁一律不许写在这里 —— 编一个数字出来，真红就会变假绿。
 export const COMPLETION_RECORDED_GATES: Record<string, number> = {
+  // 2026-11-23 #72：按会话读取一张票的结构化详情 —— 七样东西（标题/状态/标签/正文/验收标准/进度/阻塞者）、
+  // 没有可选区块时不凭空造、评论一个字都不进回包、缺票与读失败与回包不成形三种结果分得开、
+  // 验收标准只认它那个区（围栏与区外不算，中英标题都认），并覆盖真实会话解析器 + 真实 opener/GitHub 房间管线；53 条单跑实测。
+  'verify-72-deck-ticket-read': 53,
   // 2026-11-23 #71：按会话读取开放地图/规格树 —— 成功瘦树、明确空结果、截断/降级如实上送、会话缺失/打开失败如实失败、阻塞未知与空数组分开，并覆盖真实 session opener + GitHub 房间管线；35 条单跑实测。
   'verify-71-deck-tree-read': 35,
   'verify-release-dist-safety': 12,
