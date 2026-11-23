@@ -5,29 +5,17 @@
  * Tracker 读会话里取出的开放工作树是什么形状。它不复制后端判据：workspace 由现有 wf.cwd 解析，
  * 后端选择、只读权限与 Tracker 契约调用都由现有 openSession 会话承担。
  *
- * #72 起「会话 → workspace → 只读会话」与每一行的归一搬到 src/host/deckReadScope.ts：
- * 票读（src/host/deckTicket.ts）必须与这里解析出同一个工作区、把阻塞者写成一模一样的一行，
- * 各留一份就是两个真源。本文件只剩树自己的投影（容器、子票、状态与截断）。
+ * #72 起「会话 → workspace → 只读会话」与失败折法搬到 src/host/deckReadSession.ts，每一行的归一
+ * 搬到 src/host/deckReadRow.ts：票读（src/host/deckTicket.ts）必须与这里解析出同一个工作区、
+ * 把阻塞者写成一模一样的一行，各留一份就是两个真源。本文件只剩树自己的投影（容器、子票与截断）。
  *
  * 边界：不写、不缓存、不读评论。会话找不到就失败，绝不回落到别的 workspace；
  * 后端没表达的 blockedBy / tickets 保持未知，不折成空数组。
  */
 
 import { assembleSnapshot } from './tracker/snapshotAssemble.js'
-import {
-  blockersOf,
-  failureOf,
-  errorTextOf,
-  numberOrNull,
-  resolveDeckReadSession,
-  stateOf,
-  stringOf,
-  type DeckReadBlocker,
-  type DeckReadDeps,
-} from './deckReadScope.js'
-
-/** 本电话的依赖：会话解析与只读会话两条出口，由装配点显式传入。 */
-type Deps = DeckReadDeps
+import { errorTextOf, failureOf, resolveDeckReadSession, type DeckReadDeps } from './deckReadSession.js'
+import { blockersOf, numberOrNull, stateOf, stringOf, type DeckReadBlocker } from './deckReadRow.js'
 
 type TreeTicket = {
   key: string
@@ -87,11 +75,9 @@ function containerOf(raw: any): TreeContainer | null {
 /**
  * 组装电话。依赖显式传入：会话解析、只读会话与后端选择各只有一条来源。
  */
-export function createDeckTreeRead(deps: Deps): { handleTree: (args?: any) => Promise<any> } {
-  const scope: Deps = Object.assign({ readLabel: 'The deck tree could not be read' }, deps)
-
+export function createDeckTreeRead(deps: DeckReadDeps): { handleTree: (args?: any) => Promise<any> } {
   async function handleTree(args?: any): Promise<any> {
-    const resolved = await resolveDeckReadSession(scope, args && args.sessionId)
+    const resolved = await resolveDeckReadSession(deps, args && args.sessionId, 'The deck tree could not be read')
     if (!resolved.ok) return resolved
 
     let listed: any
