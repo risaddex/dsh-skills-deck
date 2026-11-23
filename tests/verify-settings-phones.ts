@@ -264,7 +264,8 @@ async function main() {
     // #1922 加了快照库占用读数一条电话 wf.snapshotStoreStats（只给诊断看），124 → 125。
     // issue #3：四条更新电话与仅供更新器使用的 logAppend 一起移除，125 → 120。
     // issue #65：加了 Linear 绑定提示词一条电话 wf.linearBindingPrompt（横幅按钮向宿主要已拼好的设置文字，账号清单只出 alias / label / teams），120 → 121。
-    check(nPhones === 121, '宿主电话一百二十一条（增删电话须同步这个数），实得 ' + nPhones + ' 条。')
+    // #71 加了一条只读电话 wf.deckTree（按会话读取开放地图/规格树），121 → 122。
+    check(nPhones === 122, '宿主电话一百二十二条（增删电话须同步这个数），实得 ' + nPhones + ' 条。')
   }
 
   // —— 第五件事：每条电话真跑一遍并断言真的落了一行对应的日志 ——

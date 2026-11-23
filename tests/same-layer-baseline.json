@@ -1477,6 +1477,24 @@
       "count": 1,
       "owner": "#19（Linear 登录流）",
       "note": "接线叶子要用登录流的注册函数（registerLinearFlows），协议与网络住在 linearSignin.ts，接线与账号读取住在叶子里，两者分文件是为了让协议部分能脱离宿主离线测试。方向单向（叶子→协议件），协议件不引叶子，无环。"
+    },
+    {
+      "file": "src/host/index.ts",
+      "spec": "./deckTree.js",
+      "resolved": "src/host/deckTree.ts",
+      "layer": "host",
+      "count": 1,
+      "owner": "#71",
+      "note": "装配扇入：宿主入口动态加载按会话读取开放地图/规格树的只读电话；叶子自包含，依赖由入口显式传入。"
+    },
+    {
+      "file": "src/host/deckTree.ts",
+      "spec": "./tracker/snapshotAssemble.js",
+      "resolved": "src/host/tracker/snapshotAssemble.ts",
+      "layer": "host",
+      "count": 1,
+      "owner": "#71",
+      "note": "复用现有快照纯组装器把 Tracker 的开放行按 parentKey 收成地图/规格与子票；只读、无状态、不引后端实现。"
     }
   ]
 }
