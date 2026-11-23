@@ -49,8 +49,10 @@ const definition = {
 };
 function normKey(raw) {
   const t = String(raw === void 0 || raw === null ? "" : raw).trim().replace(/^#/, "");
-  if (!/^\d{1,10}$/.test(t)) return "";
-  return t.replace(/^0+(?=\d)/, "");
+  if (!t) return "";
+  if (/^\d{1,10}$/.test(t)) return t.replace(/^0+(?=\d)/, "");
+  if (/^[A-Za-z][A-Za-z0-9_]{0,15}-\d{1,10}$/.test(t)) return t;
+  return "";
 }
 function createDeckIssueReport(deps) {
   const d = deps || {};
@@ -167,5 +169,6 @@ function createDeckIssueReport(deps) {
 }
 export {
   createDeckIssueReport,
-  definition
+  definition,
+  normKey
 };
