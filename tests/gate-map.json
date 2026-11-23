@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T19:20:34.401Z",
+  "generatedAt": "2026-11-23T19:31:57.844Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 649,
-  "gateCount": 649,
-  "attributedGates": 587,
+  "chainLength": 651,
+  "gateCount": 651,
+  "attributedGates": 589,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 170,
+  "completionRecordedGates": 172,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 999,
+  "graphFileCount": 1000,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -9309,12 +9309,31 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；静态 import 说明符 1 条"
     },
     {
-      "step": "node tests/verify-72-deck-ticket-read.ts",
-      "file": "tests/verify-72-deck-ticket-read.ts",
+      "step": "node tests/verify-72-deck-ticket-read-failures.ts",
+      "file": "tests/verify-72-deck-ticket-read-failures.ts",
+      "guards": [
+        "src/host/deckTicket.ts",
+        "tests/lib/deck-ticket-fixture.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 17,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 2 条"
+    },
+    {
+      "step": "node tests/verify-72-deck-ticket-read-seams.ts",
+      "file": "tests/verify-72-deck-ticket-read-seams.ts",
       "guards": [
         "src/host/deckTicket.ts",
         "src/host/sessionLifecycle.ts",
         "src/refresh/rooms/host/session-opener.ts",
+        "tests/lib/deck-ticket-fixture.ts",
         "tests/lib/gate-result.ts"
       ],
       "dirs": [
@@ -9325,8 +9344,26 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 53,
-      "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；静态 import 说明符 1 条"
+      "expectedAssertions": 9,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；静态 import 说明符 2 条"
+    },
+    {
+      "step": "node tests/verify-72-deck-ticket-read.ts",
+      "file": "tests/verify-72-deck-ticket-read.ts",
+      "guards": [
+        "src/host/deckTicket.ts",
+        "tests/lib/deck-ticket-fixture.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 35,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 2 条"
     },
     {
       "step": "node tests/verify-723-gate-wiring.ts",
@@ -16123,6 +16160,8 @@
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-696-shared-cache.ts",
       "node tests/verify-71-deck-tree-read.ts",
+      "node tests/verify-72-deck-ticket-read-failures.ts",
+      "node tests/verify-72-deck-ticket-read-seams.ts",
       "node tests/verify-72-deck-ticket-read.ts",
       "node tests/verify-723-single-refresh-instance.ts",
       "node tests/verify-729-force-dedup.ts",
@@ -16497,7 +16536,7 @@
       "node tests/verify-696-shared-cache.ts",
       "node tests/verify-709-no-self-continuing-timers.ts",
       "node tests/verify-71-deck-tree-read.ts",
-      "node tests/verify-72-deck-ticket-read.ts",
+      "node tests/verify-72-deck-ticket-read-seams.ts",
       "node tests/verify-723-gate-wiring.ts",
       "node tests/verify-723-single-refresh-instance.ts",
       "node tests/verify-729-force-dedup.ts",
@@ -17474,6 +17513,8 @@
       "node tests/verify-698-switch-asks-layout.ts",
       "node tests/verify-709-no-self-continuing-timers.ts",
       "node tests/verify-71-deck-tree-read.ts",
+      "node tests/verify-72-deck-ticket-read-failures.ts",
+      "node tests/verify-72-deck-ticket-read-seams.ts",
       "node tests/verify-72-deck-ticket-read.ts",
       "node tests/verify-723-gate-wiring.ts",
       "node tests/verify-763-detail-fold.ts",
@@ -17584,9 +17625,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1022,
+    "fileCount": 1023,
     "dirCount": 106,
-    "coveredFileCount": 1022,
+    "coveredFileCount": 1023,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -17976,7 +18017,8 @@
       "src/host/bootstrap.ts",
       "src/host/choiceStore.ts",
       "src/host/configStore.ts",
-      "src/host/deckReadScope.ts",
+      "src/host/deckReadRow.ts",
+      "src/host/deckReadSession.ts",
       "src/host/deckTicket.ts",
       "src/host/deckToolGate.ts",
       "src/host/deckTree.ts",

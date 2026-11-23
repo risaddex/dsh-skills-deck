@@ -6,31 +6,19 @@
  *
  * 为什么复用而不是另起一条读路径（规格 #70）：workspace 由现有 wf.cwd 解析、后端选择与只读权限由
  * 现有 openSession 承担、票本身由 Tracker 契约的 get 读。本文件只做一件事：把契约回来的那张票
- * 投影成面板要的形状，所以 GitHub / GitLab / 本地 Markdown / Linear 四个后端天然走同一条路。
+ * 投影成面板要的形状，所以四个后端天然走同一条路。
  *
  * 三条不能改的约定：
- * 1. 失败三态分得开：缺票（not-found）、读失败（后端自己的原因）、回包读不成形状（parse）。
- *    面板对缺票与读失败说两种话，混在一起就没法决定「这张票没了」还是「等一下再试」。
- * 2. 评论绝不进回包：规格 #70 明确第一版不读评论，回包连一格评论字段都不留。
- * 3. 不知道与空是两件事：后端整格没给标签 / 阻塞者时省略那一格，明确给空数组就回空数组。
+ * 1. 失败分得开：缺票（契约说的 not-found）、读失败（后端自己的原因）、回包读不成形状（parse）。
+ *    面板靠这个差别决定说「这张票没了」还是「等一下再试」；把三者混成一个 ok=false 就没法决定。
+ * 2. 评论不进回包：规格 #70 第一版不显示评论，所以回包里连一格评论字段都没有，读票时也不向契约要
+ *    评论正文（见下面 get 的 opts）。
+ * 3. 不知道与空是两件事：后端整格没给标签 / 阻塞者 / 状态时省略那一格，明确给空数组就回空数组。
  */
 
 import { parseProgressDetail } from '../tracker/body-parse.js'
-import { ERROR_KIND } from '../tracker/contract/vocabulary.js'
-import {
-  blockersOf,
-  failureOf,
-  errorTextOf,
-  numberOrNull,
-  resolveDeckReadSession,
-  stateOf,
-  stringOf,
-  type DeckReadBlocker,
-  type DeckReadDeps,
-} from './deckReadScope.js'
-
-/** 本电话的依赖：与树读完全同一份（会话解析 + 只读会话）。 */
-type Deps = DeckReadDeps
+import { resolveDeckReadSession, errorTextOf, failureOf, type DeckReadDeps } from './deckReadSession.js'
+import { blockersOf, numberOrNull, stateOf, stringOf, type DeckReadBlocker } from './deckReadRow.js'
 
 /** 标签片：名字必给；后端不给颜色时是空串（契约里的 Label 就是这个口径，这里不另造一种）。 */
 type DetailLabel = { name: string; color: string }
@@ -49,7 +37,14 @@ type TicketDetail = {
   key: string
   number: number | null
   title: string
+  /** 生命周期两态（OPEN / CLOSED），与树里那一行同口径。 */
   state: string
+  /**
+   * triage 状态（只有本地 Markdown 后端会给，例如 needs-triage、ready-for-agent）。
+   * 为什么两态不够：一张票可以「还开着」但已经不是「可接」的状态，面板要能看出这件事；
+   * 后端不报这一格时整格省略 —— 缺席不等于「没有状态」。
+   */
+  status?: string
   url: string
   labels?: DetailLabel[]
   body: string
@@ -59,11 +54,16 @@ type TicketDetail = {
 }
 
 /**
- * 验收标准的标题写法：新建的票写英文（本仓英文优先），老票写中文。
+ * 验收标准的标题写法：新建的票写英文（本仓英文优先），老票写中文「验收标准」。
+ *
  * 为什么按整句比而不是按子串：按子串会让「Acceptance criteria (draft)」这类自造标题也算命中，
  * 而它下面通常没有勾选项，读出来就是一张「没有验收标准」的假结论。
+ *
+ * 与写侧的关系：本地 Markdown 房建票时（src/tracker/rooms/markdown/create-render.ts 的
+ * ACCEPTANCE_LINE_RE）把这种复选框行写进模板的验收项位置；这里按区读回它写下的同一批行。
+ * 两处认的行形状一致（`- [ ]` / `- [x]`），区别只在读的是二级区、写的是模板位置，不是两条数据路径。
  */
-const ACCEPTANCE_TITLES: readonly string[] = ['acceptance criteria', 'acceptance', '验收标准', '验收条件']
+const ACCEPTANCE_TITLES: readonly string[] = ['acceptance criteria', '验收标准', '验收条件']
 
 /** 勾选项：`- [ ]`、`* [x]`、`+ [X]` 都认；方括号里只认空格与 x/X。 */
 const CHECKBOX_RE = /^\s*[-*+]\s+\[([ xX])\]\s*(.*)$/
@@ -84,17 +84,16 @@ function normalizeTitle(raw: string): string {
 /**
  * 从正文里读验收标准。
  *
- * 只认二级「## 验收标准」区里第一层勾选项；围栏里的示例不算。找不到那个区、或区里没有勾选项时
+ * 只认二级「## 验收标准」区里第一层的勾选项；围栏里的示例不算。找不到那个区、或区里没有勾选项时
  * 回空数组 —— 「这张票没写验收标准」是这次读得出的结论，不是不知道，所以不省略这一格。
  */
-export function parseAcceptanceCriteria(body: unknown): AcceptanceItem[] {
+function parseAcceptanceCriteria(body: unknown): AcceptanceItem[] {
   const text = body == null ? '' : String(body)
   if (!text) return []
-  const lines = text.split(/\r?\n/)
   const out: AcceptanceItem[] = []
   let inside = false
   let fence = ''
-  for (const line of lines) {
+  for (const line of text.split(/\r?\n/)) {
     const fenced = FENCE_RE.exec(line)
     if (fenced) {
       const mark = fenced[1].charAt(0)
@@ -149,10 +148,12 @@ function detailOf(issue: any, requestedKey: string): TicketDetail {
     state: stateOf(issue && issue.state),
     url: stringOf(issue && issue.url),
     body,
-    // 进度与验收标准都从正文读，与桌面面板同一份解析（parseProgressDetail 是共享叶子）。
+    // 进度与验收标准都从正文读，与桌面面板同一份进度解析（parseProgressDetail 是共享叶子）。
     acceptanceCriteria: parseAcceptanceCriteria(body),
     progress: parseProgressDetail(body),
   }
+  const status = stringOf(issue && issue.status).trim()
+  if (status) detail.status = status
   const labels = labelsOf(issue)
   if (labels !== undefined) detail.labels = labels
   const blockedBy = blockersOf(issue)
@@ -163,11 +164,11 @@ function detailOf(issue: any, requestedKey: string): TicketDetail {
 /**
  * 组装电话。依赖显式传入：会话解析、只读会话与后端选择各只有一条来源。
  */
-export function createDeckTicketRead(deps: Deps): { handleTicket: (args?: any) => Promise<any> } {
-  const scope: Deps = Object.assign({ readLabel: 'The deck ticket could not be read' }, deps)
+export function createDeckTicketRead(deps: DeckReadDeps): { handleTicket: (args?: any) => Promise<any> } {
+  const notRead = 'The deck ticket could not be read'
 
   async function handleTicket(args?: any): Promise<any> {
-    const resolved = await resolveDeckReadSession(scope, args && args.sessionId)
+    const resolved = await resolveDeckReadSession(deps, args && args.sessionId, notRead)
     if (!resolved.ok) return resolved
 
     // 票号收成非空字符串：客户端可能送数字，也可能送字符串；空白一律当没给。
@@ -177,21 +178,26 @@ export function createDeckTicketRead(deps: Deps): { handleTicket: (args?: any) =
 
     let got: any
     try {
-      // 只要那张票本身：评论按规格不读，反向阻塞边也不读（详情显示的是「谁挡着我」）。
-      got = await resolved.call((session: any, ctx: any) => session.get(resolved.repoRef, key, {}, ctx))
+      // 只要那张票本身：面板不显示评论，所以只要 0 条正文（契约把 comments.first=0 读成「不要正文」，
+      // 后端仍可能取一条只为报总数 —— 这是契约自己的最小取法，不是这条电话要的）。
+      // 反向阻塞边也不读：详情显示的是「谁挡着我」，那一格本来就在票上（Issue.blockedBy）。
+      got = await resolved.call((session: any, ctx: any) => session.get(resolved.repoRef, key, { comments: { first: 0 } }, ctx))
     } catch (e) {
-      return { ok: false, error: { kind: 'fetch-failed', message: errorTextOf(e, 'The deck ticket could not be read') } }
+      return { ok: false, error: { kind: 'fetch-failed', message: errorTextOf(e, notRead) } }
     }
     if (!got || got.ok !== true) {
-      const failed = failureOf(got, 'fetch-failed', 'The deck ticket could not be read')
-      // 缺票单独说话：契约用 not-found 表示「这个票号不存在」（GitHub 404）。面板据此说「这张票没了」，
-      // 而不是「读失败、等一下再试」——后者会让人一直等一张不存在的票。
-      if (failed.error.kind === ERROR_KIND.NOTFOUND) return { ok: false, error: { kind: ERROR_KIND.NOTFOUND, message: failed.error.message } }
-      return failed
+      // 缺票不另立结论：契约自己就用 not-found 说「这个票号不存在」（对应 GitHub 404），
+      // 这里原样上送。面板按 error.kind 分辨「这张票没了」与「读失败、等一下再试」。
+      return failureOf(got, 'fetch-failed', notRead)
     }
     const issue = got.data
     if (!issue || typeof issue !== 'object') {
       return { ok: false, error: { kind: 'parse', message: 'The tracker read returned no ticket row' } }
+    }
+    // 读成了却是一张没有任何身份的空行（键与标题都空）：这不是一张票，不能拿请求的票号把它装成一张。
+    // 契约里 key 与 title 都是核心字段（永远存在），两者都空只可能是回包形状不对。
+    if (!stringOf(issue.key).trim() && !stringOf(issue.title).trim()) {
+      return { ok: false, error: { kind: 'parse', message: 'The tracker read returned a row without a ticket identity' } }
     }
 
     return {
