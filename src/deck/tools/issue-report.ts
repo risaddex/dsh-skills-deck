@@ -98,11 +98,19 @@ export const definition = {
   },
 }
 
-/** 票号归一：去掉开头的 #、丢掉前导零，只认 1 到 10 位数字，别的（含没给）一律当空。 */
-function normKey(raw: unknown): string {
+/**
+ * 票号归一：去掉开头的 #、丢掉前导零。数字票号照旧只认 1 到 10 位；文本票号（Linear 的 `OMB-923`）
+ * 原样放行，怎么解析归房间，和 `deck_issue_patch` / `deck_issue_get` 同一口径（#76：以前这里只认数字，
+ * Linear 工作区一次也报不上账）。别的形状（含没给）一律当空。
+ *
+ * 导出给门禁 `verify-76-report-text-key` 直接用；工具内部只此一处调用。
+ */
+export function normKey(raw: unknown): string {
   const t = String(raw === undefined || raw === null ? '' : raw).trim().replace(/^#/, '')
-  if (!/^\d{1,10}$/.test(t)) return ''
-  return t.replace(/^0+(?=\d)/, '')
+  if (!t) return ''
+  if (/^\d{1,10}$/.test(t)) return t.replace(/^0+(?=\d)/, '')
+  if (/^[A-Za-z][A-Za-z0-9_]{0,15}-\d{1,10}$/.test(t)) return t
+  return ''
 }
 
 /**
