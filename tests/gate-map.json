@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T20:26:11.881Z",
+  "generatedAt": "2026-11-23T20:30:13.693Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 659,
-  "gateCount": 659,
-  "attributedGates": 596,
+  "chainLength": 660,
+  "gateCount": 660,
+  "attributedGates": 597,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 180,
+  "completionRecordedGates": 181,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 1006,
@@ -9627,6 +9627,23 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 1 条"
     },
     {
+      "step": "node tests/verify-76-report-text-key.ts",
+      "file": "tests/verify-76-report-text-key.ts",
+      "guards": [
+        "src/deck/tools/issue-report.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/deck/tools",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 16,
+      "reason": "归属来自：静态 import 说明符 2 条"
+    },
+    {
       "step": "node tests/verify-763-detail-fold.ts",
       "file": "tests/verify-763-detail-fold.ts",
       "guards": [
@@ -16227,6 +16244,7 @@
       "node tests/verify-1831-read-timeout.ts",
       "node tests/verify-1832-single-triage-state.ts",
       "node tests/verify-723-gate-wiring.ts",
+      "node tests/verify-76-report-text-key.ts",
       "node tests/verify-784-effortId.ts",
       "node tests/verify-790-parent-edge.ts",
       "node tests/verify-829-parent-reread.ts",
@@ -17706,6 +17724,7 @@
       "node tests/verify-73-deck-read-limits.ts",
       "node tests/verify-73-deck-ticket-read-backends.ts",
       "node tests/verify-73-deck-tree-read-backends.ts",
+      "node tests/verify-76-report-text-key.ts",
       "node tests/verify-763-detail-fold.ts",
       "node tests/verify-784-effortId.ts",
       "node tests/verify-786-focus-end.ts",
