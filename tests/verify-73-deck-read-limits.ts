@@ -2,7 +2,7 @@
 // 字节护栏与「坏数据不许变成一棵空树」。
 //
 // 判据来自票面（规格 #70 钉的两个数在 tests/verify-73 这组门禁里只从 DECK_READ_LIMITS 取值，不另抄字面量）：
-//   · 树最多带 50 个容器、最多带 200 张票，任何一个上限切掉了东西都要在回包里看得见；
+//   · 树最多带 DECK_READ_LIMITS 钉的那几个容器与那几张票，任何一个上限切掉了东西都要在回包里看得见；
 //   · 截断不许是「悄悄少一半」：少了几个容器、几张票都要报出来，且被切掉的容器整块消失（不留半截子票单，
 //     否则面板会把「地图里有 10 张票、只画了 3 张」读成这张地图只有 3 张票）；
 //   · 回包超过字节护栏就如实失败，绝不回半份；后端回来的行整批读不懂时同样失败，不折成一棵空树。
@@ -67,7 +67,7 @@ async function readTree(rows: any[], resultExtra: any = {}): Promise<any> {
   check(r && r.containers && r.containers[0] && r.containers[0].key === 'c1' && r.containers[r.containers.length - 1].key === 'c' + DECK_READ_LIMITS.maxContainers, '保留的是后端回来的前 N 个容器，顺序不乱')
 }
 
-// —— 二、票上限：跨容器合计 200 张就停；停在哪就整块停，不留半截子票单 ——
+// —— 二、票上限：跨容器合计到 DECK_READ_LIMITS.maxTickets 就停；停在哪就整块停，不留半截子票单 ——
 {
   const per = 10
   const count = Math.floor(DECK_READ_LIMITS.maxTickets / per) + 10

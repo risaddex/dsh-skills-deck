@@ -9,6 +9,7 @@
 // 票读另见 verify-73-deck-ticket-read-backends.ts。
 import { printGateResult } from './lib/gate-result.ts'
 import { DECK_READ_LIMITS } from '../src/tracker/contract/deck-read.ts'
+import { PAGINATION } from '../src/tracker/contract/pagination.ts'
 import {
   cwdReply,
   githubMap,
@@ -113,7 +114,9 @@ await runTree('markdown', markdownSession(), { backendId: 'markdown', containerK
 
 // —— 六、后端自己说名单不全时，真实房间的那个事实也要传到回包上（GitLab 一页取满就是这种） ——
 {
-  const rows = Array.from({ length: 100 }, (_, i) => gitlabMap(200 + i))
+  // 回满一页（GitLab 的 per_page 上限，从共享分页表取）时房间自己就会置 truncated：那是后端说的话，
+  // 宿主不许把它吞掉，也不许和自己的两个上限混成一句话。
+  const rows = Array.from({ length: PAGINATION.gitlab.maxPerPage }, (_, i) => gitlabMap(200 + i))
   const session = gitlabSession({ rows })
   const phone = createDeckTreeRead({ handleCwd: cwdReply(session.cwd), openSession: session.openSession })
   const r: any = await phone.handleTree({ sessionId: 's-gitlab-pagefull' })

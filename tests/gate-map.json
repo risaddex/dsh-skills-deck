@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T20:12:59.162Z",
+  "generatedAt": "2026-11-23T20:14:49.158Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 659,
   "gateCount": 659,
@@ -9573,6 +9573,7 @@
       "guards": [
         "src/host/deckTree.ts",
         "src/tracker/contract/deck-read.ts",
+        "src/tracker/contract/pagination.ts",
         "tests/lib/deck-backend-matrix.ts",
         "tests/lib/gate-result.ts"
       ],
@@ -9585,7 +9586,7 @@
       "buildOutputOnly": false,
       "completionRecord": true,
       "expectedAssertions": 55,
-      "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 3 条"
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 4 条"
     },
     {
       "step": "node tests/verify-730-cwd-consistent.ts",
