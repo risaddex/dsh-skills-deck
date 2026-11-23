@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-18T20:48:24.728Z",
+  "generatedAt": "2026-11-23T18:12:51.895Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 647,
-  "gateCount": 647,
-  "attributedGates": 585,
+  "chainLength": 648,
+  "gateCount": 648,
+  "attributedGates": 586,
   "unattributedGates": 62,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 168,
+  "completionRecordedGates": 169,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 996,
+  "graphFileCount": 997,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -9289,6 +9289,26 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；静态 import 说明符 2 条；源码里的路径字面量 6 条"
     },
     {
+      "step": "node tests/verify-71-deck-tree-read.ts",
+      "file": "tests/verify-71-deck-tree-read.ts",
+      "guards": [
+        "src/host/deckTree.ts",
+        "src/host/sessionLifecycle.ts",
+        "src/refresh/rooms/host/session-opener.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "src/refresh/rooms/host",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 35,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；静态 import 说明符 1 条"
+    },
+    {
       "step": "node tests/verify-723-gate-wiring.ts",
       "file": "tests/verify-723-gate-wiring.ts",
       "guards": [
@@ -16082,6 +16102,7 @@
       "node tests/verify-690-closed-pages.ts",
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-696-shared-cache.ts",
+      "node tests/verify-71-deck-tree-read.ts",
       "node tests/verify-723-single-refresh-instance.ts",
       "node tests/verify-729-force-dedup.ts",
       "node tests/verify-730-cwd-consistent.ts",
@@ -16454,6 +16475,7 @@
       "node tests/verify-691-map-subissues.ts",
       "node tests/verify-696-shared-cache.ts",
       "node tests/verify-709-no-self-continuing-timers.ts",
+      "node tests/verify-71-deck-tree-read.ts",
       "node tests/verify-723-gate-wiring.ts",
       "node tests/verify-723-single-refresh-instance.ts",
       "node tests/verify-729-force-dedup.ts",
@@ -17429,6 +17451,7 @@
       "node tests/verify-690-closed-pages.ts",
       "node tests/verify-698-switch-asks-layout.ts",
       "node tests/verify-709-no-self-continuing-timers.ts",
+      "node tests/verify-71-deck-tree-read.ts",
       "node tests/verify-723-gate-wiring.ts",
       "node tests/verify-763-detail-fold.ts",
       "node tests/verify-784-effortId.ts",
@@ -17538,9 +17561,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1019,
+    "fileCount": 1020,
     "dirCount": 106,
-    "coveredFileCount": 1019,
+    "coveredFileCount": 1020,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -17931,6 +17954,7 @@
       "src/host/choiceStore.ts",
       "src/host/configStore.ts",
       "src/host/deckToolGate.ts",
+      "src/host/deckTree.ts",
       "src/host/dispatchMeta.ts",
       "src/host/fsAbsence.ts",
       "src/host/handoffClaim.ts",
