@@ -253,6 +253,8 @@ export default {
     harness.handle('wf.mapTickets', async function (args: WfArgs) { const h = await _mapTickets(); return h.handleMapTickets(args) })
     harness.handle('wf.deckTree', async function (args: WfArgs) { const h = await _deckTree(); return h.handleTree(args) })
     harness.handle('wf.deckTicket', async function (args: WfArgs) { const h = await _deckTicket(); return h.handleTicket(args) })
+    // #74：把上面两个读发布成服务 deckPanelRead（只有 tree/ticket 两个操作，功能名 deck.panel.read.v1）。两个加载器会缓存加载结果，加载失败时要把缓存清掉，否则一次临时失败会让这项功能直到重启都不可用；整段加载或发布失败只让远程宿主看不到这个功能（面板与工具不受影响），所以吞掉异常，但吞之前记一行失败。
+    import('./deckReadChannel.js').then(function (m: any) { m.provideDeckReadChannel(ctx as any, m.createDeckReadChannel({ loadTree: function () { return _deckTree().catch(function (e: any) { _deckTreeP = null; throw e }) }, loadTicket: function () { return _deckTicket().catch(function (e: any) { _deckTicketP = null; throw e }) }, logCtx: logCtx, timer: timer }), logCtx) }).catch(function () { try { fireLog('warn', 'host.call.fail', { method: 'deck.panel.read.provide', kind: 'deck-read', errorHash: 'load-fail' }) } catch (eL) {} })
 
     // #1436：胶囊首帧的「本会话处理过哪些票」只读电话 —— 只读本机 work-path 存档，不为了一张名单去重建整份快照（缘由见 src/host/snapshotEnvelope.ts 末尾那一节）。
     let _ownRouteP: Promise<any> | null = null
