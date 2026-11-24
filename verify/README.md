@@ -86,8 +86,10 @@ cd ..
 
 这个包装调用原构建脚本 `node ../scripts/build.mts --pkg-only`，再做两件 base `freeze` 要求的事：
 
-- 在 `lib/client.js` 首行写入 `/*! dsh-skills-deck v<版本> */` 身份横幅。产物里第一处
-  这种横幅原本来自内联的 base 包，`freeze` 会据此误判包名与版本。
+- 校验 `lib/client.js` 首行是 `/*! dsh-skills-deck v<版本> */` 身份横幅，缺了就补。横幅本身由
+  构建脚本写（发布路径与验证路径跑同一个脚本，于是两条路径产出的 `lib/client.js` 逐字节相同，#81）；
+  这一步只在缓存命中、产物落后于构建脚本时兜底。产物里第一处这种横幅原本来自内联的 base 包，
+  `freeze` 会据此误判包名与版本。
 - 校验产物里的 `DSW_BUILD_COMMIT` 与当前 HEAD 一致；构建缓存命中导致提交号过期时，用
   `--force` 重建一次，而不是改写产物里的提交号。
 

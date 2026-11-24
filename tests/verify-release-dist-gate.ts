@@ -240,12 +240,21 @@ async function main(): Promise<void> {
     check(realAudited.verdict === 'diff-audited' && requireCandidateBytes({ verdict: realAudited.verdict, message: realAudited.message }, { push: true, emit: () => {} }) === 'pass', 'H8 同一对指纹在有差异审计时放行（放行与否只看审计，不看谁写的）', realAudited.verdict)
 
     const script = fs.readFileSync('scripts/release-dist.mts', 'utf8')
-    const compareAt = script.indexOf('judgeReleaseBytes(')
+    const safetySource = fs.readFileSync('scripts/lib/release-dist-safety.mts', 'utf8')
+    const compareAt = script.indexOf('decideCandidateBytes(')
     const seamAt = script.indexOf('requireCandidateBytes(candidateVerdict, { push })')
     check(
-      compareAt >= 0 && seamAt >= 0 && compareAt < seamAt && script.includes("'PREFLIGHT-CANDIDATE-AUDIT'"),
-      'H9 脚本自己比字节（judgeReleaseBytes），并把差异审计取自门禁自己打的 PREFLIGHT-CANDIDATE-AUDIT 行',
+      compareAt >= 0 && seamAt >= 0 && compareAt < seamAt,
+      'H9 脚本先算「要发的字节是不是候选那份」（decideCandidateBytes），再据此决定停手还是继续',
       show([compareAt, seamAt]),
+    )
+    check(
+      // 脚本的注释里可以提到标记名（那是给人读的说明），但不许自己扫门禁的行：
+      // 既不能引用标记常量，也不能对 gate.lines 做 any/some 之类的过滤。
+      safetySource.includes('judgeReleaseBytes(') && safetySource.includes('PREFLIGHT-CANDIDATE-AUDIT')
+        && !script.includes('CANDIDATE_AUDIT_MARKER') && !script.includes('gate.lines.some') && !script.includes('gate.lines.filter'),
+      'H9b 判据与审计标记的扫描只有一份（都在 release-dist-safety.mts；脚本里不再自己扫门禁的行）',
+      '',
     )
     check(
       seamAt >= 0 && seamAt < script.indexOf("'update-ref'") && seamAt < script.indexOf('pushAndNotify(run, tag)'),

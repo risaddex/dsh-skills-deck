@@ -615,7 +615,15 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // script pelo mesmo judgeReleaseBytes do publish-token, e a diferença só passa com o PREFLIGHT-CANDIDATE-AUDIT
   // que o portão imprime. Bloco H soma 11 asserções (跳过/一致/差异审计/拒绝/演练/真判据/接线) → 32 → 43，
   // medidas por execução; contra o script anterior as âncoras H9–H11 não existem (medido no texto de HEAD).
-  'verify-release-dist-gate': 43,
+  // 2026-11-24 #81: os dois caminhos de build produziam bytes diferentes porque só o wrapper de verificação
+  // escrevia o banner de identidade no lib/client.js; o banner passou para o próprio build e a decisão de bytes
+  // saiu do script para decideCandidateBytes. O bloco H ganhou uma asserção (H9b: 判据 e marca com uma fonte só)
+  // → 43 → 44, medidas por execução isolada; o bloco J de ponta a ponta virou a porta verify-release-dist-bytes.
+  'verify-release-dist-gate': 44,
+  // 2026-11-24 #81: a porta de ponta a ponta do caminho de auditoria — ticket com差异审计 → marcador do portão
+  // → decisão de bytes do release-dist (9 asserções, medidas por execução isolada): sem auditoria recusa, mesmo
+  // commit com bytes diferentes recusa, bytes iguais passa, e a primeira linha do artefato carrega o banner.
+  'verify-release-dist-bytes': 9,
   // 2026-11-17 retro da sessão do #17: Markdown já versionado não pode perder seções '## ' sem declarar.
   // A contagem é de execução isolada; muda junto com as asserções de tests/verify-md-sections.ts.
   'verify-md-sections': 48,

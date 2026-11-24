@@ -1,5 +1,7 @@
 import fs from 'node:fs'
 
+import { judgeReleaseBytes } from './release-candidate-audit.mts'
+
 export type GitRunner = (command: string, args: string[]) => string
 
 /** 只把干净检出的固定提交作为来源；构建期间切换 HEAD 或改写已跟踪文件都必须停止。 */
@@ -140,6 +142,42 @@ export interface CandidateBytesVerdict {
   readonly verdict: 'same' | 'diff-audited' | 'diff'
   /** 给人看的一句话，由 judgeReleaseBytes 生成，这里不改写。 */
   readonly message: string
+}
+
+/**
+ * 门禁输出里唯一能证明「差异已被清单票审计」的标记行。
+ *
+ * 它由 scripts/lib/release-preflight-gate.mts 打印：只有候选提交与发布提交不同、且清单票正文写了覆盖
+ * 这对提交的差异审计时才会出现。发布脚本按这行判断「差异是可以接受的」，所以这个字符串只能有这一份，
+ * 扫描也只在这个文件里做。
+ */
+export const CANDIDATE_AUDIT_MARKER = 'PREFLIGHT-CANDIDATE-AUDIT'
+
+/**
+ * 把「这次要发的字节」与「候选包的逐文件指纹」对上，并给出发布脚本要的结论。
+ *
+ * 为什么由这一处算：发布脚本在建引用之前需要三样东西——候选指纹、发布指纹、以及「票面有没有为这对
+ * 提交写过差异审计」。前两样来自候选清单与打包后的 tarball，第三样来自门禁的输出行。把三样收进一个
+ * 纯函数，发布脚本就只剩「调用 + 按结论停手」，测试也才能拿门禁的真实输出把它整条走一遍（#81：
+ * 过去这段逻辑长在脚本顶层，只能靠读源码字符串来守，断了也不会有人知道）。
+ *
+ * 规则本身仍在 release-candidate-audit.mts 的 judgeReleaseBytes 里，这里不另写一份判据。
+ */
+export function decideCandidateBytes(options: {
+  /** 门禁这次打印的全部行（stdout 与 stderr 合并前的原样数组）。 */
+  readonly lines: readonly ReleaseGateLine[]
+  /** 候选清单里登记的逐文件清单指纹。 */
+  readonly candidateFileDigest: string
+  /** 这次真要发布的 tarball 的逐文件清单指纹。 */
+  readonly publishedFileDigest: string
+}): CandidateBytesVerdict {
+  const auditCovered = options.lines.some((line) => line.text.indexOf(CANDIDATE_AUDIT_MARKER) >= 0)
+  const report = judgeReleaseBytes({
+    candidateFileDigest: options.candidateFileDigest,
+    publishedFileDigest: options.publishedFileDigest,
+    auditCovered,
+  })
+  return { verdict: report.verdict, message: report.message }
 }
 
 /**

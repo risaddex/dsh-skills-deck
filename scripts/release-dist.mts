@@ -7,10 +7,10 @@
 // 打标签、发 dispatch 之前停手，并把门禁自己的结论行（每条 finding 都带「改法」）照原样打给人看。
 // --dry-run 与两条既有发布路径（publish-token.ps1 -DryRun、wizard-release.sh --dry-run）同口径：
 // 非 0 只提示不阻断——演练要摆出结论，不是替人拍板。
-import { requireCleanSource, requireVerifiedSource, notifyPublishedTag, pushAndNotify, requireReleaseGate, ReleaseGateRefusedError, requireCandidateBytes, ReleaseBytesRefusedError } from './lib/release-dist-safety.mts'
+import { requireCleanSource, requireVerifiedSource, notifyPublishedTag, pushAndNotify, requireReleaseGate, ReleaseGateRefusedError, requireCandidateBytes, ReleaseBytesRefusedError, decideCandidateBytes } from './lib/release-dist-safety.mts'
 import type { CandidateBytesVerdict } from './lib/release-dist-safety.mts'
 import { runPreflightGate } from './lib/release-preflight-gate.mts'
-import { candidateFromRecord, judgeReleaseBytes } from './lib/release-candidate-audit.mts'
+import { candidateFromRecord } from './lib/release-candidate-audit.mts'
 import { digestOfFiles, readTarballEntries } from './release-integrity.mts'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -109,9 +109,11 @@ collect(packedManifest.exports)
 for (const rel of targets) if (!fs.existsSync(path.join(pkgRoot, rel))) fail('manifest target missing from packed root: ' + rel)
 
 // 字节级对账只能在这里做：门禁（上面那次）跑在构建之前，那时还没有 tarball，它只能看清单票与候选清单本身。
-// 「要发的字节就是验过的那份」用与 publish-token.ps1 同一个判据比较——候选的 fileDigest 与这份 tarball 的
-// 逐文件清单指纹（规则在 lib/release-candidate-audit.mts 的 judgeReleaseBytes，本脚本不另写一份）。
-// 差异只有在清单票正文写了「候选与发布差异审计」时才放行：那是门禁自己打的 PREFLIGHT-CANDIDATE-AUDIT 行。
+// 「要发的字节就是验过的那份」交给 lib/release-dist-safety.mts 的 decideCandidateBytes：它拿门禁这次打印的
+// 行、候选清单的 fileDigest 与这份 tarball 的逐文件清单指纹，问出同一个判据（规则仍只在
+// lib/release-candidate-audit.mts 的 judgeReleaseBytes 里）。差异只有在清单票正文写了「候选与发布差异
+// 审计」时才放行——那是门禁自己打的 PREFLIGHT-CANDIDATE-AUDIT 行，这行的扫描也只在那一个函数里，
+// 脚本自己不另扫一遍。
 // 这段必须留在 git update-ref / tag / pushAndNotify 之前：dist 标签单向，发出去的字节撤不回来。
 let candidateVerdict: CandidateBytesVerdict | null = null
 if (options.candidatePath) {
@@ -121,11 +123,10 @@ if (options.candidatePath) {
   }
   const candidate = candidateFromRecord(record)
   if (!candidate) fail('the candidate manifest lacks the fields a release candidate needs (git.commit, package.fileDigest, package.tgzSha256, validity, sourceStable): ' + options.candidatePath, 2)
-  const auditCovered = gate.lines.some(function (line) { return line.text.indexOf('PREFLIGHT-CANDIDATE-AUDIT') >= 0 })
-  candidateVerdict = judgeReleaseBytes({
+  candidateVerdict = decideCandidateBytes({
+    lines: gate.lines,
     candidateFileDigest: candidate.fileDigest,
     publishedFileDigest: digestOfFiles(readTarballEntries(tarball)),
-    auditCovered: auditCovered,
   })
 } else {
   // 没给候选清单就是「没对账」，不是「对上了」：结论行照打，人看得出这次没证明字节。

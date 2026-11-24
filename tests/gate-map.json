@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-24T13:01:00.059Z",
+  "generatedAt": "2026-11-24T21:26:00.131Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 667,
-  "gateCount": 667,
+  "chainLength": 668,
+  "gateCount": 668,
   "attributedGates": 604,
-  "unattributedGates": 63,
+  "unattributedGates": 64,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 184,
+  "completionRecordedGates": 185,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 1011,
@@ -13765,6 +13765,24 @@
       "reason": "读到的路径都落在 docs、package、scripts、wizard/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
+      "step": "node tests/verify-release-dist-bytes.ts",
+      "file": "tests/verify-release-dist-bytes.ts",
+      "guards": [
+        "scripts/lib/release-dist-safety.mts",
+        "scripts/lib/release-preflight-gate.mts",
+        "scripts/release-dist.mts"
+      ],
+      "dirs": [
+        "scripts",
+        "scripts/lib"
+      ],
+      "unattributed": true,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 9,
+      "reason": "读到的路径都落在 scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
+    },
+    {
       "step": "node tests/verify-release-dist-gate.ts",
       "file": "tests/verify-release-dist-gate.ts",
       "guards": [
@@ -13778,7 +13796,7 @@
       "unattributed": true,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 43,
+      "expectedAssertions": 44,
       "reason": "读到的路径都落在 scripts/ 下（夹具、文档、工具脚本之类），不指向插件源码，所以算不出它守着哪条源码路径"
     },
     {
@@ -15679,6 +15697,7 @@
       "node tests/verify-parse-leaf.ts",
       "node tests/verify-prompts.ts",
       "node tests/verify-release-contract.ts",
+      "node tests/verify-release-dist-bytes.ts",
       "node tests/verify-release-dist-gate.ts",
       "node tests/verify-release-dist-safety.ts",
       "node tests/verify-release-gate.ts",
@@ -15763,6 +15782,7 @@
       "node tests/verify-platform-contract.ts",
       "node tests/verify-prompts.ts",
       "node tests/verify-refresh-adr.ts",
+      "node tests/verify-release-dist-bytes.ts",
       "node tests/verify-release-dist-gate.ts",
       "node tests/verify-release-gate.ts",
       "node tests/verify-settings-debug.ts",
