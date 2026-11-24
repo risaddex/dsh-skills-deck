@@ -11,6 +11,7 @@
 
 import { AGENT_TOOL_TIMEOUT_MS, deckAgentOutputSchemaRaw } from './register-options.js'
 import { createSuggestNextSteps, definition } from '../tools/suggest-next-steps.js'
+import { suggestPresentationMetaOf } from '../tools/suggest-card.js'
 import { HOST_LOG_SLOT_RETRY_MS, REGISTER_RETRY_WAIT_MS } from '../../shared/time-config/src/values.js'
 import { sleepOnce } from '../shell/capped-wait.js'
 import { withInFlightLease } from '../shell/in-flight-lease.js'
@@ -142,6 +143,11 @@ function fireRegisterLog(log: SuggestRegisterLogLike | null, latencyMs: number, 
 /**
  * 造一份可交给工具服务注册的数据：名字、描述、参数模式直接取工具定义，输出模式用九工具
  * 同一份退路形状（原生模式受支持子集），执行函数调本进程里的 run 并兜底永不抛。
+ *
+ * #97：输出里多挂一格 presentationMeta —— 它把这次调用收下来的建议画成 dsh-go 的原生卡片
+ * （`dsh-go/view`，随对话记录走，所以 DSH Go 与 DSH Remote 拿到的是同一份说明数据）。
+ * 为什么挂在 output 上而不是另加一件东西：宿主工具契约里 presentationMeta 就住在 output 里
+ * （@deepseek-ai/dsh-tools 的 ToolDefinition.output），登记表只认这一处。
  */
 export function makeSuggestRegistration(deps?: SuggestRegisterDeps): UnknownRecord {
   const d = resolveRegisterDeps(deps)
@@ -151,7 +157,13 @@ export function makeSuggestRegistration(deps?: SuggestRegisterDeps): UnknownReco
     description: definition.description,
     parameters: definition.parameters,
     timeoutMs: AGENT_TOOL_TIMEOUT_MS,
-    output: deckAgentOutputSchemaRaw(),
+    output: Object.assign({}, deckAgentOutputSchemaRaw(), {
+      // 纯函数：只看这次调用的返回值，不读时间、不落状态（宿主按同一份输入可以重放同一张卡）。
+      // 内部已兜住「抛错 / 不是无损 JSON / 超过 8 KiB」三种会让整次工具调用失败的情形，见那个模块。
+      presentationMeta: function (_args: unknown, value: unknown): UnknownRecord {
+        return suggestPresentationMetaOf(value)
+      },
+    }),
     execute: async function (args: unknown, exec: unknown): Promise<UnknownRecord> {
       try {
         return await runner.run(exec, args)

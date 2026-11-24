@@ -363,6 +363,10 @@ export const StatusBar = (props: any) => {
     //   收起与展开这条行为一点没动 —— 点它照样把横幅与胶囊一起带回来（下面那道「回来的路」门禁仍然钉着这一点）。
     // #640：收起态是例外 —— 只剩一句小灰字时不再跟卡片等宽，改收成包裹内容居中，
     //   避免一条空旷横带占住输入区上方；maxWidth 仍取卡宽变量兜底超长文案，展开/收起之间不横向跳动。
+    // #97 复审（PR #103）：收起态这一支**必须**继续挂取数组件 —— 两支持久不会同时存在，挂载跟着树走，
+    //   拿掉它就断了订阅：收起期间模型又给了一组、或用户发了新消息（turn/start）都收不到，展开后
+    //   按会话缓存把旧组放回来时 restoreReplay 已经是 false，旧建议就复活了（suggestGate.ts 文件头
+    //   第 9~10 行专门写了这一条）。收起着时卡片由 suggestBubbleVisibleOf 一处判隐藏，不必在这里摘挂载。
     return h('div', { style: Object.assign({ display: 'flex', flex: 'none', justifyContent: 'center', alignSelf: 'center' }, dswsStatusDockGeom(), { width: 'auto' }) }, [
       h(Tip, { content: tr('banner.folded') }, h('button', { className: 'dsws-btn ghost dsws-hov', 'aria-label': tr('banner.expandDeck'),
         // 接线（#1335 界面反馈）：收起态这颗「展开」按钮带文字，属于文字类控件，按压与悬停都要有；
@@ -397,7 +401,7 @@ export const StatusBar = (props: any) => {
       Icon({ scheme: s.ui.icon, size: 14 }),
       h('span', { 'data-fold-priority': 1 }, tr('panel.title')),
     ]),
-    h(SessionChainCapsule, { st: s, sid: sid }), h(SuggestStreamMount, { sid: sid, cwd: s.cwd }), h(ShownAttentionMount, { sid: sid }),
+    h(SessionChainCapsule, { st: s, sid: sid }), h(ShownAttentionMount, { sid: sid }),
     h('span', { ref: takeAnchorRef, style: { position: 'relative', display: 'inline-flex' }, onMouseEnter: showTakeMenu, onMouseLeave: function () { scheduleClose(takeCloseRef, closeTakeMenu) } }, [
       h(Tip, { content: tr('nav.takeableTitle') }, seg('target', [h('span', { 'data-fold-priority': 9 }, tr('nav.takeable')), num(String(fr), '2ch')], '#4ade80', function () { s.stateFilter = 'frontier'; s.lblFilters = []; go('list') }, undefined, 'status.seg.takeable')),
       s.takeMenuOpen ? PortalOverlay({ className: 'dsws-takemenu', onMouseEnter: function () { clearClose(takeCloseRef) }, onMouseLeave: function () { scheduleClose(takeCloseRef, closeTakeMenu) }, onClick: function (e: any) { e.stopPropagation() }, style: { position: 'fixed', left: s.takeMenuPos ? s.takeMenuPos.left : 0, bottom: s.takeMenuPos ? s.takeMenuPos.bottom : 0, padding: 4, zIndex: 2147483000, background: 'var(--dsw-alias-bg-layer-2,#16181d)', border: '1px solid var(--dsw-alias-border-l1,#2a2d35)', borderRadius: 8, boxShadow: '0 8px 30px rgba(0,0,0,.45)' } }, [
@@ -487,7 +491,7 @@ export const StatusBar = (props: any) => {
   //   这里因此不再声明它；两个转调包装留着，卡的界面在那边直接调用它们。
   if (!bannerStep) {
     // 无 banner 时为胶囊 + 常驻收起按钮（#422：收起即整个功能区消失）
-    return h('div', { style: Object.assign({ display: 'flex', flex: 'none', flexDirection: 'column', alignItems: 'center', gap: 2, overflow: RDOM ? 'hidden' : 'visible' }, dswsStatusDockGeom()) }, [modalSeat, deckDoorConfirmEl(h, s), deckDoorCloseConfirmEl(h, s), workspaceFileNoteEl(s), capsule])
+    return h('div', { style: Object.assign({ display: 'flex', flex: 'none', flexDirection: 'column', alignItems: 'center', gap: 2, overflow: RDOM ? 'hidden' : 'visible' }, dswsStatusDockGeom()) }, [h(SuggestStreamMount, { sid: sid, cwd: s.cwd }), modalSeat, deckDoorConfirmEl(h, s), deckDoorCloseConfirmEl(h, s), workspaceFileNoteEl(s), capsule])
   }
   const bann = function (text: any, btnLabel: any, onBtn: any, foldable: any, alt: any) {
     // #669：这颗叉（收起整个功能区）与左边那颗主按钮之间留 12px —— 原来只隔 6px，两颗按钮长得一样高、
@@ -537,6 +541,8 @@ export const StatusBar = (props: any) => {
   })()
   return h('div', { style: Object.assign({ display: 'flex', flex: 'none', flexDirection: 'column', alignItems: 'center', gap: 4, position: 'relative' }, dswsStatusDockGeom()) }, [
     stepBanner, workspaceFileNoteEl(s),
+    // #97：建议卡片排在胶囊前面（横幅与工作区提示仍在它上面）。
+    h(SuggestStreamMount, { sid: sid, cwd: s.cwd }),
     capsule, deckDoorConfirmEl(h, s), deckDoorCloseConfirmEl(h, s),
     modalSeat,
     (s.gateModalOpen && s.gateModalSource==='status' ? h('div', { onClick:function(e: any){ if(e.target===e.currentTarget) closeGate() },
