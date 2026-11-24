@@ -180,6 +180,9 @@ import type { SetupLayoutValue } from '../statusbar/StatusBackend.js'
       // #1294：整条 entry 交给按链取词，不在这里列举语言键（清单加语言时这一行不用改，
       //   生成物哪天多一门语言的正文，这里自动取到）。
       let s = promptPickText(p, chain)
+      // #100：设置页给这条提示词存了生效的改写时，用它顶掉默认正文；没有改写（或本片不在场的门禁沙箱）时 s 一字不动。
+      //   改写取在占位符替换之前，所以 {url} 这类占位符照常被下面那一遍替换。
+      try { if (typeof promptOverrideOf === 'function') { const o = promptOverrideOf(id); if (typeof o === 'string' && o !== '') s = o } } catch (eO) {}
       const vals = Object.assign({}, params || {})
       ;(Object.keys({ cli: '', cliBrand: '' }) as (keyof VocabularyParams)[]).forEach(function (k) {
         if (!Object.prototype.hasOwnProperty.call(vals, k)) vals[k] = promptPickText(VOCABULARY_DEFAULT[k], chain)
@@ -525,6 +528,9 @@ declare const DOC_LAYOUT_VALUES: readonly ('single' | 'multi')[]
 declare function currentBackendId(...args: any[]): any
 declare function declaredLangPick(...args: any[]): any
 declare function backendPromptFrom(...args: any[]): any
+// #100：设置页存的提示词改写的读口，真源在 kernel/settings-prompt-overrides.ts（拼在本片之后的闭包里）。
+//   门禁沙箱单独拼本文件时它不在场，promptText 里用 typeof 判过再调，不在场就等于没有改写。
+declare function promptOverrideOf(id: string): string
 declare function getCachedSelection(cwd: unknown): { backendId?: unknown } | null | undefined
 declare function chainSteps(st: unknown): ChainStep[]
 declare function guideStepsFor(backendId: unknown): ChainStep[] | null | undefined

@@ -68,6 +68,7 @@ async function main() {
     workspaces: {},
     debug: { enabled: false, sampleRate: 1 },
     templates: {},
+    promptOverrides: {},
   }
 
   // —— 第一件事：缺席 ——

@@ -24,6 +24,7 @@ declare function noticeIcon(kind: unknown): string;
 declare const DSW_REPO_URL: string;
 declare const DSW_VERSION: unknown;
 declare const DiagnosticLogSection: (props: { sessionId?: unknown }) => unknown;
+declare const PromptOverridesSection: (props: { sessionId?: unknown }) => unknown;
 // #1802：设置页每次挂上来都重读一次本机设置文档。内核的惰性读只问一次，重开设置页不再重读，
 //   于是别的窗口刚写进去的值看不到；重读要合并本窗还没落盘的待写格再替换内存文档（实现见 kernel/settings-view-reload.ts）。
 declare function settingsViewReload(): void;
@@ -70,6 +71,9 @@ export     const SettingsPage = (props: { sessionId?: unknown }): unknown => {
         // #155 Q1 改：只读全局总览（wf.bindings + workspaces.list + wf.registry 色值，不可改；不调 wf.bind）
         // 分组渲染收进 views/SettingsWorkspaces.js 的 renderWsOverview（纯结构搬移，行为零变化）
         renderWsOverview(h, sharedSt, overview.wsOverview, overview.loadRef, foldVer, setFoldVer),
+
+        // #100 提示词改写分组：每个动作按钮一个输入框，可保存、可恢复默认；画法与规则都在它自己的叶子里。
+        h(PromptOverridesSection, { sessionId: props && props.sessionId }),
 
         // #492 沉底调试分组（布局文案沿 #334 原型：主开关默认关，写经 settingsDebugToggle（真源是本机设置文件的
         //   debug 节，宿主开机直接读它，见 #1012 第 8 条与 #1432），保存即广播；四键调宿主三电话加复用目录电话）

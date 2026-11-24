@@ -51,6 +51,7 @@
           if (!d) continue
           if (d.section === 'ui') { settingsUiSetInDoc(doc, d.name, d.value); continue }
           if (d.section === 'templates') { settingsTemplatesSetInDoc(doc, d.name, d.value); continue }
+          if (d.section === 'promptOverrides') { settingsPromptOverridesSetInDoc(doc, d.name, d.value); continue }
           if (d.section === 'debug') { settingsDebugSetInDoc(doc, d.name, d.value); continue }
           const key = d.key || viewFlagDocKeyOf(d.cwd)
           if (key) viewFlagSetInDoc(doc, d.cwd, key, d.name, d.value, d.unopened)
@@ -61,6 +62,7 @@
     // 三族只有格名、没有工作区路径的待写格（界面偏好、动作模板、调试开关）在这里声明它们的写入口。
     declare function settingsUiSetInDoc(...args: any[]): any;
     declare function settingsTemplatesSetInDoc(...args: any[]): any;
+    declare function settingsPromptOverridesSetInDoc(...args: any[]): any;
     declare function settingsDebugSetInDoc(...args: any[]): any;
     // 按「基底」与「目标」算补丁：只收两边不一样的格；目标里已经没有、基底里还留着的键写成 null（表示删掉）。
     //   对象逐键递归（设置文档最多三层：节 → 工作区记录 → 格），数组与其它值当整体比较。
@@ -143,6 +145,12 @@
         if (d.section === 'templates') {
           const tv = (snap && snap.templates && typeof snap.templates === 'object') ? snap.templates[d.name] : undefined
           return (typeof tv === 'string' && tv !== '') ? tv : d.value
+        }
+        // #100：promptOverrides 节的值允许是空串（空串＝这一格用默认文本），所以这里不像 ui / templates 那样把空串换回队列值：
+        //   目标文档里是什么就是什么，缺了才退回队列值。
+        if (d.section === 'promptOverrides') {
+          const pv = (snap && snap.promptOverrides && typeof snap.promptOverrides === 'object') ? snap.promptOverrides[d.name] : undefined
+          return (typeof pv === 'string') ? pv : d.value
         }
         if (d.section === 'debug') {
           const dv = (snap && snap.debug && typeof snap.debug === 'object') ? snap.debug[d.name] : undefined

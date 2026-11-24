@@ -298,6 +298,8 @@
           if (d.section === 'ui') { saveListPrefsLegacy(); continue }
           // 动作模板那一族照改动前的老办法兜底：整份写回旧键 dsws.templates（由 config.js 那一份管那把键）。
           if (d.section === 'templates') { tplLegacyWriteAll(); continue }
+          // #100：promptOverrides 节是新节，没有旧键可退；这一笔留在队列里等下一趟，内存文档里已经改好，本次会话内按钮照样用改写后的文本。
+          if (d.section === 'promptOverrides') continue
           // 调试开关那一族兜底：把内存这一份（＝真值）写回旧键 dsws.debug 当秒显快照，理由见 settings-debug.js。
           if (d.section === 'debug') { settingsDebugLegacyWrite(); continue }
           // #1612 与 #1879 的三个文字开关没有对应的旧 localStorage 键（旧版根本没有这几件事），也不再有旧字段可换算：

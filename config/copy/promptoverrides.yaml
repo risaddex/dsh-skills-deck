@@ -1,0 +1,79 @@
+# config/copy/promptoverrides.yaml —— 界面词表 —— 设置页「提示词改写」分组（#100）
+#
+# 这一族只服务设置页里「每个动作按钮一个输入框」的那一组：分组标题与说明、每颗按钮的名字、
+# 保存与恢复默认的按钮、以及保存失败时说清原因的几句话。真源与写法约定同 config/copy/flow.yaml：
+#   · 每种语言一段，同一段里每个键都要有；值一律是字符串。
+#   · {name} 是占位符，由界面渲染处替换；同一键的中英两份占位符必须一字不差。
+#   · 想改界面上的字：改这里 → 跑 node scripts/generate-locale-config.mts → 重新构建。
+# 注意：这里的「占位符」有两种，别混：上面说的 {names} 是界面文案自己的填空；
+#   「po.placeholders」这类句子里列出来给人看的 {url}、{title} 是提示词里的占位符，它们由代码拼进 {names}，不写在本文件里。
+
+zh:
+  po.title: 提示词改写
+  po.desc: 每个动作按钮点下去注入的提示词，默认用插件自带的文本。在下面改某一格并保存，这个按钮就改用你写的文本；点「恢复默认」回到自带文本。改写对所有语言生效，只存在本机设置文件里。
+  po.placeholders: 可以使用的占位符：{names}
+  po.required: 必须保留：{names}
+  po.custom: 已改写
+  po.save: 保存
+  po.restore: 恢复默认
+  po.saved: 提示词已保存
+  po.restored: 已恢复为默认文本
+  po.inactive: 这一格存着的文字没有生效，按钮仍用默认文本：{why}
+  po.errUnknown: 含有未知的占位符：{names}
+  po.errMissing: 缺少必须保留的占位符：{names}
+  po.errLoading: 还没读到本机设置文件，稿子已保留，请稍等一下再点保存
+  po.errReadonly: 保存失败：本机设置文件是更高版本插件写的，当前插件不许写回去
+  po.errUnavailable: 保存失败：读不到本机设置文件，请稍后重试
+  po.errGeneric: 保存失败，请重试
+  po.name.mapInspect: 地图：检查（0/0 地图）
+  po.name.mapExecute: 地图：推进
+  po.name.complete: 地图：完成
+  po.name.fixate: 固化
+  po.name.healthCheck: 环境检查
+  po.name.specSplit: 规格：拆成票
+  po.name.specExecute: 规格：推进
+  po.name.specComplete: 规格：完成
+  po.name.tpl.implement: 实施
+  po.name.tpl.diagnose: 诊断
+  po.name.tpl.fix: 修复
+  po.name.tpl.discuss: 讨论
+  po.name.tpl.research: 研究
+  po.name.tpl.prototype: 原型
+  po.name.tpl.takeover: 接手
+  po.name.tpl.supplement: 补充
+  po.name.tpl.execute: 执行
+
+en:
+  po.title: Prompt overrides
+  po.desc: "Each action button injects a prompt; by default it is the text shipped with the plugin. Edit a field below and save it, and that button injects your text instead; “Restore default” goes back to the shipped text. An override applies to every language and lives only in this machine’s settings file."
+  po.placeholders: "Placeholders you can use: {names}"
+  po.required: "Must keep: {names}"
+  po.custom: Customised
+  po.save: Save
+  po.restore: Restore default
+  po.saved: Prompt saved
+  po.restored: Restored to the default text
+  po.inactive: "The text saved in this field is not in effect, so the button still uses the default text: {why}"
+  po.errUnknown: "Unknown placeholder(s): {names}"
+  po.errMissing: "Missing placeholder(s) that must stay: {names}"
+  po.errLoading: The local settings file has not been read yet — your text is kept, please wait a moment and save again
+  po.errReadonly: Could not save — the local settings file was written by a newer plugin version and this one must not write it back
+  po.errUnavailable: Could not save — the local settings file cannot be read right now, please retry
+  po.errGeneric: Could not save — please retry
+  po.name.mapInspect: "Map: inspect (0/0 map)"
+  po.name.mapExecute: "Map: advance"
+  po.name.complete: "Map: complete"
+  po.name.fixate: Fixate
+  po.name.healthCheck: Health check
+  po.name.specSplit: "Spec: split into tickets"
+  po.name.specExecute: "Spec: advance"
+  po.name.specComplete: "Spec: complete"
+  po.name.tpl.implement: Implement
+  po.name.tpl.diagnose: Diagnose
+  po.name.tpl.fix: Fix
+  po.name.tpl.discuss: Discuss
+  po.name.tpl.research: Research
+  po.name.tpl.prototype: Prototype
+  po.name.tpl.takeover: Take over
+  po.name.tpl.supplement: Supplement
+  po.name.tpl.execute: Execute
