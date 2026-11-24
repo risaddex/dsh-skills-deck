@@ -194,7 +194,29 @@ The change list usually comes from the output of `git status --porcelain` or `gi
    dedicated gate, either write a gate for it or add one （`// 门禁归属:`） comment to an existing gate that really
    does guard it — note that the comment **replaces** every clue that gate already had, so write it out in full.
 
+6. **A visual gate's fixture stands in for the real shell, and the fixture can be the thing that is wrong.** A gate
+   that measures pixels — `tests/verify-suggest-look-browser.ts` is the first one in `src/client` — builds its own page:
+   the component's real DOM, its real stylesheet, and, where the behaviour lives in the browser, the real runtime code.
+   Everything the real shell contributes is hand-written around it, so any of it can be missing. The first version of
+   that gate forgot `body[data-ds-dark-theme]` and therefore rendered the *light* theme on a dark page; the numbers came
+   out green and the screenshot showed the wrong thing. When such a gate disagrees with a person's screenshot, believe
+   the person first and check the fixture.
+
 In one sentence: **the ownership map is a map of "who guards whom", not a proof of "who affects whom".** It can frame the blast radius of most changes, but not all of it, which is why the last gate is the whole chain before a commit.
+
+### Looking at a UI change before shipping it
+
+A chain that is all green says nothing about whether what a person sees is right: on 2026-11-24 a change went through the
+whole chain and put the suggestion buttons at 4% opacity. Before opening a PR that changes something visible, render it
+and look at it:
+
+    node --import ./scripts/ts-hook.mts tests/verify-suggest-look-browser.ts
+
+It writes `node_modules/.cache/dsh-suggest-look/suggest-look.png` and a `manifest.json` beside it, and the gate itself
+asserts the facts a picture is needed for — real opacity after the entrance animation, the group inside the viewport,
+text not clipped, and the detail panel visible rather than merely present in the DOM. Read the PNG with the image tool.
+Another surface copies that file as its template; the fixture notes at the top of it say which parts are the real thing
+and which parts stand in for the shell.
 
 ## 5. Day-to-day operations
 
