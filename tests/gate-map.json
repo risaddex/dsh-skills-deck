@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-24T23:42:54.784Z",
+  "generatedAt": "2026-11-24T23:49:59.010Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 671,
   "gateCount": 671,
@@ -14450,7 +14450,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 19,
+      "expectedAssertions": 20,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 6 条"
     },
     {

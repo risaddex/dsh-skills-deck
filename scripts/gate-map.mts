@@ -543,8 +543,8 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 2026-11-24 #97 收尾：桌面这一面的**画出来的像素**没人看过 —— 一次把药丸换成卡片的改动全链全绿，
   // 人一看屏幕却有三处问题（药丸停在 4% 不透明度、详情区一坨不透明白板、计数空圈）。这一扇把真 DOM、
   // 真样式表和真的入场执行器放进一只真 Chromium，量不透明度、几何、计数与详情区的可见性，并写一张 PNG
-  // 让人和 agent 都能看，单跑实测 19 条。
-  'verify-suggest-look-browser': 19,
+  // 让人和 agent 都能看；#112 复审又加了「!important 压过内联值时判据照样红」这一条，单跑实测 20 条。
+  'verify-suggest-look-browser': 20,
   // 2026-11-24 #97：建议改成一整张卡片的那一版已还原（桌面外观不动），所以这里只有「给 dsh-go 的
   // 说明数据」这一扇：形状、视图上限、presentationMeta 永不抛且只产无损 JSON、登记真的挂上去，单跑实测 45 条。
   'verify-97-suggest-card': 45,

@@ -187,11 +187,14 @@ async function main() {
     const closeBtn = document.querySelector('.dsws-sugg-close')
     const count = document.querySelector('.dsws-sugg-count')
     const rect = layerEl.getBoundingClientRect()
+    // 判据只看 computed：那才是 Chromium 真画出来的不透明度。内联值（执行器写进去的那一个）只留作诊断，
+    // 因为一条 `.dsws-sugg-pill{opacity:.04!important}` 会压过内联值 —— 那时内联还写着 1，人看到的却是 0.04，
+    // 拿内联值当判据就成了「量的是动画的意图，不是渲染的结果」（PR #112 复审指出）。
     const opacityOf = function (el) {
       if (!el) return null
       const inline = el.style && el.style.opacity
       const computed = window.getComputedStyle(el).opacity
-      return { inline: inline === '' ? null : inline, computed: computed === '' ? null : computed, effective: Number((inline !== '' && inline != null) ? inline : computed) }
+      return { inline: inline === '' ? null : inline, computed: computed === '' ? null : computed, effective: Number(computed) }
     }
     return {
       pills: pills.map(function (p) { return { text: (p.textContent || '').trim(), opacity: opacityOf(p), clipped: p.scrollWidth > p.clientWidth + 1, width: Math.round(p.getBoundingClientRect().width) } }),
@@ -263,7 +266,7 @@ async function main() {
     at: new Date().toISOString(),
     viewport: lens.viewport,
     png: path.basename(shotPath),
-    pills: lens.pills.map(function (p) { return { text: p.text, opacity: p.opacity.effective, clipped: p.clipped } }),
+    pills: lens.pills.map(function (p) { return { text: p.text, renderedOpacity: p.opacity.computed, inlineOpacity: p.opacity.inline, clipped: p.clipped } }),
     count: lens.count,
     layerRect: lens.rect,
     detailRowsOnHover: hovered.pop ? hovered.pop.rows : null,
@@ -278,6 +281,19 @@ async function main() {
     return { lowest: lowest }
   })
   check(doctored.lowest < 0.9, '反证：把药丸压回 0.04 时判据确实会红（量到 ' + doctored.lowest + '）—— 这把尺子还灵')
+  // 第二种反证：样式表用 !important 压过执行器写的内联值。这时内联仍是 1，渲染出来却是 0.04 ——
+  // 判据必须认渲染值，才量得到「人看不见药丸」这件事（PR #112 复审指出的那条缝）。
+  const importantCase = await page.evaluate(function () {
+    for (const p of Array.prototype.slice.call(document.querySelectorAll('.dsws-sugg-pill'))) p.style.opacity = '1'
+    const style = document.createElement('style')
+    style.textContent = '.dsws-sugg-pill{opacity:0.04 !important}'
+    document.head.appendChild(style)
+    const pills = Array.prototype.slice.call(document.querySelectorAll('.dsws-sugg-pill'))
+    const rendered = pills.length ? Math.min.apply(null, pills.map(function (p) { return Number(window.getComputedStyle(p).opacity) })) : 1
+    const inline = pills.length ? Number(pills[0].style.opacity) : 1
+    return { rendered: rendered, inline: inline }
+  })
+  check(importantCase.inline === 1 && importantCase.rendered < 0.9, '反证：!important 压过内联值时（内联 ' + importantCase.inline + '、渲染 ' + importantCase.rendered + '）判据照样红 —— 量的是渲染值，不是执行器的意图')
 
   await page.close()
   await closeBrowser()
