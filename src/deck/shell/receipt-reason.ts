@@ -19,8 +19,12 @@
  *   2. stage=input-refused：房间在动手前拒了输入，改输入才能重试，归 bad-args；
  *   3. stage=anchor-lookup：失败只说明「票没建、重试安全」，那是读侧的安全说明，
  *      不改变「下一步做什么」的判断，所以按读阶段查表；
- *   4. kind 表：读、写各一张；
- *   5. 不知道 kind 或表外值：停（backend-unsupported），别发明「重试就好」。
+ *   4. stage=label-create（#85）：失败只说明「停在把标签名换成标签 id 那一步」，票没建也没改。
+ *      它同样不改变原因码 —— 权限被拒仍是 auth，仍归 backend-unsupported，下一步仍是停下来；
+ *      这个标记唯一多出来的效果在本文件末尾的 backendMessageLimit：这一档的后端原话是
+ *      「还缺哪些标签名」的名单，截在中间等于把答案切掉，所以只有它放宽到 1200 字；
+ *   5. kind 表：读、写各一张；
+ *   6. 不知道 kind 或表外值：停（backend-unsupported），别发明「重试就好」。
  */
 import { REFUSAL_REASONS } from './call-shell.js'
 import type { RefusalReason } from './call-shell.js'
