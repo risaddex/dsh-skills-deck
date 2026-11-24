@@ -454,11 +454,14 @@ export function createDeckIssuePatch(deps?: DeckIssuePatchDeps) {
       const status = statusOfItems(items)
       if (status !== DECK_STATUS.OK) notes.push('Some steps did not go through; the reason for each is in the items above: do not treat a step that failed as already done.')
       // #1799：顶层 reason 取失败项里「最该先告诉人」的那个码（安全优先），text 说同一处，避免两处指向不同步骤。
-      const failedItems = items.filter((i) => i.status !== 'ok') as Array<{ step?: string; reason?: string; code?: string }>
+      // 名字那一步的失败要能读全：#85 让房间把「还缺哪些标签名」写进消息，而这一句是回执里最先被读到的
+      // 那一句 —— 一律截 160 字会正好切在名单中间（与 `items` 里那条 1200 字的上限自相矛盾）。
+      // 所以这里按同一个上限函数取：只有 `stage=label-create` 放宽，其余失败仍是 160 字（#92）。
+      const failedItems = items.filter((i) => i.status !== 'ok') as Array<{ step?: string; reason?: string; code?: string; stage?: string }>
       const reason = status === DECK_STATUS.OK ? '' : reasonForItems(items)
       const leadFailure = failedItems.find((i) => i.code === reason) || failedItems[0] || null
       const firstFailureText = leadFailure
-        ? ' The most important thing to say first is "' + String(leadFailure.step || '') + '": ' + String(leadFailure.reason || 'the backend did not give a reason').slice(0, 160)
+        ? ' The most important thing to say first is "' + String(leadFailure.step || '') + '": ' + String(leadFailure.reason || 'the backend did not give a reason').slice(0, backendMessageLimit(leadFailure.stage, 160))
         : ''
       return {
         value: {
