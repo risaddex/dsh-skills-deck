@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-24T13:01:00.059Z",
+  "generatedAt": "2026-11-24T21:04:53.753Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 667,
-  "gateCount": 667,
-  "attributedGates": 604,
+  "chainLength": 668,
+  "gateCount": 668,
+  "attributedGates": 605,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
   "completionRecordedGates": 184,
@@ -10676,6 +10676,23 @@
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 11 条"
     },
     {
+      "step": "node tests/verify-94-linear-declaration-heading.ts",
+      "file": "tests/verify-94-linear-declaration-heading.ts",
+      "guards": [
+        "src/tracker/kernel/issue-tracker-declaration.ts",
+        "src/tracker/rooms/linear"
+      ],
+      "dirs": [
+        "src/tracker/kernel",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 2 条）"
+    },
+    {
       "step": "node tests/verify-947-workspace-file.ts",
       "file": "tests/verify-947-workspace-file.ts",
       "guards": [
@@ -17240,6 +17257,7 @@
       "node tests/verify-61-snapshot-unknown-blockers.ts",
       "node tests/verify-62-linear-text-key-grouping.ts",
       "node tests/verify-64-text-key-level-blocks.ts",
+      "node tests/verify-94-linear-declaration-heading.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
       "node tests/verify-error-normalize-log.ts",
@@ -17512,7 +17530,8 @@
       "node tests/verify-50-linear-list-sub-issues.ts",
       "node tests/verify-65-linear-setup-hint.ts",
       "node tests/verify-85-linear-label-resolution.ts",
-      "node tests/verify-92-label-step-log.ts"
+      "node tests/verify-92-label-step-log.ts",
+      "node tests/verify-94-linear-declaration-heading.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-patch-receipt-slim.ts",
