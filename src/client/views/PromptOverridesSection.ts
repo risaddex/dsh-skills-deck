@@ -38,6 +38,7 @@ const failText = function (f: PromptFieldFailure): string {
   if (f.unknown && f.unknown.length > 0) parts.push(tr('po.errUnknown', { names: braceList(f.unknown) }))
   if (f.missing && f.missing.length > 0) parts.push(tr('po.errMissing', { names: braceList(f.missing) }))
   if (parts.length > 0) return parts.join(' ')
+  if (f.reason === 'loading') return tr('po.errLoading')
   if (f.reason === 'readonly') return tr('po.errReadonly')
   if (f.reason === 'unavailable') return tr('po.errUnavailable')
   return tr('po.errGeneric')

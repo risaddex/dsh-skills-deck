@@ -69,8 +69,6 @@ declare const viewFlagState: any;
 declare function viewFlagNotifySettled(...args: any[]): any;
 declare function settingsUiDrainDeferred(...args: any[]): any;
 declare function settingsTemplatesDrainDeferred(...args: any[]): any;
-// #100：promptOverrides 节那一族的收口，真源在 kernel/settings-prompt-overrides.ts。
-declare function settingsPromptOverridesDrainDeferred(...args: any[]): any;
 declare function settingsDebugDrainDeferred(...args: any[]): any;
 declare function settingsDebugDocLooksReal(...args: any[]): any;
 declare function viewFlagScheduleWrite(...args: any[]): any;
@@ -370,7 +368,6 @@ declare const process: any;
           if (d.section === 'ui') { settingsUiDrainDeferred(d, status); continue }
           // 动作模板与调试开关那两族（settings-templates.js、settings-debug.js）同 ui：队列里都没有工作区路径。
           if (d.section === 'templates') { settingsTemplatesDrainDeferred(d, status); continue }
-          if (d.section === 'promptOverrides') { settingsPromptOverridesDrainDeferred(d, status); continue }
           if (d.section === 'debug') { settingsDebugDrainDeferred(d, status); continue }
           const key = (status === 'ready') ? (d.key || viewFlagWriteKeyOf(d.cwd)) : ''
           if (key && viewFlagSetInDoc(viewFlagState.doc, d.cwd, key, d.name, d.value, d.unopened)) {

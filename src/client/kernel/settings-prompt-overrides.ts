@@ -28,7 +28,9 @@
  *   二、允许的占位符 = 登记条目声明的占位符 ∪ 默认正文里实际出现的占位符 ∪ 词表占位符 {cli} {cliBrand}。
  *       必须保留的只有 {url}，而且只在默认正文里本来就有它时才要求。
  *   三、改写按语言无关存一份：默认正文有中英两版，改写只有一份文字，所以设置页的说明里写明「改写对所有语言生效」。
- *   四、文档还在路上（loading）时读口回空串（按默认文本走）；写口会先记进 deferred，等文档到手再并进去。
+ *   四、文档还在路上（loading）时读口回空串（按默认文本走）；写口直接拒绝（reason: loading）而不是先记着：先记着的话，
+ *       文档随后若读失败或是更高版本，这一笔就既不在文档里也不在待写队列里，设置页却已经弹了「已保存」并丢掉了草稿
+ *       （#111 评审指出的丢字缺口）。拒绝时设置页保留草稿，用户等文档到手再点一次保存。所以本节不进 deferred，也没有收口函数。
  */
 import type { PromptTemplateId } from './prompt-data.js'
 
@@ -87,21 +89,6 @@ export const settingsPromptOverridesSetInDoc = function (doc: any, name: any, va
 // 一笔写不进内存文档时记一行：沿用既有的 storage.fail，不新开事件名（key 记固定记号，日志纪律不许把用户的提示词写进日志）。
 const settingsPromptOverridesLogDocFail = function (): void {
   try { log('warn', 'storage.fail', { key: 'settings.promptOverrides', op: 'write' }) } catch (eL) {}
-}
-
-// 文档到手（或判定问不到）时，把还在路上的本节那几笔接上：能进文档就进待写队列，进不去只记一行（本节没有旧键可退）。
-//   由 kernel/settings-view.ts 的 viewFlagSettle 在清空 deferred 那一趟里按 section 分派过来；返回 true
-//   表示这一笔已经处理完（调用方不必再按工作区那条路处理它，那条路会拿 undefined 当工作区根）。
-//   与 templates 那一族不同：这里用户刚点的那一下赢过文件里的旧值（用户刚亲手改的，比盘上的旧值新）。
-export const settingsPromptOverridesDrainDeferred = function (d: any, status: any): any {
-  try {
-    if (status === 'ready' && settingsPromptOverridesSetInDoc(viewFlagState.doc, d.name, d.value)) {
-      viewFlagState.journal[settingsPromptOverridesJournalKeyOf(d.name)] = { section: 'promptOverrides', name: d.name, value: d.value }
-      return true
-    }
-    settingsPromptOverridesLogDocFail()
-  } catch (e) {}
-  return true
 }
 
 /** 文件里这一格存的原文（没写、不是文字、或 id 不在名单里都回空串）。设置页用它判断「这一格现在有没有改写」。 */
@@ -196,7 +183,7 @@ export const promptOverrideOf = function (id: any): string {
 
 /**
  * 写口：保存一格改写，或（传空串）恢复这一格的默认文本。返回 { ok: true } 或 { ok: false, reason, unknown?, missing? }，
- * reason 是 unknown-id（名单里没有这个 id）、invalid（有未知占位符或丢了 {url}）、readonly（文件是更高版本，不许写）、
+ * reason 是 unknown-id（名单里没有这个 id）、loading（文档还在路上，稍后重试）、invalid（有未知占位符或丢了 {url}）、readonly（文件是更高版本，不许写）、
  * unavailable（问不到宿主文档）、doc-fail（文档在手却写不进这一格）、error（过程中抛错）。
  * 与默认文本逐字相同的文字按「没有改写」存空串：这样插件以后升级了默认文本，没动过它的人会跟着用新的。
  */
@@ -208,11 +195,8 @@ export const setPromptOverride = function (id: any, text: any): any {
     if (!check.ok) return { ok: false, reason: 'invalid', unknown: check.unknown, missing: check.missing }
     const stored = (check.empty || value === promptOverrideDefaultOf(id)) ? '' : value
     settingsViewLoad()
-    if (viewFlagState.status === 'loading') {
-      // 文档还在路上：先记下这一笔，等它落地再并进文档（见 settingsPromptOverridesDrainDeferred）。
-      viewFlagState.deferred[settingsPromptOverridesJournalKeyOf(id)] = { section: 'promptOverrides', name: id, value: stored }
-      return { ok: true }
-    }
+    // 文档还在路上：不接这一笔（文件头第四条），调用方保留草稿、稍后重试。
+    if (viewFlagState.status === 'loading') return { ok: false, reason: 'loading' }
     if (viewFlagState.status !== 'ready') return { ok: false, reason: viewFlagState.status === 'readonly' ? 'readonly' : 'unavailable' }
     if (!settingsPromptOverridesSetInDoc(viewFlagState.doc, id, stored)) { settingsPromptOverridesLogDocFail(); return { ok: false, reason: 'doc-fail' } }
     viewFlagState.journal[settingsPromptOverridesJournalKeyOf(id)] = { section: 'promptOverrides', name: id, value: stored }

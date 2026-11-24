@@ -5,7 +5,7 @@
  * 第五件事是校验：未知占位符、丢了 {url}、空白文字各按约定处理，被拒的一个字都不写进文件。
  * 第六件事是手改文件造出的坏值不生效：按钮仍用默认文本，不会注入一段没有链接的提示词。
  * 第七件事是旧模板老文本不挡新改写：旧的 templates 节还留着老文本时，同一个按钮的改写赢；没有改写时旧行为一字不变。
- * 第八件事是写不进文件时的底线：文件是更高版本就拒绝且不改一个字节；写失败时本次会话内改写仍生效；文档在路上时先记着。
+ * 第八件事是写不进文件时的底线：文件是更高版本就拒绝且不改一个字节；写失败时本次会话内改写仍生效；文档还在路上时拒绝保存（不假装收下，设置页保留草稿）。
  * 第九件事是接线与行数：构建清单与客户端入口登记了这一片、设置页挂了这一组、新文件没有超三百五十有效行。
  * 怎么保证量的是真件见 tests/verify-100-prompt-overrides.ts 与夹具 tests/lib/prompt-overrides-env.ts。
  *
@@ -117,12 +117,30 @@ async function main(): Promise<void> {
     check(env.ls.getItem('dsws.templates') === null, '没有把这一笔写进任何旧 localStorage 键。')
   }
   {
+    // #111 评审指出的丢字缺口：文档还在路上时保存不能报成功，否则文档随后读失败或是更高版本，这一笔就哪里都不在了。
     const env = makeEnv({ tag: 'loading' })
     const res = env.mod.setPromptOverride('mapInspect', 'EARLY {url}')
-    check(res.ok === true, '文档一次都没问过时保存先接下（先记着，等文档）。', JSON.stringify(res))
+    check(res.ok === false && res.reason === 'loading', '文档还在路上时保存被拒（reason: loading），不报成功。', JSON.stringify(res))
+    check(Object.keys(env.mod.viewFlagState.deferred).length === 0 && Object.keys(env.mod.viewFlagState.journal).length === 0, '这一笔没有进待写队列，也没有进 deferred（没有任何地方假装收下了）。')
+    check(env.calls.some((c: any) => c.method === 'wf.getSettings'), '被拒的同时把文档问了出去（惰性读一次），用户稍后重试就有文档了。')
+    check(await ready(env), '文档到手。')
+    const retry = env.mod.setPromptOverride('mapInspect', 'EARLY {url}')
+    check(retry.ok === true, '文档到手之后重试，保存被接下。', JSON.stringify(retry))
     const landed = await waitFor(async () => { const d = await readDoc(env.home); return !!d && d.promptOverrides.mapInspect === 'EARLY {url}' })
-    check(landed, '文档到手之后这一笔落进了文件。', JSON.stringify(await readDoc(env.home)))
+    check(landed, '重试的这一笔落进了文件。', JSON.stringify(await readDoc(env.home)))
     check(env.mod.promptText('mapInspect', PARAMS) === 'EARLY https://example.invalid/7', '落地之后取用口给的是改写后的文本。')
+  }
+  {
+    // 同一个缺口的另一半：文档在路上时被拒，随后读出来是更高版本，用户的文字没被收下过，设置页保留草稿，文件一个字节没动。
+    const env = makeEnv({ tag: 'loading-readonly' })
+    fs.mkdirSync(path.dirname(settingsPathIn(env.home)), { recursive: true })
+    fs.writeFileSync(settingsPathIn(env.home), 'version: 9\n', 'utf8')
+    const early = env.mod.setPromptOverride('mapInspect', 'LOST? {url}')
+    check(early.ok === false && early.reason === 'loading', '文档在路上时被拒。', JSON.stringify(early))
+    check(await ready(env), '文档到手（结论是只读）。')
+    const late = env.mod.setPromptOverride('mapInspect', 'LOST? {url}')
+    check(late.ok === false && late.reason === 'readonly', '到手之后同一笔仍被拒并说出是只读：两次都没有报成功，设置页两次都保留草稿。', JSON.stringify(late))
+    check(fs.readFileSync(settingsPathIn(env.home), 'utf8').indexOf('version: 9') === 0, '高版本文件一个字节都没被改。')
   }
 
   // ── 第九件事：接线与行数 ──

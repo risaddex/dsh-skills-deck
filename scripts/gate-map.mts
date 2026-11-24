@@ -492,9 +492,9 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 2026-10-26 #1143：旧日志实现退役，删掉读已删 logStore.ts 的两条断言（剩 35 条，单跑实测）。
   'verify-log-switch-single-source': 35,
   'verify-settings-templates': 65,
-  // 2026-11-24 #100：提示词改写（设置文件第六节 promptOverrides、取用口的改写、设置页每个按钮一格）的两扇门禁，单跑实测 39 条与 47 条。
+  // 2026-11-24 #100：提示词改写（设置文件第六节 promptOverrides、取用口的改写、设置页每个按钮一格）的两扇门禁，单跑实测 39 条与 55 条。
   'verify-100-prompt-overrides': 39,
-  'verify-100-prompt-overrides-rules': 47,
+  'verify-100-prompt-overrides-rules': 55,
   // 2026-10-29 #1612：删掉旧 bannerFolded 迁移后改写这一扇的采样格，单跑实测 217 条。
   'verify-settings-view': 217,
   // 2026-10-29 #1643：加了八条冒烟阶段的断言（并行执行器里冒烟跑没跑、跳过时明说原因、
