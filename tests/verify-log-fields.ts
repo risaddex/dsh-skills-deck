@@ -542,6 +542,15 @@ const ALLOWED = {
   // 操作名、桶、结局（八档之一或 ok）、耗时、账号别名。不记请求头、正文、变量与完整地址：
   // Authorization 就在头里，日志落盘不许带可重放的凭据。
   'linear.request': ['op', 'bucket', 'outcome', 'ms', 'alias'],
+  // 2026-11-24（#92）新增常驻 #156 `label.resolve.match`（信息级）与 #157 `label.resolve.fail`（告警级）：
+  //   把标签名换成标签 id 那一步的两条结论线 —— 前者说这一次请求的几个名字里，有几个是靠忽略大小写对上的
+  //   （例：要 `bug`、对上 `Bug`；一个都没折时记 folded: 0，与「根本没走到这一步」分得开），后者说建标签
+  //   这一步被后端拒了、后端档位是什么、还缺几个名字。**标签名原文一个字都不记**（与 `labelColors.listed`
+  //   同一口径：名单写在回执的 message 里，那是给人读的一次性回答），只留个数与短散列。
+  //   落点：src/tracker/rooms/linear/label-log.ts（发射），由 src/tracker/rooms/linear/labels.ts 的
+  //   resolveLabelIds 调（覆盖式改标签与建票两条路都走它）。
+  'label.resolve.match': ['requested', 'folded', 'namesHash', 'latencyMs', 'opId'],
+  'label.resolve.fail': ['kind', 'missing', 'requested', 'namesHash', 'latencyMs', 'opId'],
   // 2026-10-21 map 1010 逐票复核（#891/#995/#916/#917）：状态栏黄条出现、消失或换文案时边沿记一行。
   // 2026-10-22（#1363）：黄条「该出没出、该消没消」的判定依据补齐 —— reason 为什么这么判（枚举）、
   //   decideStep 判定落在哪一步、backendId 当时选定的后端、steps 快照里实际有几行、wsHash 与 sidHash

@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-24T12:57:06.655Z",
+  "generatedAt": "2026-11-24T13:01:00.059Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 666,
-  "gateCount": 666,
-  "attributedGates": 603,
+  "chainLength": 667,
+  "gateCount": 667,
+  "attributedGates": 604,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
   "completionRecordedGates": 184,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 1009,
+  "graphFileCount": 1011,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -10498,6 +10498,25 @@
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条；载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 1 条"
     },
     {
+      "step": "node tests/verify-92-label-step-log.ts",
+      "file": "tests/verify-92-label-step-log.ts",
+      "guards": [
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/label-match.ts",
+        "src/tracker/rooms/linear/labels.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
+    },
+    {
       "step": "node tests/verify-92-patch-label-step.ts",
       "file": "tests/verify-92-patch-label-step.ts",
       "guards": [
@@ -17161,6 +17180,7 @@
       "node tests/verify-85-label-step-receipt.ts",
       "node tests/verify-85-linear-label-resolution.ts",
       "node tests/verify-895-github-memo.ts",
+      "node tests/verify-92-label-step-log.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
       "node tests/verify-backend-quota-model.ts",
@@ -17491,7 +17511,8 @@
       "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-50-linear-list-sub-issues.ts",
       "node tests/verify-65-linear-setup-hint.ts",
-      "node tests/verify-85-linear-label-resolution.ts"
+      "node tests/verify-85-linear-label-resolution.ts",
+      "node tests/verify-92-label-step-log.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-patch-receipt-slim.ts",
@@ -17973,9 +17994,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1032,
+    "fileCount": 1034,
     "dirCount": 106,
-    "coveredFileCount": 1032,
+    "coveredFileCount": 1034,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -18891,7 +18912,9 @@
       "src/tracker/rooms/linear/client.ts",
       "src/tracker/rooms/linear/errors.ts",
       "src/tracker/rooms/linear/index.ts",
+      "src/tracker/rooms/linear/label-create.ts",
       "src/tracker/rooms/linear/label-list.ts",
+      "src/tracker/rooms/linear/label-log.ts",
       "src/tracker/rooms/linear/label-match.ts",
       "src/tracker/rooms/linear/labels.ts",
       "src/tracker/rooms/linear/normalize.ts",

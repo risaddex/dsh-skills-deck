@@ -18,12 +18,15 @@
 import type { Issue } from '../../contract/entities.js'
 import type { OpContext } from '../../contract/contexts.js'
 import type { LabelInput, SetOpts } from '../../contract/inputs.js'
-import type { OpResult, TrackerError } from '../../contract/results.js'
-import { TRACKER_ERROR_STAGE } from '../../contract/results.js'
+import type { OpResult } from '../../contract/results.js'
 import { ERROR_KIND } from '../../contract/vocabulary.js'
 import { gql, type LinearAccount } from './client.js'
 import { linearError } from './errors.js'
 import { labelNameFilter, pickLabel, wantedLabelsOf, type WantedLabel } from './label-match.js'
+// 建缺的标签那一件（团队 id、建标签、建不成时的说明）住在 label-create.ts：#92 加日志之后本文件越过每文件 20 KB。
+import { createLabel, labelCreateFailure, teamIdOfIssue } from './label-create.js'
+// #92：这一步的两条结论线（忽略大小写对上、建标签被拒）住在同目录的 label-log.ts，本文件只负责给事实。
+import { emitLabelCreateFail, emitLabelMatch } from './label-log.js'
 import { PAGINATION } from '../../contract/pagination.js'
 import { issueOf, type LinearIssueNode } from './normalize.js'
 import { ISSUE_CORE } from './queries.js'
@@ -62,82 +65,6 @@ const ISSUE_UPDATED_AT = 'query DeckIssueUpdatedAt($id: String!) { issue(id: $id
  */
 const LABELS_BY_NAME = 'query DeckLabelsByName($filter: IssueLabelFilter!, $after: String) { issueLabels(filter: $filter, first: 250, after: $after) { nodes { id name color team { id key } } pageInfo { hasNextPage endCursor } } }'
 
-/** 缺的名字建出来（§4：`IssueLabelCreateInput` 只有 `name` 必填，`color` 不接受 null）。 */
-const LABEL_CREATE = 'mutation DeckIssueLabelCreate($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name color team { id key } } } }'
-
-/** 团队 key → 团队 id：标签的 `teamId` 要 UUID，而绑定声明里写的是 key（与建票同一条路）。 */
-const TEAMS_BY_KEY = 'query DeckTeamsByKey($key: String!) { teams(filter: { key: { eq: $key } }) { nodes { id key name } } }'
-
-/**
- * 团队 key → 团队 id。只在真要建标签时才调用，所以「标签全都已经存在」的那一趟不会多一次查询。
- * 声明里没写团队、或者 Linear 没有这个 key，都如实失败：把标签建到凭空猜的团队里，
- * 等于把调用方要的东西换成了别的（与 `write.ts` 建票那一处同一个判断）。
- */
-async function teamIdOfIssue(ctx: OpContext, account: LinearAccount, teamKey: string): Promise<OpResult<string>> {
-  if (!String(teamKey || '')) {
-    return { ok: false, error: linearError(ERROR_KIND.ENV, 'the workspace binding names no Linear team, so a new label has no team to belong to') }
-  }
-  const teams: any = await gql<any>(ctx, account, { query: TEAMS_BY_KEY, variables: { key: teamKey }, bucket: 'read' })
-  if (!teams.ok) return { ok: false, error: teams.error }
-  const nodes = (teams.data && teams.data.teams && teams.data.teams.nodes) || []
-  const team = (Array.isArray(nodes) ? nodes : []).find((node: any) => node && String(node.key || '').toUpperCase() === String(teamKey).toUpperCase())
-  if (!team || !team.id) {
-    return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, 'Linear has no team with key ' + teamKey + ', so a new label cannot be scoped to it') }
-  }
-  return { ok: true, data: String(team.id) }
-}
-
-/**
- * 建一个缺失的标签，回它的 id。
- *
- * **建成本团队的标签，不是工作区标签**，这是本文件唯一一处主动选边的地方，理由三条：
- * 一是这张票属于绑定声明那一个团队，本团队标签它一定能用，而工作区标签只解决「能用」、不解决归属；
- * 二是工作区标签对整个工作区永久可见，一个只为这张票起的名字从此出现在每个团队的选片器里 ——
- * 一次只认一张票的写操作不该有这么大的影响面（还要工作区级的权限才收得回来）；
- * 三是反过来的代价很小：别的团队真要用这个名字时，建自己的那一份即可，两条同名标签并存在 Linear 里
- * 本来就是合法状态，读侧按名字认识它们（`normalize.ts` 的 `issueTypeOf` 只看名字）。
- * 真要建工作区标签，`IssueLabelCreateInput` 的写法是**省掉 teamId**（§4 的原话 “Omit for a workspace
- * label.”），也就是说「建团队标签」是显式给出 teamId 这一条，而不是另有一个 organization 字段
- * （§4 明确说两个输入类型上都没有 organizationId）。
- */
-async function createLabel(ctx: OpContext, account: LinearAccount, want: WantedLabel, teamId: string): Promise<OpResult<string>> {
-  const input: Record<string, unknown> = { name: want.name, teamId }
-  // §4：color 不接受 null，所以「没颜色」只能整格省掉，不能传空串或 null。
-  if (want.color) input.color = want.color
-  if (want.description) input.description = want.description
-  const created: any = await gql<any>(ctx, account, { query: LABEL_CREATE, variables: { input }, bucket: 'write' })
-  if (!created.ok) return { ok: false, error: created.error }
-  const payload = created.data && created.data.issueLabelCreate
-  const id = payload && payload.issueLabel ? String(payload.issueLabel.id || '') : ''
-  if ((payload && payload.success === false) || !id) {
-    return { ok: false, error: linearError(ERROR_KIND.CONFLICT, 'Linear accepted the label creation but reported no label id, so the ticket was left untouched') }
-  }
-  return { ok: true, data: id }
-}
-
-/**
- * 把「建标签失败」补成一条人能照着做的失败（#85）。
- *
- * 为什么要补：Linear 的应用令牌在有的工作区没有建标签的权限，回的只有一句 “not allowed to take action”，
- * 而回执里 `stage` 为空、reason 是 backend-unsupported，读的人看不出是标签这一步失败、缺哪些标签、该做什么。
- * 这里不新增原因码（原因码固定八个，见 `receipt-reason.ts`），而是把事实写进两处：
- *   · 失败的 `stage` 字段标成 `LABEL_CREATE`，让失败证据里看得见是哪一步；
- *   · `message` 写明这一步、Linear 的原话，权限被拒时再列出**还没建成的全部名字**（被拒的这个加上还没试的），
- *     并说清去哪里一次性建好再重试。只列被拒的那一个不够：人会建一个、重试、再撞下一个。
- * `kind` 原样保留（权限被拒仍是 `auth`）：分类决定界面怎么说话，这里只补说明，不改分类。
- * 只有权限被拒才建议「去 Linear 里手工建」：别的原因（比如名字不合规）手工建同样会失败，那句话会把人带偏。
- * 已经建出来的标签留在工作区里，理由见 `createLabel`。
- */
-function labelCreateFailure(cause: TrackerError, stillMissing: WantedLabel[], teamKey: string): TrackerError {
-  // stillMissing 的第一个就是这次建失败的那个标签，后面是还没试的。
-  const head = 'The step of creating a label failed: the label "' + stillMissing[0].name + '" was not created (Linear said: ' + cause.message + '). '
-  const tail = cause.kind === ERROR_KIND.AUTH
-    ? 'Missing labels that could not be created: ' + stillMissing.map((item) => '"' + item.name + '"').join(', ')
-      + '. No ticket was created or changed. Create them once in Linear (Settings, Labels, team ' + teamKey + ') and retry.'
-    : 'No ticket was created or changed.'
-  return { kind: cause.kind, message: head + tail, raw: cause.raw || cause.message, stage: TRACKER_ERROR_STAGE.LABEL_CREATE }
-}
-
 /** 唯一的一处写：`labelIds` 把这张票的标签**整组换掉**（§4 引的 schema 原话），空数组就是清空。 */
 async function writeLabelIds(ctx: OpContext, account: LinearAccount, key: string, labelIds: string[]): Promise<OpResult<Issue>> {
   const result: any = await gql<any>(ctx, account, { query: ISSUE_UPDATE, variables: { id: key, input: { labelIds } }, bucket: 'write' })
@@ -160,6 +87,8 @@ async function writeLabelIds(ctx: OpContext, account: LinearAccount, key: string
  * 入参 `wanted` 必须已经过 `wantedLabelsOf` 归一（去重、名字非空）。
  */
 export async function resolveLabelIds(ctx: OpContext, account: LinearAccount, wanted: WantedLabel[], teamKey: string): Promise<OpResult<string[]>> {
+  // #92：这一趟的起算点，两条结论线都记「走到这里花了多久」（查一次、建几个、再回话，可能隔着两次网络）。
+  const startedAt = Date.now()
   // 翻到底再判断「缺不缺」：只看第一页就建标签，会把别人的同名标签当成不存在。
   const found: any[] = []
   let after: string | null = null
@@ -182,12 +111,20 @@ export async function resolveLabelIds(ctx: OpContext, account: LinearAccount, wa
 
   const ids = new Map<string, string>()
   const missing: WantedLabel[] = []
+  // #92：靠忽略大小写对上的那些对（要 `bug`、对上 `Bug`）。`pickLabel` 只在找不到同一拼写时才回别的写法，
+  // 所以「对上的写法与请求的写法不同」就是「这一趟确实靠忽略大小写才成功」的判据。
+  const folded: Array<{ wanted: string; found: string }> = []
   for (const want of wanted) {
     const match = pickLabel(found, want.name, teamKey)
     const id = match ? String(match.id || '') : ''
-    if (id) ids.set(want.name, id)
-    else missing.push(want)
+    if (id) {
+      ids.set(want.name, id)
+      if (String(match.name || '') !== want.name) folded.push({ wanted: want.name, found: String(match.name || '') })
+    } else missing.push(want)
   }
+  // 一条解析落一行（不按名字各记一行）：要回答的是「这一趟走没走过忽略大小写那条路」，不是逐名字的流水。
+  // 一个都没折也照记：`folded: 0` 说「查过、一个都没折」，与「这一条根本没发」（没走到这一步）是两件事。
+  emitLabelMatch(ctx, { requested: wanted.length, folded: folded, startedAt: startedAt })
 
   if (missing.length > 0) {
     const team = await teamIdOfIssue(ctx, account, teamKey)
@@ -199,7 +136,11 @@ export async function resolveLabelIds(ctx: OpContext, account: LinearAccount, wa
       // 不删它们，是因为删标签会连带摘掉别处正在用的同一份（§4 的 issueLabelDelete 就是这样），
       // 为了收拾自己的一次失败去动别人的数据，代价比留下一个空标签大得多。
       // 失败说明里要列的是「还没建成的全部名字」：被拒的这一个加上后面还没试的（#85）。
-      if (!created.ok) return { ok: false, error: labelCreateFailure(created.error, missing.slice(index), teamKey) }
+      if (!created.ok) {
+        // #92：这一档此前一条日志都没有，事后只能从回执反推「标签这一步被拒了」与「缺的是哪一批」。
+        emitLabelCreateFail(ctx, { requested: wanted.length, missing: missing.slice(index).map((one) => one.name), kind: String(created.error.kind || ''), startedAt: startedAt })
+        return { ok: false, error: labelCreateFailure(created.error, missing.slice(index), teamKey) }
+      }
       ids.set(want.name, created.data)
     }
   }
