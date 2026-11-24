@@ -23,7 +23,7 @@ import { adoptAnchoredChildren, repairOrphanParents } from './map-plan-resume.js
 import { backendMapCreateFailure } from './map-plan-create-failure.js'
 import type { TransportResult } from '../shell/backend-transport.js'
 import { applyParentEdge, applyBlockEdges, statusOfItems, childrenOf, failureFields } from '../shell/edge-landing.js'
-import { reasonForFailure, reasonForItems } from '../shell/receipt-reason.js'
+import { backendMessageLimit, reasonForFailure, reasonForItems } from '../shell/receipt-reason.js'
 import { ensureLabels, ensureBody, anchorKeyFor } from '../shell/minimal-spec.js'
 // #1413：子票的位置与标签口径只在 rules/object-kind.ts 那份位置表里写一份，这里照它收口，不再自带一套。
 import { resolveCreateKind, MAP_TICKET_LABELS } from '../rules/object-kind.js'
@@ -396,7 +396,7 @@ export function createDeckMapPlanCreate(deps?: DeckMapPlanCreateDeps) {
             items.push({ key: state.keys[String(o.ch.key)], role: 'child', planKey: String(o.ch.key), title: String(o.ch.title), status: 'ok' })
           }
         } else {
-          const msg = String((created && created.error && created.error.message) || 'the backend did not give a reason').slice(0, 200)
+          const msg = String((created && created.error && created.error.message) || 'the backend did not give a reason').slice(0, backendMessageLimit(created && created.error && (created.error as { stage?: string }).stage, 200))
           items.push(Object.assign({ key: '', role: 'child', planKey: String(o.ch.key), title: String(o.ch.title), status: 'failed', reason: msg }, failureFields(created, 'write')))
         }
         await store.save(planId, state)

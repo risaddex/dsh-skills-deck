@@ -174,6 +174,25 @@ export function evidenceFields(ev: FailureEvidence, kindKey: 'kind' | 'errorKind
   return out
 }
 
+/**
+ * 回执里引用后端原话时最多留多少字（#85）。
+ *
+ * 平时各工具各自按 200 或 300 截：后端原话只是「顺带给人看」，截短不影响下一步。
+ * 但 `label-create` 这一档的原话是房间专门写给人的——要列出还缺的**每一个**标签名并说清去哪里建，
+ * 截在中间等于把答案切掉（缺 6 个标签时，300 字刚好切在名单中间）。所以这一档放宽到 1200 字；
+ * 这个数留出了十几个标签名的余地，仍然不让一条回执无限长。
+ * 其余失败一律返回调用点原来的上限，行为不变。
+ */
+const LABEL_STEP_MESSAGE_LIMIT = 1200
+
+/**
+ * 回执引用后端原话的字数上限：`stage` 是房间标注的失败阶段（可能缺席、可能是表外值，所以收 unknown），
+ * `normal` 是调用点原来用的上限。只有 `label-create` 放宽，其余任何阶段都原样返回 `normal`。
+ */
+export function backendMessageLimit(stage: unknown, normal: number): number {
+  return stage === TRACKER_ERROR_STAGE.LABEL_CREATE ? Math.max(normal, LABEL_STEP_MESSAGE_LIMIT) : normal
+}
+
 /** 只要码时的简写；形状与 failureOf 一样。 */
 export function reasonForResult(result: unknown, phase: ReceiptPhase, local?: LocalFailureCause): RefusalReason {
   return failureOf(result, phase, local).code

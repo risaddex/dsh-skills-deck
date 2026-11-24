@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T22:31:22.260Z",
+  "generatedAt": "2026-11-24T11:03:16.752Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 663,
-  "gateCount": 663,
-  "attributedGates": 600,
+  "chainLength": 665,
+  "gateCount": 665,
+  "attributedGates": 602,
   "unattributedGates": 63,
   "buildOutputOnlyGates": 19,
   "completionRecordedGates": 184,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 1008,
+  "graphFileCount": 1009,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -10234,6 +10234,46 @@
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条"
     },
     {
+      "step": "node tests/verify-85-label-step-receipt.ts",
+      "file": "tests/verify-85-label-step-receipt.ts",
+      "guards": [
+        "src/deck/shell/call-shell.ts",
+        "src/deck/shell/receipt-reason.ts",
+        "src/deck/tools/issue-create-failure.ts",
+        "src/tracker/contract/results.ts",
+        "src/tracker/contract/vocabulary.ts"
+      ],
+      "dirs": [
+        "src/deck/shell",
+        "src/deck/tools",
+        "src/tracker/contract"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 5 条"
+    },
+    {
+      "step": "node tests/verify-85-linear-label-resolution.ts",
+      "file": "tests/verify-85-linear-label-resolution.ts",
+      "guards": [
+        "src/tracker/contract/contexts.ts",
+        "src/tracker/rooms/linear/client.ts",
+        "src/tracker/rooms/linear/labels.ts",
+        "src/tracker/rooms/linear/write.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：静态 import 说明符 4 条"
+    },
+    {
       "step": "node tests/verify-881-commit-open.ts",
       "file": "tests/verify-881-commit-open.ts",
       "guards": [
@@ -16246,6 +16286,7 @@
       "node tests/verify-656-subworkspace-acceptance.ts",
       "node tests/verify-80-work-route-text-key.ts",
       "node tests/verify-829-parent-reread.ts",
+      "node tests/verify-85-label-step-receipt.ts",
       "node tests/verify-895-bulk-deadline.ts",
       "node tests/verify-895-github-memo.ts",
       "node tests/verify-898-block-merge.ts",
@@ -16306,6 +16347,7 @@
       "node tests/verify-784-effortId.ts",
       "node tests/verify-790-parent-edge.ts",
       "node tests/verify-829-parent-reread.ts",
+      "node tests/verify-85-label-step-receipt.ts",
       "node tests/verify-895-bulk-deadline.ts",
       "node tests/verify-898-block-merge.ts",
       "node tests/verify-929-batch-cycle.ts",
@@ -17087,6 +17129,8 @@
       "node tests/verify-73-deck-read-limits.ts",
       "node tests/verify-73-deck-tree-read-backends.ts",
       "node tests/verify-74-deck-read-channel.ts",
+      "node tests/verify-85-label-step-receipt.ts",
+      "node tests/verify-85-linear-label-resolution.ts",
       "node tests/verify-895-github-memo.ts",
       "node tests/verify-969-tiered-timeout.ts",
       "node tests/verify-992-readonly-labels.ts",
@@ -17417,7 +17461,8 @@
       "node tests/verify-49-linear-label-filter.ts",
       "node tests/verify-50-linear-list-sub-issues-callers.ts",
       "node tests/verify-50-linear-list-sub-issues.ts",
-      "node tests/verify-65-linear-setup-hint.ts"
+      "node tests/verify-65-linear-setup-hint.ts",
+      "node tests/verify-85-linear-label-resolution.ts"
     ],
     "src/tracker/rooms/markdown": [
       "node tests/verify-deck-patch-receipt-slim.ts",
@@ -17898,9 +17943,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1031,
+    "fileCount": 1032,
     "dirCount": 106,
-    "coveredFileCount": 1031,
+    "coveredFileCount": 1032,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -18817,6 +18862,7 @@
       "src/tracker/rooms/linear/errors.ts",
       "src/tracker/rooms/linear/index.ts",
       "src/tracker/rooms/linear/label-list.ts",
+      "src/tracker/rooms/linear/label-match.ts",
       "src/tracker/rooms/linear/labels.ts",
       "src/tracker/rooms/linear/normalize.ts",
       "src/tracker/rooms/linear/paging.ts",

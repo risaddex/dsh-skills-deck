@@ -24,7 +24,7 @@ import { ensureBody } from '../shell/minimal-spec.js'
 import { must, numOpt, timeoutMessage, withCap } from '../shell/backend-transport.js'
 import type { TransportResult } from '../shell/backend-transport.js'
 // #1799：非 ok 回执的 reason 只从 receipt-reason 来（它回答「下一步做什么」）；失败项同时保留 kind/stage 证据。
-import { failureOf, reasonForFailure, reasonForItems } from '../shell/receipt-reason.js'
+import { backendMessageLimit, failureOf, reasonForFailure, reasonForItems } from '../shell/receipt-reason.js'
 import type { LocalFailureCause } from '../shell/receipt-reason.js'
 // #1090：进度区的读、写、核对统一走 shared 层的那一份口径（读与写共用同一份写法，不再各留一份正则）。
 // #1091：维护者原话区同理；两块一起写时的组合与写后核对住在 body-write。
@@ -173,8 +173,9 @@ export function createDeckIssuePatch(deps?: DeckIssuePatchDeps) {
       // result 是后端回包（本地闸门、写后核对这类失败没有后端回包，传 null）；local 是 deck 本地这一环的失败来源；
       // message 是调用方自己的话（有它就不用后端原话，例如正文指纹对不上）。同一个映射函数管所有回执的顶层 reason。
       const fail = (step: string, result: unknown, local?: LocalFailureCause, message?: string) => {
-        const err = (result && typeof result === 'object' && (result as { error?: unknown }).error && typeof (result as { error?: unknown }).error === 'object') ? (result as { error: { message?: unknown } }).error : {}
-        const msg = String(message || (err && err.message) || 'the backend did not give a reason').slice(0, 200)
+        const err: { message?: unknown; stage?: unknown } = (result && typeof result === 'object' && (result as { error?: unknown }).error && typeof (result as { error?: unknown }).error === 'object') ? (result as { error: { message?: unknown; stage?: unknown } }).error : {}
+        // 标签那一步的原话是写给人的名单（#85），不能截在中间；别的失败仍是 200 字。
+        const msg = String(message || (err && err.message) || 'the backend did not give a reason').slice(0, backendMessageLimit(err && err.stage, 200))
         items.push(Object.assign({ key: key, step: step, status: 'failed', reason: msg }, failureFields(result, 'write', local)))
       }
       // 剩余额度不够时停发新调用：与 deck_map_link 同一句话，逐项诚实报失败，不硬撑。
