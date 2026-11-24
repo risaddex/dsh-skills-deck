@@ -10,7 +10,7 @@ Backends: GitHub, GitLab, Markdown local e **Linear**.
 
 </div>
 
-> **Estado: versão estável 2.1.1.** A série 2.1.x completa o backend Linear no painel — etiquetas da conta, filtro por etiqueta, sub-tickets sob demanda e tickets de chave de texto (como `ENG-101`) com nível e lista de bloqueios. A `v2.1.1` corrige a ferramenta de registro de trabalho, que recusava justamente as chaves de texto do Linear: numa workspace Linear, `deck_issue_report` voltava erro antes mesmo de falar com a API, então a sessão não conseguia registrar em que ticket estava trabalhando. O plugin é usado todos os dias pelo mantenedor. As partes que nunca rodaram contra um serviço real estão marcadas como tal nas seções abaixo.
+> **Estado: versão estável 2.1.2.** A série 2.1.x completa o backend Linear no painel — etiquetas da conta, filtro por etiqueta, sub-tickets sob demanda e tickets de chave de texto (como `ENG-101`) com nível e lista de bloqueios. A `v2.1.2` corrige três lugares onde o painel via menos do que o workspace dizia: uma workspace cuja única declaração é a linha `# Issue tracker: linear` volta a abrir a árvore em vez de ser recusada como ambígua, o quadro de trabalho registra de novo o ticket Linear em que a sessão trabalhou quando a chave é de texto, e a criação de ticket deixa de recusar etiquetas por diferença de maiúscula e minúscula — quando recusa, diz em que passo e qual nome falta. A mesma versão fecha a prova de bytes da via de release. O plugin é usado todos os dias pelo mantenedor. As partes que nunca rodaram contra um serviço real estão marcadas como tal nas seções abaixo.
 
 ## O que é
 
@@ -36,7 +36,7 @@ O pacote **não está no npm**. Ele é instalado pelo marketplace do DSH, a part
    https://raw.githubusercontent.com/risaddex/dsh-plugins-index/main/index.json
    ```
 
-3. Instale `dsh-skills-deck` na lista que aparecer. A versão estável atual é a `2.1.1`.
+3. Instale `dsh-skills-deck` na lista que aparecer. A versão estável atual é a `2.1.2`.
 4. Reinicie o DSH por completo. No aplicativo desktop, isso é fechar e abrir de novo; no `dsh web`, reiniciar o servidor e atualizar a página.
 
 **A partir de um clone** (para desenvolver ou testar uma branch):
