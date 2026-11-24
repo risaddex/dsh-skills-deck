@@ -280,7 +280,12 @@ export const SuggestBubble = function (props: any) {
     style: {
       position: 'relative',
       zIndex: SUGGEST_Z,
-      maxWidth: 'min(calc(100vw - 32px), ' + SUGGEST_APPEARANCE.maxWidthPx + 'px)',
+      // 宽度上限取三者最小的那一档：容器宽度（100%）、视口宽度减边距、外观旋钮的上限。
+      // 为什么必须带上容器的 100%：卡片改在输入框停靠栏那一列里占正常文档流，宿主两侧栏把对话列
+      // 压得比视口窄时，只按视口算会让卡片比容器宽；而停靠栏那条路的根节点是 overflow:hidden，
+      // 宽出来的选项与关闭键会被裁掉（PR #103 复审指出）。max-width 会压住 width:max-content，
+      // 所以压窄时卡片自己收窄、选项行按 flex-wrap 折行，不会溢出。
+      maxWidth: 'min(100%, calc(100vw - 32px), ' + SUGGEST_APPEARANCE.maxWidthPx + 'px)',
       width: 'max-content',
     },
   }, children)

@@ -214,6 +214,9 @@ async function main() {
     check(layer.style.position === 'relative', '基本：卡片占正常文档流（不再是页面浮层）')
     check(layer.style.zIndex === String(appearanceMod.SUGGEST_Z), '基本：z-index 取具名常量 SUGGEST_Z')
     check(layer.style.maxWidth.indexOf('100vw') >= 0 && layer.style.maxWidth.indexOf('720') >= 0, '基本：卡片最大宽度受视口与旋钮共同约束')
+    // #97 复审（PR #103）：卡片在停靠栏那一列里占正常文档流，而那一支的根节点是 overflow:hidden，
+    // 所以宽度上限还必须带上容器自己的宽度；只按视口算，侧栏压窄对话列时选项与关闭键会被裁掉。
+    check(layer.style.maxWidth.indexOf('100%') >= 0, '基本：卡片最大宽度同时受容器宽度约束（100%，不被停靠栏裁掉）')
     check(layer.querySelector('.dsws-sugg-head') !== null && layer.querySelector('.dsws-sugg-title').textContent === '下一步建议', '基本：主行印「下一步建议」，走词表')
     check(layer.querySelector('.dsws-sugg-count') !== null && layer.querySelector('.dsws-sugg-count').textContent === '2', '基本：主行右边带条数')
     check(layer.querySelector('.dsws-sugg-sub') !== null && layer.querySelector('.dsws-sugg-sub').textContent === '选一条填进输入框；关掉就都不选', '基本：次行说明怎么用，走词表')
@@ -417,6 +420,7 @@ async function main() {
     const lyrNarrow = mNarrow.layer()
     check(lyrNarrow.style.maxWidth.indexOf('100vw') >= 0, '窄栏：卡片宽度随视口收（100vw 兜底）')
     check(lyrNarrow.style.maxWidth.indexOf('720') >= 0, '窄栏：同时仍受外观旋钮的最大宽度约束')
+    check(lyrNarrow.style.maxWidth.indexOf('100%') >= 0, '窄栏：宽度上限仍带上容器宽度（压窄时按容器收，不横向溢出）')
     await mNarrow.unmount()
     if (widthProp) Object.defineProperty(win, 'innerWidth', widthProp)
     else Object.defineProperty(win, 'innerWidth', { value: 1024, configurable: true, writable: true })
