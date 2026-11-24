@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-24T23:29:48.091Z",
+  "generatedAt": "2026-11-24T23:42:54.784Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 670,
-  "gateCount": 670,
-  "attributedGates": 606,
+  "chainLength": 671,
+  "gateCount": 671,
+  "attributedGates": 607,
   "unattributedGates": 64,
   "buildOutputOnlyGates": 19,
-  "completionRecordedGates": 186,
+  "completionRecordedGates": 187,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
   "graphFileCount": 1012,
@@ -14430,6 +14430,30 @@
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条；载入模块（require / import / pathToFileURL） 4 条；源码里的路径字面量 6 条"
     },
     {
+      "step": "node tests/verify-suggest-look-browser.ts",
+      "file": "tests/verify-suggest-look-browser.ts",
+      "guards": [
+        "src/client/kernel/motion.ts",
+        "src/client/statusbar/suggestAppearance.ts",
+        "src/client/statusbar/suggestBubble.ts",
+        "src/client/statusbar/suggestEngine.ts",
+        "src/client/statusbar/suggestStyles.ts",
+        "src/client/statusbar/suggestTimeline.ts",
+        "tests/lib/browser-pool.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/client/kernel",
+        "src/client/statusbar",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 19,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；源码里的路径字面量 6 条"
+    },
+    {
       "step": "node tests/verify-suggest-next-steps.ts",
       "file": "tests/verify-suggest-next-steps.ts",
       "guards": [
@@ -16026,6 +16050,7 @@
       "node tests/verify-single-read-source.ts",
       "node tests/verify-skill-detail-stack.ts",
       "node tests/verify-subdir-first-frame.ts",
+      "node tests/verify-suggest-look-browser.ts",
       "node tests/verify-tabsfold-leaf.ts",
       "node tests/verify-time-config.ts",
       "node tests/verify-ui-feedback.ts",
@@ -16095,6 +16120,7 @@
       "node tests/verify-cap-fold.ts",
       "node tests/verify-reuse.ts",
       "node tests/verify-subdir-first-frame.ts",
+      "node tests/verify-suggest-look-browser.ts",
       "node tests/verify-suggest-next-steps.ts",
       "node tests/verify-time-config.ts",
       "node tests/verify-ui-feedback.ts"
@@ -18023,6 +18049,7 @@
       "node tests/verify-skill-detail-stack.ts",
       "node tests/verify-snapshot-cache-first.ts",
       "node tests/verify-subdir-first-frame.ts",
+      "node tests/verify-suggest-look-browser.ts",
       "node tests/verify-suggest-next-steps.ts",
       "node tests/verify-t1-initpublish.ts",
       "node tests/verify-tabsfold-leaf.ts",
