@@ -171,6 +171,15 @@ async function main() {
   const registerSrc = fs.readFileSync(path.join(ROOT, 'src/deck/registration/suggest-steps-register.ts'), 'utf8')
   check(registerSrc.indexOf('presentationMeta') >= 0 && registerSrc.indexOf('suggestPresentationMetaOf') >= 0, '守卫：登记处把卡片挂进 output（改回不带卡片会被这行挡住）')
 
+  // ---------- 7. 第二块界面：面板里那组动作按钮也是同一张卡 ----------
+  // #97 的票面把两块界面算在一起：建议画成卡片，面板底部那组三态动作按钮也画成同一张卡
+  // （主行 + 次行 + 一排按钮）。按钮的行为一个字没动，所以这里只钉形状与两个既有的日志标识。
+  const actionBarSrc = fs.readFileSync(path.join(ROOT, 'src/client/views/DetailActionBar.ts'), 'utf8')
+  check(actionBarSrc.indexOf("className: 'dsws-act-card'") >= 0 && actionBarSrc.indexOf("className: 'dsws-act-msg'") >= 0, '面板动作卡：一张卡 + 主行（说这组按钮做什么）')
+  check(actionBarSrc.indexOf("className: 'dsws-act-tool'") >= 0 && actionBarSrc.indexOf("className: 'dsws-act-actions'") >= 0, '面板动作卡：次行（作用在哪个容器上）+ 一排按钮')
+  check(actionBarSrc.indexOf("'data-log': 'map.dest.exec'") >= 0 && actionBarSrc.indexOf("'data-log': 'map.dest.archive'") >= 0, '面板动作卡：两颗按钮的日志标识与行为都没动（只有外面多了一层卡）')
+  check(actionBarSrc.indexOf("inject(st, promptText())") >= 0, '面板动作卡：主按钮仍然注入提示词，没有变成别的东西')
+
   console.log('\n' + total + ' 条断言，' + (failed ? '失败' : '通过'))
   printGateResult('verify-97-suggest-card', total, failed ? 1 : 0)
   process.exit(failed ? 1 : 0)

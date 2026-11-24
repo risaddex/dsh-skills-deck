@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-24T21:53:28.962Z",
+  "generatedAt": "2026-11-24T21:57:21.958Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 670,
   "gateCount": 670,
@@ -10892,12 +10892,14 @@
       "step": "node tests/verify-97-suggest-card.ts",
       "file": "tests/verify-97-suggest-card.ts",
       "guards": [
+        "src/client/views/DetailActionBar.ts",
         "src/deck/registration/suggest-steps-register.ts",
         "src/deck/tools/suggest-card.ts",
         "src/deck/tools/suggest-next-steps.ts",
         "tests/lib/gate-result.ts"
       ],
       "dirs": [
+        "src/client/views",
         "src/deck/registration",
         "src/deck/tools",
         "tests/lib"
@@ -10905,8 +10907,8 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 45,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 2 条；载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 3 条"
+      "expectedAssertions": 49,
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 3 条；载入模块（require / import / pathToFileURL） 1 条；源码里的路径字面量 3 条"
     },
     {
       "step": "node tests/verify-970-whole-document.ts",
@@ -16153,6 +16155,7 @@
       "node tests/verify-671-modal-global-overlay.ts",
       "node tests/verify-763-detail-fold.ts",
       "node tests/verify-818-version-control-view.ts",
+      "node tests/verify-97-suggest-card.ts",
       "node tests/verify-b2-map-newsession.ts",
       "node tests/verify-issue529-checks-i18n.ts",
       "node tests/verify-labels-sync.ts",
