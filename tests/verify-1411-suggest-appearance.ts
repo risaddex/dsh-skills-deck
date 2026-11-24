@@ -122,7 +122,8 @@ async function main() {
     check(typeof A.lightPillBg === 'string' && A.lightPillBorder !== A.pillBorder, '旋钮：亮色主题另给一组颜色')
     check(typeof A.popBg === 'string' && A.popBg.indexOf('linear-gradient') === 0 && A.popBg !== A.pillBg, '旋钮：浮层底色另给一档，不能与选项框完全同色')
     check(typeof A.lightPopBg === 'string' && A.lightPopBg !== A.lightPillBg, '旋钮：浅色主题的浮层底色也比选项框淡一档')
-    check(typeof A.popText === 'string' && typeof A.popLabelText === 'string' && A.popText !== A.popLabelText, '旋钮：浮层正文与四行标签各有一个深色文字色（不再用主题次要色）')
+    check(typeof A.popText === 'string' && typeof A.popLabelText === 'string' && A.popText !== A.popLabelText, '旋钮：深色主题浮层正文与四行标签各有一个浅色文字色（不再用主题次要色）')
+    check(typeof A.lightPopText === 'string' && typeof A.lightPopLabelText === 'string' && A.lightPopText !== A.lightPopLabelText && A.lightPopText !== A.popText, '旋钮：亮色主题浮层另给一对深色文字色，不与深色主题那对共用')
     check(typeof A.closeBg === 'string' && typeof A.closeBorder === 'string' && typeof A.closeText === 'string' && typeof A.closeHoverBg === 'string', '旋钮：关闭按钮有实心底、描边、文字色与悬停底色')
     check(typeof A.lightCloseBg === 'string' && typeof A.lightCloseBorder === 'string' && typeof A.lightCloseText === 'string' && typeof A.lightCloseHoverBg === 'string', '旋钮：亮色主题的关闭按钮另给一组反色芯片')
     check(Object.keys(A).length >= 60, '旋钮：外观参数集中在一个对象里（至少 60 项）')
@@ -132,18 +133,31 @@ async function main() {
   }
 
   // ---------- 1b. 对比度：浮层标签/正文与关闭按钮在合成背景上的实测比值（#1787 现象②与关闭按钮） ----------
-  // 页面底色用保守近似：深色主题按 #0d1117、亮色主题按 #ffffff。浮层改成不透明浅色卡片后，
-  // 文字相对卡片底色的比值与宿主主题无关，两个主题用同一套文字色；关闭按钮则是深色主题用浅芯片、
+  // 页面底色用保守近似：深色主题按 #0d1117、亮色主题按 #ffffff。深色主题的浮层是半透明深色玻璃配浅色文字，
+  // 压在卡片玻璃上，所以按「卡片玻璃最亮一档 + 浮层底色」合成后量；亮色主题的浮层近白不透明配深色文字；
+  // 两个主题各用自己的一对文字色。关闭按钮则是深色主题用浅芯片、
   // 亮色主题用深芯片，芯片对页面底色与「×」对芯片都要过 WCAG 2.2 非文本对比度 3:1。
   {
     const DARK_PAGE = [13, 17, 23]
     const LIGHT_PAGE = [255, 255, 255]
-    const popTextDark = worstTextContrast(A.popText, A.popBg, DARK_PAGE)
-    const popLabelDark = worstTextContrast(A.popLabelText, A.popBg, DARK_PAGE)
-    const popTextLight = worstTextContrast(A.popText, A.lightPopBg, LIGHT_PAGE)
-    const popLabelLight = worstTextContrast(A.popLabelText, A.lightPopBg, LIGHT_PAGE)
-    check(popTextDark >= 4.5, '对比度：深色主题浮层正文对合成底色 ≥ 4.5:1（实测 ' + popTextDark.toFixed(2) + ':1）')
-    check(popLabelDark >= 4.5, '对比度：深色主题四行标签对合成底色 ≥ 4.5:1（实测 ' + popLabelDark.toFixed(2) + ':1）')
+    // 深色主题的详情区是半透明玻璃，压在卡片自己的玻璃上，而不是直接压在页面上：所以先把卡片底色的每一档合成到
+    // 页面底色上，再把详情区底色合成到那一档上，取最差的一档（最亮处，浅色文字最难读的地方）。
+    const cardStopsDark = colorStopsOf(A.pillBg).map((stop: any) => compositeOver(stop, DARK_PAGE))
+    const worstOnCard = function (textToken: any) { return Math.min.apply(null, cardStopsDark.map(function (under: number[]) { return worstTextContrast(textToken, A.popBg, under) })) }
+    check(cardStopsDark.length >= 2, '对比度：卡片底色至少解出两档颜色，详情区才有真实的底可比')
+    // 回归钉子（本次修复：#1787 把深色主题的详情区做成近白不透明卡片，在深色界面里是一块刺眼的白板）：
+    // 深色主题的详情区必须保持半透明（每一档不透明度不高于 0.7，让卡片玻璃透出来），文字必须是浅色。
+    // 光靠下面的对比度比值拦不住它：深色字配近白底的比值很高，照样「过关」。
+    const popStopsDark = colorStopsOf(A.popBg)
+    check(popStopsDark.length >= 2 && popStopsDark.every(function (stop: any) { return stop.alpha <= 0.7 }), '外观：深色主题的详情区底色每一档都是半透明（不透明度 ≤ 0.7），不能再是近白不透明的白板')
+    const popTextRgb = parseColor(A.popText)
+    check(popTextRgb !== null && Math.min.apply(null, popTextRgb.rgb) >= 160, '外观：深色主题的详情区文字是浅色（三个通道都 ≥ 160），与半透明深色玻璃配套')
+    const popTextDark = worstOnCard(A.popText)
+    const popLabelDark = worstOnCard(A.popLabelText)
+    const popTextLight = worstTextContrast(A.lightPopText, A.lightPopBg, LIGHT_PAGE)
+    const popLabelLight = worstTextContrast(A.lightPopLabelText, A.lightPopBg, LIGHT_PAGE)
+    check(popTextDark >= 4.5, '对比度：深色主题浮层正文对「卡片玻璃 + 浮层」合成底色（最亮一档）≥ 4.5:1（实测 ' + popTextDark.toFixed(2) + ':1）')
+    check(popLabelDark >= 4.5, '对比度：深色主题四行标签对「卡片玻璃 + 浮层」合成底色（最亮一档）≥ 4.5:1（实测 ' + popLabelDark.toFixed(2) + ':1）')
     check(popTextLight >= 4.5, '对比度：亮色主题浮层正文对合成底色 ≥ 4.5:1（实测 ' + popTextLight.toFixed(2) + ':1）')
     check(popLabelLight >= 4.5, '对比度：亮色主题四行标签对合成底色 ≥ 4.5:1（实测 ' + popLabelLight.toFixed(2) + ':1）')
     const closeChipDark = compositeOver(parseColor(A.closeBg) || { rgb: [0, 0, 0], alpha: 0 }, DARK_PAGE)
@@ -535,8 +549,8 @@ async function main() {
     check(stylesSrc.indexOf('body:not([data-ds-dark-theme])') >= 0, '守卫：亮色主题有单独覆盖')
     check(stylesSrc.indexOf('prefers-reduced-motion') >= 0, '守卫：系统减少动效有兜底')
     check(stylesSrc.indexOf('will-change') >= 0, '守卫：小泡标了 will-change（动效性能）')
-    check(stylesSrc.indexOf('SUGGEST_APPEARANCE.pillBlurPx') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.popBlurPx') < 0, '守卫：只有药丸保留磨砂；浮层改成不透明卡片，不再引用已退役的 popBlurPx')
-    check(stylesSrc.indexOf('SUGGEST_APPEARANCE.popText') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.popLabelText') >= 0, '守卫：浮层正文与四行标签各有自己的深色文字色（#1787 现象②）')
+    check(stylesSrc.indexOf('SUGGEST_APPEARANCE.pillBlurPx') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.popBlurPx') < 0, '守卫：只有药丸保留磨砂；浮层压在卡片的磨砂玻璃上，不再引用已退役的 popBlurPx')
+    check(stylesSrc.indexOf('SUGGEST_APPEARANCE.popText') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.popLabelText') >= 0, '守卫：浮层正文与四行标签各有自己的文字色，亮色主题另有一对（#1787 现象②）')
     check(stylesSrc.indexOf('--dsw-alias-label-secondary') < 0, '守卫：浮层标签与关闭按钮不再借用主题次要文字色（实测对比度不够）')
     check(stylesSrc.indexOf('SUGGEST_APPEARANCE.closeBg') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.closeBorder') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.closeText') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.closeHoverBg') >= 0, '守卫：关闭按钮的实心底、描边、文字色与悬停底色都取自外观旋钮（#1787 关闭按钮）')
     check(stylesSrc.indexOf('SUGGEST_APPEARANCE.lightCloseBg') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.lightCloseText') >= 0, '守卫：亮色主题的关闭按钮另给一组反色芯片')

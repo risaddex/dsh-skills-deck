@@ -123,12 +123,14 @@ export const SUGGEST_APPEARANCE = {
   pillHoverShadow: '0 1px 14px rgba(150,190,255,.14)',
   pillShadow: 'inset 0 1px 0 rgba(255,255,255,.24),0 1px 10px rgba(140,180,255,.06)',
   pillTextShadow: '0 1px 1px rgba(0,0,0,.3)',
-  /** #1787 现象②：浮层改成足够不透明的浅色卡片，文字用一对固定深色——半透明玻璃底会让
-   *  四行的灰色标签在深色主题下只剩 1.36~1.48:1（WCAG 正文要 4.5:1）。做成不透明卡片后，
-   *  浮层内文字对比度与宿主主题无关，深浅两个主题共用同一对文字色。 */
-  popBg: 'linear-gradient(180deg,rgba(242,246,252,.97),rgba(236,242,250,.97) 46%,rgba(230,238,248,.97))',
-  popText: '#1f2328',
-  popLabelText: '#3d4a5c',
+  /** 详情区（#1787 现象②，本次改回半透明）：深色主题里它是一块压在卡片玻璃上的半透明深色玻璃，文字用浅色。
+   *  为什么不是完全透明：卡片玻璃自己的合成底色最亮处约 (120,133,148)，浅色文字直接放上去只有约 3.2:1，
+   *  过不了 WCAG 正文 4.5:1；叠一层 .50~.58 的深色后最亮处约 (66,75,86)，正文与标签都在 5:1 以上，
+   *  又仍能透出玻璃。反例：#1787 把它做成近乎不透明的近白卡片，深色主题里变成一块刺眼的白板。
+   *  亮色主题的底色与文字色是下面 lightPopBg / lightPopText / lightPopLabelText 那一组，与这里互不影响。 */
+  popBg: 'linear-gradient(180deg,rgba(13,17,23,.50),rgba(13,17,23,.54) 46%,rgba(13,17,23,.58))',
+  popText: '#e6edf3',
+  popLabelText: '#c4cfdc',
   bubbleBg: 'radial-gradient(circle at 34% 28%,rgba(255,255,255,.55),rgba(186,210,242,.22) 52%,rgba(150,180,220,.07) 78%)',
   bubbleBorder: 'rgba(200,220,250,.35)',
   bubbleGlow: '0 0 6px rgba(150,190,255,.25)',
@@ -138,7 +140,10 @@ export const SUGGEST_APPEARANCE = {
   lightPillHoverShadow: '0 1px 14px rgba(90,130,190,.18)',
   lightPillShadow: 'inset 0 1px 0 rgba(255,255,255,.8),0 1px 8px rgba(90,120,160,.12)',
   /** #1451 后续：浅色主题下浮层要比选项框淡一档（更白、更浅），不能直接复用 lightPillBg；
-   *  #1787 起它与深色主题共用同一个深色文字 popText/popLabelText，所以底色保持近白不透明。 */
+   *  近白不透明的底色配下面 lightPopText / lightPopLabelText 那一对固定深色文字（#1787 现象②）。
+   *  深色主题的浮层是半透明深色玻璃配浅色文字（popBg / popText / popLabelText），两组互不借用。 */
+  lightPopText: '#1f2328',
+  lightPopLabelText: '#3d4a5c',
   lightPopBg: 'linear-gradient(180deg,rgba(255,255,255,.97),rgba(254,255,255,.95) 46%,rgba(252,254,255,.93))',
   /** #1787 现象⑥：关闭按钮改成实心芯片——深色主题用浅芯片配深「×」，悬停再亮一点。 */
   closeBg: 'rgba(226,234,244,.95)',

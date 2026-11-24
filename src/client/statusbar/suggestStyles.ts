@@ -81,6 +81,11 @@ export const SUGGEST_STYLE_TEXT: string = [
   'body:not([data-ds-dark-theme]) .dsws-sugg-pill{background:' + SUGGEST_APPEARANCE.lightPillBg + ';border-color:' + SUGGEST_APPEARANCE.lightPillBorder + ';box-shadow:' + SUGGEST_APPEARANCE.lightPillShadow + ';text-shadow:none}',
   'body:not([data-ds-dark-theme]) .dsws-sugg-pill:hover{border-color:' + SUGGEST_APPEARANCE.lightPillHoverBorder + ';box-shadow:' + SUGGEST_APPEARANCE.lightPillHoverShadow + '}',
   'body:not([data-ds-dark-theme]) .dsws-sugg-pop{background:' + SUGGEST_APPEARANCE.lightPopBg + ';border-color:' + SUGGEST_APPEARANCE.lightPillBorder + ';box-shadow:' + SUGGEST_APPEARANCE.lightPillShadow + '}',
+  // 亮色主题的详情区文字：基础规则里的 popText / popLabelText 现在是深色主题用的浅色，亮色主题必须自己再给一对深色，
+  // 否则浅色字落在近白底上看不见。选择器带 [role="tooltip"] 与 body:not(...) 前缀，特异性高过宿主的 body [role="tooltip"] 规则（#1834）。
+  'body:not([data-ds-dark-theme]) .dsws-sugg-pop[role="tooltip"]{color:' + SUGGEST_APPEARANCE.lightPopText + '}',
+  'body:not([data-ds-dark-theme]) .dsws-sugg-pop-label{color:' + SUGGEST_APPEARANCE.lightPopLabelText + '}',
+  'body:not([data-ds-dark-theme]) .dsws-sugg-pop-value{color:' + SUGGEST_APPEARANCE.lightPopText + '}',
   // #1787 现象⑥：亮色主题的关闭按钮换成深芯片配浅「×」，与深色主题的浅芯片互为反色。
   'body:not([data-ds-dark-theme]) .dsws-sugg-close{background:' + SUGGEST_APPEARANCE.lightCloseBg + ';color:' + SUGGEST_APPEARANCE.lightCloseText + ';border-color:' + SUGGEST_APPEARANCE.lightCloseBorder + '}',
   'body:not([data-ds-dark-theme]) .dsws-sugg-close:hover{background:' + SUGGEST_APPEARANCE.lightCloseHoverBg + '}',
