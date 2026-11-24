@@ -10,7 +10,7 @@ import { withCallScope } from "../../refresh/rooms/host/tool-call-budget-enforce
 import { withKeyLock } from "../shell/write-mutex.js";
 import { ensureBody } from "../shell/minimal-spec.js";
 import { must, numOpt, timeoutMessage, withCap } from "../shell/backend-transport.js";
-import { reasonForFailure, reasonForItems } from "../shell/receipt-reason.js";
+import { backendMessageLimit, reasonForFailure, reasonForItems } from "../shell/receipt-reason.js";
 import { PROGRESS_BODY_LIMIT } from "../../shared/issue-file/progress.js";
 import { progressEntryFromArg, stampNow } from "../../shared/issue-file/progress-tool.js";
 import { originalWordsFromArg } from "../../shared/issue-file/original-words-tool.js";
@@ -103,7 +103,7 @@ function createDeckIssuePatch(deps) {
       let lockTimeout = null;
       const fail = (step, result, local, message) => {
         const err = result && typeof result === "object" && result.error && typeof result.error === "object" ? result.error : {};
-        const msg = String(message || err && err.message || "the backend did not give a reason").slice(0, 200);
+        const msg = String(message || err && err.message || "the backend did not give a reason").slice(0, backendMessageLimit(err && err.stage, 200));
         items.push(Object.assign({ key, step, status: "failed", reason: msg }, failureFields(result, "write", local)));
       };
       const over = (step) => fail(step, null, "budget", "There is not enough quota left to send this call, so this step was not done: call again with the same parameters.");
@@ -363,7 +363,7 @@ function createDeckIssuePatch(deps) {
       const failedItems = items.filter((i) => i.status !== "ok");
       const reason = status === DECK_STATUS.OK ? "" : reasonForItems(items);
       const leadFailure = failedItems.find((i) => i.code === reason) || failedItems[0] || null;
-      const firstFailureText = leadFailure ? ' The most important thing to say first is "' + String(leadFailure.step || "") + '": ' + String(leadFailure.reason || "the backend did not give a reason").slice(0, 160) : "";
+      const firstFailureText = leadFailure ? ' The most important thing to say first is "' + String(leadFailure.step || "") + '": ' + String(leadFailure.reason || "the backend did not give a reason").slice(0, backendMessageLimit(leadFailure.stage, 160)) : "";
       return {
         value: {
           status,

@@ -3,6 +3,7 @@ import { createDeckShell, DECK_STATUS, REFUSAL_REASONS } from "../shell/call-she
 import { evidenceFields, failureOf, reasonForFailure } from "../shell/receipt-reason.js";
 import { MD_SCOPE_LOCATE, applyMdScope, mdScopeNote } from "./md-scope.js";
 import { sessionContextOfAsync } from "../shell/session-workdir.js";
+import { TEXT_TICKET_KEY } from "../shell/work-path-receipt-read.js";
 import { callDeckSession, openDeckSession } from "./tracker-session.js";
 import { withCallScope } from "../../refresh/rooms/host/tool-call-budget-enforcement.js";
 import { estimateToolCost, toolCostInputFrom } from "../../refresh/kernel/tool-call-budget.js";
@@ -51,7 +52,7 @@ function normKey(raw) {
   const t = String(raw === void 0 || raw === null ? "" : raw).trim().replace(/^#/, "");
   if (!t) return "";
   if (/^\d{1,10}$/.test(t)) return t.replace(/^0+(?=\d)/, "");
-  if (/^[A-Za-z][A-Za-z0-9_]{0,15}-\d{1,10}$/.test(t)) return t;
+  if (TEXT_TICKET_KEY.test(t)) return t;
   return "";
 }
 function createDeckIssueReport(deps) {

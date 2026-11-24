@@ -9,7 +9,7 @@ import { readbackMapPlan, leadFailureText } from "./map-plan-readback.js";
 import { adoptAnchoredChildren, repairOrphanParents } from "./map-plan-resume.js";
 import { backendMapCreateFailure } from "./map-plan-create-failure.js";
 import { applyParentEdge, applyBlockEdges, statusOfItems, childrenOf, failureFields } from "../shell/edge-landing.js";
-import { reasonForFailure, reasonForItems } from "../shell/receipt-reason.js";
+import { backendMessageLimit, reasonForFailure, reasonForItems } from "../shell/receipt-reason.js";
 import { ensureLabels, ensureBody, anchorKeyFor } from "../shell/minimal-spec.js";
 import { resolveCreateKind, MAP_TICKET_LABELS } from "../rules/object-kind.js";
 import { triageStateProblem } from "../rules/triage-state.js";
@@ -285,7 +285,7 @@ function createDeckMapPlanCreate(deps) {
               items.push({ key: state.keys[String(o.ch.key)], role: "child", planKey: String(o.ch.key), title: String(o.ch.title), status: "ok" });
             }
           } else {
-            const msg = String(created && created.error && created.error.message || "the backend did not give a reason").slice(0, 200);
+            const msg = String(created && created.error && created.error.message || "the backend did not give a reason").slice(0, backendMessageLimit(created && created.error && created.error.stage, 200));
             items.push(Object.assign({ key: "", role: "child", planKey: String(o.ch.key), title: String(o.ch.title), status: "failed", reason: msg }, failureFields(created, "write")));
           }
           await store.save(planId, state);

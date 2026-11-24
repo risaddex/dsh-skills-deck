@@ -5,6 +5,7 @@ function parseIssueTracker(raw) {
   const titleGithub = /^#\s*issue\s*tracker\s*:\s*github/im.test(text);
   const titleGitlab = /^#\s*issue\s*tracker\s*:\s*gitlab/im.test(text);
   const titleMarkdown = /^#\s*issue\s*tracker\s*:\s*(markdown|local)/im.test(text);
+  const titleLinear = /^#\s*issue\s*tracker\s*:\s*linear/im.test(text);
   if (titleGitlab) {
     return { explicitBackendId: "gitlab", rawHint: "gitlab", confidence: "high", reason: "title-gitlab" };
   }
@@ -14,6 +15,9 @@ function parseIssueTracker(raw) {
   if (titleGithub) {
     const ghHint = /gh\s+(issue|api|auth)|github\s*issues/i.test(text);
     return { explicitBackendId: "github", rawHint: "github", confidence: "high", reason: ghHint ? "github-template" : "title-github" };
+  }
+  if (titleLinear) {
+    return { explicitBackendId: "linear", rawHint: "linear", confidence: "high", reason: "title-linear" };
   }
   const hasGitlab = /gitlab/i.test(text);
   if (hasGitlab) {

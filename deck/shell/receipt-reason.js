@@ -67,6 +67,10 @@ function evidenceFields(ev, kindKey = "kind") {
   if (ev.local) out.local = ev.local;
   return out;
 }
+const LABEL_STEP_MESSAGE_LIMIT = 1200;
+function backendMessageLimit(stage, normal) {
+  return stage === TRACKER_ERROR_STAGE.LABEL_CREATE ? Math.max(normal, LABEL_STEP_MESSAGE_LIMIT) : normal;
+}
 function reasonForResult(result, phase, local) {
   return failureOf(result, phase, local).code;
 }
@@ -97,6 +101,7 @@ function reasonForItems(items) {
   return worstReason(failed.map((one) => String(one.code || "")));
 }
 export {
+  backendMessageLimit,
   evidenceFields,
   failureOf,
   reasonForFailure,

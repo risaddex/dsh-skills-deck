@@ -2,75 +2,16 @@
 import { ERROR_KIND } from "../../contract/vocabulary.js";
 import { gql } from "./client.js";
 import { linearError } from "./errors.js";
+import { labelNameFilter, pickLabel, wantedLabelsOf } from "./label-match.js";
+import { createLabel, labelCreateFailure, teamIdOfIssue } from "./label-create.js";
+import { emitLabelCreateFail, emitLabelMatch } from "./label-log.js";
 import { PAGINATION } from "../../contract/pagination.js";
 import { issueOf } from "./normalize.js";
 import { ISSUE_CORE } from "./queries.js";
 const ISSUE_FIELDS = "...LinearIssueCore";
 const ISSUE_UPDATE = "mutation DeckIssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { " + ISSUE_FIELDS + " } } } " + ISSUE_CORE;
 const ISSUE_UPDATED_AT = "query DeckIssueUpdatedAt($id: String!) { issue(id: $id) { identifier updatedAt } }";
-const LABELS_BY_NAME = "query DeckLabelsByName($names: [String!]!, $after: String) { issueLabels(filter: { name: { in: $names } }, first: 250, after: $after) { nodes { id name color team { id key } } pageInfo { hasNextPage endCursor } } }";
-const LABEL_CREATE = "mutation DeckIssueLabelCreate($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name color team { id key } } } }";
-const TEAMS_BY_KEY = "query DeckTeamsByKey($key: String!) { teams(filter: { key: { eq: $key } }) { nodes { id key name } } }";
-function hexColorOf(color) {
-  const digits = String(color ?? "").trim().replace(/^#/, "");
-  return /^[0-9a-fA-F]{6}$/.test(digits) ? "#" + digits : "";
-}
-function wantedLabelsOf(labels) {
-  const list = Array.isArray(labels) ? labels : [];
-  const seen = /* @__PURE__ */ new Set();
-  const wanted = [];
-  for (const item of list) {
-    const source = item;
-    const name = typeof source === "string" ? source : String(source && source.name || "");
-    if (!name.trim()) {
-      return { ok: false, error: linearError(ERROR_KIND.CONFLICT, "a label needs a name: Linear names are 1 to 80 characters, and a blank one cannot be matched or created") };
-    }
-    if (seen.has(name)) continue;
-    seen.add(name);
-    wanted.push({
-      name,
-      color: typeof source === "string" ? "" : hexColorOf(source && source.color),
-      description: typeof source === "string" ? "" : String(source && source.description || "")
-    });
-  }
-  return { ok: true, data: wanted };
-}
-function pickLabel(found, name, teamKey) {
-  const same = found.filter((node) => node && String(node.name || "") === name);
-  if (same.length === 0) return null;
-  const wantedTeam = String(teamKey || "").toUpperCase();
-  if (wantedTeam) {
-    const own = same.find((node) => node.team && String(node.team.key || "").toUpperCase() === wantedTeam);
-    if (own) return own;
-  }
-  return same.find((node) => !node.team) || null;
-}
-async function teamIdOfIssue(ctx, account, teamKey) {
-  if (!String(teamKey || "")) {
-    return { ok: false, error: linearError(ERROR_KIND.ENV, "the workspace binding names no Linear team, so a new label has no team to belong to") };
-  }
-  const teams = await gql(ctx, account, { query: TEAMS_BY_KEY, variables: { key: teamKey }, bucket: "read" });
-  if (!teams.ok) return { ok: false, error: teams.error };
-  const nodes = teams.data && teams.data.teams && teams.data.teams.nodes || [];
-  const team = (Array.isArray(nodes) ? nodes : []).find((node) => node && String(node.key || "").toUpperCase() === String(teamKey).toUpperCase());
-  if (!team || !team.id) {
-    return { ok: false, error: linearError(ERROR_KIND.NOTFOUND, "Linear has no team with key " + teamKey + ", so a new label cannot be scoped to it") };
-  }
-  return { ok: true, data: String(team.id) };
-}
-async function createLabel(ctx, account, want, teamId) {
-  const input = { name: want.name, teamId };
-  if (want.color) input.color = want.color;
-  if (want.description) input.description = want.description;
-  const created = await gql(ctx, account, { query: LABEL_CREATE, variables: { input }, bucket: "write" });
-  if (!created.ok) return { ok: false, error: created.error };
-  const payload = created.data && created.data.issueLabelCreate;
-  const id = payload && payload.issueLabel ? String(payload.issueLabel.id || "") : "";
-  if (payload && payload.success === false || !id) {
-    return { ok: false, error: linearError(ERROR_KIND.CONFLICT, "Linear accepted the label creation but reported no label id, so the ticket was left untouched") };
-  }
-  return { ok: true, data: id };
-}
+const LABELS_BY_NAME = "query DeckLabelsByName($filter: IssueLabelFilter!, $after: String) { issueLabels(filter: $filter, first: 250, after: $after) { nodes { id name color team { id key } } pageInfo { hasNextPage endCursor } } }";
 async function writeLabelIds(ctx, account, key, labelIds) {
   const result = await gql(ctx, account, { query: ISSUE_UPDATE, variables: { id: key, input: { labelIds } }, bucket: "write" });
   if (!result.ok) return { ok: false, error: result.error };
@@ -81,10 +22,11 @@ async function writeLabelIds(ctx, account, key, labelIds) {
   return { ok: true, data: issueOf(payload.issue) };
 }
 async function resolveLabelIds(ctx, account, wanted, teamKey) {
+  const startedAt = Date.now();
   const found = [];
   let after = null;
   for (let page = 0; page < PAGINATION.linear.countMaxPages; page += 1) {
-    const lookup = await gql(ctx, account, { query: LABELS_BY_NAME, variables: { names: wanted.map((item) => item.name), after }, bucket: "read" });
+    const lookup = await gql(ctx, account, { query: LABELS_BY_NAME, variables: { filter: labelNameFilter(wanted), after }, bucket: "read" });
     if (!lookup.ok) return { ok: false, error: lookup.error };
     const conn = lookup.data && lookup.data.issueLabels;
     const nodes = conn && conn.nodes || [];
@@ -100,18 +42,26 @@ async function resolveLabelIds(ctx, account, wanted, teamKey) {
   }
   const ids = /* @__PURE__ */ new Map();
   const missing = [];
+  const folded = [];
   for (const want of wanted) {
     const match = pickLabel(found, want.name, teamKey);
     const id = match ? String(match.id || "") : "";
-    if (id) ids.set(want.name, id);
-    else missing.push(want);
+    if (id) {
+      ids.set(want.name, id);
+      if (String(match.name || "") !== want.name) folded.push({ wanted: want.name, found: String(match.name || "") });
+    } else missing.push(want);
   }
+  emitLabelMatch(ctx, { requested: wanted.length, folded, startedAt });
   if (missing.length > 0) {
     const team = await teamIdOfIssue(ctx, account, teamKey);
     if (!team.ok) return { ok: false, error: team.error };
-    for (const want of missing) {
+    for (let index = 0; index < missing.length; index += 1) {
+      const want = missing[index];
       const created = await createLabel(ctx, account, want, team.data);
-      if (!created.ok) return { ok: false, error: created.error };
+      if (!created.ok) {
+        emitLabelCreateFail(ctx, { requested: wanted.length, missing: missing.slice(index).map((one) => one.name), kind: String(created.error.kind || ""), startedAt });
+        return { ok: false, error: labelCreateFailure(created.error, missing.slice(index), teamKey) };
+      }
       ids.set(want.name, created.data);
     }
   }
@@ -147,6 +97,5 @@ async function setLabelsOfIssue(ctx, account, key, labels, opts, teamKey) {
 }
 export {
   resolveLabelIds,
-  setLabelsOfIssue,
-  wantedLabelsOf
+  setLabelsOfIssue
 };

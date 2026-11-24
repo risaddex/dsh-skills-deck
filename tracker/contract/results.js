@@ -3,7 +3,9 @@ const TRACKER_ERROR_STAGE = Object.freeze({
   /** 建票前按幂等锚回查时没能做成：票没建，原样重试是安全的。 */
   ANCHOR_LOOKUP: "anchor-lookup",
   /** 房间在动手之前就拒绝了这次输入：一个写动作都没发出，改输入后才可能成功。 */
-  INPUT_REFUSED: "input-refused"
+  INPUT_REFUSED: "input-refused",
+  /** 为缺失的标签名新建标签时失败：票没建也没改；说明里列出还缺的名字，先把标签建好才可能成功。 */
+  LABEL_CREATE: "label-create"
 });
 const LIST_TRUNCATED_REASON = "list:truncated";
 const READ_DEGRADED_EVENT = "read.degraded";
