@@ -30,6 +30,15 @@ export const SUGGEST_APPEARANCE = {
   gapAboveCapsule: 9,
   /** 整组气泡的最大宽度：窄栏靠它和视口宽度一起收，不横向溢出。 */
   maxWidthPx: 720,
+  /** 卡片（#97）：整组建议现在画成一张卡片、挂在输入框上方的停靠栏里（占正常文档流，不再浮在
+   *  页面浮层上），所以这里只有框的尺寸与两行字的字号，没有定位相关的旋钮。
+   *  为什么主行比次行大半档：主行说「这是什么」，次行说「怎么用」，扫一眼先读主行。 */
+  cardRadiusPx: 10,
+  cardPadY: 8,
+  cardPadX: 10,
+  cardGapPx: 6,
+  headFontPx: 13,
+  subFontPx: 11.5,
   /** 选项药丸：字号、行高、圆角、内边距、彼此间距、单颗最大宽度。 */
   pillFontPx: 12.5,
   pillLineHeight: 1.5,
