@@ -522,6 +522,10 @@ const KERNEL_MODULES: { name: string; file: string }[] = [
   // #1251：这一片由手写 .js 转成 .ts，这里改指新真源（读源由 readSpliceFragmentSource 按扩展名分派，
   //   它会把 .ts 转译成可拼接的 JavaScript；同名 .js 已删，不再入库）。
   { name: 'settingsTemplates', file: 'src/client/kernel/settings-templates.ts' },
+  // #100：每个动作按钮注入的提示词可以在本机设置文件的 promptOverrides 节里改写（键是提示词登记表 id）。
+  //   与上面几族共用同一个待写队列与同一份文档，所以标记必须排在 settingsViewWrite 与 settingsViewReload 之后；
+  //   它没有旧 localStorage 键可退，读写两头的分工见该文件开头的说明。
+  { name: 'settingsPromptOverrides', file: 'src/client/kernel/settings-prompt-overrides.ts' },
   // #1012 第 8 条：调试开关的真源从宿主那份 log-switch.json（与旧键 dsws.debug）搬进本机设置文件的 debug 节。
   //   与上面三族共用同一个待写队列与同一份文档，所以标记必须排在 settingsViewWrite 之后；它还要用运行时那份
   //   日志内核的名字（上面第 500 行的 log），所以必须排在 log 之后。
@@ -1038,6 +1042,7 @@ const LEAF_MODULES: { id: string; file: string }[] = [
   { id: 'diagnosticLogModel', file: 'src/client/views/diagnosticLog/diagnosticLogModel.ts' }, // 诊断日志的纯推演层：失败翻译、日期、开关选句（#597 那张表由此搬入，DebugSwitchFailHint.js 删档）
   { id: 'diagnosticLogActions', file: 'src/client/views/diagnosticLog/diagnosticLogActions.ts' }, // 诊断日志的不纯跑腿层：五个动作调宿主弹提示，世界全从参数进（原来设置页 toggleDbg 与 do 开头那一串）
   { id: 'diagnosticLogSection', file: 'src/client/views/diagnosticLog/DiagnosticLogSection.ts' }, // 诊断日志分组画法：抱住五个 useState，接好世界，画原来沉底那一组（原来设置页 194-220 行）
+  { id: 'promptOverridesSection', file: 'src/client/views/PromptOverridesSection.ts' }, // #100 提示词改写分组：每个动作按钮一个输入框，保存与恢复默认；规则在 kernel/settings-prompt-overrides.ts
   { id: 'settingsPage', file: 'src/client/views/SettingsPage.ts' }, // 真源是同名 .ts（调试分组搬走后转成 TS）：拼接缝自己转译，登记真源这一支（与 SkillsTab 同例）
   { id: 'runPanel', file: 'src/client/views/RunPanel.ts' },
   // #1251：这一片由手写 .js 转成 .ts，这里改指新真源（读源由 readSpliceFragmentSource 按扩展名分派，

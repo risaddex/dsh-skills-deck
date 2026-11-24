@@ -322,7 +322,7 @@ export default {
     // ==== kernel:settingsViewState (spliced by build) ====
     // ==== kernel:settingsView (spliced by build) ====
     // ==== kernel:settingsViewWrite (spliced by build) ====
-    // ==== kernel:settingsViewReload (spliced by build) ==== // ==== kernel:settingsUi (spliced by build) ==== // ==== kernel:settingsTemplates (spliced by build) ==== // ==== kernel:settingsDebug (spliced by build) ==== // ==== kernel:deckState (spliced by build) ==== // ==== kernel:deckPromptFilter (spliced by build) ====
+    // ==== kernel:settingsViewReload (spliced by build) ==== // ==== kernel:settingsUi (spliced by build) ==== // ==== kernel:settingsTemplates (spliced by build) ==== // ==== kernel:settingsPromptOverrides (spliced by build) ==== // ==== kernel:settingsDebug (spliced by build) ==== // ==== kernel:deckState (spliced by build) ==== // ==== kernel:deckPromptFilter (spliced by build) ====
     // ==== kernel:storeSwitch (spliced by build) ====
     // ==== kernel:storeSnapshot (spliced by build) ====
     // #1355：本会话自己的工作路线读数（剥表、补拉、三处接线共用的请求决策）单独一片，理由见 kernel/work-route-own.ts 文件头。
@@ -546,6 +546,7 @@ export default {
     // ==== leaf:OverlayGate (spliced by build) ====
 
     // ==== leaf:diagnosticLogModel (spliced by build) ==== // ==== leaf:diagnosticLogActions (spliced by build) ==== // ==== leaf:diagnosticLogSection (spliced by build) ==== // ==== leaf:SettingsWorkspaces (spliced by build) ====
+    // ==== leaf:promptOverridesSection (spliced by build) ====
     // ==== leaf:settingsPage (spliced by build) ====
     // ==== leaf:runPanel (spliced by build) ==== // ==== leaf:panelAssembly (spliced by build) ====
   },

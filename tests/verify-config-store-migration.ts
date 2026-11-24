@@ -115,6 +115,7 @@ async function main() {
       workspaces: { 'D:\\ws\\demo': { statusBar: 'hide', deckTools: 'on', suggest: 'on', noRepoDismissed: false, subwsMarkAutoShown: false } },
       debug: { enabled: true, sampleRate: 0.5 },
       templates: {},
+      promptOverrides: {},
     }
     const w = await writeLocalSettings(value, 'C:\\Users\\demo', mem.io)
     check(w.ok === true, '设置能写', JSON.stringify(w))
@@ -129,6 +130,7 @@ async function main() {
       workspaces: { 'D:\\ws\\demo': { bannerFolded: false, noRepoDismissed: false, subwsMarkAutoShown: false } },
       debug: { enabled: false, sampleRate: 1 },
       templates: {},
+      promptOverrides: {},
     }
     const wl = await writeLocalSettings(legacyValue, 'C:\\Users\\demo', mem.io)
     check(wl.ok === true, '旧字段的文件也能写（读得进 bannerFolded，只换算展开那一种旧值）', JSON.stringify(wl))

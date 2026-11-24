@@ -55,6 +55,8 @@ async function main() {
       workspaces: { 'D:\\ws\\demo': { statusBar: 'show', deckTools: 'off', suggest: 'on', noRepoDismissed: false, subwsMarkAutoShown: true } },
       debug: { enabled: false, sampleRate: 1 },
       templates: { execute: 'hi' },
+      // #100：第六节，键是提示词登记表 id，值是改写后的整段提示词（空串表示用默认文本）。
+      promptOverrides: { mapInspect: '检查 {url}', 'tpl.fix': '' },
     }
     const stOut = stringifyConfig(st, 'settings')
     check(stOut.ok === true, 'C1 设置能拼', stOut.ok ? '' : stOut.message)

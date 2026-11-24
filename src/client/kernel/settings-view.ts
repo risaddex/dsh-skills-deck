@@ -206,7 +206,7 @@ declare const process: any;
     // 一份空文档：形状与核归一之后那一份逐字一致（version 1、ui 三格加 labelClicks、workspaces 空、
     //   debug 两格、templates 空）。照抄形状不是照抄校验：写成别的样子，核会按「多出来的名字」拒绝整份写入。
     const viewFlagEmptyDoc = function (): any {
-      return { version: 1, ui: { stateFilter: '', sortKey: '', sortDir: '', labelClicks: {} }, workspaces: {}, debug: { enabled: false, sampleRate: 1 }, templates: {} }
+      return { version: 1, ui: { stateFilter: '', sortKey: '', sortDir: '', labelClicks: {} }, workspaces: {}, debug: { enabled: false, sampleRate: 1 }, templates: {}, promptOverrides: {} }
     }
     // 旧表里那把键（按折算键记，与旧写法一致）：红文件夹标志按工作区根。
     const viewFlagLegacyKeyOf = function (cwd: any, name: any): any {
