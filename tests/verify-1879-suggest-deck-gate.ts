@@ -363,6 +363,11 @@ async function main() {
   console.log('== 第六件事：接线 ==')
   const statusBarSrc = readText('src/client/statusbar/StatusBar.ts')
   check(statusBarSrc.indexOf('SuggestStreamMount, { sid: sid, cwd: s.cwd }') >= 0, '状态栏两处挂载都把 cwd 交给取数组件（判据要靠它读本工作区的开关）。')
+  // #97 复审（PR #103）：收起态那一支**也要**挂取数组件。收起与展开是两棵不同的树，挂载跟着树走，
+  // 收起时摘掉挂载就断了订阅：收起期间到的 turn/start 与那一组建议都收不到，展开时按会话缓存把旧组
+  // 放回来，restoreReplay 已经是 false，旧建议就复活的。三支（收起态 / 无横幅 / 有横幅）各一次。
+  const mountHits = statusBarSrc.split('SuggestStreamMount, { sid: sid, cwd: s.cwd }').length - 1
+  check(mountHits >= 3, '状态栏三支都挂着取数组件（收起态摘掉会断订阅、展开后旧建议复活；#97 复审）。实际 ' + mountHits + ' 处')
   const streamSrc = readText('src/client/statusbar/suggestStream.ts')
   check(streamSrc.indexOf('useSuggestBubbleGate(props, group, setGroup)') >= 0 && streamSrc.indexOf('if (!group || !visible) return null') >= 0, '挂载组件问判据钩子，并在不该显示时不画气泡。')
   const gateSrc = readText('src/client/statusbar/suggestGate.ts')

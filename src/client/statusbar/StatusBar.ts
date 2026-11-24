@@ -356,8 +356,17 @@ export const StatusBar = (props: any) => {
   //   卡因此与「当前有没有横幅」「功能区收没收起」都不再相干，而它在「已初始化 + 切后端」那条路上也画得出来。
   const modalSeat = (typeof FormModalSeat === 'function') ? h(FormModalSeat, { st: s }) : null
   if (deckFolded) {
-    // #97：收起态不再挂建议卡片 —— 收起就是把 Deck 的功能区藏起来，建议属于功能区；
-    //   卡片现在占正常文档流，跟那句小灰字并排会把整行挤宽、被 dock 裁掉。（展开态的卡片见下面那一列。）
+    // 收起态：整个功能区只剩这一颗细小灰字按钮（点即恢复横幅与状态栏；设置页工作区行是另一条恢复路径）。
+    // 2026-09-21 按维护者要求还原：2026-09-20 那两轮一度把它画成「有底色、有描边、12px 粗体、带面板图标」的按钮，
+    //   维护者看过真机之后不认可那一下改动（收起态原本只有一句 10px 灰字，改完高了一倍多、显眼过头），
+    //   要求退回改动前的样子。所以这里照原文写回：10px、无底色、无描边、圆角 99。
+    //   收起与展开这条行为一点没动 —— 点它照样把横幅与胶囊一起带回来（下面那道「回来的路」门禁仍然钉着这一点）。
+    // #640：收起态是例外 —— 只剩一句小灰字时不再跟卡片等宽，改收成包裹内容居中，
+    //   避免一条空旷横带占住输入区上方；maxWidth 仍取卡宽变量兜底超长文案，展开/收起之间不横向跳动。
+    // #97 复审（PR #103）：收起态这一支**必须**继续挂取数组件 —— 两支持久不会同时存在，挂载跟着树走，
+    //   拿掉它就断了订阅：收起期间模型又给了一组、或用户发了新消息（turn/start）都收不到，展开后
+    //   按会话缓存把旧组放回来时 restoreReplay 已经是 false，旧建议就复活了（suggestGate.ts 文件头
+    //   第 9~10 行专门写了这一条）。收起着时卡片由 suggestBubbleVisibleOf 一处判隐藏，不必在这里摘挂载。
     return h('div', { style: Object.assign({ display: 'flex', flex: 'none', justifyContent: 'center', alignSelf: 'center' }, dswsStatusDockGeom(), { width: 'auto' }) }, [
       h(Tip, { content: tr('banner.folded') }, h('button', { className: 'dsws-btn ghost dsws-hov', 'aria-label': tr('banner.expandDeck'),
         // 接线（#1335 界面反馈）：收起态这颗「展开」按钮带文字，属于文字类控件，按压与悬停都要有；
@@ -368,7 +377,7 @@ export const StatusBar = (props: any) => {
         Ic({ n: 'chev-up', size: 10 }),
         h('span', null, tr('banner.expandDeck')),
       ])),
-      modalSeat, deckDoorConfirmEl(h, s), deckDoorCloseConfirmEl(h, s), h(ShownAttentionMount, { sid: sid }),
+      modalSeat, deckDoorConfirmEl(h, s), deckDoorCloseConfirmEl(h, s), h(SuggestStreamMount, { sid: sid, cwd: s.cwd }), h(ShownAttentionMount, { sid: sid }),
     ])
   }
   // #522：调试开关关闭时小灰点不挂载（胶囊里不留空位）；开时常驻；开关切换经已有的日志开关广播刷新各会话界面，此处只读开关不另加广播。
@@ -482,7 +491,6 @@ export const StatusBar = (props: any) => {
   //   这里因此不再声明它；两个转调包装留着，卡的界面在那边直接调用它们。
   if (!bannerStep) {
     // 无 banner 时为胶囊 + 常驻收起按钮（#422：收起即整个功能区消失）
-
     return h('div', { style: Object.assign({ display: 'flex', flex: 'none', flexDirection: 'column', alignItems: 'center', gap: 2, overflow: RDOM ? 'hidden' : 'visible' }, dswsStatusDockGeom()) }, [h(SuggestStreamMount, { sid: sid, cwd: s.cwd }), modalSeat, deckDoorConfirmEl(h, s), deckDoorCloseConfirmEl(h, s), workspaceFileNoteEl(s), capsule])
   }
   const bann = function (text: any, btnLabel: any, onBtn: any, foldable: any, alt: any) {
