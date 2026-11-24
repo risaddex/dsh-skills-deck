@@ -495,6 +495,8 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 2026-11-24 #100：提示词改写（设置文件第六节 promptOverrides、取用口的改写、设置页每个按钮一格）的两扇门禁，单跑实测 39 条与 55 条。
   'verify-100-prompt-overrides': 39,
   'verify-100-prompt-overrides-rules': 55,
+  // 2026-11-24 #113：设置页提示词改写每一格默认收起、点名字展开（收起不丢草稿）的门禁，单跑实测 15 条。
+  'verify-113-prompt-fields-collapse': 15,
   // 2026-10-29 #1612：删掉旧 bannerFolded 迁移后改写这一扇的采样格，单跑实测 217 条。
   'verify-settings-view': 217,
   // 2026-10-29 #1643：加了八条冒烟阶段的断言（并行执行器里冒烟跑没跑、跳过时明说原因、

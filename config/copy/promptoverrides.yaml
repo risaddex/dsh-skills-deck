@@ -14,6 +14,7 @@ zh:
   po.placeholders: 可以使用的占位符：{names}
   po.required: 必须保留：{names}
   po.custom: 已改写
+  po.unsaved: 未保存
   po.save: 保存
   po.restore: 恢复默认
   po.saved: 提示词已保存
@@ -49,6 +50,7 @@ en:
   po.placeholders: "Placeholders you can use: {names}"
   po.required: "Must keep: {names}"
   po.custom: Customised
+  po.unsaved: Unsaved
   po.save: Save
   po.restore: Restore default
   po.saved: Prompt saved

@@ -81,7 +81,7 @@ const MATRIX: [string, string, string[]][] = [
   //   本页自己只剩版本号这一颗可点控件；页头静默簇与推荐卡的点击日志由 base 包自己带，不归这份清单。
   ['src/client/views/SettingsPage.ts', '设置页版本号', ['settings.version']],
   ['src/client/views/SettingsWorkspaces.ts', '工作区总览刷新与展开收起', ['settings.workspaces.toggle', 'settings.workspaces.refresh']],
-  ['src/client/views/PromptOverridesSection.ts', '提示词改写的输入框与保存、恢复默认', ['settings.prompt.field.', 'settings.prompt.save.', 'settings.prompt.restore.']],
+  ['src/client/views/PromptOverridesSection.ts', '提示词改写的展开收起、输入框与保存、恢复默认', ['settings.prompt.toggle.', 'settings.prompt.field.', 'settings.prompt.save.', 'settings.prompt.restore.']],
   ['src/client/views/diagnosticLog/DiagnosticLogSection.ts', '调试开关与四颗日志按钮', ['settings.debug.toggle', 'settings.log.export', 'settings.log.open', 'settings.log.copy', 'settings.log.clear']],
   // 2026-10-21 补全：清单之外的可点控件也补齐了接线（用户要求「把所有遗漏的控件都补全了」），
   // 下面这些是补全时新接上的几片界面，每片都要有自己这一组定位串。
