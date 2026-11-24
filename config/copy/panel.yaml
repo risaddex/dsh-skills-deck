@@ -342,8 +342,6 @@ zh:
   vc.other.prunableUnknownTip: 当前 git 版本无法判断该工作树目录是否存在；无法判断不等于不存在。
   suggest.group: 下一步建议
   suggest.close: 关闭（等于一条都不选）
-  suggest.closeShort: 关闭
-  suggest.cardPick: 选一条填进输入框；关掉就都不选
   suggest.label.score: 推荐分
   suggest.label.reason: 理由
   suggest.label.gain: 优点
@@ -732,8 +730,6 @@ en:
   vc.other.prunableUnknownTip: This git version cannot tell whether this worktree directory still exists; cannot tell does not mean it is still there.
   suggest.group: Next-step suggestions
   suggest.close: Close (choosing none)
-  suggest.closeShort: Close
-  suggest.cardPick: Pick one to put it in the input; close to pick none
   suggest.label.score: Score
   suggest.label.reason: Reason
   suggest.label.gain: Gain

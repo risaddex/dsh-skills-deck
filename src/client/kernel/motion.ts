@@ -84,9 +84,9 @@ export const MOTION = {
   suggestPickBubbleTailMs: 60, // 退场：最后一颗飘完后到收起整组的余量
   suggestFadeMs: 170, // 关闭或被覆盖时整组淡出
   suggestPillMs: 140, // 选项药丸悬停的底色/描边/阴影过渡
-  // #97：suggestPopMs 退役 —— 详情区改成卡片里的一块常驻内容，不再淡入。
+  suggestPopMs: 120, // 悬停浮层的透明度与位移过渡
   suggestCloseMs: 120, // 关闭按钮的透明度与底色过渡
-  // #97：suggestAnchorPollMs 退役 —— 卡片占正常文档流，不再测量锚点，也就没有轮询间隔。
+  suggestAnchorPollMs: 120, // 侧栏收起/展开：逐帧轮询锚点的最小间隔（宿主不发 resize/scroll，见 suggestBubble 文件头）
 
   // ---- 系统要求减少动态效果时 ----
   motionOffMs: 1, // 把动画压到几乎为零的一毫秒（suggestStyles 的 reduced-motion 分支）

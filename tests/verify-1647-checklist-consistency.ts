@@ -141,6 +141,36 @@ check(
   )
 }
 
+// #97（2026-11-24）：两位票号的场景编号必须认得出来。
+// 起因：格式原先卡 3~5 位，而本仓票号还在一百上下，模板要求写成「<来源票号>-01」，
+// 于是 `97-01` 这种写法在总览表里被判「读不懂」、在场景块标题里被判「没登记」，
+// 这些票永远过不了预检 —— 2.1.2 的清单票（#96）里 94-01、81-01 就是这么被判红的。
+// 这条断言同时钉住两边：编号本身要认得出，`## Scenario block: 97 …` 里的票号也要登记得上。
+{
+  const twoDigitBody = [
+    '## Scenario overview',
+    '',
+    '1 scenario, 1 source ticket, 1 passed.',
+    '',
+    '| Scenario number | Source ticket | One sentence | Status | Notes |',
+    '| --- | --- | --- | --- | --- |',
+    '| 97-01 | #97 | The suggestion card draws as one card | passed | |',
+    '',
+    '## Pre-release reconciliation',
+    '',
+    '- passed 1 / failed 0 / exempt 1',
+  ].join('\n')
+  const twoDigitBlocks = [{ body: '## Scenario block: 97 The suggestion card draws as one card\n\nScenario 97-01: passed', createdAt: '2026-11-24T23:00:00Z' }]
+  const twoDigitCodes = checkChecklistConsistency({ body: twoDigitBody, comments: twoDigitBlocks }).findings.map((finding) => finding.code)
+  check(!twoDigitCodes.includes('malformed-row'), '两位票号的场景编号（97-01）在总览表里读得出来，不报 malformed-row')
+  check(!twoDigitCodes.includes('missing-scenario-block'), '场景块标题里写两位票号（## Scenario block: 97 …）也算登记，不报 missing-scenario-block')
+  check(!twoDigitCodes.includes('orphan-row'), '总览表里的一行与场景块对得上，不报 orphan-row（这条记录自洽）')
+  // 下界仍是 1 位：0 开头的票号不存在，不能被当成合法来源票号放过。
+  const zeroBody = twoDigitBody.replace('| 97-01 |', '| 0-01 |').replace('passed 1 / failed 0 / exempt 1', 'passed 1 / failed 0 / exempt 1')
+  const zeroCodes = checkChecklistConsistency({ body: zeroBody, comments: twoDigitBlocks }).findings.map((finding) => finding.code)
+  check(zeroCodes.includes('malformed-row'), '0 开头的票号不是合法场景编号，仍报 malformed-row')
+}
+
 if (failed) {
   console.log('\n存在失败（共 ' + total + ' 项）')
   process.exit(1)

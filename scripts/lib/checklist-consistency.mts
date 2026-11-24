@@ -155,10 +155,17 @@ const STATUS_ALTERNATION = STATUS_SPELLINGS.map((entry) => entry.word)
   .join('|')
 
 /**
- * 场景编号的形状只在这里定义一次：来源票号 3~5 位、连字符、两位序号；前后不能紧挨数字或连字符，
+ * 场景编号的形状只在这里定义一次：来源票号 1~5 位、连字符、两位序号；前后不能紧挨数字或连字符，
  * 免得把日期（2026-10-29）或更长的编号认成场景号。下面几处正则都从这三段拼出来，改形状只改这里。
+ *
+ * 为什么是 1~5 位而不是 3~5 位（2026-11-24 修正）：这个仓的票号从 1 开始长，到今天还在一百上下，
+ * 而模板要求写成「<来源票号>-01」，于是 #97 这样的票只能写 `97-01`。原先卡 3 位时，
+ * 一个两位票号的场景编号在任何一处都读不出来：总览表那行算「读不懂」，场景块标题算「没登记」，
+ * 结果是这些票永远过不了预检 —— 2.1.2 的清单票（#96）里 94-01、81-01 两行就是被这么判红的。
+ * 一条判据要求证据「写得出来」，却把本仓真实存在的一半票号挡在格式之外，这不是严格，是写错了。
+ * 下界仍然是 1 位、且首位不能是 0：0 号票不存在，`0-01` 或 `097-01` 只可能是笔误，不能当成合法编号放过。
  */
-const SCENARIO_ID_SOURCE = '(\\d{3,5})-(\\d{2})'
+const SCENARIO_ID_SOURCE = '([1-9]\\d{0,4})-(\\d{2})'
 const SCENARIO_ID_BEFORE = '(?<![\\d-])'
 const SCENARIO_ID_AFTER = '(?![\\d-])'
 /** 从一段文字里找出所有完整场景编号及其位置。 */
@@ -424,9 +431,10 @@ function parseComment(comment: ChecklistCommentInput): ParsedComment {
   const text = expandShorthand(String(comment.body || ''))
   const lines = text.split(/\r?\n/)
   const tickets: string[] = []
-  // 场景块标题里写的是来源票号（不是场景编号），单独一个三位到五位数字，所以不复用场景编号的常量。
+  // 场景块标题里写的是来源票号（不是场景编号），单独一个一到五位、首位非零的数字，所以不复用场景编号的常量。
+  // 位数与 SCENARIO_ID_SOURCE 保持同一档：两处对不上时，两位数票号的场景块就登记不上（见上面的说明）。
   for (const line of lines) {
-    const heading = /^#{2,6}\s*(?:场景块|scenario block)[:：]\s*#?(\d{3,5})(?!\d)/i.exec(line.trim())
+    const heading = /^#{2,6}\s*(?:场景块|scenario block)[:：]\s*#?([1-9]\d{0,4})(?!\d)/i.exec(line.trim())
     if (heading) tickets.push(heading[1])
   }
   const registered: string[] = []

@@ -95,21 +95,7 @@ export const DetailActionBar = ({ st, m, kind, cState, effStats, tri }: any) => 
   }
   // 字色：完成态沿用今天的深绿字（#0c1a10），其余按底色深浅在深墨与白字之间择优。
   const textColor = state === 'done' ? '#0c1a10' : ((typeof isLightHex === 'function' && isLightHex(t.color)) ? '#140a1e' : '#ffffff')
-  // #97：这一组按钮改画成一张卡片，形状照 dsh-git-manager 面板那张卡：主行说这组按钮做什么，
-  //   次行说它作用在哪个容器上（#编号 + 三态动作名），按钮排在最下面一行。
-  //   为什么主行取 t.titleKey：那张卡的主行本来就是「这次动作的一句话说明」；次行用容器编号与动作名，
-  //   与头部那块标题不重复（头部的标题是容器自己的标题）。颜色只借宿主的两枚语义 token，
-  //   和界面上其它卡片同一套；尺寸写在行内，不新起一片样式叶子（kernel/styles.ts 已贴着行数上限）。
-  const cardStyle = { display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'stretch', maxWidth: 520, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--dsw-alias-border-l1,#2a2d35)', background: 'var(--dsw-alias-bg-layer-2,#16181d)', textAlign: 'left' }
-  const cardMsgStyle = { fontSize: 12.5, fontWeight: 700, lineHeight: 1.4 }
-  const cardToolStyle = { fontSize: 11, color: 'var(--dsws-alias-label-caption,#8b8b95)' }
-  const cardActionsStyle = { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-start' }
-  const cardSecondary = '#' + String(mNav) + ' · ' + tr(t.labelKey)
   return h('div', { className: 'acts' }, [
-    h('div', { className: 'dsws-act-card', style: cardStyle }, [
-      h('div', { className: 'dsws-act-msg', style: cardMsgStyle }, tr(t.titleKey)),
-      h('div', { className: 'dsws-act-tool', style: cardToolStyle }, cardSecondary),
-      h('div', { className: 'dsws-act-actions', style: cardActionsStyle }, [
     h(Tip, { content: tr(t.titleKey) }, h('button', { className: 'dsws-btn primary', 'data-press': 'button', 'data-log': 'map.dest.exec', onClick: function () {
       inject(st, promptText())
     }, style: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 12px', fontSize: 11, background: t.color, borderColor: 'transparent', color: textColor, fontWeight: 700 } }, [
@@ -130,8 +116,6 @@ export const DetailActionBar = ({ st, m, kind, cState, effStats, tri }: any) => 
       return archiveIsUrl
         ? h('a', { className: 'dsws-btn ghost', href: archiveUrl, target: '_blank', rel: 'noreferrer', 'data-press': 'button', 'data-log': 'map.dest.archive', style: archiveBtnStyle }, [Ic({ n: 'link', size: 11 }), h('span', null, tr('map.archive'))])
         : h('button', { className: 'dsws-btn ghost', onClick: openArchive, 'data-press': 'button', 'data-log': 'map.dest.archive', style: archiveBtnStyle }, [Ic({ n: 'link', size: 11 }), h('span', null, tr('map.archive'))])
-        })(),
-      ]),
-    ]),
+    })(),
   ])
 }
