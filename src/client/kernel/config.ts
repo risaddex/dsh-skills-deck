@@ -13,6 +13,7 @@ declare function log(...args: any[]): any;
 declare function backendParamsFor(...args: any[]): any;
 declare function promptTextFor(...args: any[]): any;
 declare function promptText(...args: any[]): any;
+declare function promptOverrideOf(...args: any[]): any;
     export const TPL_KEY: string = 'dsws.templates'
     // #519 落地 A：配置页模板编辑入口已删，只删人改入口。已存模板按“忽略旧模板”处理
     export const templates: any = (function (): any {
@@ -61,7 +62,14 @@ declare function promptText(...args: any[]): any;
       handoff2: function (): any { return promptText('tpl.handoff2') },
       fixate: function (st: any): any { return promptTextFor(st, 'fixate') },
     }
-    export const tplText = (id: any, st: any): string => templates[id] || (TPL_DEFAULT[id] ? TPL_DEFAULT[id](st) : '')
+    // #100：旧动作模板那一格还留着非空老文本时，它本来先于默认文本生效；设置页现在给同一条提示词存了生效的改写时，
+    //   改写必须赢过老文本，否则用户在设置页改了字、按钮却还在发旧文本。判法：这个模板对应的登记表 id
+    //   （fixate 对应 fixate，其余都是 tpl. 加模板名，与上面 TPL_DEFAULT 取的 id 一致）有生效的改写，就直接走默认那条
+    //   路（TPL_DEFAULT 里取的是 promptTextFor，提示词取用口会把改写换进去）。没有改写时与改动前一字不差。
+    const tplOverrideActive = (id: any): boolean => {
+      try { return typeof promptOverrideOf === 'function' && promptOverrideOf(id === 'fixate' ? 'fixate' : 'tpl.' + id) !== '' } catch (e) { return false }
+    }
+    export const tplText = (id: any, st: any): string => (TPL_DEFAULT[id] && tplOverrideActive(id)) ? TPL_DEFAULT[id](st) : (templates[id] || (TPL_DEFAULT[id] ? TPL_DEFAULT[id](st) : ''))
     // 渲染：转义 {{x}} → 字面 {x}，再替换已知占位符；未知占位符保留原样（保存层已拦截）
     export const renderTemplate = function (id: any, values: any, st: any): string {
       let text: string = String(tplText(id, st))

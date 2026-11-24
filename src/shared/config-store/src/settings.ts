@@ -54,8 +54,9 @@ const COMMENT_SUBWS = '# Whether the red folder marker explanation has already o
 const COMMENT_UNOPENED = '# This entry temporarily uses the settings workspace-list path (the workspace has not been opened); once opened and its root recognized, it merges into the root entry'
 const COMMENT_DEBUG = '# Local diagnostic logging switch'
 const COMMENT_TEMPLATES = '# Action templates (empty = default text)'
+const COMMENT_PROMPT_OVERRIDES = '# Prompt overrides, one per action button, keyed by prompt id (empty = use the text shipped with the plugin)'
 
-const TOP_KEYS = ['version', 'ui', 'workspaces', 'debug', 'templates']
+const TOP_KEYS = ['version', 'ui', 'workspaces', 'debug', 'templates', 'promptOverrides']
 // labelClicks 只在「读」这一侧认得（老文件里可能已经写进去了，读出来不能报错），写出去的一份里没有它：
 // 维护者 2026-10-12 拍板这项不落盘——它只是标签 chip 排序用的热度，丢了不影响功能，没必要占文件。
 const UI_KEYS = ['stateFilter', 'sortKey', 'sortDir', 'labelClicks']
@@ -112,6 +113,35 @@ function esc(text: string): string {
 
 function unknownIn(obj: Record<string, unknown>, allowed: string[]): string[] {
   return Object.keys(obj).filter((k) => allowed.indexOf(k) < 0)
+}
+
+/**
+ * 读一节「名字 → 一段文字」的映射（templates 与 promptOverrides 两节共用同一套规矩）：
+ * 名字是动态的、不许用危险名、值必须是文字，空串合法（空串表示「这一格用插件自带的默认文本」，不是「用户选了空」）。
+ * 成功返回读好的映射，失败返回一句原因（调用方包成 bad-shape）。核不去猜名字是不是某张登记表里的 id：
+ * 登记表在客户端那一半，核只守文件形状，认不认得某个 id 由读写它的那一边决定。
+ */
+function readTextMap(raw: unknown, section: string, shapeMessage: string): Record<string, unknown> | string {
+  if (!isRecord(raw)) return shapeMessage
+  const out: Record<string, unknown> = {}
+  for (const name of Object.keys(raw)) {
+    if (isDangerousKey(name)) return 'this name is not allowed in local settings ' + section + ': ' + name
+    if (typeof raw[name] !== 'string') return 'in local settings ' + section + ', "' + name + '" must have a string value'
+    out[name] = raw[name]
+  }
+  return out
+}
+
+/** 把一节「名字 → 文字」写成 YAML 行：先写注释；一格都没有就写成空映射，保持五节与第六节永远齐全。 */
+function pushTextMap(lines: string[], comment: string, key: string, map: Record<string, unknown>): void {
+  lines.push(comment)
+  const names = Object.keys(map)
+  if (names.length === 0) {
+    lines.push(key + ': {}')
+    return
+  }
+  lines.push(key + ':')
+  for (const name of names) lines.push('  ' + esc(name) + ': ' + esc(String(map[name])))
 }
 
 /** 校验一份已解析出来的本机设置。版本高于认识时读成功标只读。 */
@@ -230,14 +260,11 @@ export function parseSettings(doc: unknown): ConfigParseResult {
     return fail('bad-shape', 'sampleRate in the local settings debug section must be a number from 0 to 1')
   }
 
-  const tplRaw = doc['templates'] === undefined ? {} : doc['templates']
-  if (!isRecord(tplRaw)) return fail('bad-shape', 'templates in the local settings file must map actions to text')
-  const templates: Record<string, unknown> = {}
-  for (const name of Object.keys(tplRaw)) {
-    if (isDangerousKey(name)) return fail('bad-shape', 'this name is not allowed in local settings templates: ' + name)
-    if (typeof tplRaw[name] !== 'string') return fail('bad-shape', 'in local settings templates, "' + name + '" must have a string value')
-    templates[name] = tplRaw[name]
-  }
+  const templates = readTextMap(doc['templates'] === undefined ? {} : doc['templates'], 'templates', 'templates in the local settings file must map actions to text')
+  if (typeof templates === 'string') return fail('bad-shape', templates)
+  // promptOverrides 节（#100）：每个动作按钮注入的提示词可以在这里改写，键是提示词登记表里的 id；缺节按空映射读。
+  const promptOverrides = readTextMap(doc['promptOverrides'] === undefined ? {} : doc['promptOverrides'], 'promptOverrides', 'promptOverrides in the local settings file must map prompt ids to text')
+  if (typeof promptOverrides === 'string') return fail('bad-shape', promptOverrides)
 
   return {
     ok: true,
@@ -252,6 +279,7 @@ export function parseSettings(doc: unknown): ConfigParseResult {
       workspaces,
       debug: { enabled, sampleRate },
       templates,
+      promptOverrides,
     },
     readonly: false,
     warnings: [],
@@ -282,6 +310,7 @@ export function stringifySettings(value: unknown): ConfigStringifyResult {
   const workspaces = v['workspaces'] as Record<string, Record<string, unknown>>
   const debug = v['debug'] as Record<string, unknown>
   const templates = v['templates'] as Record<string, unknown>
+  const promptOverrides = v['promptOverrides'] as Record<string, unknown>
 
   const lines = [...HEADER]
   lines.push('version: 1')
@@ -327,14 +356,8 @@ export function stringifySettings(value: unknown): ConfigStringifyResult {
   lines.push('debug:')
   lines.push('  enabled: ' + String(debug['enabled']))
   lines.push('  sampleRate: ' + String(debug['sampleRate']))
-  lines.push(COMMENT_TEMPLATES)
-  const tplKeys = Object.keys(templates)
-  if (tplKeys.length === 0) {
-    lines.push('templates: {}')
-  } else {
-    lines.push('templates:')
-    for (const name of tplKeys) lines.push('  ' + esc(name) + ': ' + esc(String(templates[name])))
-  }
+  pushTextMap(lines, COMMENT_TEMPLATES, 'templates', templates)
+  pushTextMap(lines, COMMENT_PROMPT_OVERRIDES, 'promptOverrides', promptOverrides)
   return { ok: true, text: lines.join('\n') + '\n' }
 }
 
@@ -351,6 +374,7 @@ export function settingsEmptyDocument(): Record<string, unknown> {
     workspaces: {},
     debug: { enabled: false, sampleRate: 1 },
     templates: {},
+    promptOverrides: {},
   }
 }
 
