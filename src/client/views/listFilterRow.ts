@@ -79,10 +79,12 @@ export const listFilterRowNode = function (h: any, st: any, colorOf: any, sorted
   //   #375 点选即记点击记忆（次数 + 最近点击时间，双键排序）。画法与搬出前一致。
   const chip = function (nm: any, withCount: any, on: any, isAll: any, idx: any) {
     const c = colorOf[nm]
-    const borderColor = isAll ? 'rgba(255,255,255,.35)' : (darken(c, 0.16) || 'rgba(188,140,255,.6)')
-    const selColor = isAll ? 'rgba(255,255,255,.65)' : (c ? '#' + c : '#bc8cff')
-    const inkBg = isAll ? LABEL_ALL_INK_BG : (hexA(c, 0.18) || 'rgba(188,140,255,.16)')
-    const inkBd = isAll ? LABEL_ALL_INK_BD : (c ? '#' + c : '#bc8cff')
+    // #99：没有颜色的标签画中性灰 cccccc（不是界面强调紫 #bc8cff）—— 这条兜底只有 Linear 会走到，
+    //   GitHub 的标签永远带色。四层颜色（描边、选中字色、墨块底、墨块描边）必须同一个色值。
+    const borderColor = isAll ? 'rgba(255,255,255,.35)' : (darken(c, 0.16) || 'rgba(204,204,204,.6)')
+    const selColor = isAll ? 'rgba(255,255,255,.65)' : (c ? '#' + c : '#cccccc')
+    const inkBg = isAll ? LABEL_ALL_INK_BG : (hexA(c, 0.18) || 'rgba(204,204,204,.18)')
+    const inkBd = isAll ? LABEL_ALL_INK_BD : (c ? '#' + c : '#cccccc')
     const logTarget = isAll ? 'list.filter.label.all' : ('list.filter.label.' + idx + '-' + logSlugOf(nm))
     return h('span', chipProps({
       key: nm,
@@ -108,8 +110,8 @@ export const listFilterRowNode = function (h: any, st: any, colorOf: any, sorted
       },
       style: {
         cursor: 'pointer', marginRight: 4, marginBottom: 3, fontSize: 10,
-        background: isAll ? 'rgba(255,255,255,.08)' : (hexA(c, 0.18) || 'rgba(188,140,255,.16)'),
-        color: isAll ? 'var(--dsw-alias-label-secondary,#a1a1aa)' : (c ? '#' + c : '#bc8cff'),
+        background: isAll ? 'rgba(255,255,255,.08)' : (hexA(c, 0.18) || 'rgba(204,204,204,.18)'),
+        color: isAll ? 'var(--dsw-alias-label-secondary,#a1a1aa)' : (c ? '#' + c : '#cccccc'),
         border: '1px solid ' + (on ? selColor : borderColor),
       },
     }), nm)

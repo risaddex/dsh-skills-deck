@@ -360,8 +360,9 @@ export     const ListTab = ({ st, narrow }: any) => {
           h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)', flex: 'none' } }, tr('list.filterActive')),
           (st.lblFilters || []).map(function (nm: any, i: any) {
             const c = colorOf[nm]
-            const hex = c ? '#' + c : '#bc8cff'
-            return h('span', { key: 'f-label-' + nm, className: 'dsws-chip', style: { fontSize: 10, background: hexA(c, 0.18) || 'rgba(188,140,255,.16)', color: hex, border: '1px solid ' + (darken(c, 0.16) || 'rgba(188,140,255,.6)') } }, [
+            // #99：与列表行、详情同一颗药丸 —— 没有颜色就是中性灰 cccccc，不是界面强调紫 #bc8cff。
+            const hex = c ? '#' + c : '#cccccc'
+            return h('span', { key: 'f-label-' + nm, className: 'dsws-chip', style: { fontSize: 10, background: hexA(c, 0.18) || 'rgba(204,204,204,.18)', color: hex, border: '1px solid ' + (darken(c, 0.16) || 'rgba(204,204,204,.6)') } }, [
               nm,
               // 本次界面反馈需求：✕ 是一颗能点的小控件（去掉这一个标签的过滤），给它自己的按压态与点击日志；
               //   定位串用它在已选标签条里的序号（标签名可能是中文，进不了定位串）。

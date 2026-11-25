@@ -122,7 +122,8 @@ export const PrTab = function (props: any) {
           var nm = (l && l.name) ? String(l.name) : ''
           var col = (l && l.color) ? String(l.color) : ''
           var cc = colorOf[nm] || col.replace(/^#/, '')
-          return h('span', { key: i, className: 'dsws-chip', style: { fontSize: 10, background: (typeof hexA === 'function' ? hexA(cc, 0.18) : null) || 'rgba(188,140,255,.16)', color: cc ? '#' + cc : '#bc8cff', border: '1px solid ' + ((typeof darken === 'function' ? darken(cc, 0.16) : null) || 'rgba(188,140,255,.6)') } }, nm)
+          // #99：拉取请求页与票页共用同一条规则 —— 标签没有颜色画中性灰 cccccc，不画强调紫。
+          return h('span', { key: i, className: 'dsws-chip', style: { fontSize: 10, background: (typeof hexA === 'function' ? hexA(cc, 0.18) : null) || 'rgba(204,204,204,.18)', color: cc ? '#' + cc : '#cccccc', border: '1px solid ' + ((typeof darken === 'function' ? darken(cc, 0.16) : null) || 'rgba(204,204,204,.6)') } }, nm)
         }),
         upd ? h('span', { style: { fontSize: 10, color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, upd) : null,
       ]),
