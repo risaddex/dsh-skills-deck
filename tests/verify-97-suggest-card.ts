@@ -8,6 +8,9 @@
 //   ② 失败代价：dsh-go 的 quickstart 写明 presentationMeta 抛错、返回值不是无损 JSON、视图超过
 //      8 KiB，都会让整次工具调用失败——所以这里钉住它是纯函数、永不抛、只产无损 JSON；
 //   ③ 工具卡第 0 期不能点：这里不许出现 actions / confirm 这类「看着能点、其实点不动」的组件。
+//      #102 之后唯一能点的是行上的 `insert`（维护者的分支 risaddex/dsh-Go 认它：点一下把提示词放进输入框、
+//      不发送），所以另钉三件事：每行带的是那个选项的提示词原文、超过 2000 字的那一行不带、
+//      四段长提示词撑过 8 KiB 时先从最重的那一行摘 insert，卡片照出。
 // 另外钉住登记接线（output.presentationMeta 真的挂上去了）与「没有新增参数」——本票只有数据，没有新功能。
 // #97 复审（第二轮）：这是**只给 dsh-go 用的数据**。桌面那一侧的外观一个字都不改（浮动的建议药丸照旧），
 // 所以这一扇不再断言面板动作条的形状 —— 那一块被还原了。
@@ -121,6 +124,38 @@ async function main() {
     Object.assign({}, FULL, { intro: '四'.repeat(30) }),
   ], texts))
   check(JSON.stringify(biggest).length < cardMod.TOOL_CARD_MAX_BYTES, '视图：四条满字（汉字）的卡片也远在 8 KiB 之内')
+
+  // ---------- 3b. #102：每行带 insert（提示词原文），超过上限的行不带，撑过 8 KiB 先摘最重的 ----------
+  const rowsOf = function (v) {
+    const list = (v && Array.isArray(v.children)) ? v.children.find((c) => c && c.type === 'list') : null
+    return list ? list.items : []
+  }
+  check(cardMod.TOOL_CARD_INSERT_MAX_CHARS === 2000, '常量：insert 上限 2000 字，与 App 的 insert 效果同一个数')
+  check(kids[1].items[0].insert === '/implement 97' && kids[1].items[1].insert === '继续收尾', 'insert：每行带的是那个选项的提示词原文')
+  const atLimit = 'a'.repeat(2000)
+  const overLimit = 'b'.repeat(2001)
+  const edgeRows = rowsOf(cardMod.suggestCardViewOf(cardMod.suggestCardOf([
+    Object.assign({}, FULL, { prompt: atLimit }),
+    Object.assign({}, FULL, { prompt: overLimit }),
+  ], texts)))
+  check(edgeRows.length === 2 && edgeRows[0].insert === atLimit, 'insert：正好 2000 字的提示词原样带上')
+  check(edgeRows[1].insert === undefined && edgeRows[1].title === FULL.intro, 'insert：超过 2000 字的那一行不带 insert（不截断），行本身照画')
+
+  const asciiItems = [1990, 1980, 1970, 1960].map((n, i) => Object.assign({}, FULL, { intro: '选项' + i, prompt: String(i).repeat(n) }))
+  const asciiMeta = cardMod.suggestPresentationMetaOf({ data: { items: asciiItems } })
+  const asciiRows = rowsOf(asciiMeta['dsh-go/view'])
+  check(asciiRows.length === 4, '8 KiB：四段长提示词撑过上限时卡片照出，四行都在')
+  check(cardMod.utf8BytesOf(JSON.stringify(asciiMeta)) <= cardMod.TOOL_CARD_MAX_BYTES, '8 KiB：摘过之后整张卡放得进上限')
+  check(asciiRows[0].insert === undefined && [1, 2, 3].every((i) => asciiRows[i].insert === asciiItems[i].prompt), '8 KiB：只摘最重的那一行（1990 字），其余三行照样能点')
+
+  const wideItems = [0, 1, 2, 3].map((i) => Object.assign({}, FULL, { intro: '宽' + i, prompt: '字'.repeat(1500) }))
+  const wideMeta = cardMod.suggestPresentationMetaOf({ data: { items: wideItems } })
+  const wideRows = rowsOf(wideMeta['dsh-go/view'])
+  check(wideRows.length === 4 && wideRows.filter((r) => typeof r.insert === 'string').length === 1, '8 KiB：汉字按三字节量，四段 1500 字的提示词只留得下一行能点')
+  check(cardMod.utf8BytesOf(JSON.stringify(wideMeta)) <= cardMod.TOOL_CARD_MAX_BYTES, '8 KiB：汉字那张摘过之后也放得进上限')
+
+  const hugeTitles = [0, 1, 2, 3].map((i) => Object.assign({}, FULL, { intro: String(i).repeat(3000) }))
+  check(JSON.stringify(cardMod.suggestPresentationMetaOf({ data: { items: hugeTitles } })) === '{}', '8 KiB：insert 全摘了还放不下才不出卡片（与 #97 的规矩一样）')
 
   // ---------- 4. presentationMeta：纯函数、永不抛、只产无损 JSON ----------
   const envelope = { ok: true, status: 'ok', text: 'Recorded 2 next steps.', data: { items: [FULL, LEGACY], counts: { received: 2, returned: 2, clipped: 0 } } }

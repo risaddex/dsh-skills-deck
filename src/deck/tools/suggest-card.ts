@@ -11,9 +11,11 @@
 // 说明数据只保证形状一致。宿主要对 dsh-go 说英语，就把英语两行递进来；网页界面递它自己的
 // tr() 取到的词。形状一致、文字各自负责，两边才都不必为了对方的语言将就。
 //
-// 为什么 dsh-go 那一侧画成只读的行、而不是按钮：dsh-go 第 0 期（docs/plugins/actions.md）明写
-// 工具卡不能点 —— 按钮与确认不显示、选项只读。所以这里用 list 的行承载每个选项，不用 actions
-// 伪造成能点的样子；等 dsh-go 支持工具卡上的点按，换的是这一个函数，不是卡片的数据形状。
+// 为什么 dsh-go 那一侧画成 list 的行、而不是按钮：dsh-go 第 0 期（docs/plugins/actions.md）明写
+// 工具卡里按钮与确认根本不画。所以这里用 list 的行承载每个选项，不用 actions 伪造成能点的样子。
+// #102：维护者的分支 risaddex/dsh-Go 让工具卡里带 `insert: "<文字>"` 的行可以点 —— 点一下就把
+// 这段文字放进输入框、不发送（与 App 已有的 insert 效果同一条路，没有新路由、新审批）。所以每一行
+// 再带上这个选项的提示词；不认这个字段的 App（上游 dsh-go、旧版本）把它当未知字段忽略，照旧画只读的行。
 //
 // 契约（与仓库其它模块同一套）：本文件是普通 ESM 模块，由宿主编译单元装载；界面那半边不 import
 // 它（界面是拼接出来的闭包片段），两边的形状由 tests/verify-97-suggest-card.ts 对着同一组夹具钉住。
@@ -50,6 +52,12 @@ export interface SuggestCard {
 export const TOOL_CARD_VIEW_KEY = 'dsh-go/view'
 /** dsh-go 对工具卡的总字节上限（超出它 App 会画一行「插件界面有误」，所以这里先自己挡）。 */
 export const TOOL_CARD_MAX_BYTES = 8 * 1024
+/**
+ * 工具卡一行 `insert` 的字符上限（#102）：与 App 的 insert 效果同一个数（dsh-go 的 UiSchema.sendTextMax）。
+ * 按 JS 字符串的 length 数，与 App 那边 Dart 的 String.length 同一把尺（都是 UTF-16 单元）。
+ * 超过的 App 不截断、整个丢掉并在卡上记一条「插件界面有误」，所以这里干脆不写，那一行照旧只读。
+ */
+export const TOOL_CARD_INSERT_MAX_CHARS = 2000
 
 /** 宿主对 dsh-go 说的英语两行字：数出几条选项，主行带上条数，次行说清每一行给的是什么。 */
 export function suggestCardTextsOf(count: number): SuggestCardTexts {
@@ -104,12 +112,17 @@ export function suggestCardDetailOf(option: SuggestCardOption): string {
 }
 
 /**
- * 把一份卡片说明画成 dsh-go 的原生视图（第 0 期：只读）。
+ * 把一份卡片说明画成 dsh-go 的原生视图。
  *
  * 为什么是 stack + text + list：工具卡的折叠摘要取根节点的 title，所以主行放 title；
  * 次行用一行灰字；每颗按钮用 list 的一行（标签在上、三格理由在下、推荐分在行尾）。
  * 不用 actions：工具卡里按钮根本不画，写了只会让人以为能点。
  * 选项超过 list 的行数上限（50）不会发生（上限只有 4 条），这里不再截。
+ *
+ * #102：每一行再带 `insert`，值就是这个选项的提示词，原样写、不截断 —— 认它的 App 点这一行
+ * 就把提示词放进输入框（不发送）。提示词超过 TOOL_CARD_INSERT_MAX_CHARS 的那一行不写 insert：
+ * 截断的提示词比没有更糟，而写进去 App 也只会丢掉它并在卡上记一条错。
+ * 整张卡放不放得进 8 KiB 不在这里管，由 suggestPresentationMetaOf 量过之后再摘。
  */
 export function suggestCardViewOf(card: SuggestCard): UnknownRecord {
   const options = (card && Array.isArray(card.options)) ? card.options : []
@@ -118,6 +131,7 @@ export function suggestCardViewOf(card: SuggestCard): UnknownRecord {
     const detail = suggestCardDetailOf(option)
     if (detail) row.subtitle = detail
     if (typeof option.priority === 'number' && Number.isFinite(option.priority)) row.trailing = String(option.priority)
+    if (option.prompt && option.prompt.length <= TOOL_CARD_INSERT_MAX_CHARS) row.insert = option.prompt
     return row
   })
   const children: UnknownRecord[] = []
@@ -152,6 +166,11 @@ export function utf8BytesOf(text: string): number {
  *   3. 视图超过 8 KiB 也不出卡片 —— 先量字节，超了就回 {}。
  * 数据来源优先用返回值里的 data.items（工具已排好序、截到上限的那一份），取不到再退回参数里的
  * items（调用方自己给的那一份），两者都没有就回 {}，不凭空造建议。
+ *
+ * #102：每行的 insert 带着整段提示词（一段最多 2000 字），四段长提示词加起来能把卡片撑过 8 KiB。
+ * 超了先摘 insert，不先丢卡片：从字节最多的那一行起一行一行摘，摘到放得下为止 —— 摘掉的那一行
+ * 只是变回只读，其余的行照样能点；insert 全摘了还放不下，才回 {}（与 #97 的老规矩一样）。
+ * 为什么不截短提示词来凑：截过的提示词填进输入框是另一句话，比点不了更糟。
  */
 export function suggestPresentationMetaOf(value: unknown, texts?: SuggestCardTexts | null): UnknownRecord {
   try {
@@ -163,9 +182,23 @@ export function suggestPresentationMetaOf(value: unknown, texts?: SuggestCardTex
     const given = (texts && typeof texts === 'object') ? texts : suggestCardTextsOf(items.length)
     const card = suggestCardOf(items, given)
     if (!card.options.length) return {}
-    const text = JSON.stringify({ [TOOL_CARD_VIEW_KEY]: suggestCardViewOf(card) })
+    const view = suggestCardViewOf(card)
+    const measure = function (): string { return JSON.stringify({ [TOOL_CARD_VIEW_KEY]: view }) }
+    let text = measure()
     if (typeof text !== 'string') return {}
-    if (utf8BytesOf(text) > TOOL_CARD_MAX_BYTES) return {}
+    if (utf8BytesOf(text) > TOOL_CARD_MAX_BYTES) {
+      const children = Array.isArray(view.children) ? view.children as UnknownRecord[] : []
+      const list = children.find(function (child) { return child.type === 'list' })
+      const rows = (list && Array.isArray(list.items)) ? list.items as UnknownRecord[] : []
+      const heaviest = rows
+        .filter(function (row) { return typeof row.insert === 'string' })
+        .sort(function (a, b) { return utf8BytesOf(b.insert as string) - utf8BytesOf(a.insert as string) })
+      for (let i = 0; i < heaviest.length && utf8BytesOf(text) > TOOL_CARD_MAX_BYTES; i += 1) {
+        delete heaviest[i].insert
+        text = measure()
+      }
+      if (utf8BytesOf(text) > TOOL_CARD_MAX_BYTES) return {}
+    }
     return JSON.parse(text) as UnknownRecord
   } catch (eMeta) {
     return {}
