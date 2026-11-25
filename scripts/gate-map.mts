@@ -1106,8 +1106,9 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // one shared builder (5), several labels as AND plus spelling and blanks (8), what stays refused with 0 requests (5 filter shapes
   // x with and without labels x 4 assertions + 3 table checks = 43), state and since untouched (5) = 84. Measured by running it:
   // against the source before the fix 37 of the 84 fail (every one that needs the label to be expressed or no longer blamed);
-  // 84 of 84 pass now.
-  'verify-49-linear-label-filter': 84,
+  // 84 of 84 pass now. #89 then made `type: 'map'` expressible (it is the map label): the refused table swaps it for `spec` and adds `issue` (+8) and one assertion says
+  // `type: 'map'` is no longer a refused cell (+1) = 93 (counted by running it).
+  'verify-49-linear-label-filter': 93,
   // 2026-11-19 #48: the Linear room had no listLabels, so the registry answered its "does not implement op listLabels" stub and every label badge of the
   // panel drew in the fallback colour. This gate runs the real room, reached through the registry, over a fake HTTP channel that counts requests:
   // a two-page workspace in the contract shape with the cursor, the read bucket, the account header and no global fetch (15) + a list that cannot be
@@ -1125,6 +1126,15 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // no seam, Chinese, dropped entries (e: 15) = 63 (counted by running it). Against the source before the change 13 of the first 24 assertions fail and the
   // rest crash on the missing files; 63 of 63 pass now.
   'verify-65-linear-setup-hint': 63,
+  // 2026-11-25 #89: the Linear room had no listMaps (the registry stub answered "unsupported"), so deck_context fell back to a `list(type: 'map')` that this room refuses and
+  // answered partial with `maps: []`. Two gates, split only for file size, over one fake Relay-style channel (tests/lib/linear-maps-fake.ts). Room gate = the request, label
+  // filter, no state or time condition, thin selection, cost (A: 14) + a multi-page walk, row shape, closed maps, update-time order, no duplicate (B: 11) + the page cap and
+  // its boundary (C: 9) + a list read in part is never complete, failure classes (D: 8) + the shared table, contract prose and row conversion (E: 6) = 48. Callers gate = the
+  // real deck_context and deck_issue_list end to end, the cut-list notes, and `type=map` without a label turned into the map label by the room's `list` (F: 15). Against the
+  // source before the change all 48 room assertions fail with the stub answer; 11 of the 63 fail when the label filter is removed from the room and 3 when the type
+  // translation is removed (counted by running it).
+  'verify-89-linear-list-maps': 48,
+  'verify-89-linear-list-maps-callers': 15,
 }
 
 // 冒烟链（scripts.smoke）上已经开闸的门禁，写法与上面那张表一样：写在这里 = 已开闸，值 = 期望条数。

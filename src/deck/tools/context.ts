@@ -214,7 +214,9 @@ export function createDeckContext(deps?: DeckContextDeps) {
       if (pre?.accounts) notes.push('Accounts are configured metadata only, not live authentication status; each account is checked when it is read.')
       if (pre?.accountsError) notes.push('The account configuration could not be listed: ' + String((pre.accountsError as { message?: unknown }).message || '').slice(0, 200))
       if (!listed.ok) notes.push('The map list did not come back this time (the backend said: ' + String((listed.error && listed.error.message) || '').slice(0, 200) + ').')
-      if (listMapsUsed && listed.ok === true && listed.data && listed.data.truncated === true) notes.push('Only the first ' + thinRows.length + ' maps came back (out of ' + listed.data.total + ', the page cap was hit); the rest was not fetched this time.')
+      // 总数只在后端真的给出一个比已取回行数大的数时才说「out of N」：Linear 的连接没有总数（#89），撞上限时它回的 total 就是已取回的行数，
+      // 照写会变成「前 500 张（共 500 张）」这种自相矛盾的话；这时只说「还有更多」，不编一个总数。
+      if (listMapsUsed && listed.ok === true && listed.data && listed.data.truncated === true) notes.push('Only the first ' + thinRows.length + ' maps came back (' + (Number(listed.data.total) > thinRows.length ? 'out of ' + listed.data.total : 'the backend does not say how many there are in total, but more exist') + ', the page cap was hit); the rest was not fetched this time.')
       if (pre && pre.ok === false) notes.push('The environment preflight did not pass (' + String((pre.error && pre.error.message) || '').slice(0, 200) + '): tickets can still be read, but write operations may fail.')
       if (perm && perm.ok === false) notes.push('Write permissions could not be read this time (' + String((perm.error && perm.error.message) || '').slice(0, 200) + '): they are treated as unknown for now, so write operations may fail.')
       if (permissions && permissions.push === false) {

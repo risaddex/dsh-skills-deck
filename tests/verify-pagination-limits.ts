@@ -75,6 +75,7 @@ const EXPECTED = {
     subIssuesPageSize: 50,
     subIssuesMax: 1000,
     subIssuesMaxPages: 40,
+    mapListMaxPages: 10,
   },
   markdown: {
     limitDefault: 50,

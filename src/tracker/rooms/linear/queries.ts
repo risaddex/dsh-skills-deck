@@ -118,6 +118,25 @@ export const ISSUES_WITH_BLOCKERS_QUERY = `query LinearIssuesWithBlockers($first
 ${ISSUE_CORE}`
 
 /**
+ * 地图薄查（listMaps，#89）：只问一张地图清单画出来要的几格，别的一概不问。
+ *
+ * 选择集只有 `identifier`、`title`、`url`、`updatedAt` 和 `state { type }`：
+ *  · 前三格是薄行的 key、title、url；`state.type` 交给 `stateOf` 折成 open / closed（与整个房间同一张表）；
+ *  · `updatedAt` 只为交出去之前按更新时间重排（契约的承诺），不进薄行；
+ *  · 故意不问标签、正文、评论、阻塞者、指派人、父票：标签的筛选在服务端做（见 maps.ts 的 `filter`），
+ *    不需要把标签再读回来；没有嵌套连接，所以一页的复杂度远低于整行的列表（tests/lib/linear-complexity.ts 量这一条）。
+ * 页大小与游标都是变量（页大小取共享分页表的 listPageSize，游标是 Linear 上一页给的 endCursor，原样回传）。
+ * 翻页顺序写 `orderBy: createdAt`、不写 updatedAt：翻页期间一张地图被改动，按更新时间排会让它在页与页之间挪位置，
+ * 翻页就会漏掉它；创建时间写下来就不动（与 SUB_ISSUES_ORDER_BY 是同一个理由，GitLab 房的地图薄查也是按创建时间翻页）。
+ */
+export const MAP_LIST_QUERY = `query LinearMaps($first: Int!, $after: String, $filter: IssueFilter) {
+  issues(first: $first, after: $after, orderBy: createdAt, filter: $filter) {
+    nodes { identifier title url updatedAt state { type } }
+    pageInfo { hasNextPage endCursor }
+  }
+}`
+
+/**
  * 子票这一读的排序键，写在代码里、有名字（与评论读的 COMMENTS_FETCH_CAP 那一段同一个做法）：创建时间。
  * 为什么不是更新时间：翻页期间子票被改动时，按更新时间排会让一张票在页与页之间挪位置，翻页就漏掉它；创建时间写下来就不动，
  * 与 listPage 为同一件事选创建时间是同一个理由（paging.ts 的头注释，契约 `PageResult` 的头注释）。

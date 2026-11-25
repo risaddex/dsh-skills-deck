@@ -16,7 +16,7 @@
  *
  * ── 这个切片还没有的东西 ─────────────────────────────────────────────────────
  * 其余操作：写侧、评论、标签、关系、计数、翻页、预算读数（都在 #13 的票面上）。
- * 子票（listSubIssues）自 #50 起有了真实现，见 sub-issues.ts。
+ * 子票（listSubIssues）自 #50 起有了真实现，见 sub-issues.ts；地图薄查（listMaps）自 #89 起有了真实现，见 maps.ts。
  */
 import type { BackendContext, OpContext, RepoHandle } from '../../contract/contexts.js'
 import type { RepositoryRef } from '../../contract/entities.js'
@@ -34,6 +34,7 @@ import { setAssigneesOfIssue } from './assignees.js'
 import { setBlockedByOfIssue } from './relations.js'
 import { countsOf, listPageOf, readBudgetOf } from './paging.js'
 import { listSubIssuesOf } from './sub-issues.js'
+import { listMapsOf } from './maps.js'
 import { preflightLinear } from './preflight.js'
 import { failLinear } from './errors.js'
 import { readBinding } from './binding.js'
@@ -50,6 +51,7 @@ export { setAssigneesOfIssue } from './assignees.js'
 export { setBlockedByOfIssue } from './relations.js'
 export { countsOf, listPageOf, readBudgetOf } from './paging.js'
 export { listSubIssuesOf } from './sub-issues.js'
+export { listMapsOf } from './maps.js'
 export { parseBinding, readBinding, BINDING_PATH } from './binding.js'
 
 /** 契约的账号缝回包 → 这一层要的那三格；缺 authorization 就当没解出来。 */
@@ -138,6 +140,13 @@ export function createLinearBackend(ctx: BackendContext, account?: LinearAccount
       const got = await using(requestCtx)
       if (!got.ok) return { ok: false, error: got.error }
       return listSubIssuesOf(requestCtx, got.account, mapKey)
+    },
+    // 地图薄查（#89）：只收仓库，本房不读 repo（账号来自绑定声明）；翻页、上限与「不全」的交代都在 maps.ts。
+    listMaps: async (_repo, opCtx) => {
+      const requestCtx = opCtx || (ctx as never)
+      const got = await using(requestCtx)
+      if (!got.ok) return { ok: false, error: got.error }
+      return listMapsOf(requestCtx, got.account)
     },
     comment: async (_repo, key, body, opCtx) => {
       const got = await using(opCtx || (ctx as never))
