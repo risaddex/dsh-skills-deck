@@ -186,7 +186,9 @@ async function main(): Promise<void> {
   console.log('F7 what is still not expressible stays refused, with zero requests')
   {
     const refused: [string, any][] = [
-      ['type', { type: 'map' }],
+      // `type: 'map'` is expressible since #89 (it is the map label, see F8 below); the other two types still are not.
+      ['type', { type: 'spec' }],
+      ['type', { type: 'issue' }],
       ['parentKey', { parentKey: 'ENG-100' }],
       ['parentKey', { parentKey: null }],
       ['keys', { keys: ['ENG-1'] }],
@@ -207,7 +209,8 @@ async function main(): Promise<void> {
       }
     }
     check(same(unsupportedFilters({ labels: [MAP] }), []), 'unsupportedFilters no longer lists labels')
-    check(same(unsupportedFilters({ type: 'map', labels: [MAP], keys: ['ENG-1'] }), ['type', 'keys']), 'but still lists the cells that are refused, in the table order', show(unsupportedFilters({ type: 'map', labels: [MAP], keys: ['ENG-1'] })))
+    check(same(unsupportedFilters({ type: 'spec', labels: [MAP], keys: ['ENG-1'] }), ['type', 'keys']), 'but still lists the cells that are refused, in the table order', show(unsupportedFilters({ type: 'spec', labels: [MAP], keys: ['ENG-1'] })))
+    check(same(unsupportedFilters({ type: 'map', labels: [MAP] }), []), 'type map is not a refused cell any more (#89): it is the map label')
     check(same(unsupportedFilters({ labels: [], isPullRequest: false }), []), 'an empty label list and isPullRequest:false are still not requirements')
   }
 

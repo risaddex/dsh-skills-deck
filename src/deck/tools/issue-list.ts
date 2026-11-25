@@ -311,7 +311,8 @@ export function createDeckIssueList(deps?: DeckIssueListDeps) {
           if (type !== 'all') thinCond.push('type=' + type)
           if (wantLabels.length) thinCond.push('label=' + wantLabels.join('&'))
           const thinNotes = ['This one took the fast thin map query (map labels only, no body read).']
-          if (thinBackendTruncated) thinNotes.push('Only the first ' + mapped.length + ' maps came back (out of ' + String(thinBody.data && thinBody.data.total) + ', the page cap was hit); the rest was not fetched this time.')
+          // 同 context.ts：后端不给总数（Linear，#89）时 total 就是已取回的行数，不写「out of N」自相矛盾，只说还有更多。
+          if (thinBackendTruncated) thinNotes.push('Only the first ' + mapped.length + ' maps came back (' + (Number(thinBody.data && thinBody.data.total) > thinRows.length ? 'out of ' + String(thinBody.data && thinBody.data.total) : 'the backend does not say how many there are in total, but more exist') + ', the page cap was hit); the rest was not fetched this time.')
           if (thinTruncated) thinNotes.push('Only the first ' + thinSliced.length + ' rows came back (out of ' + thinTotal + ' that match): narrow the filters or raise limit and fetch again.')
           const thinRawUsage: unknown = (thin as { usage?: unknown }).usage
           const thinUsageObj: { requests?: unknown; points?: unknown } = (thinRawUsage !== null && typeof thinRawUsage === 'object') ? (thinRawUsage as { requests?: unknown; points?: unknown }) : {}
