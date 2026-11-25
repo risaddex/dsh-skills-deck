@@ -227,6 +227,13 @@ async function main() {
   globalThis.suggestEventOf = facts.suggestEventOf
   const bubbleMod = await imp('src/client/statusbar/suggestBubble.ts')
   globalThis.SuggestBubble = bubbleMod.SuggestBubble
+  // #109：气泡又从两片相邻叶子取条目形状与一颗选项的画法，按 index.ts 的拼接次序列出。
+  const viewMod = await imp('src/client/statusbar/suggestItemView.ts')
+  const pillMod = await imp('src/client/statusbar/suggestPill.ts')
+  globalThis.suggestViewItemsOf = viewMod.suggestViewItemsOf
+  globalThis.popBodyOf = viewMod.popBodyOf
+  globalThis.suggestPillNodeOf = pillMod.suggestPillNodeOf
+  globalThis.suggestClampPopToViewport = pillMod.suggestClampPopToViewport
   const streamMod = await imp('src/client/statusbar/suggestStream.ts')
   // 判据钩子与它的三个缓存写口：真机里都在同一个闭包，这里按全局名字接上同一份实现。
   globalThis.useSuggestBubbleGate = gateMod.useSuggestBubbleGate

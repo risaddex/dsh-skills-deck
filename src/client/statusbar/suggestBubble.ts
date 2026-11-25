@@ -1,67 +1,42 @@
-// src/client/statusbar/suggestBubble.ts —— 「下一步建议」气泡的渲染与交互薄壳（#1411）
+// src/client/statusbar/suggestBubble.ts —— 「下一步建议」气泡的锚点与交互薄壳（#1411 / #109）
 //
-// 职责：把取数层（#1409 的 suggestStream）交来的 items = {intro, prompt, reason}[] 画成状态胶囊
-// 上方的一组气泡：每颗选项是一颗按钮，按钮上只印简介（#1451 后续：原来印「简介 + 提示词」两段，
-// 用户要求只留简介）；完整提示词不进按钮，点一下才把它交给既有的「填进输入框」口子（kernel 的
-// inject，自带补尾换行、注入提示与光标落末尾），随后关闭按钮立刻消失、每颗胶囊化作小泡向上飘走，
-// 飘完整组收起（#1451 用户拍板）；
-// 点关闭按钮同样整组消失（等于一条都不选），走的是更短的整组淡出。
+// 职责：把取数层（#1409 的 suggestStream）交来的一组建议画到页面浮层上，并把用户的那一下变成
+// 「填进输入框、整组退场」：
+//   - 锚点：跟状态栏外框（胶囊）走，量不到才退回最宽的输入框，再兜底视口中央靠下；
+//   - 注入与退场：点选交给 kernel 的 inject（填进输入框、不发送），随后由动效执行器把小泡送走；
+//     点关闭按钮等于一条都不选，走更短的整组淡出；两种都只认第一次。
+// 条目怎么洗、浮层四行怎么写，住在 suggestItemView.ts；一颗选项怎么画，住在 suggestPill.ts。
 //
-// 一行排满：每颗按钮的最大宽度按当前条数均分整组宽度（见下面 pillCapPx），条数越多每颗越窄，
-// 三条、四条都排得进一行；只有窄到每颗连一个字都放不下时，才靠选项行的 flex-wrap 换行。
+// 一行排满：每颗按钮的最大宽度按当前条数均分整组宽度（见下面 pillCapPx），三条、四条都排得进
+// 一行；只有窄到每颗连一个字都放不下时，才靠选项行的 flex-wrap 换行。
 //
-// 为什么挂页面浮层而不是就地渲染：状态栏那一层有 overflow 裁剪，就地渲染会把气泡切掉。
-// 挂 body 的做法与胶囊弹菜单同一招（kernel:portal 的 PortalOverlay 直接调用，第二个参数是子节点），
-// 层级用 suggestAppearance 里的具名常量 SUGGEST_Z（与胶囊同层，宿主设置面板能盖住它，#1665）；
-// 悬停理由用框正上方的浮层（.dsws-sugg-pop，样式叶子画、位置固定在框顶边、不跟鼠标走），读屏照旧从按钮的 aria-label 念。
+// 为什么挂页面浮层而不是就地渲染：状态栏那一层有 overflow 裁剪，就地渲染会把气泡切掉。挂 body
+// 的做法与胶囊弹菜单同一招（kernel:portal 的 PortalOverlay 直接调用）；层级取 suggestAppearance 的
+// 具名常量 SUGGEST_Z（与胶囊同层，宿主设置面板能盖住它，#1665）；悬停理由用框正上方的浮层
+// （.dsws-sugg-pop，不跟鼠标走），读屏照旧从按钮的 aria-label 与 aria-describedby 念。
 //
 // 硬约束（票面 #1411）：
 //   - 只读借用：界面绝不碰会话服务里那几个保活接口（#1409 已设守卫，本文件连 sessions 都不提）；
-//   - 不新增常驻定时器：只用一次性 DOM 监听（resize / scroll / keydown），卸载即摘；
-//     唯一例外是 #1787 现象④的侧栏轮询：宿主收起/展开左侧边栏时胶囊尺寸不变、窗口不 resize、
-//     也没有 scroll，没有任何事件可等，只能用 requestAnimationFrame 每 suggestAnchorPollMs 读一次
-//     锚点矩形（只读；位置没变时 setPos 返回同一个对象，不触发渲染），卸载时取消；
+//   - 不新增常驻定时器：只用一次性 DOM 监听（resize / scroll / keydown），卸载即摘；唯一例外是
+//     #1787 现象④的侧栏轮询 —— 宿主收起/展开左侧边栏时胶囊尺寸不变、窗口不 resize、也没有 scroll，
+//     只能用 requestAnimationFrame 每 suggestAnchorPollMs 读一次锚点矩形（只读；位置没变时
+//     setPos 返回同一个对象、不触发渲染），卸载时取消；
 //   - 数据防御：缺字段、空数组、条数越界都不许崩，也不假设 item 形状合法；
-//   - 不新增日志事件：#1409 已有 suggest.bind/call/ready，本票只挂既有交互标识（data-log / data-press）。
+//   - 不新增日志事件：#1409 已有 suggest.bind/call/ready，本片只挂既有交互标识（data-log / data-press）。
 //
-// 契约（与仓库其它叶子文件同一套，见 scripts/build.mts 里的叶子清单）：
-//   模块真源是 ESM 导出，构建时剥掉行首 export 拼进 apply 闭包；运行时不许跨文件 import；
-//   不许 export default；只写可剥离的 TypeScript（不用 enum、不用构造函数参数属性）。
+// 契约（与仓库其它叶子文件同一套，见 scripts/build.mts 里的叶子清单）：模块真源是 ESM 导出，
+// 构建时剥掉行首 export 拼进 apply 闭包；运行时不许跨文件 import；不许 export default；
+// 只写可剥离的 TypeScript（不用 enum、不用构造函数参数属性）。
 declare const PortalOverlay: any;
 declare function inject(...args: any[]): any;
 declare const SUGGEST_Z: any;
 declare const SUGGEST_APPEARANCE: any;
 declare const MOTION: any;
 declare function createSuggestEngine(...args: any[]): any;
-declare function suggestPopShiftOf(rect: any, viewWidth: any, viewHeight: any, margin: any): any;
-
-/** 一组建议最多显示多少颗按钮：与工具/取数层同一组上下限，界面这层只防越界，不重复校验内容。 */
-const SUGGEST_VIEW_MAX_ITEMS = 4
-
-/**
- * 清洗 items：只留 prompt 是非空字符串的条目，条数截到上限；reason 不是字符串就当没有理由；
- * priority 不是有效数字就当没打分（null），排序与浮层都不认它。
- * 为什么要再洗一遍：取数层保证的是「工具参数校验过」，但界面侧不假设数据一定合法（票面⑥）。
- */
-export const suggestViewItemsOf = function (items: any) {
-  const out: any[] = []
-  try {
-    if (!Array.isArray(items)) return out
-    for (let i = 0; i < items.length && out.length < SUGGEST_VIEW_MAX_ITEMS; i++) {
-      const item = items[i]
-      if (!item || typeof item !== 'object') continue
-      const prompt = item.prompt
-      if (typeof prompt !== 'string' || !prompt) continue
-      const intro = (typeof item.intro === 'string') ? item.intro : ''
-      const reason = (typeof item.reason === 'string') ? item.reason : ''
-      const gain = (typeof item.gain === 'string') ? item.gain : ''
-      const cost = (typeof item.cost === 'string') ? item.cost : ''
-      const priority = (typeof item.priority === 'number' && Number.isFinite(item.priority)) ? item.priority : null
-      out.push({ intro: intro, prompt: prompt, reason: reason, gain: gain, cost: cost, priority: priority })
-    }
-  } catch (eItems) {}
-  return out
-}
+// 相邻叶子（index.ts 的标记排在 suggestBubble 之前）：条目洗形与一颗选项的画法，加浮层夹取。
+declare function suggestViewItemsOf(items: any): any;
+declare function suggestPillNodeOf(spec: any): any;
+declare function suggestClampPopToViewport(pop: any): any;
 
 /** 找输入框：textarea 或 contenteditable 里量得到宽高、宽度最大的那个（界面上可能还有小的
  *  搜索框与隐藏输入域，输入框是最宽的那个；量不到宽高的一律跳过）。
@@ -156,46 +131,6 @@ export const suggestAnchorOf = function (probeEl: any) {
     if (fromInput) return fromInput
   } catch (eAnchorInput) {}
   return fallback
-}
-
-/**
- * 把浮层推回视口内：只写两个 CSS 变量（横向 --dsws-sugg-pop-shift、纵向 --dsws-sugg-pop-shift-y），
- * 位移量由 suggestTimeline 的 suggestPopShiftOf 算（纯函数、可脱 DOM 验），不改浮层别的样式。
- * 先清成 0 再量：上一颗浮层留下的位移不能掺进这次测量。显示前调一次；锚点被窗口或侧栏挪动后，
- * feature 的 measure 回调再对打开着的浮层调一次（#1787 现象③的窄窗口分支）。
- */
-const suggestClampPopToViewport = function (pop: any) {
-  try {
-    if (!pop || !pop.style || typeof pop.style.setProperty !== 'function' || typeof pop.getBoundingClientRect !== 'function') return
-    pop.style.setProperty('--dsws-sugg-pop-shift', '0px')
-    pop.style.setProperty('--dsws-sugg-pop-shift-y', '0px')
-    const rect = pop.getBoundingClientRect()
-    if (!rect) return
-    const margin = Number(SUGGEST_APPEARANCE && SUGGEST_APPEARANCE.popViewportMarginPx) || 0
-    const viewWidth = (typeof window !== 'undefined' && Number(window.innerWidth)) || 0, viewHeight = (typeof window !== 'undefined' && Number(window.innerHeight)) || 0
-    const shift = suggestPopShiftOf(rect, viewWidth, viewHeight, margin)
-    if (shift && shift.x) pop.style.setProperty('--dsws-sugg-pop-shift', shift.x + 'px')
-    if (shift && shift.y) pop.style.setProperty('--dsws-sugg-pop-shift-y', shift.y + 'px')
-  } catch (eClampPop) {}
-}
-
-/** 浮层内容：四行固定顺序「推荐分 / 理由 / 优点 / 缺点」，每行左边一个灰色标签、右边正文；
- *  旧事件缺哪一格就跳过哪一行，不补空行。推荐分印数字不画进度条：模型给的是「谁更该先做」的
- *  相对判断，画条会让人以为它是可校准的刻度。 */
-export const popBodyOf = function (item: any, index: number) {
-  const priority = (item && typeof item.priority === 'number' && Number.isFinite(item.priority)) ? item.priority : null
-  const rows: any[] = []
-  function pushRow(key: string, labelKey: string, text: any) {
-    if (typeof text !== 'string' || !text) return
-    rows.push(React.createElement('div', { key: 'suggest-row-' + index + '-' + key, className: 'dsws-sugg-pop-row' },
-      React.createElement('span', { className: 'dsws-sugg-pop-label' }, tr(labelKey)),
-      React.createElement('span', { className: 'dsws-sugg-pop-value' }, text)))
-  }
-  pushRow('score', 'suggest.label.score', priority === null ? '' : String(priority))
-  pushRow('reason', 'suggest.label.reason', item ? item.reason : '')
-  pushRow('gain', 'suggest.label.gain', item ? item.gain : '')
-  pushRow('cost', 'suggest.label.cost', item ? item.cost : '')
-  return rows
 }
 
 /**
@@ -322,11 +257,9 @@ export const SuggestBubble = function (props: any) {
     if (!onDismiss) return
     try { onDismiss() } catch (eDismiss) {}
   }
-  /**
-   * 退场：能演就交给动效执行器，演不了立刻整组消失。
-   * kind 是 'pick'（选中一条：胶囊化作小泡上飘，整体约半秒）或 'fade'（关闭整组：约 170 毫秒淡出）。
-   * 只认第一次调用，重复点击不会重复触发。
-   */
+  /** 退场：能演就交给动效执行器，演不了立刻整组消失。
+   *  kind 是 'pick'（选中一条：胶囊化作小泡上飘，整体约半秒）或 'fade'（关闭整组：约 170 毫秒淡出）。
+   *  只认第一次调用，重复点击不会重复触发。 */
   function playOut(kind: string) {
     if (leavingRef.current) return
     leavingRef.current = true
@@ -371,71 +304,6 @@ export const SuggestBubble = function (props: any) {
     try { if (ev && ev.stopPropagation) ev.stopPropagation() } catch (eStop) {}
     playOut('fade')
   }
-  function pillNodeOf(item: any, index: number) {
-    const intro = (typeof item.intro === 'string') ? item.intro : ''
-    const prompt = item.prompt
-    const reason = (typeof item.reason === 'string') ? item.reason : ''
-    const gain = (typeof item.gain === 'string') ? item.gain : ''
-    const cost = (typeof item.cost === 'string') ? item.cost : ''
-    // 读屏念「简介 提示词」；理由、优点、缺点由 aria-describedby 指向浮层正文读出，不在按钮名里重复念。
-    const spoken = intro ? intro + ' ' + prompt : prompt
-    // 选项框上只印简介（#1451 后续拍板）：提示词不进按钮，点选时才原样填进输入框；
-    // 没有简介的旧事件退回只印提示词。理由、优点、缺点收进框正上方的浮层（2026-10-31 改成四行），
-    // 进出由外层负责显隐。
-    const label = intro
-      ? React.createElement('span', { key: 'suggest-intro-' + index, className: 'dsws-sugg-intro' }, intro)
-      : prompt
-    const popId = 'suggest-pop-' + groupKey + '-' + index
-    const hasPop = Boolean(reason || gain || cost)
-    const button = React.createElement('button', {
-      key: 'suggest-pill-' + index,
-      type: 'button',
-      className: 'dsws-sugg-pill',
-      'data-press': 'button',
-      'data-log': 'suggest.pill',
-      style: { maxWidth: pillCapPx + 'px' },
-      'aria-label': spoken,
-      'aria-describedby': hasPop ? popId : undefined,
-      onClick: function (ev: any) { onPillClick(ev, prompt) },
-      onKeyDown: function (ev: any) { onPillKey(ev, prompt) },
-    }, label)
-    // 没有理由也不裸奔：照样包进定位壳（只是里面不放浮层），有理由没理由 DOM 形状一致。
-    // 显示浮层：#1787 现象③的窄窗口分支——先让浮层按原位置显示，再量一次矩形，把超出视口
-    // 边距的部分写进两个位移变量推回来（横向 --dsws-sugg-pop-shift、纵向 --dsws-sugg-pop-shift-y，
-    // 由样式叶子接在 translate 里）。算术在 suggestTimeline.suggestPopShiftOf，这里只搬 DOM。
-    function showPop(ev: any) {
-      const wrap = ev && ev.currentTarget
-      try { if (wrap && wrap.classList) wrap.classList.add('dsws-sugg-show-pop') } catch (eShow) {}
-      try {
-        const pop = (wrap && typeof wrap.querySelector === 'function') ? wrap.querySelector('.dsws-sugg-pop') : null
-        if (pop) suggestClampPopToViewport(pop)
-      } catch (eShowShift) {}
-    }
-    function hidePop(ev: any) {
-      const wrap = ev && ev.currentTarget
-      try { if (wrap && wrap.classList) wrap.classList.remove('dsws-sugg-show-pop') } catch (eHide) {}
-      try {
-        const pop = (wrap && typeof wrap.querySelector === 'function') ? wrap.querySelector('.dsws-sugg-pop') : null
-        if (pop && pop.style && typeof pop.style.setProperty === 'function') {
-          pop.style.setProperty('--dsws-sugg-pop-shift', '0px')
-          pop.style.setProperty('--dsws-sugg-pop-shift-y', '0px')
-        }
-      } catch (eHideShift) {}
-    }
-    return React.createElement('span', {
-      key: 'suggest-wrap-' + index,
-      className: 'dsws-sugg-pill-wrap',
-      onMouseEnter: showPop,
-      onMouseLeave: hidePop,
-      onFocus: showPop,
-      onBlur: hidePop,
-    }, hasPop ? [button, React.createElement('div', {
-      key: 'suggest-pop-' + index,
-      id: popId,
-      className: 'dsws-sugg-pop',
-      role: 'tooltip',
-    }, popBodyOf(item, index))] : button)
-  }
 
   if (!items.length) return null
 
@@ -457,7 +325,18 @@ export const SuggestBubble = function (props: any) {
     },
   }
   const nodes: any[] = []
-  for (let i = 0; i < items.length; i++) nodes.push(pillNodeOf(items[i], i))
+  for (let i = 0; i < items.length; i++) {
+    // 一颗选项怎么画（按钮、简介、悬停浮层）在 suggestPill.ts；这里只把这一组的宽度预算
+    // 与点选/键盘行为交过去。
+    nodes.push(suggestPillNodeOf({
+      item: items[i],
+      index: i,
+      groupKey: groupKey,
+      pillCapPx: pillCapPx,
+      onClick: onPillClick,
+      onKeyDown: onPillKey,
+    }))
+  }
   const closeProps = {
     type: 'button',
     className: 'dsws-sugg-close dsws-hov',

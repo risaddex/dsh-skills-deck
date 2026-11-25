@@ -177,12 +177,12 @@ async function main() {
   check(facts.SUGGEST_COST_MAX_CHARS === tool.COST_MAX_CHARS && facts.SUGGEST_COST_MAX_CHARS === 48, '缺点上限两侧一致且为 48')
   check(facts.SUGGEST_PRIORITY_MIN === tool.PRIORITY_MIN && facts.SUGGEST_PRIORITY_MIN === 0, '优先级下限两侧一致且为 0')
   check(facts.SUGGEST_PRIORITY_MAX === tool.PRIORITY_MAX && facts.SUGGEST_PRIORITY_MAX === 10, '优先级上限两侧一致且为 10')
-  // 气泡叶子在本地再钳一次条数（构建时是同一闭包里的常量，不能跨文件 import），所以读源码把第四个 4
-  // 与工具上限连起来：以后谁只改一处，这条就红，不用靠人记得同步。
-  const bubbleSource = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestBubble.ts'), 'utf8')
+  // 条目洗形叶子在本地再钳一次条数（构建时是同一闭包里的常量，不能跨文件 import），所以读源码把第四个 4
+  // 与工具上限连起来：以后谁只改一处，这条就红，不用靠人记得同步。#109 起这段住在 suggestItemView.ts。
+  const bubbleSource = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestItemView.ts'), 'utf8')
   const viewMaxMatch = /const SUGGEST_VIEW_MAX_ITEMS\s*=\s*(\d+)/.exec(bubbleSource)
   check(!!viewMaxMatch && Number(viewMaxMatch[1]) === tool.MAX_ITEMS,
-    '气泡叶子的 SUGGEST_VIEW_MAX_ITEMS 与工具上限一致（都是 ' + tool.MAX_ITEMS + '）')
+    '条目洗形叶子的 SUGGEST_VIEW_MAX_ITEMS 与工具上限一致（都是 ' + tool.MAX_ITEMS + '）')
 
   // ── 3. 短散列：日志里只出现这种形状的会话号与调用编号 ──
   const hash = facts.suggestHash(SID)

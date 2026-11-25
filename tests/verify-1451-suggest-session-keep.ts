@@ -145,6 +145,13 @@ async function main() {
   const bubbleMod = await imp('src/client/statusbar/suggestBubble.ts')
   // 取数层把建议气泡的渲染薄壳当相邻叶子的自由变量用（真机由构建闭包按次序拼进来）。
   globalThis.SuggestBubble = bubbleMod.SuggestBubble
+  // #109：气泡又从两片相邻叶子取条目形状与一颗选项的画法，按 index.ts 的拼接次序列出。
+  const viewMod = await imp('src/client/statusbar/suggestItemView.ts')
+  const pillMod = await imp('src/client/statusbar/suggestPill.ts')
+  globalThis.suggestViewItemsOf = viewMod.suggestViewItemsOf
+  globalThis.popBodyOf = viewMod.popBodyOf
+  globalThis.suggestPillNodeOf = pillMod.suggestPillNodeOf
+  globalThis.suggestClampPopToViewport = pillMod.suggestClampPopToViewport
   // #1879：挂载组件每次渲染都要问「这一帧该不该显示气泡」，判据住在相邻叶子 suggestGate.ts。
   //   这一扇量的是按会话保留与关闭，不量 deck 状态，所以给一组「deck 开着、建议开关是开」的真依赖。
   globalThis.isDeckCapsuleFolded = function () { return false }

@@ -521,6 +521,10 @@ async function main() {
   {
     const stylesSrc = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestStyles.ts'), 'utf8')
     const bubbleSrc = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestBubble.ts'), 'utf8')
+    // #109：气泡拆成三片相邻叶子后，浮层正文住 suggestItemView.ts、浮层夹取住 suggestPill.ts，
+    // 守卫按职责分头看（薄壳那边已经看不到这两段）。
+    const itemViewSrc = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestItemView.ts'), 'utf8')
+    const pillSrc = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestPill.ts'), 'utf8')
     const timelineSrc = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestTimeline.ts'), 'utf8')
     const engineSrc = fs.readFileSync(path.join(ROOT, 'src/client/statusbar/suggestEngine.ts'), 'utf8')
     const indexSrc = fs.readFileSync(path.join(ROOT, 'src/client/index.ts'), 'utf8')
@@ -546,7 +550,7 @@ async function main() {
     check(stylesSrc.indexOf('.dsws-sugg-pop-row') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.popLabelGapPx') >= 0 && stylesSrc.indexOf('SUGGEST_APPEARANCE.popRowGapPx') >= 0, '守卫：浮层四行的列宽与行距取自外观旋钮')
     check(stylesSrc.indexOf('.dsws-sugg-score') < 0 && stylesSrc.indexOf('.dsws-sugg-reason') < 0, '守卫：旧的分数泡与理由同行样式已删')
     check(bubbleSrc.indexOf('suggestInputOf') >= 0 && bubbleSrc.indexOf('ResizeObserver') >= 0, '守卫：锚点先找胶囊（输入框只做兜底），胶囊尺寸变化时重新量（#1665）')
-    check(bubbleSrc.indexOf('popBodyOf') >= 0, '守卫：浮层内容由单独的函数拼（分数泡 + 理由）')
+    check(itemViewSrc.indexOf('popBodyOf') >= 0, '守卫：浮层内容由单独的函数拼（分数泡 + 理由）')
     check(timelineSrc.indexOf('document.') < 0 && timelineSrc.indexOf('window.') < 0, '守卫：时间线是纯函数（不碰 DOM）')
     check(timelineSrc.indexOf('setTimeout') < 0 && timelineSrc.indexOf('setInterval') < 0, '守卫：时间线不含任何定时器')
     check(engineSrc.indexOf('setInterval') < 0, '守卫：DOM 执行者没有常驻定时器')
@@ -561,7 +565,7 @@ async function main() {
     check(bubbleSrc.indexOf('setTimeout') < 0 && bubbleSrc.indexOf('setInterval') < 0, '守卫：气泡薄壳仍不新增定时器')
     check(bubbleSrc.indexOf('leavingRef') >= 0, '守卫：气泡薄壳只认第一次退场（重复点击不重复注入）')
     check(bubbleSrc.indexOf('requestAnimationFrame') >= 0 && bubbleSrc.indexOf('suggestAnchorPollMs') >= 0, '守卫：气泡薄壳逐帧轮询锚点（宿主侧栏收起/展开不触发 resize 也能重排；间隔取自 MOTION，#1787）')
-    check(bubbleSrc.indexOf('dsws-sugg-pop-shift') >= 0 && bubbleSrc.indexOf('dsws-sugg-pop-shift-y') >= 0 && bubbleSrc.indexOf('suggestPopShiftOf') >= 0, '守卫：浮层靠自己的横向/纵向位移变量夹在视口内（横向不溢出、顶边越界下推；算术在时间线纯函数里，夹取在显示与锚点挪动后各做一次）')
+    check(pillSrc.indexOf('dsws-sugg-pop-shift') >= 0 && pillSrc.indexOf('dsws-sugg-pop-shift-y') >= 0 && pillSrc.indexOf('suggestPopShiftOf') >= 0, '守卫：浮层靠自己的横向/纵向位移变量夹在视口内（横向不溢出、顶边越界下推；算术在时间线纯函数里，夹取在显示与锚点挪动后各做一次）')
     check(indexSrc.indexOf('leaf:suggestTimeline') >= 0 && indexSrc.indexOf('leaf:suggestEngine') >= 0, '接线：两片新叶子在入口登记了拼接标记')
     check(indexSrc.indexOf('leaf:suggestTimeline') < indexSrc.indexOf('leaf:suggestEngine') && indexSrc.indexOf('leaf:suggestEngine') < indexSrc.indexOf('leaf:suggestBubble'), '接线：拼接次序是时间线 → 执行者 → 气泡薄壳')
     check(buildSrc.indexOf("id: 'suggestTimeline'") >= 0 && buildSrc.indexOf("id: 'suggestEngine'") >= 0, '接线：两片新叶子在构建清单登记')
