@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     assert.equal(receipt.data.accountsStatus, 'configured-not-probed')
     assert.equal(receipt.data.initialized, !failure)
   }
-  // Linear has no listMaps implementation: its unsupported stub triggers an ordinary bound read.
+  // A backend whose thin map list answers `unsupported` (a hand-made room or an old session shape) triggers an ordinary bound read.
   mapsUnsupported = true
   listFailure = true
   preflightFailure = 'env'

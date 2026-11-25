@@ -171,7 +171,8 @@ async function main(): Promise<void> {
 
     // 翻不动的格子必须整体报 unsupported，而且一个请求都不发：交回没筛过的名单比失败更贵。
     const unhonoured: [string, any][] = [
-      ['type', { type: 'map' }],
+      // `type: 'map'` is the map label since #89 (tests/verify-89-linear-list-maps.ts); the other types still cannot be honoured.
+      ['type', { type: 'spec' }],
       // Labels were refused here until #49; they are expressible now (see tests/verify-49-linear-label-filter.ts).
       ['parentKey', { parentKey: 'ENG-100' }],
       ['parentKey', { parentKey: null }],

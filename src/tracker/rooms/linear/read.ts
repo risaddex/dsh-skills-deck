@@ -24,6 +24,9 @@ import { incomingBlocks, refOf, type RelationConnection } from './relations.js'
  */
 const PAGE_SIZE = Math.min(50, MAX_PAGE)
 
+/** 本房里一张票成为地图的唯一依据是这个标签；契约的 `type: 'map'` 翻成它（#89，见 labelNamesOf）。 */
+const MAP_TYPE_LABEL = 'wayfinder:map'
+
 /**
  * 这一版翻不动的筛选格（返回字段名）；空数组表示整份条件都翻成了 Linear 的 filter。
  *
@@ -38,7 +41,8 @@ const PAGE_SIZE = Math.min(50, MAX_PAGE)
 export function unsupportedFilters(filter: ListFilter | undefined): string[] {
   if (!filter) return []
   const out: string[] = []
-  if (filter.type) out.push('type')
+  // `type: 'map'` 能翻成标签条件（#89，见 MAP_TYPE_LABEL），所以不在此列；别的类型（spec 要读正文标记，issue 是「其余」）仍翻不动，照旧整体拒绝。
+  if (filter.type && filter.type !== 'map') out.push('type')
   // null 在契约里是「只要根票」，不是「不过滤」—— 这一版两种都还拼不出来。
   if (filter.parentKey !== undefined) out.push('parentKey')
   if (Array.isArray(filter.keys) && filter.keys.length > 0) out.push('keys')
@@ -53,10 +57,15 @@ export function unsupportedFilters(filter: ListFilter | undefined): string[] {
  * 空数组、省略、全是空名，都归一成空名单，也就是「不筛标签」（契约：空数组与省略相同，#1183）。
  */
 function labelNamesOf(filter: ListFilter): string[] {
-  if (!Array.isArray(filter.labels)) return []
+  const asked: unknown[] = Array.isArray(filter.labels) ? [...filter.labels] : []
+  // `type: 'map'` 就是地图标签（#89）：本房里「是不是地图」只由标签决定（normalize.ts 的 issueTypeOf；只有 spec 才读正文），
+  // 所以要 `type: 'map'` 与要这个标签是同一个问题。并进同一份名单，下面的去重保证调用方已经带了同一标签时不会拼出重复条件。
+  // 反例：对 `spec`、`issue` 不成立（那两种由 unsupportedFilters 继续拒绝），别照这个写法给它们也加翻译。
+  if (filter.type === 'map') asked.push(MAP_TYPE_LABEL)
+  if (asked.length === 0) return []
   const seen = new Set<string>()
   const names: string[] = []
-  for (const raw of filter.labels) {
+  for (const raw of asked) {
     const name = String(raw === undefined || raw === null ? '' : raw).trim()
     const folded = name.toLowerCase()
     if (!name || seen.has(folded)) continue

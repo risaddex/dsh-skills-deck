@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-25T14:14:15.103Z",
+  "generatedAt": "2026-11-25T18:33:43.691Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 674,
-  "gateCount": 674,
-  "attributedGates": 609,
+  "chainLength": 678,
+  "gateCount": 678,
+  "attributedGates": 613,
   "unattributedGates": 65,
   "buildOutputOnlyGates": 20,
-  "completionRecordedGates": 190,
+  "completionRecordedGates": 192,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 1014,
+  "graphFileCount": 1015,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -8377,7 +8377,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 84,
+      "expectedAssertions": 93,
       "reason": "归属来自 文件头 // 门禁归属: 注释（共 4 条）"
     },
     {
@@ -10364,6 +10364,46 @@
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条"
     },
     {
+      "step": "node tests/verify-89-linear-list-maps-callers.ts",
+      "file": "tests/verify-89-linear-list-maps-callers.ts",
+      "guards": [
+        "src/deck/tools/context.ts",
+        "src/deck/tools/issue-list.ts",
+        "src/tracker/rooms/linear/index.ts",
+        "src/tracker/rooms/linear/maps.ts",
+        "src/tracker/rooms/linear/read.ts"
+      ],
+      "dirs": [
+        "src/deck/tools",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 15,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 5 条）"
+    },
+    {
+      "step": "node tests/verify-89-linear-list-maps.ts",
+      "file": "tests/verify-89-linear-list-maps.ts",
+      "guards": [
+        "src/tracker/contract/index.ts",
+        "src/tracker/contract/pagination.ts",
+        "src/tracker/rooms/linear/index.ts",
+        "src/tracker/rooms/linear/maps.ts",
+        "src/tracker/rooms/linear/queries.ts"
+      ],
+      "dirs": [
+        "src/tracker/contract",
+        "src/tracker/rooms/linear"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 48,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 5 条）"
+    },
+    {
       "step": "node tests/verify-891-setup-refresh.ts",
       "file": "tests/verify-891-setup-refresh.ts",
       "guards": [
@@ -11070,6 +11110,65 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条"
+    },
+    {
+      "step": "node tests/verify-99-linear-detail-labels.ts",
+      "file": "tests/verify-99-linear-detail-labels.ts",
+      "guards": [
+        "src/client/kernel/container-view.ts",
+        "src/client/kernel/ctx.ts",
+        "src/client/kernel/detail-top-gate.ts",
+        "src/client/kernel/link.ts",
+        "src/client/kernel/motion.ts",
+        "src/client/kernel/row-actions.ts",
+        "src/client/kernel/ticket-label.ts",
+        "src/client/views/IssueDetail.ts",
+        "src/client/views/IssueDetailComments.ts",
+        "src/client/views/issueDetailErrorView.ts",
+        "src/client/views/shared/detailProjection.ts",
+        "src/client/views/shared/stateKind.ts",
+        "src/client/views/shared/ticketBadge.ts",
+        "src/refresh/rooms/client/snapshot-sync-helpers.ts",
+        "src/tracker/kernel/identity-keys.ts"
+      ],
+      "dirs": [
+        "src/client/kernel",
+        "src/client/views",
+        "src/client/views/shared",
+        "src/refresh/rooms/client",
+        "src/tracker/kernel"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 15 条"
+    },
+    {
+      "step": "node tests/verify-99-linear-list-row-labels.ts",
+      "file": "tests/verify-99-linear-list-row-labels.ts",
+      "guards": [
+        "src/client/kernel/container-view.ts",
+        "src/client/kernel/link.ts",
+        "src/client/kernel/row-actions.ts",
+        "src/client/kernel/ticket-label.ts",
+        "src/client/views/ListTabRow.ts",
+        "src/client/views/shared/ticketBadge.ts",
+        "src/refresh/rooms/client/snapshot-sync-helpers.ts",
+        "src/tracker/kernel/identity-keys.ts"
+      ],
+      "dirs": [
+        "src/client/kernel",
+        "src/client/views",
+        "src/client/views/shared",
+        "src/refresh/rooms/client",
+        "src/tracker/kernel"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自：载入模块（require / import / pathToFileURL） 8 条"
     },
     {
       "step": "node tests/verify-992-readonly-labels.ts",
@@ -16101,6 +16200,8 @@
       "node tests/verify-842-version-control-write-view.ts",
       "node tests/verify-9-client-english.ts",
       "node tests/verify-907-chain-titles.ts",
+      "node tests/verify-99-linear-detail-labels.ts",
+      "node tests/verify-99-linear-list-row-labels.ts",
       "node tests/verify-b2-map-newsession.ts",
       "node tests/verify-bug-entry.ts",
       "node tests/verify-cap-fold.ts",
@@ -16264,6 +16365,8 @@
       "node tests/verify-671-modal-global-overlay.ts",
       "node tests/verify-763-detail-fold.ts",
       "node tests/verify-818-version-control-view.ts",
+      "node tests/verify-99-linear-detail-labels.ts",
+      "node tests/verify-99-linear-list-row-labels.ts",
       "node tests/verify-b2-map-newsession.ts",
       "node tests/verify-issue529-checks-i18n.ts",
       "node tests/verify-labels-sync.ts",
@@ -16376,6 +16479,8 @@
       "node tests/verify-693-detail-fallback-honesty.ts",
       "node tests/verify-9-client-english.ts",
       "node tests/verify-907-chain-titles.ts",
+      "node tests/verify-99-linear-detail-labels.ts",
+      "node tests/verify-99-linear-list-row-labels.ts",
       "node tests/verify-bug-entry.ts",
       "node tests/verify-diagnostic-log-actions.ts",
       "node tests/verify-hovertip.ts",
@@ -16561,6 +16666,7 @@
       "node tests/verify-790-parent-edge.ts",
       "node tests/verify-829-parent-reread.ts",
       "node tests/verify-85-label-step-receipt.ts",
+      "node tests/verify-89-linear-list-maps-callers.ts",
       "node tests/verify-895-bulk-deadline.ts",
       "node tests/verify-898-block-merge.ts",
       "node tests/verify-92-patch-label-step.ts",
@@ -16918,6 +17024,8 @@
       "node tests/verify-669-choice-precedence.ts",
       "node tests/verify-669-switch-visible.ts",
       "node tests/verify-891-setup-refresh.ts",
+      "node tests/verify-99-linear-detail-labels.ts",
+      "node tests/verify-99-linear-list-row-labels.ts",
       "node tests/verify-bug-entry.ts",
       "node tests/verify-delta-wiring.ts",
       "node tests/verify-error-single-source.ts",
@@ -17349,6 +17457,7 @@
       "node tests/verify-74-deck-read-channel.ts",
       "node tests/verify-85-label-step-receipt.ts",
       "node tests/verify-85-linear-label-resolution.ts",
+      "node tests/verify-89-linear-list-maps.ts",
       "node tests/verify-895-github-memo.ts",
       "node tests/verify-92-label-step-log.ts",
       "node tests/verify-969-tiered-timeout.ts",
@@ -17412,6 +17521,8 @@
       "node tests/verify-64-text-key-level-blocks.ts",
       "node tests/verify-94-linear-declaration-heading.ts",
       "node tests/verify-969-tiered-timeout.ts",
+      "node tests/verify-99-linear-detail-labels.ts",
+      "node tests/verify-99-linear-list-row-labels.ts",
       "node tests/verify-992-readonly-labels.ts",
       "node tests/verify-error-normalize-log.ts",
       "node tests/verify-error-rule-samples.ts",
@@ -17683,6 +17794,8 @@
       "node tests/verify-50-linear-list-sub-issues.ts",
       "node tests/verify-65-linear-setup-hint.ts",
       "node tests/verify-85-linear-label-resolution.ts",
+      "node tests/verify-89-linear-list-maps-callers.ts",
+      "node tests/verify-89-linear-list-maps.ts",
       "node tests/verify-92-label-step-log.ts",
       "node tests/verify-94-linear-declaration-heading.ts"
     ],
@@ -18171,9 +18284,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1037,
+    "fileCount": 1038,
     "dirCount": 106,
-    "coveredFileCount": 1037,
+    "coveredFileCount": 1038,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -19097,6 +19210,7 @@
       "src/tracker/rooms/linear/label-log.ts",
       "src/tracker/rooms/linear/label-match.ts",
       "src/tracker/rooms/linear/labels.ts",
+      "src/tracker/rooms/linear/maps.ts",
       "src/tracker/rooms/linear/normalize.ts",
       "src/tracker/rooms/linear/paging.ts",
       "src/tracker/rooms/linear/preflight.ts",
