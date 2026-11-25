@@ -115,6 +115,11 @@ async function main() {
   global.createSuggestEngine = function () { return { run: function () { return false }, playOut: function () { return false }, dispose: function () {} } }
   const stylesMod = await imp('src/client/statusbar/suggestStyles.ts')
   const bubbleMod = await imp('src/client/statusbar/suggestBubble.ts')
+  const viewMod = await imp('src/client/statusbar/suggestItemView.ts')
+  const pillMod = await imp('src/client/statusbar/suggestPill.ts')
+  global.suggestViewItemsOf = viewMod.suggestViewItemsOf
+  global.popBodyOf = viewMod.popBodyOf
+  global.suggestPillNodeOf = pillMod.suggestPillNodeOf
 
   const items = [itemOf(0), itemOf(1), itemOf(2)]
   const container = win.document.createElement('div')

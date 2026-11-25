@@ -1107,6 +1107,11 @@ const LEAF_MODULES: { id: string; file: string }[] = [
   { id: 'suggestGate', file: 'src/client/statusbar/suggestGate.ts' },
   { id: 'suggestTimeline', file: 'src/client/statusbar/suggestTimeline.ts' },
   { id: 'suggestEngine', file: 'src/client/statusbar/suggestEngine.ts' },
+  // #109：气泡的两片相邻叶子 —— 条目洗形与浮层四行（suggestItemView）、一颗选项的画法（suggestPill）。
+  //   拼接次序与 index.ts 的标记一致：suggestItemView 在前（popBodyOf 被选项那颗调用），
+  //   suggestPill 在后，两片都在 suggestBubble 之前（薄壳要调用它们导出的函数）。
+  { id: 'suggestItemView', file: 'src/client/statusbar/suggestItemView.ts' },
+  { id: 'suggestPill', file: 'src/client/statusbar/suggestPill.ts' },
   // #1411：状态胶囊上方的下一步建议气泡。外观旋钮（含层级常量）先求值，样式叶子读它拼 CSS；
   //   渲染薄壳在订阅层之前（订阅层拿到建议直接调它）。index.ts 的标记次序保证了这个依赖顺序。
   { id: 'suggestAppearance', file: 'src/client/statusbar/suggestAppearance.ts' },
