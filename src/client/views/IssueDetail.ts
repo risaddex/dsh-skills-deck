@@ -426,7 +426,9 @@ export const IssueDetail = function (props: any): any {
           labelArr.map(function (l: any, i: any) {
             const nm = l.name || l
             const col = l.color || ''
-            return h('span', { key: i, className: 'dsws-chip', style: { fontSize: 10, background: hexA ? hexA(col, 0.18) : ('#' + col), color: col ? '#' + col : '#bc8cff', border: '1px solid ' + (darken ? darken(col, 0.16) : 'rgba(188,140,255,.6)') } }, nm)
+            // #99：与列表行同一条规则 —— 标签没有颜色就是中性灰 cccccc，不是界面强调紫 #bc8cff。
+            //   两处必须画同一颗药丸：用户在列表里看到什么颜色，点开详情就该看到什么颜色。
+            return h('span', { key: i, className: 'dsws-chip', style: { fontSize: 10, background: (typeof hexA === 'function' ? hexA(col, 0.18) : null) || 'rgba(204,204,204,.18)', color: col ? '#' + col : '#cccccc', border: '1px solid ' + ((typeof darken === 'function' ? darken(col, 0.16) : null) || 'rgba(204,204,204,.6)') } }, nm)
           }),
           assignees.map(function (a: any, i: any) {
             const login = (typeof a === 'string') ? a : (a.login || '')

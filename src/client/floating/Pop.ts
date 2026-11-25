@@ -30,9 +30,11 @@ export     const showPop = function (trig: any, host: any, labels: any, title: a
       labels.forEach(function (l: any) {
         const s = document.createElement('span')
         s.className = 'dsws-chip'
-        s.style.background = hexA(l.color, 0.18) || 'rgba(188,140,255,.16)'
-        s.style.color = l.color ? '#' + l.color : '#bc8cff'
-        s.style.border = '1px solid ' + (darken(l.color, 0.16) || 'rgba(188,140,255,.6)')
+        // #99：+N 弹窗里那些标签与行内的同一颗药丸，没有颜色同样画中性灰 cccccc（不是强调紫 #bc8cff）。
+        //   只在行内改、弹窗不改，用户点开 +N 会看到两种颜色，比原来还乱。
+        s.style.background = hexA(l.color, 0.18) || 'rgba(204,204,204,.18)'
+        s.style.color = l.color ? '#' + l.color : '#cccccc'
+        s.style.border = '1px solid ' + (darken(l.color, 0.16) || 'rgba(204,204,204,.6)')
         s.textContent = l.name
         pl.appendChild(s)
       })

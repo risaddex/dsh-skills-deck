@@ -366,8 +366,12 @@ export const listIssueRow = function (h: any, st: any, x: any, isOpen: any, narr
         // 行2：标签贪心折叠（单行不换行）+ 按钮组（常显）（T1 Map #120：marginTop 8→2，全局收紧至 8px = gap6+mt2，所有行一致）
         h('div', { style: { marginTop: LIST_ROW_SHAPE.line2.marginTop, display: 'flex', alignItems: 'center', gap: LIST_ROW_SHAPE.line2.gap, width: '100%' } }, [
           h('div', { className: 'dsws-tags', 'data-dsws-row-part': 'tags', 'data-dsws-labels': JSON.stringify(labels.map(function (l: any) { return l.name })) }, [
+            // #99：一颗标签没有颜色时画中性灰 cccccc，不画界面强调紫。为什么这条对 Linear 才是问题：
+            //   GitHub 的标签永远带色，这条兜底在 GitHub 工作区从不出场；Linear 允许标签不配色，那时旧代码
+            //   落到紫 #bc8cff，同一个标签在两类后端就长成两种颜色 —— 本票要消灭的正是这个差别。
+            //   底色与描边跟着同一个色值走：只把字改成灰、底色还留着紫，就是半灰半紫的半吊子。
             labels.map(function (l: any, i: any) {
-              return h('span', { key: i, className: 'dsws-chip', style: { fontSize: 10, background: hexA(l.color, 0.18) || 'rgba(188,140,255,.16)', color: l.color ? '#' + l.color : '#bc8cff', border: '1px solid ' + (darken(l.color, 0.16) || 'rgba(188,140,255,.6)') } }, l.name)
+              return h('span', { key: i, className: 'dsws-chip', style: { fontSize: 10, background: hexA(l.color, 0.18) || 'rgba(204,204,204,.18)', color: l.color ? '#' + l.color : '#cccccc', border: '1px solid ' + (darken(l.color, 0.16) || 'rgba(204,204,204,.6)') } }, l.name)
             }),
             labels.length > 0 ? h(Tip, { content: tr('list.tagsTitle', { names: allNames }) }, h('span', chipProps({ key: 'more', className: 'dsws-chip dsws-more dsws-hov', 'data-press': 'chip', 'data-log': 'list.row.more.' + (x.key != null ? x.key : x.number), onClick: openPop }), '+0')) : null,
             // 本次界面反馈需求：带所属地图的「被阻塞」药丸能点（点开看谁挡着），给它自己的按压态与点击日志；
