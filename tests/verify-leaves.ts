@@ -101,7 +101,10 @@ const LEAVES = [
   // 外观与样式在入口的「0. 样式」区按「外观在前、样式在后」拼接，薄壳在订阅层之前。
   { file: 'src/client/statusbar/suggestAppearance.ts', exports: ['SUGGEST_Z', 'SUGGEST_APPEARANCE'], components: [] },
   { file: 'src/client/statusbar/suggestStyles.ts', exports: ['SUGGEST_STYLE_TEXT'], components: [] },
-  { file: 'src/client/statusbar/suggestBubble.ts', exports: ['SuggestBubble', 'suggestViewItemsOf', 'suggestAnchorOf'], components: ['SuggestBubble'] },
+  // #109：气泡从两片相邻叶子里取条目形状与一颗选项的画法；两片都排在薄壳之前拼接。
+  { file: 'src/client/statusbar/suggestItemView.ts', exports: ['SUGGEST_VIEW_MAX_ITEMS', 'suggestViewItemsOf', 'popBodyOf'], components: [] },
+  { file: 'src/client/statusbar/suggestPill.ts', exports: ['suggestClampPopToViewport', 'suggestPillNodeOf'], components: [] },
+  { file: 'src/client/statusbar/suggestBubble.ts', exports: ['SuggestBubble', 'suggestAnchorOf', 'suggestInputOf'], components: ['SuggestBubble'] },
   { file: 'src/client/floating/SkillFloatList.js', exports: ['SkillFloatList'], components: ['SkillFloatList'] },
   { file: 'src/client/floating/Pop.js', exports: ['showPop'], components: [] },
   { file: 'src/client/hostShim.ts', exports: ['timer', 'h'], components: [] }, // #459 由 index.js 拆出：宿主适配垫片（timer 兜底，无组件，纯函数；曾含旧标签迁移，该段已由 #598 删除）；#1254 转写为 .ts

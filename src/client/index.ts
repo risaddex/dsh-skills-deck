@@ -452,6 +452,10 @@ export default {
     // #1411：小泡动效的时间线（纯函数）与 DOM 执行者。时间线在前、执行者在后，气泡薄壳最后用它们。
     // ==== leaf:suggestTimeline (spliced by build) ====
     // ==== leaf:suggestEngine (spliced by build) ====
+    // #109：气泡的两片相邻叶子 —— 先条目洗形与浮层四行（suggestItemView），再一颗选项的画法
+    //   （suggestPill）。薄壳（suggestBubble）要调用它们导出的函数，所以两片都排在它之前。
+    // ==== leaf:suggestItemView (spliced by build) ====
+    // ==== leaf:suggestPill (spliced by build) ====
     // #1411：建议气泡的渲染与交互薄壳。排在订阅层之前 —— 订阅层拿到建议后直接渲染它。
     // ==== leaf:suggestBubble (spliced by build) ====
     // ==== leaf:suggestStream (spliced by build) ====
