@@ -54,6 +54,12 @@ export const PromptOverridesSection = (props: { sessionId?: unknown }): unknown 
   const sharedSt = cx ? cx.storeSvc.useStore(props && props.sessionId) : useStore(props && props.sessionId)
   const [drafts, setDrafts] = React.useState({} as Record<string, string>)
   const [errors, setErrors] = React.useState({} as Record<string, string>)
+  // 哪几格是展开的：默认全收起（#113），只显示按钮名字与右边的箭头。展开状态与草稿各存各的：
+  //   收起只是不画里面的东西，草稿仍在 drafts 里，所以收起再展开不丢用户没保存的字。
+  const [openIds, setOpenIds] = React.useState({} as Record<string, boolean>)
+  const toggleOpen = function (id: string): void {
+    setOpenIds(function (m: Record<string, boolean>) { return Object.assign({}, m, { [id]: !m[id] }) })
+  }
 
   const dropKey = function (m: Record<string, string>, id: string): Record<string, string> {
     const next = Object.assign({}, m)
@@ -94,12 +100,27 @@ export const PromptOverridesSection = (props: { sessionId?: unknown }): unknown 
     // 存着的文字没生效（手改文件造出的坏值）：说明原因，按钮此刻仍在用默认文本。
     const inactive = hasStored && !inEffect ? failText(promptOverrideCheck(id, stored)) : ''
     const rows = Math.min(16, Math.max(4, value.split('\n').length + 1))
+    const open = openIds[id] === true
+    // 收起时也要让人看得见两件事：这一格已改写（Customised），以及有没保存的草稿（Unsaved，免得草稿藏在收起的格子里）。
+    const head = h('button', {
+      key: 'head',
+      type: 'button',
+      className: 'dsws-cfg-card-head dsws-hov',
+      'data-press': 'row',
+      'data-log': 'settings.prompt.toggle.' + key,
+      'aria-expanded': open,
+      onClick: function () { toggleOpen(id) },
+      style: { width: '100%', margin: 0, padding: 0, border: 'none', background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' },
+    }, [
+      h('span', { key: 'name', className: 'dsws-cfg-card-name' }, tr('po.name.' + id)),
+      inEffect ? h('span', { key: 'custom', className: 'dsws-cfg-chip', style: { cursor: 'inherit' } }, tr('po.custom')) : null,
+      dirty ? h('span', { key: 'unsaved', className: 'dsws-cfg-chip req', style: { cursor: 'inherit' } }, tr('po.unsaved')) : null,
+      h('span', { key: 'caret', style: { marginLeft: 'auto', display: 'inline-flex', color: 'var(--dsw-alias-label-caption,#8b8b95)' } }, Ic({ n: open ? 'chev-up' : 'chev-down', size: 14 })),
+    ])
+    if (!open) return h('div', { key: id, className: 'dsws-cfg-card', style: { marginBottom: 6, paddingTop: 8, paddingBottom: 8 } }, [head])
     return h('div', { key: id, className: 'dsws-cfg-card' }, [
-      h('div', { key: 'head', className: 'dsws-cfg-card-head' }, [
-        h('span', { className: 'dsws-cfg-card-name' }, tr('po.name.' + id)),
-        inEffect ? h('span', { className: 'dsws-cfg-chip', style: { cursor: 'default' } }, tr('po.custom')) : null,
-      ]),
-      h('div', { key: 'ph', className: 'dsws-cfg-card-desc' }, [
+      head,
+      h('div', { key: 'ph', className: 'dsws-cfg-card-desc', style: { marginTop: 4 } }, [
         help.names.length > 0 ? tr('po.placeholders', { names: braceList(help.names) }) : '',
         help.required.length > 0 ? ' · ' + tr('po.required', { names: braceList(help.required) }) : '',
       ].join('')),
@@ -127,7 +148,7 @@ export const PromptOverridesSection = (props: { sessionId?: unknown }): unknown 
   }
 
   return h('div', { className: 'dsws-cfg-group' }, [
-    h('div', { key: 'title', className: 'dsws-cfg-gtitle' }, [Ic({ n: 'gear', size: 13 }), h('span', null, tr('po.title'))]),
+    h('div', { key: 'title', className: 'dsws-cfg-gtitle' }, [h('span', { key: 'icon', style: { display: 'inline-flex' } }, Ic({ n: 'gear', size: 13 })), h('span', { key: 'text' }, tr('po.title'))]),
     h('div', { key: 'desc', className: 'dsws-cfg-gdesc' }, tr('po.desc')),
   ].concat(PROMPT_OVERRIDE_IDS.map(fieldOf)))
 }
