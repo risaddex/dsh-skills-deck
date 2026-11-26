@@ -69,6 +69,22 @@ async function main(): Promise<void> {
     check(calls.length === 0, 'no request goes out without an account', String(calls.length))
   }
 
+  // #88：房间曾经把同一件能力读自两个地方 —— 令牌取自创建上下文，账号清单取自每次调用的上下文 ——
+  //   于是「创建时有缝、调用时没缝」这一种接错线的形状只在清单那一半炸，另一半照常工作，看着像半个故障。
+  //   这一段钉住读法只有一处：调用上下文里没有缝，就按缺缝如实失败，绝不悄悄退回创建上下文那份。
+  console.log('S1b a per-call context without the seam fails loudly instead of borrowing the creation one')
+  {
+    const calls: any[] = []
+    const seam = {
+      resolve: async (): Promise<AccountSeamResult> => ({ ok: true, alias: 'ombrello', authorization: 'Bearer tok', endpoint: 'https://api.linear.app/graphql' }),
+    }
+    const backend = createLinearBackend(ctxWith(seam, calls))
+    const answer: any = await backend.get(handle, 'ENG-1', {}, ctxWith(undefined, calls) as any)
+    check(answer.ok === false && answer.error.kind === 'env', 'a per-call context without the seam fails as env', answer.ok ? 'ok' : answer.error.kind)
+    check(String(answer.error && answer.error.message).includes('ctx.accounts'), 'the message still names the slot that is missing', String(answer.error && answer.error.message))
+    check(calls.length === 0, 'no request goes out when the call context lost the seam', String(calls.length))
+  }
+
   console.log('S2 the resolved account is what the request goes out as')
   {
     const calls: any[] = []
