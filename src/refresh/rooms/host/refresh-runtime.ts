@@ -46,7 +46,7 @@ import { createBudgetModel } from './budget-model.js' // #1852：闸的预算模
 import { createQuotaSyncStatus } from './quota-sync-status.js' // #1006：后台同步失败的记事本，面板把「还没同步上来」说清是哪一种失败
 import { createSessionOpener } from './session-opener.js' // #1444 读路径 / #1445 写路径：刷新后台开会话的唯一装配口（六个取数文件与写路径共用这一份）
 import { createQuotaLogWiring } from './quota-log-wiring.js' // #1627：配额与限流诊断日志的接线（装配开关 quotaLog，关掉则整包不建观察器）
-import { createHttpChannel, createOutboundControl } from './room-host-services.js'
+import { createHttpChannel, createOutboundControl, createLinearAccountSeam } from './room-host-services.js'
 import { hostTimers } from '../../contract/host-timer-ports.js' // #758 剩余额度读数接线：差读数先免费读一次，裁决数字不动（平台区，不新增宿主层边）
 // #723（T19c）第 E 件：行级增量那半边（src/refresh/rooms/host/row-patch.js）的装配从这里再往外搬了一格：
 // #1472 起住 ./patch-wiring.js（本文件贴着 350 有效行上限，新增接线不能再往这里堆），写事件取数那一格住 ./write-event-fetch.js。
@@ -192,6 +192,7 @@ export function createRefreshWiring(deps: any): any {
         outbound: createOutboundControl(logCtx),
         // #24：http 与 outbound 共用同一个名额闸（背后同一份进程级单例，取两份不会造成两套上限）。
         http: createHttpChannel({ outbound: createOutboundControl(logCtx) }),
+        accounts: createLinearAccountSeam({ ctx: d.ctx, getPlatform: d.getPlatform, http: createHttpChannel({ outbound: createOutboundControl(logCtx) }) }), // #88：三处注入点之一，能力实现从 room-host-services 转出（本文件贴着行数上限，不再堆注释行）
       }
     }
     // platform 每次现取：第一份装配可能发生在平台加载完之前，把 null 缓存下来就再也补不上了。
