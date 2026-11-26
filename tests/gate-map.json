@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-26T18:27:03.300Z",
+  "generatedAt": "2026-11-26T18:53:43.285Z",
   "generatedBy": "node scripts/gate-map.mts",
   "chainLength": 681,
   "gateCount": 681,
@@ -14874,6 +14874,7 @@
         "src/deck/tools/map-link.ts",
         "src/deck/tools/tracker-session.ts",
         "src/deck/tools/work-route.ts",
+        "src/host/archiveConfig.ts",
         "src/host/deckToolGate.ts",
         "src/host/index.ts",
         "src/host/linearAccounts.ts",
@@ -15051,7 +15052,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 6 条；静态 import 说明符 2 条；源码里的路径字面量 189 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 6 条；静态 import 说明符 2 条；源码里的路径字面量 190 条"
     },
     {
       "step": "node tests/verify-tip-place.ts",

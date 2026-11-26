@@ -661,6 +661,8 @@ const EXEMPTS: ExemptRow[] = [
   { file: 'src/refresh/rooms/host/quota-observer.ts', name: 'ageMs', reason: '算出来的时间差（距上次服务端读数多久），不是可调参数' },
   { file: 'src/refresh/rooms/host/quota-observer.ts', name: 'latencyMs', reason: '测量用耗时（操作收尾时算出来的这一笔花了多久），不是可调参数' },
   { file: 'src/refresh/rooms/host/quota-observer.ts', name: 'failsInWindow', reason: '计数（这一窗里失败几次），名字带 Window 但不是毫秒数' },
+  // #131 归档配置文件的读写边界日志：写失败与写成功两条事件里的耗时，是进入这次写之后用注入的时钟量出来的，不是可调时长。
+  { file: 'src/host/archiveConfig.ts', name: 'latencyMs', reason: '测量用耗时（这一次写从进入到失败或换名完成花了多久，用调用方注入的时钟量），日志字段，不是可调参数' },
   // #1862 工作区快照库：租约与开库诊断路径上的两个名字是读钟或测量值，不是可调时长。
   { file: 'src/workspace-snapshot/runtime/lease.ts', name: 'nowMs', reason: '读钟时刻（调用方注入的时钟），抢租约与续租时写进 meta，不是可调参数' },
   { file: 'src/workspace-snapshot/runtime/open.ts', name: 'elapsedMs', reason: '测量用局部变量（开库耗时），写进诊断日志，不是可调参数' },
