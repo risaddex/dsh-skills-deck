@@ -53,6 +53,13 @@ function node(id: string, name: string, color: string, team: { id: string; key: 
 type Reply = { status?: number; body?: unknown }
 
 /**
+ * The account seam, shared by the creation context and the per-call context the way production injects it.
+ * After #88 the room reads the seam from the per-call context, so a fixture that seeds only the creation
+ * context models a shape production no longer produces (and the room rightly reports it as an env gap).
+ */
+const ACCOUNT_SEAM = { resolve: async (alias: string) => ({ ok: true, alias, endpoint: ENDPOINT, authorization: AUTHORIZATION }) }
+
+/**
  * An operation context whose channel answers from a script and remembers every call.
  * `replies` is read in order; when it runs out the last one repeats, which models a connection that never ends.
  */
@@ -71,6 +78,7 @@ function scripted(replies: Reply[], options: { team?: string | null; withChannel
     fs: { resolve: async (rel: string) => '/ws/ombrello/' + rel, readText: async () => bindingText(team) },
     logEvent: () => {},
     isEnabled: () => false,
+    accounts: ACCOUNT_SEAM,
   }
   if (options.withChannel !== false) opCtx.http = http
   return { opCtx, calls }
@@ -84,7 +92,7 @@ function page(labels: Record<string, unknown>[], next: string | null, hasNext: b
 /** The room as production reaches it: registered in the registry, whose account seam hands out the credential. */
 function roomForGate(): any {
   const registry = createRegistry({
-    accounts: { resolve: async (alias: string) => ({ ok: true, alias, endpoint: ENDPOINT, authorization: AUTHORIZATION }) },
+    accounts: ACCOUNT_SEAM,
     logEvent: () => {},
     isEnabled: () => false,
   } as any, { matchesTimeout: 200 })

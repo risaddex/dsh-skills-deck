@@ -378,6 +378,12 @@ const ALLOWED = {
   // 2026-10-12 退役一条：choiceStore.hint.reject（#1003 把上报优先与修订号仲裁从判定链里删掉之后，
   //   这一档在代码里不再存在；原行保留在附录里只作追溯，本表不再要求它有落点）。
   'choiceStore.evict': ['count', 'max'],
+  // 2026-11-26（#131，PR #136 评审 P1）新增三条（附录 #158～#160）：归档配置文件 <主目录>/.dsh/mattskillsdeck/archive-config.json
+  //   的读写边界。文件坏了、写没成功是常驻告警，写成功只在调试档记一行。只记枚举、短系统错误码与数字：
+  //   主目录路径、克隆路径、仓库名与配置内容一个字都不记。落点：src/host/archiveConfig.ts。
+  'archiveConfig.file.bad': ['reason', 'errorCode'],
+  'archiveConfig.write.fail': ['step', 'reason', 'errorCode', 'latencyMs'],
+  'archiveConfig.write': ['repoCount', 'latencyMs'],
   // 2026-09-22 新增一条常驻事件（#690，附录 1.4 节）：界面向后端要一页历史票（展开折叠行 / 筛到已关闭 / 滚到底）。
   //   只记这一页要的是哪一档状态、筛了几个标签、取回几行、后端说一共多少行，以及耗时、成没成与失败散列。
   'issues.page': ['state', 'labelsCount', 'returned', 'total', 'latencyMs', 'ok', 'errorHash'],

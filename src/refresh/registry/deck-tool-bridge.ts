@@ -22,7 +22,7 @@ import { DECK_ASSEMBLY_TIMEOUT_MS as CENTRAL_DECK_ASSEMBLY_TIMEOUT_MS, DECK_LOCA
 // #1159 出站控制面（createOutboundControl，与平台通道那一处同源的两处注入点之一）。
 import { createFilePlanStore, planCursorDir } from '../../deck/shell/plan-cursor.js'
 import { hostTimers } from '../contract/host-timer-ports.js'
-import { createHttpChannel, createOutboundControl } from '../rooms/host/room-host-services.js'
+import { createHttpChannel, createOutboundControl, createLinearAccountSeam } from '../rooms/host/room-host-services.js'
 import { publishDeckTable, noteDeckGate } from '../../deck/shell/table-cell.js'
 import { createSandboxPolicyFor } from '../../deck/registration/sandbox-guard.js'
 import { parseWorkspaceFile, WORKSPACE_FILE_REL } from '../../deck/shell/workspace-anchor.js'
@@ -350,6 +350,9 @@ export function createDeckToolBridge(deps: any): any {
           outbound: createOutboundControl(logCtx),
           // #24：http 与 outbound 共用同一个名额闸（背后同一份进程级单例，取两份不会造成两套上限）。
           http: createHttpChannel({ outbound: createOutboundControl(logCtx) }),
+          // #88：账号缝与 http / outbound 一样是进程级能力，三处注入点必须同时挂上（平台通道、这里、刷新后台）。
+          //   实现从 room-host-services 取：本文件贴着 350 有效行上限，加能力改那个转出模块，注入点不长行。
+          accounts: createLinearAccountSeam({ ctx: d.ctx, getPlatform: d.getPlatform, http: createHttpChannel({ outbound: createOutboundControl(logCtx) }) }),
         }
         /**
          * #1150：批量建图的计划游标存储器，按这一次调用的工作区现造一份落盘的。

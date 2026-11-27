@@ -75,7 +75,11 @@ function kindOfStatus(status: string): typeof ERROR_KIND.AUTH | typeof ERROR_KIN
 export function createLinearBackend(ctx: BackendContext, account?: LinearAccount): RoomOperations {
   async function resolveOnce(opCtx: OpContext): Promise<{ ok: true; account: LinearAccount } | { ok: false; error: any }> {
     if (account) return { ok: true, account }
-    const seam = ctx.accounts
+    // 账号缝是进程级能力，和同房的 http / fs 一样从**这一次调用**的上下文取，拿不到才退回创建时那份（#88）。
+    // 为什么不只读创建时那份：同一件能力读自两个地方的时候，「创建时有缝、调用时没缝」这种接线错误
+    //   只让账号清单那一半失败，解析令牌那一半照常工作 —— 故障看着像半个，定位要多绕一圈。
+    // 为什么缺了不静默退回：缺缝是接线漏了一处，按 ctx.accounts 不在的环境错误大声报（与 ADR 一致）。
+    const seam = (opCtx || ctx).accounts
     if (!seam || typeof seam.resolve !== 'function') {
       return { ok: false, error: failLinear(ERROR_KIND.ENV, 'the room has no account seam wired (ctx.accounts is missing)').error }
     }

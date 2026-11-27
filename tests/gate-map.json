@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-27T10:04:07.347Z",
+  "generatedAt": "2026-11-27T10:13:17.136Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 680,
-  "gateCount": 680,
-  "attributedGates": 613,
+  "chainLength": 681,
+  "gateCount": 681,
+  "attributedGates": 614,
   "unattributedGates": 67,
   "buildOutputOnlyGates": 20,
   "completionRecordedGates": 194,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 1017,
+  "graphFileCount": 1018,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -2633,6 +2633,21 @@
       "completionRecord": false,
       "expectedAssertions": 0,
       "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 1 条；源码里的路径字面量 3 条"
+    },
+    {
+      "step": "node tests/verify-131-archive-config.ts",
+      "file": "tests/verify-131-archive-config.ts",
+      "guards": [
+        "src/host/archiveConfig.ts"
+      ],
+      "dirs": [
+        "src/host"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": false,
+      "expectedAssertions": 0,
+      "reason": "归属来自 文件头 // 门禁归属: 注释（共 1 条）"
     },
     {
       "step": "node tests/verify-1323-build-lock.ts",
@@ -14859,6 +14874,7 @@
         "src/deck/tools/map-link.ts",
         "src/deck/tools/tracker-session.ts",
         "src/deck/tools/work-route.ts",
+        "src/host/archiveConfig.ts",
         "src/host/deckToolGate.ts",
         "src/host/index.ts",
         "src/host/linearAccounts.ts",
@@ -15036,7 +15052,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 6 条；静态 import 说明符 2 条；源码里的路径字面量 189 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 6 条；静态 import 说明符 2 条；源码里的路径字面量 190 条"
     },
     {
       "step": "node tests/verify-tip-place.ts",
@@ -16751,6 +16767,7 @@
       "node tests/verify-12-linear-resolver.ts",
       "node tests/verify-1242-panel-numbers.ts",
       "node tests/verify-1305-session-permit.ts",
+      "node tests/verify-131-archive-config.ts",
       "node tests/verify-1373-stale-table-graft.ts",
       "node tests/verify-1412-ask-matt-next-steps.ts",
       "node tests/verify-1418-probe-cost-and-failure.ts",
@@ -18332,9 +18349,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1040,
+    "fileCount": 1041,
     "dirCount": 106,
-    "coveredFileCount": 1040,
+    "coveredFileCount": 1041,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -18727,6 +18744,7 @@
       "src/deck/tools/tracker-session.ts",
       "src/deck/tools/work-route.ts",
       "src/deck/tsconfig.json",
+      "src/host/archiveConfig.ts",
       "src/host/bootstrap.ts",
       "src/host/choiceStore.ts",
       "src/host/configStore.ts",

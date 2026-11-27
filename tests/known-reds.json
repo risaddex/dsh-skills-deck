@@ -5,5 +5,10 @@
   "registerCreatedFromCheckout": "73894f26",
   "sourceHead": "0a612fca212c953bc9f6a06a43b2b73c4923af29",
   "sourceAt": 1794850070892,
-  "failures": []
+  "failures": [
+    {
+      "file": "tests/verify-detail-levels.ts",
+      "note": "2026-11-26, maintainer decision (Danilo): accepted as a red that already exists on main. The gate fails identically on a clean checkout of main at abc34ef1 (snapshot is not ok, and no map with child tickets is found), so it is not caused by the work on #131. The cause is not yet known. Tracked in #135; remove this entry when #135 is fixed."
+    }
+  ]
 }
