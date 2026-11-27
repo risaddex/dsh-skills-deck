@@ -23,7 +23,7 @@ import { errorTextOf, failureOf, oversizedFailureOf, resolveDeckReadSession, typ
 import { blockersOf, numberOrNull, stateOf, stringOf, type DeckReadBlocker } from './deckReadRow.js'
 import { DECK_READ_LIMITS } from '../tracker/contract/deck-read.js'
 
-type TreeTicket = {
+export type DeckTreeTicket = {
   key: string
   number: number | null
   title: string
@@ -39,14 +39,14 @@ type TreeContainer = {
   title: string
   state: string
   url: string
-  tickets?: TreeTicket[]
+  tickets?: DeckTreeTicket[]
 }
 
-/** 子票行：键必给，其余缺了用空串，读不到就不猜。 */
-function ticketOf(raw: any): TreeTicket | null {
+/** 子票与未挂容器的票共用这一种行：键必给，其余缺了用空串，读不到就不猜。 */
+function ticketOf(raw: any): DeckTreeTicket | null {
   const key = stringOf(raw && raw.key).trim()
   if (!key) return null
-  const out: TreeTicket = {
+  const out: DeckTreeTicket = {
     key,
     number: numberOrNull(raw && raw.number, key),
     title: stringOf(raw && raw.title),
@@ -73,7 +73,7 @@ function containerOf(raw: any): TreeContainer | null {
     url: stringOf(raw && raw.url),
   }
   if (Array.isArray(raw && raw.tickets)) {
-    out.tickets = raw.tickets.map(ticketOf).filter((t: TreeTicket | null): t is TreeTicket => t !== null)
+    out.tickets = raw.tickets.map(ticketOf).filter((t: DeckTreeTicket | null): t is DeckTreeTicket => t !== null)
   }
   return out
 }
@@ -129,9 +129,15 @@ export function createDeckTreeRead(deps: DeckReadDeps): { handleTree: (args?: an
       containers.push(container)
       ticketsKept += held
     }
-    // 字节护栏放在条数之后：条数正常、单行特别大（例如一张几 MB 正文的票）时才轮到它挡。
-    const oversized = oversizedFailureOf(containers, 'deck tree')
-    if (oversized) return oversized
+    // 与桌面共用快照组装的未挂容器清单，不把被上限省略的子票重新算作独立票。
+    // 先保留旧版的容器顺序及整组规则，再把剩余额度分给独立票；后端未报清单时不冒充 []。
+    const standalone = Array.isArray(assembled.issues)
+      ? assembled.issues.filter((row: any) => row?.isPullRequest !== true)
+        .map(ticketOf).filter((row: DeckTreeTicket | null): row is DeckTreeTicket => row?.state === 'OPEN')
+      : undefined
+    const standaloneIssues = standalone?.slice(0, DECK_READ_LIMITS.maxTickets - ticketsKept)
+    const omittedStandalone = (standalone?.length ?? 0) - (standaloneIssues?.length ?? 0)
+    if (omittedStandalone > 0) ticketCut = true
 
     const out: any = {
       ok: true,
@@ -148,11 +154,12 @@ export function createDeckTreeRead(deps: DeckReadDeps): { handleTree: (args?: an
       ticketsTruncated: ticketCut,
       // 省略数是「这次投影真的少画了多少」（后端本身不全时它只是本次切掉的量，不是仓库总量）。
       omittedContainers: openContainers.length - containers.length,
-      omittedTickets: ticketsSeen - ticketsKept,
+      omittedTickets: ticketsSeen - ticketsKept + omittedStandalone,
       fallback: listed.fallback === 'rest' ? 'rest' : null,
     }
+    if (standaloneIssues !== undefined) out.standaloneIssues = standaloneIssues
     if (typeof listed.fallbackReason === 'string' && listed.fallbackReason) out.fallbackReason = listed.fallbackReason
-    return out
+    return oversizedFailureOf(out, 'deck tree') || out
   }
 
   return { handleTree }

@@ -196,6 +196,18 @@ function make(over: { tree?: (a: any) => any; ticket?: (a: any) => any; loadTree
   }
   check(ticketBad, '票读回包不成形状的九种情况（含缺 sessionId 与读到别的会话）全部折成 bad-reply')
 
+  const action = { id: 'fix', label: 'Fix', prompt: '/implement #1' }
+  const valid = make({ tree: () => ({ ok: true, sessionId: 's', containers: [], standaloneIssues: [] }),
+    ticket: () => ({ ok: true, sessionId: 's', ticket: { key: '1', actions: [action] } }) })
+  check((await valid.channel.call('tree', { sessionId: 's' })).standaloneIssues?.length === 0, 'An explicit empty standalone list survives forwarding')
+  check((await valid.channel.call('ticket', { sessionId: 's', key: '1' })).ticket?.actions?.[0] === action, 'Valid action descriptors survive forwarding')
+  const tooManyRows = make({ tree: () => ({ ok: true, sessionId: 's', containers: [{ tickets: Array(DECK_READ_LIMITS.maxTickets).fill({ key: 'child' }) }], standaloneIssues: [{ key: 'standalone', state: 'OPEN' }] }) })
+  check((await tooManyRows.channel.call('tree', { sessionId: 's' })).error?.kind === 'bad-reply', 'The channel rejects additions beyond the shared row cap')
+  for (const actions of [null, [action, action], [{ ...action, prompt: 'é'.repeat(DECK_READ_LIMITS.maxActionPromptBytes) }]]) {
+    const invalid = make({ ticket: () => ({ ok: true, sessionId: 's', ticket: { key: '1', actions } }) })
+    check((await invalid.channel.call('ticket', { sessionId: 's', key: '1' })).error?.kind === 'bad-reply', 'The channel rejects malformed, duplicate and overlong action descriptors')
+  }
+
   const giant = 'x'.repeat(DECK_READ_LIMITS.maxProjectionBytes + 1024)
   const bigTree = make({ tree: () => ({ ok: true, sessionId: 's', containers: [{ key: 'c', title: giant }] }) })
   const bt: any = await bigTree.channel.call('tree', { sessionId: 's' })

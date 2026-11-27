@@ -85,8 +85,10 @@ function sha256(file) { return crypto.createHash('sha256').update(fs.readFileSyn
 //    引用改写那几行是构建里“追踪器与工具树指回宿主树时换前缀”的原文拷贝，详见下面的说明）。
 console.log('\n四棵新树镜像校验（后缀换算 + 转译结果比对）')
 {
+  // These are the only Desk modules the published Host may load directly.
+  const actionFiles = ['row-actions', 'prompt-data', 'locale-data', 'container-view', 'settings-prompt-overrides']
   const MOVED_PAIRS = [
-    { src: 'src/host', pkg: 'package/lib', excludePkg: ['client.js'] },
+    { src: 'src/host', pkg: 'package/lib', excludePkg: ['client.js', ...actionFiles.map((name) => 'deck-action-data/' + name + '.js')] },
     { src: 'src/deck', pkg: 'package/deck', excludePkg: [] },
     { src: 'src/tracker', pkg: 'package/tracker', excludePkg: [] },
     // #1425 起刷新新家也按镜像进包（package/refresh 对 src/refresh，见 scripts/build.mts 的 MOVED_TREE_MAP）。
@@ -124,6 +126,8 @@ console.log('\n四棵新树镜像校验（后缀换算 + 转译结果比对）')
       // ../shared/<域>/src/<名>.js → package/shared/<域>/<名>.js。
       const domainTruth = /^src\/shared\/([^/]+)\/src\/(.+)$/.exec(resolved)
       if (domainTruth) return whole.replace(spec, relativePosix(outDir, 'package/shared/' + domainTruth[1] + '/' + domainTruth[2]))
+      const actionName = actionFiles.find((name) => resolved === 'src/client/kernel/' + name + '.js')
+      if (actionName) return whole.replace(spec, relativePosix(outDir, 'package/lib/deck-action-data/' + actionName + '.js'))
       if (!resolved.startsWith('src/host/')) return whole
       const fixed = relativePosix(outDir, 'package/lib/' + resolved.slice('src/host/'.length))
       if (fixed === spec) return whole
@@ -149,6 +153,16 @@ console.log('\n四棵新树镜像校验（后缀换算 + 转译结果比对）')
   const expectedPkgForSrc = (srcBaseRel) => srcBaseRel.replace(/\.ts$/, '.js')
   let allPairsOk = true
   if (tu && esbuild) {
+    const actionDir = 'package/lib/deck-action-data'
+    const expectedFiles = actionFiles.map((name) => name + '.js').sort()
+    check(collect(path.resolve(actionDir)).sort().join(',') === expectedFiles.join(','), 'The package contains exactly the Desk modules used by mobile actions')
+    for (const name of actionFiles) {
+      const source = 'src/client/kernel/' + name + '.ts'
+      const generated = actionDir + '/' + name + '.js'
+      const code = esbuild.transformSync(fs.readFileSync(source, 'utf8'), tu.TRANSPILE_OPTIONS).code
+      const expected = tu.generatedHeader(source) + code.replace(/\r\n/g, '\n').replace(/\s+$/, '') + '\n'
+      check(fs.existsSync(generated) && fs.readFileSync(generated, 'utf8') === expected, 'The published action module matches the source: ' + name)
+    }
     for (const pair of MOVED_PAIRS) {
       const srcAll = collect(path.resolve(pair.src))
       const pkgAll = collect(path.resolve(pair.pkg)).filter((f) => pair.excludePkg.indexOf(f) < 0)

@@ -83,7 +83,7 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 两个读走通并原样带回、其它十六种操作名与非字符串操作名一律被拒且一条读都不发、十九种形状不对的请求（含自由路径 cwd / path）
   // 全部失败且不碰后端、读失败 / 抛错 / 超时 / 回包不成形状（含缺 sessionId 与读到别的会话）/ 回包过大（量整个回包）一律失败且不编数据、
   // 读那一层的话术与抛错原文都不上送手机、日志只沿用既有事件且不记原文；44 条单跑实测。
-  'verify-74-deck-read-channel': 44,
+  'verify-74-deck-read-channel': 50,
   // 同票第二扇（文件粒度上限 20KB，分两扇）：加载与读共用一个期限、发布成服务 deckPanelRead 且缺 provide 或 provide 抛错时不拖垮启动、
   // 装配点里老的两个宿主方法注册行逐字不变且加载失败后能重试、入口仍在四百行内；11 条单跑实测。
   'verify-74-deck-read-channel-publish': 11,
@@ -91,11 +91,11 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 上限与失败：容器 50 / 票 200 两个上限从同一份契约常量取（不在门禁里另抄字面量）、任一上限切掉东西时
   // 截断信号与省略数都在回包里、整块跳过不留半截票单、后端名册自身的截断与本层截断分开报、超过字节护栏
   // 如实失败（不交半份树，票读同一道护栏）、整批行读不成形状时失败而不是折成空树；29 条单跑实测。
-  'verify-73-deck-read-limits': 29,
+  'verify-73-deck-read-limits': 36,
   // 后端矩阵·树读：GitHub（脚本化 gh）与 Linear（假 HTTP 通道）各自显式一遍，GitLab（脚本化 glab）与
   // 本地 Markdown（临时工作区）各一遍；四条路都经真实房间 + 真实开会话管线，断言容器/子票/阻塞者/只读
   // write:false/state=open，并验证真实回包上容器上限生效、GitLab 取满一页的自身截断传到回包；55 条单跑实测。
-  'verify-73-deck-tree-read-backends': 55,
+  'verify-73-deck-tree-read-backends': 59,
   // 后端矩阵·票读：同一组后端各读一次同一张票，断言七样东西（标题/状态/标签/正文/验收标准/进度/阻塞者）、
   // 评论一格都不出现、只读 write:false、契约 get 只要 0 条评论正文；56 条单跑实测。
   'verify-73-deck-ticket-read-backends': 56,
@@ -105,7 +105,7 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 2026-11-23 #72：按会话读取一张票的结构化详情，按行为分三扇（文件粒度上限 20KB，一扇只说自己那一组）。
   // 投影：七样东西（标题/状态/标签/正文/验收标准/进度/阻塞者）、没有可选区块时不凭空造、明确给空照旧给空、
   // triage 状态有才带、评论一个字都不进回包、验收标准只认它那个区（围栏与区外不算，中英标题都认，自造标题不算）；35 条单跑实测。
-  'verify-72-deck-ticket-read': 35,
+  'verify-72-deck-ticket-read': 49,
   // 失败：缺票（not-found）与读失败（后端原因）与回包不成形（parse）三种结果分得开，空行不算一张票，
   // 缺会话号/缺票号直接失败且不碰后端，会话找不到绝不回落到别的 workspace；17 条单跑实测。
   'verify-72-deck-ticket-read-failures': 17,
@@ -646,6 +646,8 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 2026-11-17 retro da sessão do #17: Markdown já versionado não pode perder seções '## ' sem declarar.
   // A contagem é de execução isolada; muda junto com as asserções de tests/verify-md-sections.ts.
   'verify-md-sections': 48,
+  // Read-only comments: four Tracker backends, scope checks, failures and service registration.
+  'verify-deck-panel-comments': 8,
   // 2026-11-02 #1802 合并（用户并行会话的提交）：两窗共用一份设置文件时补丁写、指纹基底与冲突重读；
   // 74 条是单跑实测得出的。这份门禁随合并进来时没登记，会让 verify-gate-map 判「在交完成记录却没登记期望」。
   'verify-1802-settings-cross-window': 74,

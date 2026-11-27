@@ -59,7 +59,7 @@ const RAW_ISSUE = {
   assignees: [{ id: 1, username: 'alice' }],
   author: { username: 'alice' },
 }
-function makeCtx (requests: string[]): any {
+function makeCtx (requests: string[], notes = NOTES): any {
   return {
     cwd: 'D:/ws',
     platform: { resolveExecutable: async () => 'glab' },
@@ -73,7 +73,7 @@ function makeCtx (requests: string[]): any {
       if (/\/issues\/28\/notes$/.test(base)) {
         const perPage = q.has('per_page') ? Number(q.get('per_page')) : 20
         const pageNo = q.has('page') ? Number(q.get('page')) : 1
-        const slice = NOTES.slice((pageNo - 1) * perPage, pageNo * perPage)
+        const slice = notes.slice((pageNo - 1) * perPage, pageNo * perPage)
         return { stdout: JSON.stringify(slice), stderr: '', code: 0 }
       }
       return { stdout: '[]', stderr: '', code: 0 }
@@ -112,6 +112,15 @@ async function readIssue (opts?: any): Promise<any> {
   check(r && r.ok === true && comments.length === 56, '要 500 条（夹到上限 200）：仍能读回 56 条（实得 ' + comments.length + ' 条）')
   check(requests.some((p: string) => p.indexOf('/notes?per_page=100&page=1') >= 0), '要 500 条：单页按上限 100 请求（GitLab per_page 上限）')
   check(!requests.some((p: string) => p.indexOf('per_page=500') >= 0), '要 500 条：没有把 500 直接交给 per_page')
+}
+{
+  const requests: string[] = []
+  const notes = Array.from({ length: 160 }, (_, i) => ({ ...NOTES[0], id: i + 1, body: 'note ' + (i + 1) }))
+  const ctx = makeCtx(requests, notes)
+  const r = await getIssue(ctx, REPO, '28', { comments: { first: 150 } }, ctx)
+  const bodies = r.ok ? r.data.comments?.map((comment: { body: string }) => comment.body) : undefined
+  check(bodies?.length === 150 && bodies.every((body: string, i: number) => body === 'note ' + (i + 1)), 'first=150 keeps both GitLab page offsets consistent, with no duplicated notes')
+  check(requests.some((p) => p.includes('/notes?per_page=100&page=2')), 'first=150 requests the same per_page on page two')
 }
 {
   const { r, requests } = await readIssue(undefined)

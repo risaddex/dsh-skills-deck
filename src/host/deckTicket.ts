@@ -20,6 +20,13 @@
  */
 
 import { parseProgressDetail } from '../tracker/body-parse.js'
+import { isSpecHeaderMarked } from '../shared/issue-file/src/marker.js'
+import { PROMPT_FRAGMENT_DATA, PROMPT_TEMPLATE_DATA, type PromptTemplateId } from '../client/kernel/prompt-data.js'
+import { LOCALE_COPY } from '../client/kernel/locale-data.js'
+import { containerKindOf, containerStateOf, containerTriState } from '../client/kernel/container-view.js'
+import { checkPromptOverrideText } from '../client/kernel/settings-prompt-overrides.js'
+import { rowActionKind } from '../client/kernel/row-actions.js'
+import { DECK_READ_LIMITS, type DeckTicketAction } from '../tracker/contract/deck-read.js'
 import { resolveDeckReadSession, errorTextOf, failureOf, oversizedFailureOf, type DeckReadDeps } from './deckReadSession.js'
 import { blockersOf, numberOrNull, stateOf, stringOf, type DeckReadBlocker } from './deckReadRow.js'
 
@@ -49,6 +56,7 @@ type TicketDetail = {
    */
   status?: string
   url: string
+  actions?: DeckTicketAction[]
   labels?: DetailLabel[]
   body: string
   acceptanceCriteria: AcceptanceItem[]
@@ -140,6 +148,85 @@ function labelsOf(issue: any): DetailLabel[] | undefined {
   return out
 }
 
+/** 只把可安全打开的跟踪器链接送到手机；本地票仍可用票号预填提示词。 */
+function trackerUrlOf(value: unknown): string {
+  if (typeof value !== 'string' || !/^https?:\/\//i.test(value) || /[\s\u0000-\u001f\u007f]/.test(value)) return ''
+  try {
+    const url = new URL(value)
+    return url.hostname && !url.username && !url.password ? value : ''
+  } catch { return '' }
+}
+
+type ContainerStats = { total: number; closed: number }
+
+/** 优先用契约的权威计数；没有计数才读同一只读会话下的一份完整子票。 */
+async function readContainerStats(issue: any, resolved: ResolvedDeckRead, key: string): Promise<ContainerStats | undefined> {
+  const counts = issue.fieldStates?.subIssues
+  if (counts?.known === true) {
+    const { total, completed } = counts.value || {}
+    if (Number.isSafeInteger(total) && Number.isSafeInteger(completed) && completed >= 0 && total >= completed) {
+      return { total, closed: completed }
+    }
+  }
+  try {
+    const result = await resolved.call((session: any, ctx: any) => session.listSubIssues(resolved.repoRef, key, {}, ctx))
+    const data = result?.data
+    if (!result?.ok || result.truncated || !Array.isArray(data?.items) || data.capped !== false || data.missing !== 0
+      || data.dropped !== 0 || data.fetched !== data.total || data.total !== data.items.length) return undefined
+    const states = data.items.map((row: any) => String(row?.state ?? '').toUpperCase())
+    if (!states.every((state: string) => state === 'OPEN' || state === 'CLOSED')) return undefined
+    return { total: states.length, closed: states.filter((state: string) => state === 'CLOSED').length }
+  } catch { return undefined }
+}
+
+type ResolvedDeckRead = Extract<Awaited<ReturnType<typeof resolveDeckReadSession>>, { ok: true }>
+
+type ActionSettings = { promptOverrides?: Record<string, unknown>; templates?: Record<string, unknown> }
+
+/** 只生成输入框文案，不执行提示词；只取当前动作设置，不外送其它设置。 */
+async function actionsOf(issue: any, detail: TicketDetail, resolved: ResolvedDeckRead, readSettings?: () => Promise<ActionSettings | undefined>): Promise<DeckTicketAction[] | undefined> {
+  if (detail.state === 'CLOSED' || issue.mergedAt || !detail.blockedBy || detail.blockedBy.some((r) => r.state !== 'CLOSED')) return []
+  const kind = containerKindOf(isSpecHeaderMarked(detail.body) ? { type: 'spec' } : issue)
+  const url = detail.url || (/^[A-Za-z0-9-]+$/.test(detail.key) ? '#' + detail.key : '')
+  if (!url) return undefined
+  let id: string
+  let templateId: PromptTemplateId
+  let labelKey: string
+  let stats: ContainerStats | undefined
+  if (kind) {
+    stats = await readContainerStats(issue, resolved, detail.key)
+    if (!stats) return undefined
+    const state = containerStateOf({ stats })
+    templateId = kind === 'spec' ? (state === 'empty' ? 'specSplit' : state === 'done' ? 'specComplete' : 'specExecute')
+      : (state === 'empty' ? 'mapInspect' : state === 'done' ? 'complete' : 'mapExecute')
+    id = templateId
+    labelKey = containerTriState(kind, state).labelKey
+  } else {
+    if (detail.labels === undefined) return undefined
+    const action = rowActionKind({ labels: detail.labels })
+    id = action
+    templateId = `tpl.${action}`
+    labelKey = `act.${action}`
+  }
+  const copy = LOCALE_COPY.en as Readonly<Record<string, string>>
+  const label = copy[labelKey]
+  const entry = PROMPT_TEMPLATE_DATA[templateId]
+  let settings: ActionSettings | undefined
+  try { settings = await readSettings?.() } catch { /* 没读到改写时照常用默认模板。 */ }
+  const edited = settings?.promptOverrides?.[templateId]
+  const legacy = !kind && id !== 'implement' ? settings?.templates?.[id] : undefined
+  const override = typeof edited === 'string' && checkPromptOverrideText(entry, entry.en, edited).ok && edited.trim() ? edited : ''
+  const oldTemplate = typeof legacy === 'string' && legacy.trim() && checkPromptOverrideText(entry, entry.en, legacy).ok ? legacy : ''
+  const params: Record<string, string> = { url, n: detail.key, title: '', subIssue: PROMPT_FRAGMENT_DATA.newWayfinderWiring.en || '',
+    total: String(stats?.total ?? 0), closed: String(stats?.closed ?? 0),
+    cli: PROMPT_FRAGMENT_DATA.vocabularyDefaults.cli?.en || '', cliBrand: PROMPT_FRAGMENT_DATA.vocabularyDefaults.cliBrand?.en || '' }
+  let prompt = (override || oldTemplate || entry.en).replace(/\{(\w+)\}/g, (match, name) => Object.prototype.hasOwnProperty.call(params, name) ? params[name] : match)
+  if (templateId === 'mapInspect' || templateId === 'mapExecute') prompt = '/wayfinder ' + url + '\n\n' + prompt
+  if (id === 'execute' && !/^\/wayfinder\b/.test(prompt.trim())) prompt = '/wayfinder\n' + prompt
+  return label && id.length <= DECK_READ_LIMITS.maxActionIdChars && label.length <= DECK_READ_LIMITS.maxActionLabelChars
+    && new TextEncoder().encode(prompt).length <= DECK_READ_LIMITS.maxActionPromptBytes ? [{ id, label, prompt }] : undefined
+}
+
 /** 把契约回来的一张票投影成面板要的详情（纯函数：同样的票永远得到同样的详情）。 */
 function detailOf(issue: any, requestedKey: string): TicketDetail {
   const key = stringOf(issue && issue.key).trim() || requestedKey
@@ -149,7 +236,7 @@ function detailOf(issue: any, requestedKey: string): TicketDetail {
     number: numberOrNull(issue && issue.number, key),
     title: stringOf(issue && issue.title),
     state: stateOf(issue && issue.state),
-    url: stringOf(issue && issue.url),
+    url: trackerUrlOf(issue && issue.url),
     body,
     // 进度与验收标准都从正文读，与桌面面板同一份进度解析（parseProgressDetail 是共享叶子）。
     acceptanceCriteria: parseAcceptanceCriteria(body),
@@ -167,7 +254,7 @@ function detailOf(issue: any, requestedKey: string): TicketDetail {
 /**
  * 组装电话。依赖显式传入：会话解析、只读会话与后端选择各只有一条来源。
  */
-export function createDeckTicketRead(deps: DeckReadDeps): { handleTicket: (args?: any) => Promise<any> } {
+export function createDeckTicketRead(deps: DeckReadDeps & { readActionSettings?: () => Promise<ActionSettings | undefined> }): { handleTicket: (args?: any) => Promise<any> } {
   const notRead = 'The deck ticket could not be read'
 
   async function handleTicket(args?: any): Promise<any> {
@@ -204,6 +291,23 @@ export function createDeckTicketRead(deps: DeckReadDeps): { handleTicket: (args?
     }
 
     const detail = detailOf(issue, key)
+    // Markdown 旧读遇到跨工作单元同号时可能返回第一张。这个窄口没有工作单元参数，
+    // 在同一个已绑定的仓库里先证实匹配唯一；宁可拒绝详情，也不让手机在另一张票上预填动作。
+    if (resolved.backendId === 'markdown') {
+      let candidates: any
+      try {
+        candidates = await resolved.call((session: any, ctx: any) => session.list(resolved.repoRef, { keys: [detail.key] }, ctx))
+      } catch { /* 无法确认身份时不提供回退结果。 */ }
+      if (!candidates?.ok || candidates.truncated || !Array.isArray(candidates.data)) {
+        return { ok: false, error: { kind: 'identity-unconfirmed', message: 'The local ticket identity could not be confirmed' } }
+      }
+      const sameKey = candidates.data.filter((row: any) => row?.key === detail.key)
+      if (sameKey.length !== 1 || sameKey[0].effortId !== issue.effortId || sameKey[0].url !== issue.url) {
+        return { ok: false, error: { kind: 'conflict', message: 'The local ticket key did not identify a unique ticket' } }
+      }
+    }
+    const actions = await actionsOf(issue, detail, resolved, deps.readActionSettings)
+    if (actions !== undefined) detail.actions = actions
     // 详情整份投影过一次字节护栏（树读用的是同一道，数字与量法都在 deckReadSession 那一处）：
     // 正文特别大的票不整份过通道，也不截半份交给面板 —— 半份正文被当成完整正文读，比失败更糟。
     const oversized = oversizedFailureOf(detail, 'deck ticket')

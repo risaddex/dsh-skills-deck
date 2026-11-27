@@ -44,7 +44,7 @@ export const CONTAINER_EMPTY_COLOR = '#f59e0b';
 export const CONTAINER_DONE_COLOR = '#3fb950';
 
 /** 这张票是不是容器、是哪种容器？普通票返回 null。 */
-export const containerKindOf = function (x: any): string | null {
+export const containerKindOf = function (x: any): 'map' | 'spec' | null {
   if (!x) return null;
   if (x.type === 'spec') return 'spec';
   const labels: any[] = Array.isArray(x.labels) ? x.labels : [];
@@ -59,7 +59,7 @@ export const containerKindOf = function (x: any): string | null {
   * 判据用容器自带的 stats（与地图同形状：{ total, closed }），宿主负责算好。
   * 注意：只有 GitHub 那条通路会在宿主侧补 stats（src/refresh/rooms/host/session-snapshot-cache.ts），
   * 别的后端里 stats 可能整个不存在——那时一律按 empty 走，跟地图今天的处境一样。 */
-export const containerStateOf = function (container: any): string {
+export const containerStateOf = function (container: any): 'empty' | 'open' | 'done' {
   const stats: any = container && container.stats;
   if (!stats || !stats.total) return 'empty';
   return stats.closed === stats.total ? 'done' : 'open';

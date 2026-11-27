@@ -44,7 +44,8 @@ declare function settingsViewLoad(...args: any[]): any
 declare function viewFlagScheduleWrite(...args: any[]): any
 declare function promptChainOf(...args: any[]): any
 declare function promptPickText(...args: any[]): any
-// log 走全局已声明的那一份，这里不重复（与 settings-templates.ts 同例）。
+// 此片也作为宿主的模块编译；宿主只调用下方不依赖日志的纯校验函数。
+declare function log(...args: any[]): void
 
 /**
  * 设置页给出改写入口的提示词 id（维护者 2026-11-24 定：只给「点在 issue 或 map 上的动作按钮」）。
@@ -123,9 +124,8 @@ const promptOverrideNamesIn = function (text: string): string[] {
 // 这一条提示词允许出现的占位符：登记条目声明的 ∪ 条目里每一种语言正文实际出现的 ∪ 词表占位符。
 //   为什么把「正文里实际出现的」也算上：生成物里个别条目的 placeholders 声明比正文少（mapExecute 声明为空），
 //   以默认正文为准才不会把默认文本自己用到的占位符判成「未知」。
-const promptOverrideAllowedNames = function (id: string): string[] {
+const promptOverrideAllowedNames = function (p: any): string[] {
   const out: string[] = PROMPT_OVERRIDE_VOCABULARY_NAMES.slice()
-  const p = PROMPTS[id]
   if (!p) return out
   const declared = Array.isArray(p.placeholders) ? p.placeholders : []
   for (let i = 0; i < declared.length; i++) { if (out.indexOf(declared[i]) < 0) out.push(declared[i]) }
@@ -144,7 +144,7 @@ const promptOverrideAllowedNames = function (id: string): string[] {
  */
 export const promptOverrideHelpOf = function (id: any): { names: string[]; required: string[] } {
   try {
-    const names = promptOverrideAllowedNames(String(id)).filter(function (n) { return PROMPT_OVERRIDE_VOCABULARY_NAMES.indexOf(n) < 0 })
+    const names = promptOverrideAllowedNames(PROMPTS[String(id)]).filter(function (n) { return PROMPT_OVERRIDE_VOCABULARY_NAMES.indexOf(n) < 0 })
     const required = promptOverrideNamesIn(promptOverrideDefaultOf(id)).filter(function (n) { return n === 'url' })
     return { names: names, required: required }
   } catch (e) { return { names: [], required: [] } }
@@ -155,14 +155,18 @@ export const promptOverrideHelpOf = function (id: any): { names: string[]; requi
  * 返回 { ok, empty, unknown, missing }：empty 为真表示去掉首尾空白后什么都没有（按「用默认文本」处理，ok 也为真）；
  * unknown 是登记表之外的占位符名；missing 是该保留却丢了的占位符名（目前只有 url）。
  */
-export const promptOverrideCheck = function (id: any, text: any): { ok: boolean; empty: boolean; unknown: string[]; missing: string[] } {
+export function checkPromptOverrideText(entry: any, defaultText: string, text: unknown): { ok: boolean; empty: boolean; unknown: string[]; missing: string[] } {
   const value = String(text == null ? '' : text)
   if (value.trim() === '') return { ok: true, empty: true, unknown: [], missing: [] }
   const used = promptOverrideNamesIn(value)
-  const allowed = promptOverrideAllowedNames(String(id))
+  const allowed = promptOverrideAllowedNames(entry)
   const unknown = used.filter(function (n) { return allowed.indexOf(n) < 0 })
-  const missing = promptOverrideNamesIn(promptOverrideDefaultOf(id)).filter(function (n) { return n === 'url' && used.indexOf(n) < 0 })
+  const missing = promptOverrideNamesIn(defaultText).filter(function (n) { return n === 'url' && used.indexOf(n) < 0 })
   return { ok: unknown.length === 0 && missing.length === 0, empty: false, unknown: unknown, missing: missing }
+}
+
+export const promptOverrideCheck = function (id: any, text: any) {
+  return checkPromptOverrideText(PROMPTS[String(id)], promptOverrideDefaultOf(id), text)
 }
 
 /**
