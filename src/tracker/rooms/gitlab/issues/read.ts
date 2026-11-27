@@ -111,8 +111,10 @@ async function fetchNotes(
   const out: unknown[] = []
   if (limit === 0) return out
   let page = 1
+  // GitLab computes the page offset from per_page. A smaller final page
+  // would repeat earlier notes instead of advancing past them.
+  const perPage = Math.min(PAGINATION.gitlab.maxPerPage, limit)
   while (out.length < limit) {
-    const perPage = Math.min(PAGINATION.gitlab.maxPerPage, limit - out.length)
     let notes: unknown
     try {
       notes = await apiJson(

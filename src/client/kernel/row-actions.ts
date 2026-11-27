@@ -46,7 +46,9 @@ const containerActionOf = function (st: any, x: any): any {
 // #771 一处分类（状态优先于类型）：未分流 → 接手 → 补充 → 修复 → 讨论 → 研究 → 原型 → 执行。
 //   两枚同时出现取接手；needs-triage 与 needs-info 同时出现仍先诊断（按定义不该同时出现）。
 //   四处展示（注入文本 / 行按钮 / 新会话与详情顶栏取色 / 详情顶栏字与悬停）一律调它，不各写一份阶梯。
-export const rowActionKind = function (x: any): any {
+export type RowActionKind = 'diagnose' | 'takeover' | 'supplement' | 'fix' | 'discuss' | 'research' | 'prototype' | 'execute' | 'implement'
+
+export const rowActionKind = function (x: any): RowActionKind {
   const has = function (nm: any): any { return ((x && x.labels) || []).some(function (l: any): any { return (typeof l === 'string') ? l === nm : l.name === nm }) }
   const _isTriageLike: boolean = !(x && x.labels && x.labels.length) || has('needs-triage')
   if (_isTriageLike) return 'diagnose'

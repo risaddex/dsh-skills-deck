@@ -89,6 +89,25 @@ async function readTree(rows: any[], resultExtra: any = {}): Promise<any> {
   check(partial && partial.ticketsTruncated === true, '整块跳过仍算「票上限切的」，信号不丢')
 }
 
+// Standalone issues spend only the capacity left by complete container groups.
+{
+  const open = { key: '101', type: 'issue', title: 'Standalone', state: 'OPEN', blockedBy: [] }
+  const rows = [open, { ...open, key: '102', blockedBy: undefined }, { ...open, key: '103', state: 'CLOSED' },
+    { ...open, key: '104', isPullRequest: true }]
+  const complete = await readTree(rows)
+  check(complete.standaloneIssues?.map((t: any) => t.key).join(',') === '101,102' && !complete.truncated, 'Standalone-only workspaces retain open issues in tracker order, without closed tickets or PRs')
+  check(Array.isArray(complete.standaloneIssues?.[0]?.blockedBy) && !('blockedBy' in complete.standaloneIssues[1]), 'Standalone rows preserve confirmed-empty and unknown blockers')
+  const limited = await readTree([...treeRows(1, DECK_READ_LIMITS.maxTickets - 1), ...rows])
+  check(limited.containers?.[0]?.tickets.length === DECK_READ_LIMITS.maxTickets - 1 && limited.standaloneIssues?.length === 1, 'Children and standalone issues share one ticket allowance')
+  check(limited.truncated && limited.ticketsTruncated && limited.omittedTickets === 1, 'The standalone omission is reported by the ticket limit')
+  const exhausted = await readTree([...treeRows(1, DECK_READ_LIMITS.maxTickets), open])
+  check(exhausted.standaloneIssues?.length === 0 && exhausted.truncated, 'An empty standalone list with a spent allowance is reported as truncated')
+  const empty = await readTree([])
+  check(empty.standaloneIssues?.length === 0 && !empty.truncated, 'A confirmed empty list stays present on a complete result')
+  const huge = await readTree([{ ...open, title: 'é'.repeat(DECK_READ_LIMITS.maxProjectionBytes) }])
+  check(huge.ok === false && huge.error?.kind === 'oversized', 'Standalone rows count toward the reply byte limit')
+}
+
 // —— 三、后端自己说名单不全与「本层切了」是两件事，各自都要看得见 ——
 {
   const r: any = await readTree(treeRows(1, 1), { truncated: true, fallback: 'rest', fallbackReason: 'quota' })

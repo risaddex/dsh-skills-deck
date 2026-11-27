@@ -1511,6 +1511,8 @@ function relativePosix(fromDir: string, toFile: string): string {
   return rel.startsWith('.') ? rel : './' + rel
 }
 
+const DECK_ACTION_CLIENT_MODULES = ['row-actions', 'prompt-data', 'locale-data', 'container-view', 'settings-prompt-overrides']
+
 const MOVED_SPEC_RE: RegExp = /\bfrom\s*(['"])(\.[^'"]*)\1|import\s*\(\s*(['"])(\.[^'"]*)\3\s*\)/g
 
 /**
@@ -1529,6 +1531,12 @@ function rewriteMovedSpecifiers(code: string, srcRel: string, outRel: string): {
     const domainTruth = /^src\/shared\/([^/]+)\/src\/(.+)$/.exec(resolved)
     if (domainTruth) {
       const fixed: string = relativePosix(outDir, 'package/shared/' + domainTruth[1] + '/' + domainTruth[2])
+      rewrites.push(`${spec} -> ${fixed}`)
+      return whole.replace(spec, fixed)
+    }
+    const clientModule = DECK_ACTION_CLIENT_MODULES.find((name) => resolved === 'src/client/kernel/' + name + '.js')
+    if (clientModule) {
+      const fixed = relativePosix(outDir, 'package/lib/deck-action-data/' + clientModule + '.js')
       rewrites.push(`${spec} -> ${fixed}`)
       return whole.replace(spec, fixed)
     }
@@ -1617,6 +1625,13 @@ function auditPackageSpecifiers(dirs: string[]): void {
 /** 新树投放：四棵树的 .ts 转译进包、手写 .js 复制进包，最后审计引用。幂等，可重跑。 */
 function deployMovedTrees(): void {
   const sources = collectMovedTs()
+  // 移动端票读复用桌面的动作判据与默认模板。只投放用到的模块，不能用整个客户端闭包作宿主依赖。
+  for (const name of DECK_ACTION_CLIENT_MODULES) {
+    const srcRel = `src/client/kernel/${name}.ts`
+    const outRel = `package/lib/deck-action-data/${name}.js`
+    mkdirSync(dirname(resolve(ROOT, outRel)), { recursive: true })
+    writeFileSync(resolve(ROOT, outRel), transpileMovedTs(srcRel), 'utf8')
+  }
   let rewrote: number = 0
   for (const srcRel of sources) {
     const outRel: string = pkgPathForSrc(srcRel)

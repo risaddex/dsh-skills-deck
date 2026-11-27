@@ -24,11 +24,19 @@
  * 三个数都不搬进 config/ 下的 YAML：条数、页数这类值按 docs/adr/20261016-time-config-yaml.md 第 5 节
  * 明确排除在外，它们是安全护栏而不是给人调的旋钮（同一口径见 contract/pagination.ts 的文件头）。
  */
+/** 提示词只供用户预填会话；id 不是宿主方法名。 */
+export type DeckTicketAction = { id: string; label: string; prompt: string }
+
 export const DECK_READ_LIMITS = {
   /** 树投影最多带几个容器（规格 #70 钉的条数）。 */
   maxContainers: 50,
-  /** 树投影最多带几张票（规格 #70 钉的条数，跨容器合计）。 */
+  /** 树投影最多带几张票：容器子票和独立票共用同一个额度。 */
   maxTickets: 200,
+  /** 票详情上的动作只描述提示词，不是远程调用；这四个上限也适用于转发。 */
+  maxActions: 8,
+  maxActionIdChars: 64,
+  maxActionLabelChars: 128,
+  maxActionPromptBytes: 24 * 1024,
   /** 一次回包的投影 JSON 最多多少字节；超了就如实失败，绝不回半份（本票补的传输护栏）。 */
   maxProjectionBytes: 262144,
 } as const

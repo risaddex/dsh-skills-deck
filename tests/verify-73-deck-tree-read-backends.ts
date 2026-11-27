@@ -44,6 +44,7 @@ type Expected = {
   childKey: string
   /** 子票上的阻塞者键：四个后端都给了同一个阻塞者时才有。 */
   blockerKey?: string
+  standaloneKey?: string
 }
 
 /** 在一份假会话上跑树读，按同一组判据断言；四个后端共用这一段，判据不会各写一份。 */
@@ -66,6 +67,7 @@ async function runTree(label: string, session: DeckSession, want: Expected): Pro
   check(!!open && open.opts && open.opts.write === false, label + '：开会话时显式请求 write:false（只读就够）', open && JSON.stringify(open.opts))
   const list = session.calls.filter((x: any) => x.kind === 'list')[0]
   check(!!list && list.filter && list.filter.state === 'open', label + '：契约 list 按 state=open 读（关闭的容器与票不进树）', list && JSON.stringify(list.filter))
+  check(Array.isArray(r?.standaloneIssues) && r.standaloneIssues.map((item: any) => item.key).join(',') === (want.standaloneKey || ''), label + ': standalone issues use the same scoped read and preserve their backend key');
   if (want.blockerKey) {
     check(child && Array.isArray(child.blockedBy) && child.blockedBy.some((b: any) => String(b.key) === want.blockerKey), label + '：子票的阻塞者读出来了', child && JSON.stringify(child.blockedBy))
   }
@@ -77,8 +79,9 @@ await runTree('github', githubSession({
     githubMap(40),
     githubNode(41, { parent: { number: 40 }, blockedBy: { nodes: [{ number: 42, title: 'Blocker', state: 'CLOSED' }] } }),
     githubNode(42, { parent: { number: 40 } }),
+    githubNode(43),
   ],
-}), { backendId: 'github', containerKey: '40', childKey: '41', blockerKey: '42' })
+}), { backendId: 'github', containerKey: '40', childKey: '41', blockerKey: '42', standaloneKey: '43' })
 
 // —— 二、Linear：假 HTTP 通道 + 真实 Linear 房间 ——
 await runTree('linear', linearSession({
@@ -86,8 +89,9 @@ await runTree('linear', linearSession({
     linearMap('ENG-916'),
     linearNode('ENG-917', { parent: { identifier: 'ENG-916' }, inverseRelations: { nodes: [{ id: 'r-1', type: 'blocks', issue: { identifier: 'ENG-918', title: 'Blocker', state: { type: 'completed' } } }], pageInfo: { hasNextPage: false } } }),
     linearNode('ENG-918', { parent: { identifier: 'ENG-916' } }),
+    linearNode('ENG-919'),
   ],
-}), { backendId: 'linear', containerKey: 'ENG-916', childKey: 'ENG-917', blockerKey: 'ENG-918' })
+}), { backendId: 'linear', containerKey: 'ENG-916', childKey: 'ENG-917', blockerKey: 'ENG-918', standaloneKey: 'ENG-919' })
 
 // —— 三、GitLab：脚本化 glab + 真实 GitLab 房间 ——
 await runTree('gitlab', gitlabSession({
@@ -95,8 +99,9 @@ await runTree('gitlab', gitlabSession({
     gitlabMap(101),
     gitlabRow(102, { title: 'Ticket 102', description: '<!-- DSH-PARENT: 101 -->', blocked_by: [{ iid: 103, title: 'Blocker', state: 'opened' }] }),
     gitlabRow(103, { description: '<!-- DSH-PARENT: 101 -->' }),
+    gitlabRow(104),
   ],
-}), { backendId: 'gitlab', containerKey: '101', childKey: '102', blockerKey: '103' })
+}), { backendId: 'gitlab', containerKey: '101', childKey: '102', blockerKey: '103', standaloneKey: '104' })
 
 // —— 四、本地 Markdown：真实临时工作区 + 真实 Markdown 房间 ——
 await runTree('markdown', markdownSession(), { backendId: 'markdown', containerKey: '00', childKey: '01', blockerKey: '02' })

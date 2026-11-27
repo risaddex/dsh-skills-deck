@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-27T10:13:17.136Z",
+  "generatedAt": "2026-11-27T10:22:29.071Z",
   "generatedBy": "node scripts/gate-map.mts",
-  "chainLength": 681,
-  "gateCount": 681,
-  "attributedGates": 614,
+  "chainLength": 682,
+  "gateCount": 682,
+  "attributedGates": 615,
   "unattributedGates": 67,
   "buildOutputOnlyGates": 20,
-  "completionRecordedGates": 194,
+  "completionRecordedGates": 195,
   "smokeLength": 8,
   "smokeCompletionRecordedGates": 5,
-  "graphFileCount": 1018,
+  "graphFileCount": 1020,
   "gates": [
     {
       "step": "node tests/verify-1207-splice-ts.ts",
@@ -66,6 +66,7 @@
         "package/deck/registration/agent-row.js",
         "package/lib",
         "package/lib/client.js",
+        "package/lib/deck-action-data",
         "package/lib/index.js",
         "package/lib/platform",
         "package/lib/platform/index.js",
@@ -93,6 +94,7 @@
         "package/deck",
         "package/deck/registration",
         "package/lib",
+        "package/lib/deck-action-data",
         "package/lib/platform",
         "package/refresh",
         "package/refresh/contract",
@@ -115,7 +117,7 @@
       "buildOutputOnly": false,
       "completionRecord": false,
       "expectedAssertions": 0,
-      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 17 条；源码里的路径字面量 13 条"
+      "reason": "归属来自：读文件调用（readFileSync / readFile / path.join(ROOT, ...)） 17 条；源码里的路径字面量 14 条"
     },
     {
       "step": "node tests/verify-build-cwd-products.ts",
@@ -492,6 +494,27 @@
       "completionRecord": true,
       "expectedAssertions": 19,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 3 条；源码里的路径字面量 9 条"
+    },
+    {
+      "step": "node tests/verify-deck-panel-comments.ts",
+      "file": "tests/verify-deck-panel-comments.ts",
+      "guards": [
+        "src/host/index.ts",
+        "src/refresh/rooms/host/deck-panel-comments.ts",
+        "src/tracker/contract/deck-read.ts",
+        "tests/lib/gate-result.ts"
+      ],
+      "dirs": [
+        "src/host",
+        "src/refresh/rooms/host",
+        "src/tracker/contract",
+        "tests/lib"
+      ],
+      "unattributed": false,
+      "buildOutputOnly": false,
+      "completionRecord": true,
+      "expectedAssertions": 8,
+      "reason": "归属来自：静态 import 说明符 3 条；源码里的路径字面量 1 条"
     },
     {
       "step": "node tests/verify-deck-parallel.ts",
@@ -9583,7 +9606,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 35,
+      "expectedAssertions": 49,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 2 条"
     },
     {
@@ -9680,7 +9703,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 29,
+      "expectedAssertions": 36,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 2 条；静态 import 说明符 3 条"
     },
     {
@@ -9719,7 +9742,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 55,
+      "expectedAssertions": 59,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 4 条"
     },
     {
@@ -9794,7 +9817,7 @@
       "unattributed": false,
       "buildOutputOnly": false,
       "completionRecord": true,
-      "expectedAssertions": 44,
+      "expectedAssertions": 50,
       "reason": "归属来自：载入模块（require / import / pathToFileURL） 1 条；静态 import 说明符 2 条"
     },
     {
@@ -15908,6 +15931,9 @@
       "node tests/verify-t3-locale.ts",
       "node tests/verify-tabsfold-leaf.ts"
     ],
+    "package/lib/deck-action-data": [
+      "node tests/verify-build-artifacts.ts"
+    ],
     "package/lib/platform": [
       "node tests/verify-build-artifacts.ts"
     ],
@@ -16750,6 +16776,7 @@
       "node tests/verify-chain-renderer.ts",
       "node tests/verify-contract-vocabulary.ts",
       "node tests/verify-deck-event-gate.ts",
+      "node tests/verify-deck-panel-comments.ts",
       "node tests/verify-dependency-rules.ts",
       "node tests/verify-gate-map.ts",
       "node tests/verify-1003-layout-in-file.ts",
@@ -17101,6 +17128,7 @@
     "src/refresh/rooms/host": [
       "node tests/verify-deck-event-gate.ts",
       "node tests/verify-deck-no-hang.ts",
+      "node tests/verify-deck-panel-comments.ts",
       "node tests/verify-deck-parallel.ts",
       "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-thin-reads.ts",
@@ -17494,6 +17522,7 @@
     ],
     "src/tracker/contract": [
       "node tests/verify-contract-types.ts",
+      "node tests/verify-deck-panel-comments.ts",
       "node tests/verify-dependency-rules.ts",
       "node tests/verify-no-mixed-session.ts",
       "node tests/verify-pagination-limits.ts",
@@ -18121,6 +18150,7 @@
       "node tests/verify-chain-env-e2e.ts",
       "node tests/verify-chain-renderer.ts",
       "node tests/verify-deck-no-hang.ts",
+      "node tests/verify-deck-panel-comments.ts",
       "node tests/verify-deck-parallel.ts",
       "node tests/verify-deck-patch-receipt-slim.ts",
       "node tests/verify-deck-slots.ts",
@@ -18349,9 +18379,9 @@
   },
   "coverage": {
     "sourceRoot": "src",
-    "fileCount": 1041,
+    "fileCount": 1043,
     "dirCount": 106,
-    "coveredFileCount": 1041,
+    "coveredFileCount": 1043,
     "ungatedFileCount": 0,
     "ungatedDirCount": 0,
     "dedicatedDirCount": 83,
@@ -18933,6 +18963,7 @@
       "src/refresh/rooms/host/chain-step-rows.ts",
       "src/refresh/rooms/host/check-chain-evaluation.ts",
       "src/refresh/rooms/host/comment-thread-fetch.ts",
+      "src/refresh/rooms/host/deck-panel-comments.ts",
       "src/refresh/rooms/host/failure-segment-notes.ts",
       "src/refresh/rooms/host/gh-execution.ts",
       "src/refresh/rooms/host/gh-run-report.ts",
@@ -19005,6 +19036,7 @@
       "src/shared/config-store/src/settings.ts",
       "src/shared/config-store/src/workspace.ts",
       "src/shared/config-store/tsconfig.json",
+      "src/shared/deck-read-reply.ts",
       "src/shared/doc-layout/README.md",
       "src/shared/doc-layout/src/layouts.ts",
       "src/shared/doc-layout/tsconfig.json",
@@ -19622,7 +19654,7 @@
       },
       {
         "path": "src/refresh/rooms",
-        "fileCount": 76
+        "fileCount": 77
       },
       {
         "path": "src/shared/command-cleanup",
