@@ -105,7 +105,7 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   // 2026-11-23 #72：按会话读取一张票的结构化详情，按行为分三扇（文件粒度上限 20KB，一扇只说自己那一组）。
   // 投影：七样东西（标题/状态/标签/正文/验收标准/进度/阻塞者）、没有可选区块时不凭空造、明确给空照旧给空、
   // triage 状态有才带、评论一个字都不进回包、验收标准只认它那个区（围栏与区外不算，中英标题都认，自造标题不算）；35 条单跑实测。
-  'verify-72-deck-ticket-read': 46,
+  'verify-72-deck-ticket-read': 49,
   // 失败：缺票（not-found）与读失败（后端原因）与回包不成形（parse）三种结果分得开，空行不算一张票，
   // 缺会话号/缺票号直接失败且不碰后端，会话找不到绝不回落到别的 workspace；17 条单跑实测。
   'verify-72-deck-ticket-read-failures': 17,

@@ -130,7 +130,7 @@ export function createDeckPanelComments(deps: DeckReadDeps, logCtx?: LogCtx, tim
       if (rows.length === 0) return fail('not-found', 'The tracker did not find this ticket')
       if (rows.length !== 1) return fail('conflict', 'More than one local ticket has this key')
       const { effortId, url } = rows[0]
-      if (!url || !effortId) return fail('bad-reply', 'The tracker returned no local ticket identity')
+      if (!url || effortId === undefined) return fail('bad-reply', 'The tracker returned no local ticket identity')
       issueIdentity = { url, effortId }
       return session.get({ ...repo, effortId }, canonicalKey, { comments: { first: want } }, ctx)
     })

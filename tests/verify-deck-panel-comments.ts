@@ -10,7 +10,7 @@ const all = Array.from({ length: 207 }, (_, i) => comment(i + 1))
 let calls = 0
 
 for (const backend of ['github', 'gitlab', 'linear', 'markdown']) {
-  const ref = { backend, refId: 'private-repo', effortId: 'effort' }
+  const ref = { backend, refId: 'private-repo', effortId: backend === 'markdown' ? '' : 'effort' }
   const wants: number[] = []
   const key = backend === 'linear' ? ' OMB-42 ' : backend === 'markdown' ? '00' : 42
   const service = createDeckPanelComments({

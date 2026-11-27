@@ -185,7 +185,7 @@ type ActionSettings = { promptOverrides?: Record<string, unknown>; templates?: R
 
 /** 只生成输入框文案，不执行提示词；只取当前动作设置，不外送其它设置。 */
 async function actionsOf(issue: any, detail: TicketDetail, resolved: ResolvedDeckRead, readSettings?: () => Promise<ActionSettings | undefined>): Promise<DeckTicketAction[] | undefined> {
-  if (detail.state === 'CLOSED' || issue.mergedAt || detail.blockedBy?.some((r) => r.state === 'OPEN')) return []
+  if (detail.state === 'CLOSED' || issue.mergedAt || !detail.blockedBy || detail.blockedBy.some((r) => r.state !== 'CLOSED')) return []
   const kind = containerKindOf(isSpecHeaderMarked(detail.body) ? { type: 'spec' } : issue)
   const url = detail.url || (/^[A-Za-z0-9-]+$/.test(detail.key) ? '#' + detail.key : '')
   if (!url) return undefined
