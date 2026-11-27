@@ -55,6 +55,8 @@ O perfil `desktop` é gerido pelo aplicativo e o CLI `dsh` o recusa. Nele, use o
 
 Instalar o plugin no perfil errado equivale a não instalar: ele nunca carrega, por mais que você reinicie. Confira que o perfil é o da entrada do DSH que você realmente usa.
 
+Se uma instalação direta pelo GitHub falhar com `ERR_MODULE_NOT_FOUND`, siga o [guia de recuperação do Desktop](https://github.com/risaddex/dsh-skills-deck/blob/main/docs/agents/desktop-install-recovery.md) antes de trocar o pacote ou restaurar preferências.
+
 ## O painel
 
 O painel abre na barra lateral direita do DSH.
