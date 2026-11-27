@@ -33,6 +33,7 @@ declare const startAttentionSignals: any;
 declare const keyOf: any;
 declare const getSnapshotVersion: any;
 declare const issueUrlFor: any;
+declare const rowNavKeyOf: (row: unknown) => string | number | null | undefined;
 declare const repoUrlFor: any;
 declare const effortOf: any;
 declare const idOf: any;
@@ -183,9 +184,11 @@ export const withWayfinderPrefix = function (body: any): any {
   return '/wayfinder\n' + body;
 };
 export const startText = (st: any, t: any): string => {
-  const url: string = issueUrlFor(st, t.number, effortOf(t)); // #231 清尾：链接一律后端声明模板；无元数据即空
   // v1.4（T2 #443）：map 用推进式 prompt（加载技能→分析map→挑下一个issue→执行）；普通 issue 用 execute 模板
   const isMap: boolean = (t.labels || []).some(function (l: any): boolean { return (typeof l === 'string') ? l === 'wayfinder:map' : l.name === 'wayfinder:map'; });
+  // #140: Linear tasks have a text key instead of a number. Use the same ticket identity as the card, without changing map prompts.
+  const urlKey = !isMap && typeof rowNavKeyOf === 'function' ? rowNavKeyOf(t) : t.number;
+  const url: string = issueUrlFor(st, urlKey, effortOf(t));
   // v1.5 B2 修订：新会话/执行 prompt 跟随行状态 —— map 完成态 → 完成确认 prompt；未完成 → 推进式；统一带 map 标识
   if (isMap) {
     const stats: any = t.stats || (function (): any {

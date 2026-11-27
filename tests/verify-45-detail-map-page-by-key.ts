@@ -14,7 +14,7 @@
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { printGateResult } from './lib/gate-result.ts'
-import { g, show, urlOf, navCalls, copied, opened, makeChecker, realConsoleError } from './lib/verify-45-detail-env.ts'
+import { g, show, urlOf, navCalls, copied, opened, injected, makeChecker, realConsoleError } from './lib/verify-45-detail-env.ts'
 
 const { check, stats } = makeChecker()
 // The map detail page reads the client context from this free name; the env helper does not install it (the page needs it, the other gates do not).
@@ -46,6 +46,33 @@ console.log('D) map detail card buttons: copy, open and open-in-new-session by t
     check(opened.length === 1 && opened[0] === c.want, c.name + ': the open button hands ' + show(c.want) + ' to the tracker opener (got ' + show(opened) + ')')
     handlers.onCard(facts)
     check(navCalls.length === 1 && navCalls[0].n === c.want, c.name + ': the whole card opens the detail with ' + show(c.want) + ' (got ' + show(navCalls.map((x) => x.n)) + ')')
+  }
+}
+
+console.log('Map task Execute inserts the direct URL of the selected ticket (#140)')
+{
+  const { pageActionHandlersOf } = await import('../src/client/views/mapDetailV2/wiring/pageActionHandlers.ts')
+  const { ticketNumberOf } = await import('../src/client/views/mapDetailV2/model/tickets/ticketCardFacts.ts')
+  const { rowActionText } = await import('../src/client/kernel/row-actions.ts')
+  const router = await import('../src/client/kernel/router.ts')
+  const promptData = await import('../src/client/kernel/prompt-data.ts')
+  Object.assign(g, promptData, { localStorage: { getItem: () => null }, localeSvc: { getSnapshot: () => ({ active: 'en' }) } })
+  const prompts = await import('../src/client/kernel/prompts.ts')
+  Object.assign(g, prompts, await import('../src/client/kernel/prompts-backend.ts'))
+  const { renderTemplate } = await import('../src/client/kernel/config.ts')
+  Object.assign(g, { rowActionText, startText: router.startText, renderTemplate })
+
+  for (const [backendId, task, parent] of [
+    ['linear', { key: 'ENG-123', url: 'https://linear.app/example/issue/ENG-123/selected-task' }, { key: 'ENG-100', url: 'https://linear.app/example/issue/ENG-100/parent-map' }],
+    ['github', { key: '42', number: 42, url: 'https://github.com/example/repo/issues/42' }, { key: '5', number: 5, url: 'https://github.com/example/repo/issues/5' }],
+  ] as const) {
+    const row = { ...task, title: 'Selected task', labels: ['wayfinder:task'] }
+    const st = { selection: { backendId }, snapshot: { issues: [], maps: [{ ...parent, tickets: [row] }] } }
+    injected.length = 0
+    pageActionHandlersOf(st, [row]).onMain!({ number: ticketNumberOf(row), rowKey: row.key } as Parameters<NonNullable<ReturnType<typeof pageActionHandlersOf>['onMain']>>[0])
+    const addresses = injected[0]?.match(/https?:\/\/[^\s]+/g)
+    check(injected.length === 1 && addresses?.[0] === task.url && !addresses.includes(parent.url),
+      `${backendId} Execute inserts ${task.url}, not the parent URL (got ${show(addresses ?? [])})`)
   }
 }
 

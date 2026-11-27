@@ -998,7 +998,7 @@ export const COMPLETION_RECORDED_GATES: Record<string, number> = {
   //   地图详情 V2 的动作与面包屑 26、工作路线与会话链胶囊 15。
   'verify-45-detail-routes-by-key': 39,
   'verify-45-detail-issue-rows-by-key': 48,
-  'verify-45-detail-map-page-by-key': 26,
+  'verify-45-detail-map-page-by-key': 28, // #140 adds Linear and numeric Execute prompt checks.
   'verify-45-detail-capsule-by-key': 15,
   // 2026-11-18 #45：地图详情页（V1）里三处还在比数字：雾（isFog 用 x.number === b 找阻塞者）、卡片排序（a.number - b.number，Linear 得 NaN）
   // 与票行的 openBlocker（String(x.number)）。Linear 的阻塞者因此认不出来、排序乱。本门禁真渲染 MapDetail 与 TicketRow，5 种行形态：
