@@ -170,5 +170,33 @@ for (const phone of ['snapshot', 'refresh']) {
   }
 }
 
+// A GitHub map must still refresh when the tracker supplies a dependency cycle.
+{
+  const childRow = (key: string, blockedBy: number[]) => ({ ...mapRow(key), type: 'issue', parentKey: '7', blockedBy })
+  const rows = [mapRow('7'), childRow('11', [12, 10]), childRow('12', [13]), childRow('13', [11]), childRow('14', [12]), childRow('10', []), childRow('15', [10])]
+  const tracker = { list: async () => ({ ok: true, data: rows }), counts: async () => ({ ok: false, error: { kind: 'unsupported' } }) }
+  const host = createTicketGrouping()
+  const reply = await createSessionRefresh(roomDeps(makeTable(), tracker, host, 'github')).handleRefresh({ cwd: 'K64' })
+  check(reply.ok === true, 'E: GitHub Refresh succeeds with three cyclic blockers (got ' + show(reply.error) + ')')
+  const map = (reply.maps || [])[0]
+  check(!!map && map.stats.blocked === 5 && map.stats.frontier === 1, 'E: cycle, its dependent, and an acyclic blocked ticket stay blocked')
+  check(!!map && show(byKeyOf(map.tickets, '11')?.blockedBy) === show([12, 10]), 'E: Refresh retains the original blocker edges')
+  const tickets = rows.slice(1).map((r) => ({ ...r, number: Number(r.key), state: 'OPEN' }))
+  const expected = [0, 1, 1, 1, 2, 1]
+  const ids = [10, 11, 12, 13, 14, 15]
+  let parity = true
+  for (const grouping of [kernelGrouping, host]) {
+    for (const input of [tickets, tickets.slice().reverse()]) {
+      try {
+        const levels = grouping.computeLevels(input).byNumber
+        parity = parity && show(ids.map((id) => levels[id])) === show(expected)
+      } catch {
+        parity = false
+      }
+    }
+  }
+  check(parity, 'E: tracker and host agree in both orders on cycle depth and unchanged acyclic levels')
+}
+
 printGateResult('verify-64-text-key-level-blocks', assertions, failed)
 if (failed) process.exit(1)

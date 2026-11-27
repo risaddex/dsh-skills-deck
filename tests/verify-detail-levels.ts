@@ -158,18 +158,34 @@ async function main() {
     }
   })
 
-  // T1c：DAG 语义 —— 若票 A 被票 B 阻塞，则 A.level > B.level（严格递增）
+  // T1c: a cycle edge stays in one level; every other in-map blocker must be at a lower level.
   withTickets.forEach(function (m) {
-    const byNum = {}
-    m.tickets.forEach(function (t) { byNum[t.number] = t })
+    const keyOf = b => String((b && typeof b === 'object' ? b.key ?? b.number : b) ?? '').trim().replace(/^0+(?=\d+$)/, '')
+    const byKey = new Map(m.tickets.map(t => [keyOf(t.number ?? t.key), t]))
+    function reaches(start, target) {
+      const pending = [start]
+      const seen = new Set()
+      while (pending.length) {
+        const current = pending.pop()
+        if (current === target) return true
+        if (seen.has(current)) continue
+        seen.add(current)
+        for (const b of current.blockedBy || []) {
+          const next = byKey.get(keyOf(b))
+          if (next) pending.push(next)
+        }
+      }
+      return false
+    }
     let bad = 0
-    m.tickets.forEach(function (t) {
-      ;(t.blockedBy || []).forEach(function (b) {
-        const bt = byNum[b]
-        if (bt && typeof bt.level === 'number' && typeof t.level === 'number' && t.level <= bt.level) bad++
-      })
-    })
-    expect('map #' + m.number + ' DAG 语义：被阻塞者 level 严格大于阻塞者（bad=' + bad + '）', bad === 0)
+    for (const t of m.tickets) {
+      for (const b of t.blockedBy || []) {
+        const blocker = byKey.get(keyOf(b))
+        if (!blocker) continue
+        if (!Number.isInteger(t.level) || !Number.isInteger(blocker.level) || (reaches(blocker, t) ? t.level !== blocker.level : t.level <= blocker.level)) bad++
+      }
+    }
+    expect('map #' + m.number + ' levels: cycle edges stay level and other edges strictly increase (bad=' + bad + ')', bad === 0)
   })
 
   // T1d：层级数的结构性上限。#1702：level 是阻塞依赖链的最长路径深度（src/tracker/body-parse.ts 的
