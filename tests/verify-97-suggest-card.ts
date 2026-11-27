@@ -160,7 +160,7 @@ async function main() {
   // ---------- 4. presentationMeta：纯函数、永不抛、只产无损 JSON ----------
   const envelope = { ok: true, status: 'ok', text: 'Recorded 2 next steps.', data: { items: [FULL, LEGACY], counts: { received: 2, returned: 2, clipped: 0 } } }
   const meta = cardMod.suggestPresentationMetaOf(envelope)
-  check(Object.keys(meta).length === 1 && meta['dsh-go/view'] !== undefined, '元数据：返回值就是 { "dsh-go/view": 视图 } 这一格')
+  check(Object.keys(meta).length === 2 && meta['dsh-go/view'] !== undefined && meta['dsh-go/card'] === 'deck.suggestions.v1', '元数据：原视图保持不变，单选标记放在同一层')
   check(meta['dsh-go/view'].title === 'Next steps · 2', '元数据：宿主自己给的两行英语字带上条数（网页界面各用各的语言）')
   const again = cardMod.suggestPresentationMetaOf(envelope)
   check(JSON.stringify(again) === JSON.stringify(meta), '元数据：同一份输入两次算出同一张卡（纯函数，宿主可重放）')

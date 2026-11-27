@@ -33,6 +33,8 @@
  */
 
 import { STEP_WAIT_MS } from '../shared/time-config/src/values.js'
+import { DECK_READ_LIMITS } from '../tracker/contract/deck-read.js'
+import { validDeckStandaloneIssues, validDeckTicketActions } from '../shared/deck-read-reply.js'
 import { oversizedFailureOf } from './deckReadSession.js'
 
 /** 协商时对外报的功能名；远程宿主以它决定要不要给手机亮出面板。 */
@@ -185,6 +187,8 @@ function replyFor(operation: Operation, requestSessionId: string, reply: unknown
   const spec = OPERATION_SPECS[operation]
   const payload = rec[spec.payload]
   if (spec.needsArray ? !Array.isArray(payload) : (payload === null || typeof payload !== 'object' || Array.isArray(payload))) return null
+  if (operation === 'tree' && !validDeckStandaloneIssues(rec, payload, DECK_READ_LIMITS)) return null
+  if (operation === 'ticket' && !validDeckTicketActions(payload, DECK_READ_LIMITS)) return null
   // 回包必须说明它读的是哪次会话，且就是请求的那一次：宿主方法回的是 trim 之后的 sessionId，所以按 trim 比。
   if (typeof rec.sessionId !== 'string' || rec.sessionId !== requestSessionId.trim()) return null
   // 量整个回包而不只是正文那一格：信封上的 workspaceRoot、fallbackReason 等也是会过通道的字节。

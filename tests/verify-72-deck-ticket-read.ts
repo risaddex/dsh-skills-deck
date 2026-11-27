@@ -132,4 +132,60 @@ function check(ok: boolean, msg: string, detail?: unknown): void {
   check(items.length === 0, '自造的标题（Acceptance criteria (draft)）不算验收标准区', JSON.stringify(items))
 }
 
+// The mobile action describes the Desk workflow; reading never runs it or writes to the tracker.
+{
+  const issue = { ...FULL_TICKET, type: 'issue', state: 'OPEN', labels: ['bug'], blockedBy: [] }
+  let settings: any = { promptOverrides: { 'tpl.fix': '/implement\nUse the saved prompt for {url}.' }, templates: { fix: 'Legacy {url}' } }
+  let children: any
+  let childReads = 0
+  const handler = createDeckTicketRead({
+    handleCwd: okCwd,
+    readActionSettings: async () => settings,
+    openSession: async (_cwd, opts) => ({
+      ok: opts?.write === false, backendId: 'github', repoRef: { refId: 'example/test' },
+      call: async (fn: any) => fn({ get: async () => ({ ok: true, data: issue }), listSubIssues: async () => { childReads++; return children } }, {}),
+    }),
+  })
+  const read = () => handler.handleTicket({ sessionId: 'actions', key: issue.key })
+  const edited = (await read()).ticket.actions?.[0]
+  check(edited?.id === 'fix' && edited.label === 'Fix' && edited.prompt === '/implement\nUse the saved prompt for ' + issue.url + '.', 'Fix uses Desk label precedence and the saved override before legacy templates')
+  settings.promptOverrides['tpl.fix'] = 'Missing required link'
+  check((await read()).ticket.actions?.[0]?.prompt === 'Legacy ' + issue.url, 'An invalid override is ignored and the saved legacy template still works')
+  settings = { promptOverrides: { 'tpl.fix': 'é'.repeat(25_000) + '{url}' } }
+  check(!('actions' in (await read()).ticket), 'Oversized prompts are omitted rather than clipped')
+  settings = undefined
+  Object.assign(issue, { url: 'https://login:secret@example.test/ticket/72' })
+  const local = (await read()).ticket
+  check(local.url === '' && local.actions?.[0]?.prompt.includes('#' + issue.key) && !local.actions[0].prompt.includes('secret'), 'Unsafe URLs do not enter the link or the generated prompt')
+  Object.assign(issue, { blockedBy: [{ key: 'ENG-7', state: 'OPEN' }] })
+  check((await read()).ticket.actions?.length === 0, 'An open blocker suppresses the workflow')
+  Object.assign(issue, { type: 'spec', blockedBy: [], url: '', fieldStates: { subIssues: { known: true, value: { total: 0, completed: 0 } } } })
+  const empty = (await read()).ticket.actions?.[0]
+  check(empty?.id === 'specSplit' && empty.prompt.startsWith('/to-tickets') && childReads === 0, 'Authoritative empty spec uses Split without fetching children')
+  Object.assign(issue, { fieldStates: { subIssues: { known: true, value: { total: 4, completed: 2 } } } })
+  check((await read()).ticket.actions?.[0]?.prompt.startsWith('/implement-spec'), 'An unfinished spec uses Implement Spec')
+  Object.assign(issue, { fieldStates: undefined })
+  children = { ok: true, data: { items: [{ state: 'CLOSED' }], total: 1, fetched: 1, capped: false, missing: 0, dropped: 0 } }
+  check((await read()).ticket.actions?.[0]?.id === 'specComplete', 'Complete child enumeration can establish a finished spec')
+  children.data.capped = true
+  check(!('actions' in (await read()).ticket), 'A partial child list cannot establish that a container is complete')
+  Object.assign(issue, { type: 'map', fieldStates: { subIssues: { known: true, value: { total: 0, completed: 0 } } } })
+  check((await read()).ticket.actions?.[0]?.id === 'mapInspect', 'An empty exploration map uses Inspect instead of the ordinary ticket workflow')
+}
+
+// A duplicate local number must not open the first file and suggest an action for it.
+{
+  const issue = { ...FULL_TICKET, key: '01', effortId: 'alpha', url: '/bound/alpha/01.md' }
+  let lookedUp: any
+  const phone = createDeckTicketRead({ handleCwd: okCwd, openSession: async () => ({
+    ok: true, backendId: 'markdown', repoRef: { refId: 'bound' },
+    call: (fn: any) => fn({ get: async () => ({ ok: true, data: issue }), list: async (_repo: any, filter: any) => {
+      lookedUp = filter
+      return { ok: true, data: [issue, { ...issue, effortId: 'beta', state: 'CLOSED' }] }
+    } }, {}),
+  }) })
+  const reply = await phone.handleTicket({ sessionId: 'local', key: '01' })
+  check(reply.error?.kind === 'conflict' && !('ticket' in reply) && lookedUp.keys.join(',') === '01' && !('state' in lookedUp), 'An open and a closed local ticket with the same key fail closed')
+}
+
 printGateResult('verify-72-deck-ticket-read', total, failed)

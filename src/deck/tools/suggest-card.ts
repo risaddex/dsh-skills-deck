@@ -50,6 +50,9 @@ export interface SuggestCard {
 
 /** dsh-go 认的那一格元数据键：工具定义里 presentationMeta 返回它，App 就把值画成原生卡片。 */
 export const TOOL_CARD_VIEW_KEY = 'dsh-go/view'
+/** 独立元数据让新版 App 只对此类建议启用单选；旧版仍按原视图画。 */
+const TOOL_CARD_KIND_KEY = 'dsh-go/card'
+const TOOL_CARD_KIND = 'deck.suggestions.v1'
 /** dsh-go 对工具卡的总字节上限（超出它 App 会画一行「插件界面有误」，所以这里先自己挡）。 */
 export const TOOL_CARD_MAX_BYTES = 8 * 1024
 /**
@@ -183,7 +186,9 @@ export function suggestPresentationMetaOf(value: unknown, texts?: SuggestCardTex
     const card = suggestCardOf(items, given)
     if (!card.options.length) return {}
     const view = suggestCardViewOf(card)
-    const measure = function (): string { return JSON.stringify({ [TOOL_CARD_VIEW_KEY]: view }) }
+    const measure = function (): string {
+      return JSON.stringify({ [TOOL_CARD_VIEW_KEY]: view, [TOOL_CARD_KIND_KEY]: TOOL_CARD_KIND })
+    }
     let text = measure()
     if (typeof text !== 'string') return {}
     if (utf8BytesOf(text) > TOOL_CARD_MAX_BYTES) {
