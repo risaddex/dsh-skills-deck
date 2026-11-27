@@ -176,19 +176,55 @@ export function computeLevels(tickets: readonly GroupingTicket[]): LevelsResult 
   const idOf = ticketIdentityOf
   const byNum: Record<string, GroupingTicket> = {}
   tickets.forEach((t) => { byNum[refKeyOf(idOf(t))] = t })
-  const memo: Record<string, number> = {}
-  const levelOf = (t: GroupingTicket): number => {
-    if (memo[idOf(t)] !== undefined) return memo[idOf(t)]
-    // 深度只由本批内的阻塞关系决定；图外的引用按叶子算（不改变分层，只影响 frontier 的判定）。
-    const blockers = (t.blockedBy || []).map((b) => byNum[refKeyOf(b)]).filter(Boolean)
-    if (!blockers.length) { memo[idOf(t)] = 0; return 0 }
-    let maxL = -1
-    blockers.forEach((b) => { const l = levelOf(b); if (l > maxL) maxL = l })
-    memo[idOf(t)] = maxL + 1
-    return memo[idOf(t)]
+  // 只在计算层级时把互相可达的票视为同一层；原有阻塞关系和状态不变。非循环的边仍按最长路径分层。
+  // 两次遍历均使用显式栈，避免长依赖链或循环耗尽调用栈；宿主副本保持同一口径。
+  const edges = new Map<GroupingTicket, GroupingTicket[]>()
+  const reverse = new Map<GroupingTicket, GroupingTicket[]>()
+  for (const t of tickets) reverse.set(t, [])
+  for (const t of tickets) {
+    const blockers = (t.blockedBy || []).map((b) => byNum[refKeyOf(b)]).filter((b) => reverse.has(b))
+    edges.set(t, blockers)
+    for (const b of blockers) reverse.get(b)!.push(t)
+  }
+  const finished: GroupingTicket[] = []
+  const seen = new Set<GroupingTicket>()
+  for (const t of tickets) {
+    if (seen.has(t)) continue
+    seen.add(t)
+    const pending = [{ ticket: t, next: 0 }]
+    while (pending.length) {
+      const frame = pending[pending.length - 1]
+      const neighbors = edges.get(frame.ticket)!
+      if (frame.next === neighbors.length) { finished.push(frame.ticket); pending.pop(); continue }
+      const b = neighbors[frame.next++]
+      if (!seen.has(b)) { seen.add(b); pending.push({ ticket: b, next: 0 }) }
+    }
+  }
+  const componentOf = new Map<GroupingTicket, number>()
+  const components: GroupingTicket[][] = []
+  for (const t of finished.reverse()) {
+    if (componentOf.has(t)) continue
+    const component = components.length
+    const members = [t]
+    components.push(members)
+    componentOf.set(t, component)
+    for (let i = 0; i < members.length; i++) {
+      for (const dependent of reverse.get(members[i])!) {
+        if (!componentOf.has(dependent)) { componentOf.set(dependent, component); members.push(dependent) }
+      }
+    }
+  }
+  // 反向迭代时，每个组的外部阻塞者都已经有层级；组内没有办法满足严格的先后顺序。
+  const depth: number[] = []
+  for (let i = components.length - 1; i >= 0; i--) {
+    depth[i] = 0
+    for (const t of components[i]) for (const b of edges.get(t)!) {
+      const blocker = componentOf.get(b)!
+      if (blocker !== i) depth[i] = Math.max(depth[i], depth[blocker] + 1)
+    }
   }
   const byNumber: Record<string, number> = {}
-  tickets.forEach((t) => { byNumber[idOf(t)] = levelOf(t) })
+  tickets.forEach((t) => { byNumber[idOf(t)] = depth[componentOf.get(t)!] })
   // 先按深度就位（下标即深度，中间没票的位置留空洞），最后再压掉空洞。
   const levels: (TicketLevel | undefined)[] = []
   tickets.forEach((t) => {
